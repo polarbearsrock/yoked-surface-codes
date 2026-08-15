@@ -1,0 +1,259 @@
+#!/usr/bin/env bash
+
+# Reproduce the 1D-yoked results associated with Figure 8.
+#
+# This script is intentionally split into separate generation, collection, and
+# plotting actions. Circuit generation is cheap; Monte Carlo collection is
+# expensive but resumable; plotting does not run any simulations.
+
+set -euo pipefail
+
+readonly REPOSITORY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly DEFAULT_OUTPUT_DIRECTORY="out/fig8_1d"
+
+
+print_usage() {
+    cat <<'EOF'
+Usage: ./reproduce_fig8_1d ACTION [OUTPUT_DIRECTORY]
+
+Actions:
+  plot-paper-data
+      Replot Figure 8b and 8d from the CSV files released with the paper.
+      This action does not run simulations.
+
+  smoke
+      Generate and sample one small d=3, n=6, r=4d circuit.
+
+  generate-validation-grid
+      Generate the 16 full-circuit Figure 8b configurations:
+      d in {5,7,9,11}, n in {6,10}, and r in {4d,8d}.
+
+  collect-open-validation-grid
+      Sample the generated grid with the selected public decoder. Collection
+      resumes from an existing CSV in the output directory.
+
+  plot-open-validation-grid
+      Plot the freshly collected validation-grid data and the paper fits.
+
+Collection environment variables:
+  MAX_SHOTS             Per-circuit shot limit (smoke: 100000; grid: 1000000)
+  MAX_ERRORS            Per-circuit logical-error limit (default: 100)
+  PROCESSES             Number of Sinter worker processes (default: 4)
+  THREADS_PER_PROCESS   Native numerical threads per worker (default: 1)
+  DECODER               Sinter decoder (default: pymatching-correlated)
+
+Examples:
+  ./reproduce_fig8_1d plot-paper-data
+  ./reproduce_fig8_1d generate-validation-grid
+  PROCESSES=32 THREADS_PER_PROCESS=1 \
+      ./reproduce_fig8_1d collect-open-validation-grid
+EOF
+}
+
+
+die() {
+    echo "error: $*" >&2
+    exit 1
+}
+
+
+require_positive_integer() {
+    local name=$1
+    local value=$2
+    if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+        die "$name must be a positive integer; got '$value'"
+    fi
+}
+
+
+configure_runtime() {
+    # Sinter parallelizes with processes. Numerical libraries may also create
+    # thread pools, so cap those pools to avoid processes × threads
+    # oversubscription.
+    worker_processes=${PROCESSES:-4}
+    threads_per_process=${THREADS_PER_PROCESS:-1}
+    max_errors=${MAX_ERRORS:-100}
+    decoder=${DECODER:-pymatching-correlated}
+
+    require_positive_integer PROCESSES "$worker_processes"
+    require_positive_integer THREADS_PER_PROCESS "$threads_per_process"
+    require_positive_integer MAX_ERRORS "$max_errors"
+
+    export OMP_NUM_THREADS=$threads_per_process
+    export OPENBLAS_NUM_THREADS=$threads_per_process
+    export MKL_NUM_THREADS=$threads_per_process
+    export NUMEXPR_NUM_THREADS=$threads_per_process
+    export VECLIB_MAXIMUM_THREADS=$threads_per_process
+    export BLIS_NUM_THREADS=$threads_per_process
+
+    # Matplotlib otherwise attempts to cache fonts under the home directory.
+    # This workspace provides TMPDIR as its designated scratch location.
+    if [[ -z ${MPLCONFIGDIR:-} ]]; then
+        [[ -n ${TMPDIR:-} ]] || die "TMPDIR must be set when MPLCONFIGDIR is unset"
+        export MPLCONFIGDIR="$TMPDIR/yoked-surface-codes-matplotlib"
+    fi
+    mkdir -p "$MPLCONFIGDIR"
+}
+
+
+plot_paper_data() {
+    local output_directory=$1
+    local plot_directory="$output_directory/paper_data"
+    mkdir -p "$plot_directory"
+
+    # Figure 8b: full-circuit samples versus gap simulations for 1D yoking.
+    tools/plot_extrapolations \
+        assets/stats_check.csv \
+        --filter_func "m.yokes == 2 and m.d in [5, 7, 9, 11] and m.patches in [6, 10]" \
+        --out "$plot_directory/fig8b_1d_full_vs_gap.png"
+
+    # Figure 8d: released 0D and 1D multi-round gap-simulation data.
+    tools/plot_extrapolations \
+        assets/stats_extrapolation.csv \
+        --filter_func "m.yokes in [0, 2] and m.d in [7, 8, 9, 10, 11] and m.patches in [8, 16, 32]" \
+        --out "$plot_directory/fig8d_0d_vs_1d.png"
+}
+
+
+generate_smoke_circuit() {
+    local circuit_directory=$1
+    mkdir -p "$circuit_directory"
+
+    tools/gen_memory_circuit \
+        --patch_diameter 3 \
+        --rounds "4*d" \
+        --noise_strength 0.001 \
+        --patches 6 \
+        --yokes 2 \
+        --gateset cz \
+        --out_dir "$circuit_directory"
+}
+
+
+generate_validation_grid() {
+    local output_directory=$1
+    local circuit_directory="$output_directory/validation_grid/circuits"
+    mkdir -p "$circuit_directory"
+
+    # Cartesian product: 4 distances × 2 durations × 2 block sizes = 16
+    # circuits. The SI1000 physical noise strength is fixed at p=0.001.
+    tools/gen_memory_circuit \
+        --patch_diameter 5 7 9 11 \
+        --rounds "4*d" "8*d" \
+        --noise_strength 0.001 \
+        --patches 6 10 \
+        --yokes 2 \
+        --gateset cz \
+        --out_dir "$circuit_directory"
+}
+
+
+collect_circuits() {
+    local circuit_directory=$1
+    local statistics_path=$2
+    local max_shots=$3
+
+    require_positive_integer MAX_SHOTS "$max_shots"
+
+    # Keep paths in an array so filenames are passed safely to Sinter. When the
+    # glob matches nothing, Bash leaves one literal '*.stim' entry behind.
+    local -a circuit_files=("$circuit_directory"/*.stim)
+    if [[ ! -e "${circuit_files[0]}" ]]; then
+        die "no circuits found in '$circuit_directory'"
+    fi
+
+    mkdir -p "$(dirname -- "$statistics_path")"
+    echo "Collecting with decoder=$decoder, processes=$worker_processes, threads/process=$threads_per_process"
+    echo "Resumable statistics: $statistics_path"
+
+    # --save_resume_filepath both appends new batches and counts existing rows
+    # toward the stopping limits, allowing safe interruption and continuation.
+    sinter collect \
+        --circuits "${circuit_files[@]}" \
+        --save_resume_filepath "$statistics_path" \
+        --metadata_func auto \
+        --decoders "$decoder" \
+        --max_shots "$max_shots" \
+        --max_errors "$max_errors" \
+        --processes "$worker_processes"
+}
+
+
+run_smoke_test() {
+    local output_directory=$1
+    local smoke_directory="$output_directory/smoke"
+    local max_shots=${MAX_SHOTS:-100000}
+
+    generate_smoke_circuit "$smoke_directory/circuits"
+    collect_circuits \
+        "$smoke_directory/circuits" \
+        "$smoke_directory/stats.csv" \
+        "$max_shots"
+}
+
+
+collect_validation_grid() {
+    local output_directory=$1
+    local validation_directory="$output_directory/validation_grid"
+    local max_shots=${MAX_SHOTS:-1000000}
+
+    collect_circuits \
+        "$validation_directory/circuits" \
+        "$validation_directory/${decoder}_stats.csv" \
+        "$max_shots"
+}
+
+
+plot_validation_grid() {
+    local output_directory=$1
+    local validation_directory="$output_directory/validation_grid"
+    local statistics_path="$validation_directory/${decoder}_stats.csv"
+
+    [[ -f "$statistics_path" ]] || \
+        die "no statistics found at '$statistics_path'; collect the grid first"
+
+    tools/plot_fig8_1d_fresh \
+        "$statistics_path" \
+        --out "$validation_directory/${decoder}_fig8b.png"
+}
+
+
+main() {
+    if (( $# < 1 || $# > 2 )); then
+        print_usage >&2
+        return 2
+    fi
+
+    local action=$1
+    local output_directory=${2:-$DEFAULT_OUTPUT_DIRECTORY}
+
+    # All repository paths below are relative to the repository root. Changing
+    # directory here makes the script safe to call through an absolute path.
+    cd "$REPOSITORY_ROOT"
+    configure_runtime
+
+    case "$action" in
+        plot-paper-data)
+            plot_paper_data "$output_directory"
+            ;;
+        smoke)
+            run_smoke_test "$output_directory"
+            ;;
+        generate-validation-grid)
+            generate_validation_grid "$output_directory"
+            ;;
+        collect-open-validation-grid)
+            collect_validation_grid "$output_directory"
+            ;;
+        plot-open-validation-grid)
+            plot_validation_grid "$output_directory"
+            ;;
+        *)
+            print_usage >&2
+            die "unknown action '$action'"
+            ;;
+    esac
+}
+
+
+main "$@"

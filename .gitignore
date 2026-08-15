@@ -2,3 +2,5 @@
 .pytest_cache
 out
 __pycache__
+.venv/
+venv/

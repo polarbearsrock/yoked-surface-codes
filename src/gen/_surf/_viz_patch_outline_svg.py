@@ -136,7 +136,7 @@ def patch_outline_svg_viewer(
             for k, obs_pair in enumerate(outline.observables):
                 k -= len(outline.observables) / 2
                 for basis, obs in obs_pair:
-                    for a, b in obs.steps:
+                    for a, b, _ in obs.segments:
                         a = transform_pt(outline_index, a)
                         b = transform_pt(outline_index, b)
                         stroke_color = OBS_COLORS[basis]

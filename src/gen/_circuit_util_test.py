@@ -52,6 +52,7 @@ def test_make_phenomenological_circuit_for_stabilizer_code():
             DETECTOR(0.5, 1, 0) rec[-4] rec[-1]
             SHIFT_COORDS(0, 0, 1)
             DEPOLARIZE1(0.25) 1 2 3 4
+            TICK
         }
         MPP X1*X3 Z1*Z2*Z3*Z4 X2*X4
         DETECTOR(0.5, 0, 0) rec[-6] rec[-3]

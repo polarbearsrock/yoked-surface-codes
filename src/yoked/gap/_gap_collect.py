@@ -1,10 +1,10 @@
 from typing import Any, TextIO, Dict, List, Optional
 
 import sinter
-from sinter._printer import ThrottledProgressPrinter
 
 from yoked.gap._collection_manager import CollectionManager
 from yoked.gap._gap_worker_handler import GapWorkHandler
+from yoked.gap._progress_printer import ThrottledProgressPrinter
 
 
 def collect_gap_stats(

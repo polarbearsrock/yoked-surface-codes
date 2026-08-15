@@ -6,7 +6,8 @@ import pathlib
 import numpy as np
 import sinter
 from matplotlib import pyplot as plt
-from sinter._main_plot import _common_json_properties, _FieldToMetadataWrapper
+
+from _plot_util import FieldToMetadataWrapper
 
 MARKERS: str = "ov*sp^<>8PhH+xXDd|" * 100
 
@@ -28,7 +29,7 @@ def main():
         stat=stat,
         decoder=stat.decoder,
         metadata=stat.json_metadata,
-        m=_FieldToMetadataWrapper(stat.json_metadata),
+        m=FieldToMetadataWrapper(stat.json_metadata),
         strong_id=stat.strong_id)
 
     fig: plt.Figure

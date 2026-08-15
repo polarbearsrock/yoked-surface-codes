@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+
+import argparse
+import collections
+import pathlib
+from typing import Dict, List, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
+import sinter
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Plot freshly collected 1D Figure 8b validation-grid data."
+    )
+    parser.add_argument("input", type=pathlib.Path)
+    parser.add_argument("--out", type=pathlib.Path, required=True)
+    parser.add_argument(
+        "--distances",
+        nargs="+",
+        type=int,
+        help="Only include these inner-code distances.",
+    )
+    args = parser.parse_args()
+
+    grouped: Dict[Tuple[int, int, int, int, str], sinter.AnonTaskStats] = (
+        collections.defaultdict(sinter.AnonTaskStats)
+    )
+    for stat in sinter.read_stats_from_csv_files(str(args.input)):
+        metadata = stat.json_metadata
+        if args.distances is not None and metadata["d"] not in args.distances:
+            continue
+        key = (
+            metadata["d"],
+            metadata["patches"],
+            metadata["r"],
+            metadata["yokes"],
+            stat.decoder,
+        )
+        grouped[key] += stat.to_anon_stats()
+
+    if not grouped:
+        raise ValueError(f"No samples found in {args.input}")
+
+    decoders = {key[-1] for key in grouped}
+    if len(decoders) != 1:
+        raise ValueError(f"Expected one decoder but found {sorted(decoders)}")
+    decoder = next(iter(decoders))
+
+    curves: Dict[Tuple[int, int], List[Tuple[int, sinter.Fit, int, int]]] = (
+        collections.defaultdict(list)
+    )
+    for (d, patches, rounds, yokes, _), totals in grouped.items():
+        shot_fit = sinter.fit_binomial(
+            num_shots=totals.shots,
+            num_hits=totals.errors,
+            max_likelihood_factor=1000,
+        )
+        patch_round_fit = sinter.shot_error_rate_to_piece_error_rate(
+            shot_fit,
+            pieces=rounds * patches,
+            values=(patches - yokes) * 2,
+        )
+        curves[patches, rounds // d].append(
+            (d, patch_round_fit, totals.shots, totals.errors)
+        )
+
+    fig, ax = plt.subplots(figsize=(10, 7), dpi=100)
+    markers = ["o", "s", "^", "D"]
+    colors = ["C0", "C1", "C2", "C3"]
+    annotation_offsets = [(-5, -14), (-5, 8), (5, -14), (5, 8)]
+    for curve_index, ((patches, rounds_per_d), points) in enumerate(
+        sorted(curves.items())
+    ):
+        points.sort()
+        color = colors[curve_index % len(colors)]
+        marker = markers[curve_index % len(markers)]
+        sampled_label_used = False
+        for d, fit, shots, errors in points:
+            label = None
+            if not sampled_label_used:
+                label = f"n={patches}, r={rounds_per_d}d samples"
+                sampled_label_used = True
+            if fit.best > 0:
+                ax.errorbar(
+                    [d],
+                    [fit.best],
+                    yerr=[[fit.best - fit.low], [fit.high - fit.best]],
+                    color=color,
+                    marker=marker,
+                    capsize=3,
+                    linewidth=0,
+                    elinewidth=1,
+                    label=label,
+                )
+            else:
+                ax.scatter(
+                    [d],
+                    [fit.high],
+                    color=color,
+                    facecolors="none",
+                    marker="v",
+                    label=label,
+                )
+            ax.annotate(
+                f"{errors}/{shots:,}",
+                (d, fit.best if fit.best > 0 else fit.high),
+                xytext=annotation_offsets[curve_index % len(annotation_offsets)],
+                textcoords="offset points",
+                ha="right" if curve_index < 2 else "left",
+                fontsize=7,
+            )
+
+        ds = np.array([point[0] for point in points], dtype=float)
+        rounds = rounds_per_d * ds
+        model = rounds * patches * 8.0**(-ds) / 500
+        ax.plot(
+            ds,
+            model,
+            color=color,
+            linestyle="--",
+            alpha=0.7,
+            label=f"n={patches}, r={rounds_per_d}d paper fit",
+        )
+
+    ax.set_yscale("log")
+    ax.set_xticks(sorted({key[0] for key in grouped}))
+    ax.set_xlabel("Inner surface-code distance d")
+    ax.set_ylabel("Logical errors per patch round")
+    ax.set_title(f"Fresh 1D yoked full-circuit simulation ({decoder})")
+    ax.grid(which="major", alpha=0.5)
+    ax.grid(which="minor", alpha=0.2)
+    ax.legend(fontsize=9, ncols=2)
+    fig.tight_layout()
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(args.out)
+    print(f"wrote file://{args.out.absolute()}")
+
+
+if __name__ == "__main__":
+    main()

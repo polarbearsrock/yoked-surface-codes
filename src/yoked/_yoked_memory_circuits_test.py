@@ -7,11 +7,11 @@ import gen
 from yoked._yoked_memory_circuits import yoked_magic_memory_circuit
 
 
-@pytest.mark.parametrize('num_patches,yokes,patch_diameter', itertools.product(
+@pytest.mark.parametrize('num_patches,yokes,patch_diameter', list(itertools.product(
     [1, 2, 5],
     [0, 1, 2],
     [3, 4, 5, 6, 7]
-))
+)))
 def test_yoked_magic_memory_circuit(
         num_patches: int,
         yokes: int,

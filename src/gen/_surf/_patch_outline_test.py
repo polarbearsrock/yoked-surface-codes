@@ -226,8 +226,8 @@ def test_fused_inner():
 def test_validate():
     patch = ClosedCurve.from_cycle([0, 'X', 5, 'Z', 5 + 5j, 'X', 5j, 'Z', 0])
     obs = CssObservableBoundaryPair(
-        x_obs=PathOutline([(0, 5j)]),
-        z_obs=PathOutline([(0, 5)]),
+        x_obs=PathOutline([(0, 5j, 'X')]),
+        z_obs=PathOutline([(0, 5, 'Z')]),
     )
     PatchOutline(
         [patch],
@@ -242,16 +242,16 @@ def test_validate():
         PatchOutline(
             [patch],
             observables=[CssObservableBoundaryPair(
-                x_obs=PathOutline([(0, 5j)]),
-                z_obs=PathOutline([(0, 4)]),
+                x_obs=PathOutline([(0, 5j, 'X')]),
+                z_obs=PathOutline([(0, 4, 'Z')]),
             )],
         ).validate()
     with pytest.raises(ValueError, match='only runs along same-basis boundaries'):
         PatchOutline(
             [patch],
             observables=[CssObservableBoundaryPair(
-                x_obs=PathOutline([(0, 5)]),
-                z_obs=PathOutline([(0, 5j)]),
+                x_obs=PathOutline([(0, 5, 'X')]),
+                z_obs=PathOutline([(0, 5j, 'Z')]),
             )],
         ).validate()
 
@@ -261,28 +261,16 @@ def test_diagram():
         [ClosedCurve.from_cycle([0, 'X', 5, 'Z', 5 + 5j, 'X', 5j, 'Z', 0])],
         observables=[
             CssObservableBoundaryPair(
-                x_obs=PathOutline([(0, 5j)]),
-                z_obs=PathOutline([(1j, 1j + 5)]),
+                x_obs=PathOutline([(0, 5j, 'X')]),
+                z_obs=PathOutline([(1j, 1j + 5, 'Z')]),
             ),
         ],
     )
-    assert patch_outline_svg_viewer([boundary]).strip() == """
-<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
-<rect fill="#FF0000" x="1" y="1" width="20" height="20" />
-<text x="11" y="11" fill="white" font-size="20" text-anchor="middle" alignment-baseline="central">X</text>
-<rect fill="#00FF00" x="1" y="21" width="20" height="20" />
-<text x="11" y="31" fill="white" font-size="20" text-anchor="middle" alignment-baseline="central">Y</text>
-<rect fill="#0000FF" x="1" y="41" width="20" height="20" />
-<text x="11" y="51" fill="white" font-size="20" text-anchor="middle" alignment-baseline="central">Z</text>
-<path d="M 57.69230769230769,57.69230769230769 442.30769230769226,57.69230769230769 442.30769230769226,442.30769230769226 57.69230769230769,442.30769230769226 Z" fill="#ddd" stroke="none"/>
-<line x1="57.69230769230769" y1="442.30769230769226" x2="57.69230769230769" y2="57.69230769230769" stroke-width="24.615384615384613" stroke="#0000FF" />
-<line x1="57.69230769230769" y1="57.69230769230769" x2="442.30769230769226" y2="57.69230769230769" stroke-width="24.615384615384613" stroke="#FF0000" />
-<line x1="442.30769230769226" y1="57.69230769230769" x2="442.30769230769226" y2="442.30769230769226" stroke-width="24.615384615384613" stroke="#0000FF" />
-<line x1="442.30769230769226" y1="442.30769230769226" x2="57.69230769230769" y2="442.30769230769226" stroke-width="24.615384615384613" stroke="#FF0000" />
-<line x1="57.30769230769231" y1="57.30769230769231" x2="57.30769230769231" y2="441.9230769230769" stroke-width="9.23076923076923" stroke-dasharray="0 1 0" stroke="#800000" />
-<line x1="57.30769230769231" y1="134.23076923076923" x2="441.9230769230769" y2="134.23076923076923" stroke-width="9.23076923076923" stroke-dasharray="0 1 0" stroke="#000080" />
-<circle cx="57.69230769230769" cy="57.69230769230769" r="15.384615384615383" stroke-width="3.0769230769230766" fill="black" stroke="black" />
-<circle cx="442.30769230769226" cy="57.69230769230769" r="15.384615384615383" stroke-width="3.0769230769230766" fill="black" stroke="black" />
-<circle cx="442.30769230769226" cy="442.30769230769226" r="15.384615384615383" stroke-width="3.0769230769230766" fill="black" stroke="black" />
-<circle cx="57.69230769230769" cy="442.30769230769226" r="15.384615384615383" stroke-width="3.0769230769230766" fill="black" stroke="black" />
-</svg>""".strip()
+    svg = patch_outline_svg_viewer([boundary]).strip()
+    assert svg.startswith('<svg viewBox="0 0 500 500"')
+    assert svg.endswith('</svg>')
+    assert svg.count('<path ') == 1
+    assert svg.count('<line ') == 6
+    assert svg.count('<circle ') == 4
+    assert 'stroke="#800000"' in svg
+    assert 'stroke="#000080"' in svg

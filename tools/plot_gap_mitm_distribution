@@ -8,7 +8,8 @@ from typing import Iterable, List
 import numpy as np
 import sinter
 from matplotlib import pyplot as plt
-from sinter._main_plot import _FieldToMetadataWrapper, _common_json_properties
+
+from _plot_util import FieldToMetadataWrapper, common_json_properties
 
 src_path = pathlib.Path(__file__).parent.parent / 'src'
 assert src_path.exists()
@@ -47,7 +48,7 @@ def main():
         stat=stat,
         decoder=stat.decoder,
         metadata=stat.json_metadata,
-        m=_FieldToMetadataWrapper(stat.json_metadata),
+        m=FieldToMetadataWrapper(stat.json_metadata),
         strong_id=stat.strong_id)
 
     fig: plt.Figure
@@ -118,7 +119,7 @@ def main():
         )
         color_index += 1
 
-    common_props = ', '.join(f'{k}={v}' for k, v in sorted(_common_json_properties(stats).items()))
+    common_props = ', '.join(f'{k}={v}' for k, v in sorted(common_json_properties(stats).items()))
 
     ax.plot(
         [],

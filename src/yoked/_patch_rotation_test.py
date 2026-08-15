@@ -30,12 +30,12 @@ def assert_observables_hug_boundaries(dem: stim.DetectorErrorModel):
             raise NotImplementedError(f'{instruction}')
 
 
-@pytest.mark.parametrize('d,b,opp,style', itertools.product(
+@pytest.mark.parametrize('d,b,opp,style', list(itertools.product(
     [3, 4, 5],
     ['X', 'Z', 'magic'],
     [False, True],
     ['cz', 'css'],
-))
+)))
 def test_patch_rotation_circuit(d: int, b: Literal['X', 'Z'], opp: bool, style: Literal['cz', 'css']):
     noisy_circuit = patch_rotation_circuit(
         patch_diameter=d,

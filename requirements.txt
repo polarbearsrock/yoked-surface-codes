@@ -1,8 +1,9 @@
-matplotlib ~= 3.5
-numpy
-pymatching ~= 2.1
-pytest
-scipy
-sinter ~= 1.12.dev
-stim ~= 1.12.dev
-pygltflib
+# Python >= 3.12; validated with Python 3.14.
+matplotlib == 3.11.1
+numpy == 2.5.1
+pymatching == 2.4.0
+pygltflib == 1.16.5
+pytest == 9.1.1
+scipy == 1.18.0
+sinter == 1.16.0
+stim == 1.16.0

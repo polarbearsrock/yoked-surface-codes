@@ -31,6 +31,8 @@ def test_step_outline_simple():
         start_round_index=5,
         cmp_layer=None,
         save_layer='test',
+        edit_cur_obs={},
+        o2i={},
     )
     assert builder.circuit == stim.Circuit("""
         QUBIT_COORDS(0, 0) 0
@@ -152,6 +154,8 @@ def test_step_outline_alternating():
         start_round_index=5,
         cmp_layer=None,
         save_layer='test',
+        edit_cur_obs={},
+        o2i={},
     )
     assert builder.circuit == stim.Circuit("""
         QUBIT_COORDS(0, 0) 0

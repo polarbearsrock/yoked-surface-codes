@@ -8,7 +8,7 @@ from yoked._squareberg_circuits import squareberg_magic_memory_circuit, \
     squareberg_phenomenological_circuit
 
 
-@pytest.mark.parametrize('patch_diameter,num_patches', itertools.product([2, 3, 4], [16, 64]))
+@pytest.mark.parametrize('patch_diameter,num_patches', list(itertools.product([2, 3, 4], [16, 64])))
 def test_squareberg_magic_memory_circuit(
         patch_diameter: int,
         num_patches: int,

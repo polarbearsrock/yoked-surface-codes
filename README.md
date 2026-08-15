@@ -21,13 +21,27 @@ commands that allow for constructions not discussed in the paper. One example
 is the functionality surrounding single Y-type yokes. The code is brittle, and
 we emphasize caution when using these 'additional' functionalities - they have not been updated.
 
-To install the requirements:
+## Setup
+
+Use Python 3.12 or newer. Python 3.14 is the version used to validate this
+fork. From the repository root:
+
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-sudo apt install parallel
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pytest
 ```
+
+The virtual environment and generated `out/` directory are ignored by Git.
+GNU Parallel is only required by some legacy top-level scripts; install it
+separately when using those workflows (for example, `sudo apt install
+parallel` on Debian or Ubuntu).
+
+For the focused Figure 8 1D-yoked workflow, including resource controls and
+the distinction between released and regenerated data, see
+[`REPRODUCING_FIG8_1D.md`](REPRODUCING_FIG8_1D.md).
 
 ## Directory structure
 

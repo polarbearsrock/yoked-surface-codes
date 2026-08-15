@@ -1,6 +1,7 @@
 import json
 
 import numpy as np
+import pygltflib
 
 from gen._surf._viz_gltf_3d import ColoredTriangleData, gltf_model_from_colored_triangle_data, viz_3d_gltf_model_html
 
@@ -70,7 +71,7 @@ def test_gltf_model_from_colored_triangle_data():
             }
         ],
         "asset": {
-            "generator": "pygltflib@v1.15.6",
+            "generator": f"pygltflib@v{pygltflib.__version__}",
             "version": "2.0"
         },
         "bufferViews": [
@@ -96,13 +97,17 @@ def test_gltf_model_from_colored_triangle_data():
         "materials": [
             {
                 "pbrMetallicRoughness": {
-                    "baseColorFactor": [1, 0, 0, 1]
+                    "baseColorFactor": [1, 0, 0, 1],
+                    "metallicFactor": 0.3,
+                    "roughnessFactor": 0.8
                 },
                 "doubleSided": True
             },
             {
                 "pbrMetallicRoughness": {
-                    "baseColorFactor": [1, 0, 1, 1]
+                    "baseColorFactor": [1, 0, 1, 1],
+                    "metallicFactor": 0.3,
+                    "roughnessFactor": 0.8
                 },
                 "doubleSided": True
             }
