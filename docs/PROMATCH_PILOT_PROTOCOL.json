@@ -1,8 +1,8 @@
 {
   "schema": "yoked.promatch.l1.protocol",
-  "schema_version": 1,
+  "schema_version": 2,
   "protocol_kind": "pilot",
-  "protocol_version": "promatch-l1-pilot-v1",
+  "protocol_version": "promatch-l1-pilot-v2",
   "status": "DRAFT_TEMPLATE_NOT_FROZEN",
   "frozen": false,
   "claim_bearing": false,
@@ -155,7 +155,7 @@
     ]
   },
   "sampler_seed_roots": {
-    "pilot": "2226b38b5ab04cd8532b4e26d3abcbf752cf94587068b91426f1e55d2277de9a",
+    "pilot": "2a7726512bc656068cf7dbf6221e1f8c97843ec56c48517ffb55b3bbb5c288e5",
     "confirmatory_holdout": "ba4df6460b1848846c5f55ba4a5981250b9a32a72bc3f8f9890d59eec52684c9",
     "target_workload": "e3dd75362e009a342c3465b1d5e1b69cc932fd00f3e2cffaf1f5b7ec65d5c93c",
     "timing_corpus": "d1d6747f169d2904233323d996586b50cb7300014d13574502f56862e80810d1",
@@ -257,7 +257,7 @@
     "promatch_reference_commit": "78929be805c602c1ee74fcff9c334fc959afbbb8"
   },
   "output_schema": {
-    "schema_version": 1,
+    "schema_version": 2,
     "required_files": [
       "experiment.json",
       "protocol.json",
@@ -293,10 +293,15 @@
       "stage_commits",
       "original_residual_hw_joint_histogram"
     ],
-    "bounded_disagreement_policy": {
-      "maximum_rows_per_category_per_cell": 100,
-      "categories": ["regression", "recovery", "rollback", "invariant_debug"],
-      "selection": "lowest_SHA256_of_cell_batch_shot_category",
+    "bounded_replay_policy": {
+      "categories": ["regression", "recovery", "rollback"],
+      "maximum_candidate_rows_per_category_per_batch_ledger": 100,
+      "maximum_retained_rows_per_category_per_cell_summary": 100,
+      "selection_key": "SHA256_ASCII(cell_id:batch_id:shot_index:category)",
+      "batch_ledger_selection": "lowest_selection_sha256_within_batch_and_category",
+      "cell_summary_selection": "lowest_selection_sha256_across_batch_candidates_within_cell_and_category",
+      "equal_cap_prefilter_equivalence": true,
+      "invariant_violation_policy": "fatal_run_error_no_replay_row",
       "must_be_replayable": true
     },
     "integrity": "reject missing or duplicate ranges, digest mismatches, nonreconciling counts, wrong fixed N, or manifest-hash mismatches"

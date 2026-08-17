@@ -7,7 +7,7 @@ PU.  Completed batches are independent JSON ledger records, making resume a
 set difference over predeclared batch IDs instead of a continuation of an RNG
 stream.
 
-Frozen protocol schema (``promatch-l1-paired-protocol-v1``):
+Frozen protocol schema (``promatch-l1-paired-protocol-v2``):
 
 * ``phase`` is ``pilot`` or ``confirm``, ``status`` is ``FROZEN``, and
   ``frozen`` is true; a frozen confirm manifest also owns the separate
@@ -20,8 +20,10 @@ Frozen protocol schema (``promatch-l1-paired-protocol-v1``):
   fixed-shot schedule;
 * each ``cells`` row declares generator inputs and the circuit, DEM, layout,
   and graph hashes; and
-* ``decoder`` freezes the PU policy while ``disagreement_cap`` bounds retained
-  replay examples per category.
+* ``decoder`` freezes the PU policy while ``replay_policy`` separately bounds
+  per-batch replay candidates and per-cell summary examples.  Only regression,
+  recovery, and rollback shots are replay categories; invariant violations are
+  fatal run errors.
 
 Draft protocols may be inspected/frozen and used by the ``smoke`` command, but
 never by scientific ``pilot``/``confirm`` collection.
@@ -69,12 +71,21 @@ from yoked.decoding._promatch_stats import (
 )
 
 
-PROTOCOL_SCHEMA = "promatch-l1-paired-protocol-v1"
+PROTOCOL_SCHEMA = "promatch-l1-paired-protocol-v2"
 PROTOCOL_KIND = "promatch-l1-paired-fixed-shot"
 LEDGER_SCHEMA = "promatch-l1-paired-batch-v1"
 SUMMARY_SCHEMA = "promatch-l1-paired-summary-v1"
 SEED_DERIVATION = "sha256-root+stim-batch+uint64le-first8-uint64le"
 GENERATOR = "yoked._yoked_memory_circuits:yoked_magic_memory_circuit"
+REPLAY_CATEGORIES = ("regression", "recovery", "rollback")
+REPLAY_SELECTION_KEY = "SHA256_ASCII(cell_id:batch_id:shot_index:category)"
+REPLAY_BATCH_SELECTION = (
+    "lowest_selection_sha256_within_batch_and_category"
+)
+REPLAY_CELL_SELECTION = (
+    "lowest_selection_sha256_across_batch_candidates_within_cell_and_category"
+)
+INVARIANT_VIOLATION_POLICY = "fatal_run_error_no_replay_row"
 THREAD_ENVIRONMENT = (
     "OMP_NUM_THREADS",
     "OPENBLAS_NUM_THREADS",
@@ -122,6 +133,43 @@ def _default_source_paths(root: Path) -> list[str]:
 
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _canonical_replay_policy(cap: int) -> dict[str, Any]:
+    return {
+        "categories": list(REPLAY_CATEGORIES),
+        "maximum_candidate_rows_per_category_per_batch_ledger": cap,
+        "maximum_retained_rows_per_category_per_cell_summary": cap,
+        "selection_key": REPLAY_SELECTION_KEY,
+        "batch_ledger_selection": REPLAY_BATCH_SELECTION,
+        "cell_summary_selection": REPLAY_CELL_SELECTION,
+        "equal_cap_prefilter_equivalence": True,
+        "invariant_violation_policy": INVARIANT_VIOLATION_POLICY,
+        "must_be_replayable": True,
+    }
+
+
+def _validate_replay_policy(value: Any) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        raise ValueError("replay_policy must be an object")
+    batch_cap = value.get(
+        "maximum_candidate_rows_per_category_per_batch_ledger"
+    )
+    summary_cap = value.get(
+        "maximum_retained_rows_per_category_per_cell_summary"
+    )
+    for name, cap in (("batch", batch_cap), ("summary", summary_cap)):
+        if isinstance(cap, bool) or not isinstance(cap, int) or cap < 0:
+            raise ValueError(f"replay_policy {name} cap must be a nonnegative integer")
+    if batch_cap != summary_cap:
+        raise ValueError(
+            "replay_policy batch and summary caps must be equal so the batch "
+            "prefilter preserves the globally lowest per-cell hashes"
+        )
+    expected = _canonical_replay_policy(batch_cap)
+    if dict(value) != expected:
+        raise ValueError(f"replay_policy must be exactly {expected}")
+    return expected
 
 
 def _jsonable_digest(value: ArrayDigest) -> dict[str, Any]:
@@ -445,7 +493,7 @@ def _required_protocol_fields() -> tuple[str, ...]:
         "cell_batch_schedules",
         "dem_options",
         "decoder",
-        "disagreement_cap",
+        "replay_policy",
         "cells",
         "scientific_contract",
         "analysis_config",
@@ -538,10 +586,15 @@ def normalize_protocol(manifest: Mapping[str, Any], *, for_freeze: bool = False)
 
     if manifest.get("schema") == PROTOCOL_SCHEMA:
         return json.loads(json.dumps(manifest))
-    if manifest.get("schema") != "yoked.promatch.l1.protocol" or manifest.get("schema_version") != 1:
+    if (
+        manifest.get("schema") != "yoked.promatch.l1.protocol"
+        or manifest.get("schema_version") != 2
+    ):
         raise ValueError("unsupported documented protocol schema")
     kind = manifest.get("protocol_kind")
     if kind == "pilot":
+        if manifest.get("protocol_version") != "promatch-l1-pilot-v2":
+            raise ValueError("pilot protocol_version must be promatch-l1-pilot-v2")
         phase = "pilot"
         raw_cells = manifest.get("pilot", {}).get("cells")
         if not isinstance(raw_cells, list) or not raw_cells:
@@ -559,6 +612,10 @@ def normalize_protocol(manifest: Mapping[str, Any], *, for_freeze: bool = False)
             if schedules[cell["cell_id"]][-1]["batch_id"] != cell["batch_id_end_inclusive"]:
                 raise ValueError("documented pilot batch ID range does not match its shot count")
     elif kind == "first_round_confirmatory":
+        if manifest.get("protocol_version") != "promatch-l1-first-round-v2":
+            raise ValueError(
+                "confirmatory protocol_version must be promatch-l1-first-round-v2"
+            )
         phase = "confirm"
         selected = manifest.get("selection", {}).get("selected_cell")
         if selected is None:
@@ -612,9 +669,12 @@ def normalize_protocol(manifest: Mapping[str, Any], *, for_freeze: bool = False)
     else:
         raise ValueError(f"unsupported documented protocol_kind {kind!r}")
     config = manifest.get("decoders", {}).get("pu_window", {}).get("configuration", {})
-    cap = manifest.get("output_schema", {}).get("bounded_disagreement_policy", {}).get(
-        "maximum_rows_per_category_per_cell", 100
-    )
+    output_schema = manifest.get("output_schema")
+    if not isinstance(output_schema, Mapping):
+        raise ValueError("documented output_schema must be an object")
+    if output_schema.get("schema_version") != 2:
+        raise ValueError("documented output_schema.schema_version must be 2")
+    replay_policy = _validate_replay_policy(output_schema.get("bounded_replay_policy"))
     normalized = {
         "schema": PROTOCOL_SCHEMA,
         "kind": PROTOCOL_KIND,
@@ -638,7 +698,7 @@ def normalize_protocol(manifest: Mapping[str, Any], *, for_freeze: bool = False)
             "boundary_policy": config.get("boundary_policy"),
             "observable_policy": config.get("observable_policy"),
         },
-        "disagreement_cap": cap,
+        "replay_policy": replay_policy,
         "cells": cells,
         "scientific_contract": (
             {
@@ -898,9 +958,33 @@ def validate_experiment_protocol(
     }:
         raise ValueError("scientific collection requires the frozen primary PU-window decoder")
     _dem_options(manifest)
-    cap = manifest.get("disagreement_cap")
-    if isinstance(cap, bool) or not isinstance(cap, int) or cap < 0:
-        raise ValueError("disagreement_cap must be a nonnegative integer")
+    replay_policy = _validate_replay_policy(manifest.get("replay_policy"))
+    if scientific:
+        analysis_config = manifest.get("analysis_config")
+        if not isinstance(analysis_config, Mapping):
+            raise ValueError("frozen analysis_config must be an object")
+        output_schema = analysis_config.get("output_schema")
+        if not isinstance(output_schema, Mapping):
+            raise ValueError("frozen output_schema must be an object")
+        if output_schema.get("schema_version") != 2:
+            raise ValueError("frozen output_schema.schema_version must be 2")
+        documented_policy = output_schema.get("bounded_replay_policy")
+        if documented_policy != replay_policy:
+            raise ValueError(
+                "frozen output-schema replay policy differs from the executable policy"
+            )
+        scientific_contract = manifest.get("scientific_contract")
+        if not isinstance(scientific_contract, Mapping):
+            raise ValueError("frozen scientific_contract must be an object")
+        expected_protocol_version = (
+            "promatch-l1-pilot-v2"
+            if phase == "pilot"
+            else "promatch-l1-first-round-v2"
+        )
+        if scientific_contract.get("protocol_version") != expected_protocol_version:
+            raise ValueError(
+                "frozen scientific_contract has the wrong protocol_version"
+            )
     cells = _phase_cells(manifest, phase)
     if len({cell.get("cell_id") for cell in cells if isinstance(cell, Mapping)}) != len(cells):
         raise ValueError("cell IDs must be unique")
@@ -1284,21 +1368,35 @@ def _replay_sample(
     u0: np.ndarray,
     pu: np.ndarray,
 ) -> dict[str, Any]:
-    selection_key = (
-        f"{cell_id}:{batch.batch_id}:{batch.shot_start + offset}:{category}"
-    ).encode("ascii")
+    shot_index = batch.shot_start + offset
     return {
-        "selection_sha256": _sha256_bytes(selection_key),
+        "selection_sha256": _replay_selection_sha256(
+            cell_id=cell_id,
+            batch_id=batch.batch_id,
+            shot_index=shot_index,
+            category=category,
+        ),
         "category": category,
         "batch_id": batch.batch_id,
         "shot_offset": offset,
-        "shot_index": batch.shot_start + offset,
+        "shot_index": shot_index,
         "stim_seed": seed,
         "detection_events_hex": bytes(dets[offset]).hex(),
         "observables_hex": bytes(obs[offset]).hex(),
         "u0_prediction_hex": bytes(u0[offset]).hex(),
         "pu_prediction_hex": bytes(pu[offset]).hex(),
     }
+
+
+def _replay_selection_sha256(
+    *, cell_id: str, batch_id: int, shot_index: int, category: str
+) -> str:
+    if category not in REPLAY_CATEGORIES:
+        raise ValueError(f"unsupported replay category {category!r}")
+    selection_key = f"{cell_id}:{batch_id}:{shot_index}:{category}".encode(
+        "ascii"
+    )
+    return _sha256_bytes(selection_key)
 
 
 def _retain_lowest_hash_samples(
@@ -1314,10 +1412,14 @@ def collect_prepared_batch(
     seed_root: str,
     experiment_id: str,
     phase: str,
-    disagreement_cap: int,
+    replay_policy: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Collect one immutable paired batch (also useful for focused tests)."""
 
+    replay_policy = _validate_replay_policy(replay_policy)
+    batch_candidate_cap = replay_policy[
+        "maximum_candidate_rows_per_category_per_batch_ledger"
+    ]
     seed = derive_stim_batch_seed(seed_root=seed_root, batch_id=batch.batch_id)
     sampler = prepared.circuit.compile_detector_sampler(seed=seed)
     dets, obs = sampler.sample(
@@ -1372,7 +1474,7 @@ def collect_prepared_batch(
         baseline_failed=baseline_failed, treatment_failed=treatment_failed
     )
     replay = []
-    categories = {
+    category_offsets = {
         "regression": np.flatnonzero(~baseline_failed & treatment_failed),
         "recovery": np.flatnonzero(baseline_failed & ~treatment_failed),
         "rollback": np.asarray(
@@ -1384,22 +1486,25 @@ def collect_prepared_batch(
             dtype=np.int64,
         ),
     }
-    for category, offsets in categories.items():
+    if tuple(category_offsets) != REPLAY_CATEGORIES:
+        raise AssertionError("collector replay categories drifted from the protocol")
+    for category in REPLAY_CATEGORIES:
+        offsets = category_offsets[category]
         candidates = [
             _replay_sample(
-                    cell_id=prepared.cell["cell_id"],
-                    category=category,
-                    batch=batch,
-                    offset=int(offset),
-                    seed=seed,
-                    dets=dets,
-                    obs=obs,
-                    u0=u0,
-                    pu=pu,
-                )
+                cell_id=prepared.cell["cell_id"],
+                category=category,
+                batch=batch,
+                offset=int(offset),
+                seed=seed,
+                dets=dets,
+                obs=obs,
+                u0=u0,
+                pu=pu,
+            )
             for offset in offsets
         ]
-        replay.extend(_retain_lowest_hash_samples(candidates, disagreement_cap))
+        replay.extend(_retain_lowest_hash_samples(candidates, batch_candidate_cap))
     return {
         "schema": LEDGER_SCHEMA,
         "experiment_id": experiment_id,
@@ -1440,7 +1545,7 @@ def _worker_collect(task: dict[str, Any]) -> dict[str, Any]:
         seed_root=task["seed_root"],
         experiment_id=task["experiment_id"],
         phase=task["phase"],
-        disagreement_cap=task["disagreement_cap"],
+        replay_policy=task["replay_policy"],
     )
 
 
@@ -1492,8 +1597,12 @@ def _validate_ledger_row(
     batch: BatchSpec,
     seed_root: str,
     expected_provenance: Mapping[str, Any],
-    disagreement_cap: int,
+    replay_policy: Mapping[str, Any],
 ) -> None:
+    replay_policy = _validate_replay_policy(replay_policy)
+    batch_candidate_cap = replay_policy[
+        "maximum_candidate_rows_per_category_per_batch_ledger"
+    ]
     if row.get("schema") != LEDGER_SCHEMA:
         raise ValueError("existing ledger has an unsupported schema")
     if row.get("experiment_id") != experiment_id or row.get("phase") != phase:
@@ -1535,12 +1644,114 @@ def _validate_ledger_row(
     telemetry = row.get("telemetry")
     if not isinstance(telemetry, Mapping) or telemetry.get("shots") != batch.shots:
         raise ValueError("existing ledger telemetry does not reconcile to batch shots")
+    rollback_shots = telemetry.get("rollback_shots")
+    if (
+        isinstance(rollback_shots, bool)
+        or not isinstance(rollback_shots, int)
+        or not 0 <= rollback_shots <= batch.shots
+    ):
+        raise ValueError("existing ledger telemetry has invalid rollback_shots")
     replay = row.get("replay_samples")
     if not isinstance(replay, list):
         raise ValueError("existing ledger replay_samples must be an array")
-    replay_counts = Counter(sample.get("category") for sample in replay if isinstance(sample, Mapping))
-    if None in replay_counts or any(value > disagreement_cap for value in replay_counts.values()):
+    replay_fields = {
+        "selection_sha256",
+        "category",
+        "batch_id",
+        "shot_offset",
+        "shot_index",
+        "stim_seed",
+        "detection_events_hex",
+        "observables_hex",
+        "u0_prediction_hex",
+        "pu_prediction_hex",
+    }
+    replay_counts: Counter[str] = Counter()
+    selection_hashes: set[str] = set()
+    for sample in replay:
+        if not isinstance(sample, Mapping) or set(sample) != replay_fields:
+            raise ValueError("existing ledger has a malformed replay sample")
+        category = sample["category"]
+        if category not in REPLAY_CATEGORIES:
+            raise ValueError(
+                f"existing ledger has unsupported replay category {category!r}"
+            )
+        replay_counts[category] += 1
+        offset = sample["shot_offset"]
+        if (
+            isinstance(offset, bool)
+            or not isinstance(offset, int)
+            or not 0 <= offset < batch.shots
+        ):
+            raise ValueError("existing ledger replay shot_offset is outside its batch")
+        shot_index = batch.shot_start + offset
+        if (
+            sample["batch_id"] != batch.batch_id
+            or sample["shot_index"] != shot_index
+            or sample["stim_seed"] != expected_seed
+        ):
+            raise ValueError("existing ledger replay identity does not match its batch")
+        expected_selection = _replay_selection_sha256(
+            cell_id=str(cell["cell_id"]),
+            batch_id=batch.batch_id,
+            shot_index=shot_index,
+            category=category,
+        )
+        if sample["selection_sha256"] != expected_selection:
+            raise ValueError("existing ledger replay selection hash mismatch")
+        if expected_selection in selection_hashes:
+            raise ValueError("existing ledger contains a duplicate replay sample")
+        selection_hashes.add(expected_selection)
+
+        decoded: dict[str, bytes] = {}
+        replay_widths = {
+            "detection_events_hex": expected_widths["detectors"],
+            "observables_hex": expected_widths["observables"],
+            "u0_prediction_hex": expected_widths["observables"],
+            "pu_prediction_hex": expected_widths["observables"],
+        }
+        for key, expected_width in replay_widths.items():
+            value = sample[key]
+            if not isinstance(value, str) or len(value) != expected_width * 2:
+                raise ValueError(f"existing ledger replay {key} has the wrong width")
+            if any(ch not in "0123456789abcdef" for ch in value):
+                raise ValueError(
+                    f"existing ledger replay {key} is not canonical lowercase hex"
+                )
+            decoded[key] = bytes.fromhex(value)
+        observable = decoded["observables_hex"]
+        u0_failed = any(
+            actual ^ predicted
+            for actual, predicted in zip(observable, decoded["u0_prediction_hex"])
+        )
+        pu_failed = any(
+            actual ^ predicted
+            for actual, predicted in zip(observable, decoded["pu_prediction_hex"])
+        )
+        # Correctness categories are self-verifying from the retained logical
+        # predictions. Rollback is an internal predecoder control-flow state:
+        # its detector corpus is replayable here, while scientific collection
+        # authenticates the status by regenerating and comparing the complete
+        # deterministic batch payload before analysis.
+        if category == "regression" and (u0_failed or not pu_failed):
+            raise ValueError("existing ledger replay is not a regression")
+        if category == "recovery" and (not u0_failed or pu_failed):
+            raise ValueError("existing ledger replay is not a recovery")
+    if any(value > batch_candidate_cap for value in replay_counts.values()):
         raise ValueError("existing ledger exceeds the bounded replay-sample policy")
+    expected_replay_counts = {
+        "regression": min(batch_candidate_cap, int(table["regressions"])),
+        "recovery": min(batch_candidate_cap, int(table["recoveries"])),
+        "rollback": min(batch_candidate_cap, rollback_shots),
+    }
+    if any(
+        replay_counts[category] != expected_replay_counts[category]
+        for category in REPLAY_CATEGORIES
+    ):
+        raise ValueError(
+            "existing ledger replay samples are incomplete for the frozen "
+            "deterministic retention policy"
+        )
 
 
 def _sum_counter_dict(target: Counter[str], value: Mapping[str, int]) -> None:
@@ -1553,8 +1764,12 @@ def summarize_ledgers(
     *,
     experiment_id: str,
     phase: str,
-    disagreement_cap: int,
+    replay_policy: Mapping[str, Any],
 ) -> dict[str, Any]:
+    replay_policy = _validate_replay_policy(replay_policy)
+    summary_cell_cap = replay_policy[
+        "maximum_retained_rows_per_category_per_cell_summary"
+    ]
     grouped: dict[str, list[Mapping[str, Any]]] = {}
     for row in rows:
         grouped.setdefault(str(row["cell_id"]), []).append(row)
@@ -1566,7 +1781,7 @@ def summarize_ledgers(
         dict_telemetry: dict[str, Counter[str]] = {}
         stage_telemetry: dict[str, np.ndarray] = {}
         replay: dict[str, list[dict[str, Any]]] = {
-            "regression": [], "recovery": [], "rollback": [], "invariant-debug": []
+            category: [] for category in REPLAY_CATEGORIES
         }
         for row in cell_rows:
             contingency.update(row["paired_contingency"])
@@ -1594,7 +1809,7 @@ def summarize_ledgers(
                 "replay_samples": [
                     sample
                     for category in replay.values()
-                    for sample in _retain_lowest_hash_samples(category, disagreement_cap)
+                    for sample in _retain_lowest_hash_samples(category, summary_cell_cap)
                 ],
             }
         )
@@ -1691,7 +1906,7 @@ def run_collection(
                     batch=batch,
                     seed_root=manifest["sampler_seed_roots"][split],
                     expected_provenance=prepared_provenance[cell["cell_id"]],
-                    disagreement_cap=manifest["disagreement_cap"],
+                    replay_policy=manifest["replay_policy"],
                 )
                 if not scientific:
                     completed.append(row)
@@ -1705,7 +1920,7 @@ def run_collection(
                     "seed_root": manifest["sampler_seed_roots"][split],
                     "experiment_id": experiment_id,
                     "phase": phase,
-                    "disagreement_cap": manifest["disagreement_cap"],
+                    "replay_policy": manifest["replay_policy"],
                 }
             if path.exists():
                 # A scientific resume never trusts strings in an old ledger:
@@ -1746,7 +1961,7 @@ def run_collection(
         completed,
         experiment_id=experiment_id,
         phase=phase,
-        disagreement_cap=manifest["disagreement_cap"],
+        replay_policy=manifest["replay_policy"],
     )
     _atomic_json_write(out / "summary.json", summary)
     return summary
@@ -1779,7 +1994,7 @@ def default_smoke_protocol(*, processes: int = 32, shots: int = 10_000) -> dict[
             "boundary_policy": "disabled",
             "observable_policy": "zero-frame",
         },
-        "disagreement_cap": 4,
+        "replay_policy": _canonical_replay_policy(4),
         "cells": [
             {
                 "cell_id": "smoke-d3-n6-r12-p0.001-y2",
@@ -1804,6 +2019,7 @@ __all__ = [
     "LEDGER_SCHEMA",
     "PROTOCOL_KIND",
     "PROTOCOL_SCHEMA",
+    "REPLAY_CATEGORIES",
     "SUMMARY_SCHEMA",
     "build_batch_schedule",
     "collect_prepared_batch",

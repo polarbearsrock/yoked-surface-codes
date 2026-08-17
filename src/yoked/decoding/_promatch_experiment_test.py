@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 
@@ -8,6 +9,7 @@ import pytest
 import yoked.decoding._promatch_experiment as promatch_experiment
 from yoked.decoding._promatch_experiment import (
     LEDGER_SCHEMA,
+    REPLAY_CATEGORIES,
     SUMMARY_SCHEMA,
     build_batch_schedule,
     collect_prepared_batch,
@@ -19,6 +21,7 @@ from yoked.decoding._promatch_experiment import (
     validate_experiment_protocol,
     freeze_protocol,
     _retain_lowest_hash_samples,
+    _validate_ledger_row,
     _verify_regenerated_scientific_ledger,
 )
 from yoked.decoding._promatch_stats import (
@@ -61,10 +64,25 @@ def test_documented_pilot_template_normalizes_to_disjoint_cell_schedules() -> No
         / "PROMATCH_PILOT_PROTOCOL.json"
     )
     normalized = normalize_protocol(json.loads(path.read_text()))
-    assert normalized["schema"] == "promatch-l1-paired-protocol-v1"
+    assert normalized["schema"] == "promatch-l1-paired-protocol-v2"
     assert normalized["kind"] == "promatch-l1-paired-fixed-shot"
     assert normalized["phase"] == "pilot"
     assert normalized["claim_bearing"] is False
+    assert normalized["replay_policy"] == {
+        "categories": ["regression", "recovery", "rollback"],
+        "maximum_candidate_rows_per_category_per_batch_ledger": 100,
+        "maximum_retained_rows_per_category_per_cell_summary": 100,
+        "selection_key": "SHA256_ASCII(cell_id:batch_id:shot_index:category)",
+        "batch_ledger_selection": (
+            "lowest_selection_sha256_within_batch_and_category"
+        ),
+        "cell_summary_selection": (
+            "lowest_selection_sha256_across_batch_candidates_within_cell_and_category"
+        ),
+        "equal_cap_prefilter_equivalence": True,
+        "invariant_violation_policy": "fatal_run_error_no_replay_row",
+        "must_be_replayable": True,
+    }
     assert len(normalized["cells"]) == 5
     ranges = []
     for cell in normalized["cells"]:
@@ -101,6 +119,7 @@ def test_documented_confirm_template_is_inspectable_but_not_freezable() -> None:
     normalized = normalize_protocol(documented)
     assert normalized["kind"] == "promatch-l1-paired-fixed-shot"
     assert normalized["phase"] == "confirm"
+    assert tuple(normalized["replay_policy"]["categories"]) == REPLAY_CATEGORIES
     assert normalized["cells"][0]["cell_id"] == "target-d11-n6-y2-r44-p0.001"
     assert normalized["performance_cells"] == normalized["cells"]
     target_id = "target-d11-n6-y2-r44-p0.001"
@@ -124,6 +143,53 @@ def test_documented_confirm_template_is_inspectable_but_not_freezable() -> None:
     assert manifest_experiment_id(changed) != before
     with pytest.raises(ValueError, match="selection.selected_cell"):
         normalize_protocol(documented, for_freeze=True)
+
+
+def test_documented_replay_policy_fails_closed() -> None:
+    path = (
+        Path(__file__).resolve().parents[3]
+        / "docs"
+        / "PROMATCH_PILOT_PROTOCOL.json"
+    )
+    documented = json.loads(path.read_text())
+    policy = documented["output_schema"]["bounded_replay_policy"]
+    mutations = []
+
+    changed = copy.deepcopy(documented)
+    changed["output_schema"]["bounded_replay_policy"]["categories"].append(
+        "invariant_debug"
+    )
+    mutations.append((changed, "replay_policy"))
+
+    changed = copy.deepcopy(documented)
+    changed["output_schema"]["bounded_replay_policy"][
+        "maximum_candidate_rows_per_category_per_batch_ledger"
+    ] = policy["maximum_retained_rows_per_category_per_cell_summary"] - 1
+    mutations.append((changed, "replay_policy"))
+
+    changed = copy.deepcopy(documented)
+    changed["output_schema"]["bounded_replay_policy"]["selection_key"] = (
+        "implementation_defined"
+    )
+    mutations.append((changed, "replay_policy"))
+
+    changed = copy.deepcopy(documented)
+    changed["output_schema"]["bounded_replay_policy"][
+        "invariant_violation_policy"
+    ] = "retain_invariant_debug"
+    mutations.append((changed, "replay_policy"))
+
+    changed = copy.deepcopy(documented)
+    changed["output_schema"]["schema_version"] = 1
+    mutations.append((changed, "output_schema.schema_version"))
+
+    changed = copy.deepcopy(documented)
+    changed["protocol_version"] = "promatch-l1-pilot-v1"
+    mutations.append((changed, "protocol_version"))
+
+    for candidate, message in mutations:
+        with pytest.raises(ValueError, match=message):
+            normalize_protocol(candidate)
 
 
 def test_target_validation_enforces_exact_performance_geometry_before_provenance() -> None:
@@ -163,7 +229,9 @@ def test_target_summary_is_explicitly_performance_only() -> None:
         [],
         experiment_id="0" * 64,
         phase="target",
-        disagreement_cap=0,
+        replay_policy=default_smoke_protocol(processes=1, shots=1)[
+            "replay_policy"
+        ],
     )
     assert summary["collection_scope"] == (
         "target-performance-only-no-accuracy-confirmation"
@@ -206,6 +274,147 @@ def test_replay_retention_uses_lowest_hash_not_arrival_order() -> None:
     assert [row["value"] for row in _retain_lowest_hash_samples(samples, 2)] == [2, 3]
 
 
+def test_summary_replay_cap_selects_global_lowest_hashes_across_batches() -> None:
+    replay_policy = copy.deepcopy(
+        default_smoke_protocol(processes=1, shots=1)["replay_policy"]
+    )
+    replay_policy[
+        "maximum_candidate_rows_per_category_per_batch_ledger"
+    ] = 2
+    replay_policy[
+        "maximum_retained_rows_per_category_per_cell_summary"
+    ] = 2
+
+    def row(batch_id: int, hashes: list[str]) -> dict:
+        return {
+            "cell_id": "cell",
+            "batch": {"batch_id": batch_id, "shot_start": batch_id, "shots": 1},
+            "paired_contingency": {"both_correct": 1},
+            "telemetry": {"shots": 1},
+            "replay_samples": [
+                {"category": "regression", "selection_sha256": value}
+                for value in hashes
+            ],
+        }
+
+    rows = [row(0, ["f" * 64, "0" * 64]), row(1, ["8" * 64, "1" * 64])]
+    assert all(len(item["replay_samples"]) <= 2 for item in rows)
+    summary = summarize_ledgers(
+        rows,
+        experiment_id="0" * 64,
+        phase="pilot",
+        replay_policy=replay_policy,
+    )
+    retained = summary["cells"][0]["replay_samples"]
+    assert [item["selection_sha256"] for item in retained] == ["0" * 64, "1" * 64]
+
+
+def test_ledger_validation_rejects_noncanonical_replay_categories() -> None:
+    protocol = default_smoke_protocol(processes=1, shots=4)
+    cell = protocol["cells"][0]
+    prepared = prepare_cell(
+        cell,
+        decoder_config=protocol["decoder"],
+        dem_options=protocol["dem_options"],
+        verify_hashes=False,
+    )
+    batch = BatchSpec.from_json(protocol["cell_batch_schedules"][cell["cell_id"]][0])
+    row = collect_prepared_batch(
+        prepared,
+        batch=batch,
+        seed_root=protocol["sampler_seed_roots"]["smoke"],
+        experiment_id=protocol["experiment_id"],
+        phase="smoke",
+        replay_policy=protocol["replay_policy"],
+    )
+    validation_args = {
+        "experiment_id": protocol["experiment_id"],
+        "phase": "smoke",
+        "cell": cell,
+        "batch": batch,
+        "seed_root": protocol["sampler_seed_roots"]["smoke"],
+        "expected_provenance": prepared.provenance,
+        "replay_policy": protocol["replay_policy"],
+    }
+    _validate_ledger_row(row, **validation_args)
+
+    malformed = copy.deepcopy(row)
+    malformed["replay_samples"] = [None]
+    with pytest.raises(ValueError, match="malformed replay"):
+        _validate_ledger_row(malformed, **validation_args)
+
+    detector_width = (prepared.dem.num_detectors + 7) // 8
+    observable_width = (prepared.dem.num_observables + 7) // 8
+    sample = {
+        "selection_sha256": "0" * 64,
+        "category": "",
+        "batch_id": batch.batch_id,
+        "shot_offset": 0,
+        "shot_index": batch.shot_start,
+        "stim_seed": row["stim_seed"],
+        "detection_events_hex": "00" * detector_width,
+        "observables_hex": "00" * observable_width,
+        "u0_prediction_hex": "00" * observable_width,
+        "pu_prediction_hex": "00" * observable_width,
+    }
+    for category in ("invariant_debug", "invariant-debug", "arbitrary"):
+        invalid = copy.deepcopy(row)
+        invalid_sample = dict(sample)
+        invalid_sample["category"] = category
+        invalid["replay_samples"] = [invalid_sample]
+        with pytest.raises(ValueError, match="unsupported replay category"):
+            _validate_ledger_row(invalid, **validation_args)
+
+    complete = copy.deepcopy(row)
+    complete["paired_contingency"] = {
+        "both_correct": batch.shots - 1,
+        "regressions": 1,
+        "recoveries": 0,
+        "both_wrong": 0,
+    }
+    complete["telemetry"]["rollback_shots"] = 0
+    regression_sample = dict(sample)
+    regression_sample["category"] = "regression"
+    regression_sample["selection_sha256"] = (
+        promatch_experiment._replay_selection_sha256(
+            cell_id=cell["cell_id"],
+            batch_id=batch.batch_id,
+            shot_index=batch.shot_start,
+            category="regression",
+        )
+    )
+    regression_sample["pu_prediction_hex"] = "01" + "00" * (
+        observable_width - 1
+    )
+    complete["replay_samples"] = [regression_sample]
+    _validate_ledger_row(complete, **validation_args)
+    complete["replay_samples"] = []
+    with pytest.raises(ValueError, match="replay samples are incomplete"):
+        _validate_ledger_row(complete, **validation_args)
+
+    truncated_policy = copy.deepcopy(protocol["replay_policy"])
+    truncated_policy[
+        "maximum_candidate_rows_per_category_per_batch_ledger"
+    ] = 2
+    truncated_policy[
+        "maximum_retained_rows_per_category_per_cell_summary"
+    ] = 2
+    truncated = copy.deepcopy(row)
+    truncated["paired_contingency"] = {
+        "both_correct": batch.shots - 3,
+        "regressions": 3,
+        "recoveries": 0,
+        "both_wrong": 0,
+    }
+    truncated["telemetry"]["rollback_shots"] = 0
+    truncated["replay_samples"] = [regression_sample]
+    with pytest.raises(ValueError, match="replay samples are incomplete"):
+        _validate_ledger_row(
+            truncated,
+            **{**validation_args, "replay_policy": truncated_policy},
+        )
+
+
 def test_scientific_resume_rejects_any_regenerated_payload_difference() -> None:
     _verify_regenerated_scientific_ledger({"digest": "a"}, {"digest": "a"}, path="x")
     with pytest.raises(ValueError, match="regenerated scientific batch"):
@@ -242,7 +451,7 @@ def test_real_paired_batch_has_complete_reconciling_telemetry() -> None:
         seed_root=protocol["sampler_seed_roots"]["smoke"],
         experiment_id=protocol["experiment_id"],
         phase="smoke",
-        disagreement_cap=protocol["disagreement_cap"],
+        replay_policy=protocol["replay_policy"],
     )
 
     assert row["schema"] == LEDGER_SCHEMA
@@ -268,8 +477,10 @@ def test_real_paired_batch_has_complete_reconciling_telemetry() -> None:
     assert sum(telemetry["original_residual_hw_joint_histogram"].values()) == 64
     assert all(
         len([s for s in row["replay_samples"] if s["category"] == category])
-        <= protocol["disagreement_cap"]
-        for category in ("regression", "recovery", "rollback")
+        <= protocol["replay_policy"][
+            "maximum_candidate_rows_per_category_per_batch_ledger"
+        ]
+        for category in REPLAY_CATEGORIES
     )
 
 

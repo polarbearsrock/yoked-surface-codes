@@ -677,11 +677,12 @@ repack path but commits no matches. It must return predictions bit-for-bit
 identical to `U0-direct`.
 
 The production Sinter adapter does not retain unbounded shot telemetry. The
-paired harness records bounded aggregate counts and a capped, replayable sample
-of disagreements. The paired accuracy/workload collector has exactly two arms:
-`U0-direct` and `PU-window`, decoded from the same sampled arrays. `U0-wrap` is
-validated against `U0-direct` in tests and used as an identity-adapter timing
-control; it is not collected as a third accuracy arm.
+paired harness records bounded aggregate counts and capped, replayable
+regression, recovery, and rollback examples. The paired accuracy/workload
+collector has exactly two arms: `U0-direct` and `PU-window`, decoded from the
+same sampled arrays. `U0-wrap` is validated against `U0-direct` in tests and
+used as an identity-adapter timing control; it is not collected as a third
+accuracy arm.
 
 `reproduce_fig8_1d` must place `src` on `PYTHONPATH` and add the pinned Sinter
 registration option to collection:
@@ -912,7 +913,7 @@ confirmatory test.
 
 Before the first pilot shot, freeze the draft
 `docs/PROMATCH_PILOT_PROTOCOL.json` from a clean implementation HEAD. Commit
-the exact generated `docs/PROMATCH_PILOT_FROZEN.json` as the sole change after
+the exact generated `docs/PROMATCH_PILOT_FROZEN_V2.json` as the sole change after
 that HEAD, then sample from the resulting clean worktree. The frozen protocol
 contains the table, fixed `200,000` shots/cell, seed ranges, gates, priority
 rule, software hashes, and output schema.
@@ -1331,7 +1332,7 @@ make commit B whose only change is the exact generated
 `docs/*FROZEN*.json`. Collection accepts B only when A is its ancestor and the
 single A-to-B change is that exact protocol file; any source, test, or other
 documentation change is rejected. Apply this sequence first to
-`docs/PROMATCH_PILOT_FROZEN.json` and again to
+`docs/PROMATCH_PILOT_FROZEN_V2.json` and again to
 `docs/PROMATCH_FIRST_ROUND_FROZEN.json` before holdout, target, or latency
 collection.
 
@@ -1354,7 +1355,7 @@ protocol/result hashes and contains literal values for:
   and fixed 10,000-shot batch size;
 - fixed stopping rule, timing warmups/restarts/blocks, and practical thresholds;
 - output schema and analysis-script hash; and
-- bounded disagreement-retention/replay policy.
+- bounded replay-retention policy.
 
 The canonical JSON hash is the experiment ID. Resume is allowed only when the
 current manifest hash matches. Raw output retains:
@@ -1365,8 +1366,21 @@ current manifest hash matches. Raw output retains:
 - unconditional telemetry sums/histograms needed to recompute every metric;
 - raw block timing rows;
 - data/corpus digests; and
-- a capped sample of regression, recovery, rollback, and invariant-debug shots
-  with enough information to replay them.
+- at most 100 deterministic candidates per regression, recovery, or rollback
+  category in each batch ledger, followed by the globally lowest 100 hashes per
+  category in each cell summary, with enough information to replay them.
+
+Invariant violations are fatal run errors and are not converted into replay
+rows. The completed V1 pilot and `docs/PROMATCH_PILOT_FROZEN.json` are retained
+as diagnostic audit artifacts only; they must never be resumed or promoted as
+V2 results.
+
+Regression and recovery replay semantics are self-verifying from the retained
+logical predictions. Rollback is internal predecoder control flow, so the row
+validator checks its retained detector corpus and exact count structurally;
+claim-bearing scientific analysis authenticates rollback status by regenerating
+and comparing the complete deterministic batch. Non-scientific resume is never
+accepted as claim-bearing verification.
 
 The final analyzer refuses mismatched hashes, duplicate ranges, missing ranges,
 nonreconciling counts, or a total different from fixed `N`. Scientific paired
@@ -1459,23 +1473,23 @@ The end-to-end scientific workflow is:
 git status --short
 tools/benchmark_promatch_l1 freeze \
     --protocol docs/PROMATCH_PILOT_PROTOCOL.json \
-    --out-protocol docs/PROMATCH_PILOT_FROZEN.json
-git add docs/PROMATCH_PILOT_FROZEN.json
-git commit -m "Freeze ProMatch L1 pilot protocol"
+    --out-protocol docs/PROMATCH_PILOT_FROZEN_V2.json
+git add docs/PROMATCH_PILOT_FROZEN_V2.json
+git commit -m "Freeze ProMatch L1 pilot protocol V2"
 
-tools/benchmark_promatch_l1 pilot \
-    --protocol docs/PROMATCH_PILOT_FROZEN.json \
-    --out "$TMPDIR/yoked-promatch-pilot" \
+env -u MAX_ERRORS tools/benchmark_promatch_l1 pilot \
+    --protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
+    --out "$TMPDIR/yoked-promatch-pilot-v2" \
     --processes 32
 
-tools/analyze_promatch_l1 \
-    --protocol docs/PROMATCH_PILOT_FROZEN.json \
-    --input "$TMPDIR/yoked-promatch-pilot"
+env -u MAX_ERRORS tools/analyze_promatch_l1 \
+    --protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
+    --input "$TMPDIR/yoked-promatch-pilot-v2"
 
 tools/benchmark_promatch_l1 freeze \
     --protocol docs/PROMATCH_FIRST_ROUND_PROTOCOL.json \
-    --pilot-protocol docs/PROMATCH_PILOT_FROZEN.json \
-    --pilot-input "$TMPDIR/yoked-promatch-pilot" \
+    --pilot-protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
+    --pilot-input "$TMPDIR/yoked-promatch-pilot-v2" \
     --out-protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json
 git add docs/PROMATCH_FIRST_ROUND_FROZEN.json
 git commit -m "Freeze ProMatch L1 first-round protocol"

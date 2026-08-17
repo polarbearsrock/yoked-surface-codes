@@ -474,6 +474,18 @@ def construct_confirmatory_draft_from_pilot(
         raise ValueError("pilot selection produced an invalid confirmatory shot count")
 
     result = copy.deepcopy(dict(draft))
+    result_roots = result.get("sampler_seed_roots")
+    pilot_roots = normalized_pilot.get("sampler_seed_roots")
+    if not isinstance(result_roots, dict) or not isinstance(pilot_roots, Mapping):
+        raise ValueError("pilot and confirmatory sampler_seed_roots must be objects")
+    pilot_seed_root = pilot_roots.get("pilot")
+    if (
+        not isinstance(pilot_seed_root, str)
+        or len(pilot_seed_root) != 64
+        or any(ch not in "0123456789abcdef" for ch in pilot_seed_root)
+    ):
+        raise ValueError("frozen pilot has an invalid pilot seed root")
+    result_roots["pilot"] = pilot_seed_root
     nested_cell = {
         "cell_id": cell["cell_id"],
         "d": cell["d"],
@@ -646,7 +658,7 @@ def load_verified_summary(
                 batch=batch,
                 seed_root=manifest["sampler_seed_roots"][split],
                 expected_provenance=prepared.provenance,
-                disagreement_cap=int(manifest["disagreement_cap"]),
+                replay_policy=manifest["replay_policy"],
             )
             if row.get("schema") != LEDGER_SCHEMA:
                 raise ValueError("unsupported ledger schema")
@@ -659,7 +671,7 @@ def load_verified_summary(
         rows,
         experiment_id=experiment_id,
         phase=phase,
-        disagreement_cap=int(manifest["disagreement_cap"]),
+        replay_policy=manifest["replay_policy"],
     )
     summary_path = input_directory / "summary.json"
     if not summary_path.is_file():

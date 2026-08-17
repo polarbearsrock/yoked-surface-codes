@@ -235,18 +235,23 @@ or documentation change.
 
 The complete freeze/run sequence is:
 
+The completed V1 pilot (`docs/PROMATCH_PILOT_FROZEN.json`) exposed an output-
+contract mismatch between per-batch replay candidates and the per-cell summary
+cap. Its artifacts are diagnostic-only and must not be resumed. V2 uses a fresh
+pilot seed, an explicit two-stage replay policy, and a new output directory.
+
 ```bash
 # 1. Commit the implementation and verify that the worktree is clean. Freeze
 #    the pilot against that implementation HEAD.
 git status --short
 tools/benchmark_promatch_l1 freeze \
     --protocol docs/PROMATCH_PILOT_PROTOCOL.json \
-    --out-protocol docs/PROMATCH_PILOT_FROZEN.json
+    --out-protocol docs/PROMATCH_PILOT_FROZEN_V2.json
 
 # 2. Make the exact frozen pilot JSON the only post-freeze change, commit it,
 #    and return to a clean worktree before sampling.
-git add docs/PROMATCH_PILOT_FROZEN.json
-git commit -m "Freeze ProMatch L1 pilot protocol"
+git add docs/PROMATCH_PILOT_FROZEN_V2.json
+git commit -m "Freeze ProMatch L1 pilot protocol V2"
 git status --short
 
 # 3. Optional functional paired smoke. It is explicitly non-claim-bearing even
@@ -257,23 +262,23 @@ tools/benchmark_promatch_l1 smoke \
     --shots 10000
 
 # 4. Run all five ordered, 200,000-shot discovery cells at exactly 32 workers.
-tools/benchmark_promatch_l1 pilot \
-    --protocol docs/PROMATCH_PILOT_FROZEN.json \
-    --out "$TMPDIR/yoked-promatch-pilot" \
+env -u MAX_ERRORS tools/benchmark_promatch_l1 pilot \
+    --protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
+    --out "$TMPDIR/yoked-promatch-pilot-v2" \
     --processes 32
 
 # 5. Verify the pilot and apply the frozen unsigned selection rule. Scientific
 #    analysis regenerates every pilot batch with the manifest's 32 processes.
-tools/analyze_promatch_l1 \
-    --protocol docs/PROMATCH_PILOT_FROZEN.json \
-    --input "$TMPDIR/yoked-promatch-pilot"
+env -u MAX_ERRORS tools/analyze_promatch_l1 \
+    --protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
+    --input "$TMPDIR/yoked-promatch-pilot-v2"
 
 # 6. From the resulting clean implementation/protocol HEAD, derive and freeze
 #    the confirmatory protocol. Manual selection literals are not trusted.
 tools/benchmark_promatch_l1 freeze \
     --protocol docs/PROMATCH_FIRST_ROUND_PROTOCOL.json \
-    --pilot-protocol docs/PROMATCH_PILOT_FROZEN.json \
-    --pilot-input "$TMPDIR/yoked-promatch-pilot" \
+    --pilot-protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
+    --pilot-input "$TMPDIR/yoked-promatch-pilot-v2" \
     --out-protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json
 
 # 7. Again, commit only the exact generated frozen JSON and restore a clean

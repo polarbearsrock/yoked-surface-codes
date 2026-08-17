@@ -1,17 +1,89 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
+import yoked.decoding._promatch_analysis as promatch_analysis
 from yoked.decoding._promatch_analysis import (
     ANALYSIS_SCHEMA,
     analyze_cell,
     analyze_summary,
+    construct_confirmatory_draft_from_pilot,
     render_markdown,
     select_pilot_cell,
 )
 from yoked.decoding._promatch_experiment import PROTOCOL_SCHEMA, SUMMARY_SCHEMA
+
+
+def test_confirmatory_derivation_copies_the_verified_pilot_seed_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = Path(__file__).resolve().parents[3]
+    draft = json.loads(
+        (root / "docs" / "PROMATCH_FIRST_ROUND_PROTOCOL.json").read_text()
+    )
+    draft["sampler_seed_roots"]["pilot"] = "ff" * 32
+    pilot_seed_root = "aa" * 32
+    pilot_manifest = {
+        "schema": PROTOCOL_SCHEMA,
+        "phase": "pilot",
+        "experiment_id": "1" * 64,
+        "sampler_seed_roots": {"pilot": pilot_seed_root},
+        "source_hashes": {"source": "2" * 64},
+        "cells": [
+            {
+                "cell_id": "selected",
+                "d": 5,
+                "patches": 6,
+                "yokes": 2,
+                "r": 20,
+                "p": 0.003,
+                "circuit_sha256": "3" * 64,
+                "dem_sha256": "4" * 64,
+                "graph_fingerprint": "5" * 64,
+            }
+        ],
+    }
+    selection_log = {
+        "selection_sha256": "6" * 64,
+        "selected": {
+            "cell_id": "selected",
+            "confirmatory_shots": 20_000,
+            "activation_fraction": 0.5,
+            "u0_failures": 100,
+            "discordant_pairs": 100,
+            "integrity_checks_passed": True,
+            "p_u0_design": 0.1,
+            "delta_noninferiority": 0.01,
+            "discordance_upper": 0.2,
+            "normal_rule_raw_shots": 15_000,
+        },
+    }
+    monkeypatch.setattr(
+        promatch_analysis, "load_verified_summary", lambda **_: {"verified": True}
+    )
+    monkeypatch.setattr(
+        promatch_analysis,
+        "analyze_summary",
+        lambda summary, *, manifest: {
+            "analysis_sha256": "7" * 64,
+            "blinded_selection": selection_log,
+        },
+    )
+    monkeypatch.setattr(
+        promatch_analysis, "_pilot_result_digest", lambda _: "8" * 64
+    )
+    pilot_protocol_path = tmp_path / "pilot.json"
+    pilot_protocol_path.write_text("{}")
+    result = construct_confirmatory_draft_from_pilot(
+        draft,
+        pilot_manifest=pilot_manifest,
+        pilot_protocol_path=pilot_protocol_path,
+        pilot_input_directory=tmp_path,
+    )
+    assert result["sampler_seed_roots"]["pilot"] == pilot_seed_root
 
 
 def _telemetry(*, shots: int, activated: int, rollback: int = 0):
