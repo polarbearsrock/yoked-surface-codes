@@ -28,6 +28,7 @@ from yoked.decoding._promatch_analysis import (  # noqa: E402
     analyze_summary,
     load_verified_summary,
     render_markdown,
+    validate_generated_analysis_artifact,
 )
 from yoked.decoding._promatch_experiment import normalize_protocol  # noqa: E402
 from yoked.decoding._promatch_latency_analysis import (  # noqa: E402
@@ -81,7 +82,12 @@ def main() -> int:
     parser.add_argument("--input", type=Path)
     parser.add_argument("--latency-input", type=Path)
     parser.add_argument("--latency-cell")
-    parser.add_argument("--out", type=Path)
+    parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="separate analysis directory (must not be the collection directory)",
+    )
     parser.add_argument(
         "--allow-non-scientific",
         action="store_true",
@@ -93,10 +99,14 @@ def main() -> int:
         manifest = _load_json(args.protocol)
         if args.input is None and args.latency_input is None:
             raise ValueError("at least one of --input or --latency-input is required")
+        if args.input is not None and args.latency_input is not None:
+            raise ValueError(
+                "accuracy and latency analyses require separate invocations/output directories"
+            )
         if (args.latency_input is None) != (args.latency_cell is None):
             raise ValueError("--latency-input and --latency-cell must be provided together")
+        normalized = normalize_protocol(manifest)
         if args.allow_non_scientific:
-            normalized = normalize_protocol(manifest)
             if (
                 normalized.get("phase") != "smoke"
                 or normalized.get("claim_bearing") is not False
@@ -104,7 +114,46 @@ def main() -> int:
                 raise ValueError(
                     "--allow-non-scientific is restricted to non-claim-bearing smoke protocols"
                 )
-        output = (args.out or args.input or args.latency_input).resolve()
+        output = args.out.resolve()
+        collection_inputs = [
+            value.resolve()
+            for value in (args.input, args.latency_input)
+            if value is not None
+        ]
+        if any(
+            source == output
+            or source in output.parents
+            or output in source.parents
+            for source in collection_inputs
+        ):
+            raise ValueError(
+                "--out and collection inputs must be separate, non-nested directories"
+            )
+        expected_output_names = (
+            {"latency_analysis.json", "latency_analysis.md"}
+            if args.latency_input is not None
+            else {
+                "analysis.json",
+                "analysis.md",
+                *(
+                    ("pilot_selection.json",)
+                    if normalized.get("phase") == "pilot"
+                    else ()
+                ),
+            }
+        )
+        if output.exists():
+            if not output.is_dir() or output.is_symlink():
+                raise ValueError("--out must be a regular directory")
+            actual_output_names = {entry.name for entry in output.iterdir()}
+            if actual_output_names != expected_output_names:
+                raise ValueError(
+                    "existing --out does not contain the exact analysis artifact set"
+                )
+            if not args.overwrite:
+                raise FileExistsError(
+                    "analysis artifacts already exist; pass --overwrite to replace them"
+                )
         if args.input is not None:
             summary = load_verified_summary(
                 manifest=manifest,
@@ -112,6 +161,7 @@ def main() -> int:
                 scientific=not args.allow_non_scientific,
             )
             analysis = analyze_summary(summary, manifest=manifest)
+            validate_generated_analysis_artifact(analysis)
             json_data = (
                 json.dumps(analysis, sort_keys=True, indent=2, allow_nan=False)
                 + "\n"

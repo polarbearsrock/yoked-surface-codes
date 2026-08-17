@@ -73,6 +73,20 @@ def test_scientific_protocol_is_extracted_exactly_from_normalized_manifest() -> 
     with pytest.raises(ValueError, match="exact claim_gates"):
         latency_protocol_from_manifest(changed, scientific=True)
 
+    changed = json.loads(json.dumps(manifest))
+    changed["analysis_config"]["timing_protocol"]["diagnostic_intervals"] = [
+        "total"
+    ]
+    with pytest.raises(ValueError, match="diagnostic_intervals"):
+        latency_protocol_from_manifest(changed, scientific=True)
+
+    changed = json.loads(json.dumps(manifest))
+    changed["analysis_config"]["timing_protocol"]["primary_interval"] = (
+        "implementation-defined"
+    )
+    with pytest.raises(ValueError, match="frozen adapter interval"):
+        latency_protocol_from_manifest(changed, scientific=True)
+
 
 def test_tiny_protocol_requires_explicit_nonclaim_configuration() -> None:
     manifest = _tiny_manifest()

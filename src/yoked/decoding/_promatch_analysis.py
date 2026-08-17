@@ -6,7 +6,6 @@ from collections import Counter
 import copy
 import dataclasses
 import hashlib
-import json
 import math
 from pathlib import Path
 from typing import Any, Mapping
@@ -14,16 +13,21 @@ from typing import Any, Mapping
 from scipy.stats import binomtest
 
 from yoked.decoding._promatch_experiment import (
-    LEDGER_SCHEMA,
+    ANALYSIS_CELL_FIELDS,
+    ANALYSIS_COMMON_TOP_LEVEL_FIELDS,
+    PILOT_SELECTION_ROW_FIELDS,
+    PILOT_SELECTION_TOP_LEVEL_FIELDS,
+    PROTOCOL_SCHEMA,
     SUMMARY_SCHEMA,
     _ledger_path,
+    _load_json_artifact,
     _phase_cells,
     _phase_schedules,
     _protocol_split,
     _validate_ledger_row,
+    _verify_scientific_regeneration_without_writes,
     normalize_protocol,
     prepare_cell,
-    run_collection,
     summarize_ledgers,
     validate_experiment_protocol,
 )
@@ -39,6 +43,80 @@ from yoked.decoding._promatch_stats import (
 
 ANALYSIS_SCHEMA = "promatch-l1-analysis-v1"
 PILOT_SELECTION_SCHEMA = "promatch-l1-pilot-selection-v1"
+
+
+@dataclasses.dataclass(frozen=True)
+class _VerificationProvenance:
+    experiment_id: str
+    phase: str
+    deterministic_regeneration_passed: bool
+    summary_sha256: str
+    manifest_sha256: str
+
+
+class _VerifiedSummary(dict[str, Any]):
+    """Private marker carried only by the fail-closed artifact verifier."""
+
+    def __init__(
+        self,
+        value: Mapping[str, Any],
+        *,
+        provenance: _VerificationProvenance,
+    ) -> None:
+        super().__init__(value)
+        self.provenance = provenance
+
+
+def _validate_pilot_selection_artifact(value: Any) -> None:
+    if not isinstance(value, Mapping) or set(value) != set(
+        PILOT_SELECTION_TOP_LEVEL_FIELDS
+    ):
+        raise ValueError("generated pilot selection has incorrect top-level fields")
+    rows = value.get("cells")
+    if not isinstance(rows, list) or any(
+        not isinstance(row, Mapping)
+        or set(row) != set(PILOT_SELECTION_ROW_FIELDS)
+        for row in rows
+    ):
+        raise ValueError("generated pilot selection rows have incorrect fields")
+    selected = value.get("selected")
+    if selected is not None and (
+        not isinstance(selected, Mapping)
+        or set(selected) != set(PILOT_SELECTION_ROW_FIELDS)
+        or dict(selected) not in [dict(row) for row in rows]
+    ):
+        raise ValueError("generated pilot selection has an invalid selected row")
+    without_hash = dict(value)
+    recorded_hash = without_hash.pop("selection_sha256", None)
+    expected_hash = hashlib.sha256(canonical_json_bytes(without_hash)).hexdigest()
+    if recorded_hash != expected_hash:
+        raise ValueError("generated pilot selection hash does not reconcile")
+
+
+def validate_generated_analysis_artifact(value: Any) -> None:
+    """Fail closed if an emitted analysis drifts from the V3 output contract."""
+
+    if not isinstance(value, Mapping):
+        raise ValueError("generated analysis must be an object")
+    phase = value.get("phase")
+    expected_top = set(ANALYSIS_COMMON_TOP_LEVEL_FIELDS)
+    if phase == "pilot":
+        expected_top.add("blinded_selection")
+    if set(value) != expected_top:
+        raise ValueError("generated analysis has incorrect top-level fields")
+    cells = value.get("cells")
+    if not isinstance(cells, list) or not cells or any(
+        not isinstance(cell, Mapping) or set(cell) != set(ANALYSIS_CELL_FIELDS)
+        for cell in cells
+    ):
+        raise ValueError("generated analysis cells have incorrect fields")
+    if phase == "pilot":
+        _validate_pilot_selection_artifact(value.get("blinded_selection"))
+    without_hash = dict(value)
+    recorded_hash = without_hash.pop("analysis_sha256", None)
+    expected_hash = hashlib.sha256(canonical_json_bytes(without_hash)).hexdigest()
+    if recorded_hash != expected_hash:
+        raise ValueError("generated analysis hash does not reconcile")
 
 
 def _sha256_file(path: Path) -> str:
@@ -341,6 +419,23 @@ def select_pilot_cell(
 ) -> dict[str, Any]:
     """Apply the blinded fixed-order pilot rule without computing signed b-c."""
 
+    provenance = getattr(summary, "provenance", None)
+    if (
+        not isinstance(summary, _VerifiedSummary)
+        or not isinstance(provenance, _VerificationProvenance)
+        or provenance.experiment_id != manifest.get("experiment_id")
+        or provenance.phase != "pilot"
+        or provenance.deterministic_regeneration_passed is not True
+        or provenance.summary_sha256
+        != hashlib.sha256(canonical_json_bytes(dict(summary))).hexdigest()
+        or provenance.manifest_sha256
+        != hashlib.sha256(canonical_json_bytes(dict(manifest))).hexdigest()
+    ):
+        raise ValueError(
+            "pilot selection requires a scientifically verified summary from "
+            "load_verified_summary"
+        )
+
     config = _analysis_config(manifest)
     gates = _require_mapping(config.get("pilot_selection_gates"), name="pilot_selection_gates")
     cells = summary.get("cells")
@@ -422,6 +517,7 @@ def select_pilot_cell(
         "status": "selected" if selected is not None else "confirmation-infeasible",
     }
     result["selection_sha256"] = hashlib.sha256(canonical_json_bytes(result)).hexdigest()
+    _validate_pilot_selection_artifact(result)
     return result
 
 
@@ -588,51 +684,91 @@ def analyze_summary(
     if phase == "pilot":
         result["blinded_selection"] = select_pilot_cell(summary, manifest=manifest)
     result["analysis_sha256"] = hashlib.sha256(canonical_json_bytes(result)).hexdigest()
+    validate_generated_analysis_artifact(result)
     return result
 
 
 def load_verified_summary(
     *, manifest: Mapping[str, Any], input_directory: Path, scientific: bool = True
 ) -> dict[str, Any]:
+    """Authenticate a complete collection and regenerate it without writes."""
+
     manifest = normalize_protocol(manifest)
+    input_directory = input_directory.resolve()
     identity_path = input_directory / "experiment.json"
     if not identity_path.is_file():
         raise ValueError("missing experiment.json")
-    identity = json.loads(identity_path.read_text(encoding="utf-8"))
+    identity = _load_json_artifact(identity_path)
+    if not isinstance(identity, Mapping) or set(identity) != {
+        "schema",
+        "experiment_id",
+        "phase",
+    }:
+        raise ValueError("experiment.json has incorrect fields")
     phase = str(identity.get("phase"))
     if phase not in {"pilot", "confirm", "target", "smoke"}:
         raise ValueError("experiment.json has an invalid phase")
     protocol_path = input_directory / "protocol.json"
     if not protocol_path.is_file():
         raise ValueError("missing protocol.json")
-    if json.loads(protocol_path.read_text(encoding="utf-8")) != manifest:
+    if _load_json_artifact(protocol_path) != manifest:
         raise ValueError("result protocol.json differs from the supplied manifest")
+    summary_path = input_directory / "summary.json"
+    if not summary_path.is_file():
+        raise ValueError("missing summary.json")
+    recorded = _load_json_artifact(summary_path)
+
     experiment_id = validate_experiment_protocol(
         manifest,
         phase=phase,
         scientific=scientific,
         processes=int(manifest["processes"]),
     )
-    if scientific:
-        # Claim-bearing analysis independently regenerates every deterministic
-        # Stim batch with the frozen 32-process collector and compares the full
-        # contingency, telemetry, replay sample, and array-digest payload.  A
-        # self-consistent edit to ledger counts plus summary.json therefore
-        # cannot pass analysis.
-        run_collection(
-            manifest,
-            phase=phase,
-            out=input_directory,
-            processes=int(manifest["processes"]),
-            scientific=True,
-        )
+    if identity != {
+        "schema": PROTOCOL_SCHEMA,
+        "experiment_id": experiment_id,
+        "phase": phase,
+    }:
+        raise ValueError("experiment.json does not match the supplied protocol")
+
     cells = _phase_cells(manifest, phase)
     schedules = _phase_schedules(manifest, phase, cells)
     split = _protocol_split(manifest, phase)
     decoder = manifest["decoder"]
     dem_options = manifest["dem_options"]
-    expected_paths = set()
-    rows = []
+    expected_paths = {
+        _ledger_path(
+            input_directory,
+            cell_id=cell["cell_id"],
+            batch_id=batch.batch_id,
+        )
+        for cell in cells
+        for batch in schedules[cell["cell_id"]]
+    }
+    actual_paths = set((input_directory / "batches").glob("*/*.json"))
+    missing = sorted(expected_paths - actual_paths)
+    extras = sorted(actual_paths - expected_paths)
+    if missing or extras:
+        raise ValueError(
+            "batch ledger set differs from the frozen schedule: "
+            f"missing={missing[:8]}, unexpected={extras[:8]}"
+        )
+    expected_files = {
+        identity_path,
+        protocol_path,
+        summary_path,
+        *expected_paths,
+    }
+    actual_files = {path for path in input_directory.rglob("*") if path.is_file()}
+    if actual_files != expected_files:
+        missing_files = sorted(expected_files - actual_files)
+        extra_files = sorted(actual_files - expected_files)
+        raise ValueError(
+            "collection artifact set differs from the exact output contract: "
+            f"missing={missing_files[:8]}, unexpected={extra_files[:8]}"
+        )
+
+    rows: list[Mapping[str, Any]] = []
     for cell in cells:
         prepared = prepare_cell(
             cell,
@@ -646,10 +782,7 @@ def load_verified_summary(
                 cell_id=cell["cell_id"],
                 batch_id=batch.batch_id,
             )
-            expected_paths.add(path)
-            if not path.is_file():
-                raise ValueError(f"missing frozen batch ledger {path}")
-            row = json.loads(path.read_text(encoding="utf-8"))
+            row = _load_json_artifact(path)
             _validate_ledger_row(
                 row,
                 experiment_id=experiment_id,
@@ -660,26 +793,36 @@ def load_verified_summary(
                 expected_provenance=prepared.provenance,
                 replay_policy=manifest["replay_policy"],
             )
-            if row.get("schema") != LEDGER_SCHEMA:
-                raise ValueError("unsupported ledger schema")
             rows.append(row)
-    actual_paths = set((input_directory / "batches").glob("*/*.json"))
-    if actual_paths != expected_paths:
-        extras = sorted(actual_paths - expected_paths)
-        raise ValueError(f"unexpected batch ledgers: {extras[:8]}")
     recomputed = summarize_ledgers(
         rows,
         experiment_id=experiment_id,
         phase=phase,
         replay_policy=manifest["replay_policy"],
     )
-    summary_path = input_directory / "summary.json"
-    if not summary_path.is_file():
-        raise ValueError("missing summary.json")
-    recorded = json.loads(summary_path.read_text(encoding="utf-8"))
     if recorded != recomputed:
         raise ValueError("summary.json does not exactly reconcile with batch ledgers")
-    return recomputed
+    if scientific:
+        _verify_scientific_regeneration_without_writes(
+            manifest,
+            phase=phase,
+            recorded_rows=rows,
+            processes=int(manifest["processes"]),
+        )
+    return _VerifiedSummary(
+        recomputed,
+        provenance=_VerificationProvenance(
+            experiment_id=experiment_id,
+            phase=phase,
+            deterministic_regeneration_passed=scientific,
+            summary_sha256=hashlib.sha256(
+                canonical_json_bytes(recomputed)
+            ).hexdigest(),
+            manifest_sha256=hashlib.sha256(
+                canonical_json_bytes(manifest)
+            ).hexdigest(),
+        ),
+    )
 
 
 def render_markdown(analysis: Mapping[str, Any]) -> str:
@@ -736,4 +879,5 @@ __all__ = [
     "load_verified_summary",
     "render_markdown",
     "select_pilot_cell",
+    "validate_generated_analysis_artifact",
 ]

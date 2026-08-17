@@ -3,15 +3,22 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 import yoked.decoding._promatch_experiment as promatch_experiment
 from yoked.decoding._promatch_experiment import (
     LEDGER_SCHEMA,
+    PROTOCOL_SCHEMA,
     REPLAY_CATEGORIES,
     SUMMARY_SCHEMA,
+    TELEMETRY_REQUIRED_FIELDS,
+    _load_json_artifact,
+    _telemetry,
+    _validate_telemetry,
     build_batch_schedule,
+    canonical_output_schema,
     collect_prepared_batch,
     default_smoke_protocol,
     normalize_protocol,
@@ -64,7 +71,7 @@ def test_documented_pilot_template_normalizes_to_disjoint_cell_schedules() -> No
         / "PROMATCH_PILOT_PROTOCOL.json"
     )
     normalized = normalize_protocol(json.loads(path.read_text()))
-    assert normalized["schema"] == "promatch-l1-paired-protocol-v2"
+    assert normalized["schema"] == "promatch-l1-paired-protocol-v3"
     assert normalized["kind"] == "promatch-l1-paired-fixed-shot"
     assert normalized["phase"] == "pilot"
     assert normalized["claim_bearing"] is False
@@ -181,7 +188,23 @@ def test_documented_replay_policy_fails_closed() -> None:
 
     changed = copy.deepcopy(documented)
     changed["output_schema"]["schema_version"] = 1
-    mutations.append((changed, "output_schema.schema_version"))
+    mutations.append((changed, "output_schema"))
+
+    changed = copy.deepcopy(documented)
+    changed["output_schema"]["artifact_sets"]["pilot_collection"].append(
+        "implementation-defined.json"
+    )
+    mutations.append((changed, "output_schema"))
+
+    changed = copy.deepcopy(documented)
+    changed["output_schema"]["telemetry_required_fields"].remove("success_shots")
+    mutations.append((changed, "output_schema"))
+
+    changed = copy.deepcopy(documented)
+    changed["output_schema"]["verification_policy"][
+        "scientific_batches_regenerated_without_writes"
+    ] = False
+    mutations.append((changed, "output_schema"))
 
     changed = copy.deepcopy(documented)
     changed["protocol_version"] = "promatch-l1-pilot-v1"
@@ -190,6 +213,88 @@ def test_documented_replay_policy_fails_closed() -> None:
     for candidate, message in mutations:
         with pytest.raises(ValueError, match=message):
             normalize_protocol(candidate)
+
+
+def test_documented_output_contract_is_the_exact_executable_v3_contract() -> None:
+    root = Path(__file__).resolve().parents[3]
+    expected = canonical_output_schema(100)
+    for name in (
+        "PROMATCH_PILOT_PROTOCOL.json",
+        "PROMATCH_FIRST_ROUND_PROTOCOL.json",
+    ):
+        documented = json.loads((root / "docs" / name).read_text())
+        assert documented["schema_version"] == 3
+        assert documented["output_schema"] == expected
+        assert set(documented["output_schema"]) == {
+            "schema_version",
+            "artifact_schemas",
+            "artifact_sets",
+            "batch_ledger_required_fields",
+            "telemetry_required_fields",
+            "replay_sample_required_fields",
+            "summary_required_fields",
+            "analysis_required_fields",
+            "pilot_selection_required_fields",
+            "bounded_replay_policy",
+            "verification_policy",
+        }
+        assert set(
+            documented["output_schema"]["analysis_required_fields"]
+        ) == {"common_top_level", "pilot_additional_top_level", "cell"}
+
+
+def test_frozen_normalized_protocol_revalidates_the_complete_output_contract() -> None:
+    root = Path(__file__).resolve().parents[3]
+    documented = json.loads(
+        (root / "docs" / "PROMATCH_PILOT_PROTOCOL.json").read_text()
+    )
+    candidate = normalize_protocol(documented)
+    candidate["status"] = "FROZEN"
+    candidate["frozen"] = True
+    candidate["analysis_config"]["output_schema"]["artifact_schemas"][
+        "summary"
+    ] = "implementation-defined"
+    with pytest.raises(ValueError, match="output_schema must be exactly"):
+        validate_experiment_protocol(
+            candidate,
+            phase="pilot",
+            scientific=True,
+            processes=32,
+        )
+
+
+def test_artifact_json_loader_rejects_duplicate_keys(tmp_path: Path) -> None:
+    path = tmp_path / "duplicate.json"
+    path.write_text('{"schema":"first","schema":"second"}')
+    with pytest.raises(ValueError, match="duplicate JSON object key 'schema'"):
+        _load_json_artifact(path)
+
+
+def test_telemetry_emitter_and_exact_validator_share_one_key_contract() -> None:
+    zeros = promatch_experiment.np.zeros((1, 1), dtype=bool)
+    layout = SimpleNamespace(
+        terminal_detector_ids=promatch_experiment.np.asarray([], dtype=int),
+        yoke_detector_ids=promatch_experiment.np.asarray([], dtype=int),
+    )
+    result = SimpleNamespace(
+        decision_weight=0.0,
+        xor_support_weight=0.0,
+        paths=[],
+        domain_stats={},
+    )
+    telemetry = _telemetry([result], zeros, zeros, layout)
+    assert tuple(telemetry) == TELEMETRY_REQUIRED_FIELDS
+    _validate_telemetry(telemetry, shots=1)
+
+    extra = copy.deepcopy(telemetry)
+    extra["implementation_defined"] = 0
+    with pytest.raises(ValueError, match="incorrect fields"):
+        _validate_telemetry(extra, shots=1)
+
+    missing = copy.deepcopy(telemetry)
+    del missing["success_shots"]
+    with pytest.raises(ValueError, match="incorrect fields"):
+        _validate_telemetry(missing, shots=1)
 
 
 def test_target_validation_enforces_exact_performance_geometry_before_provenance() -> None:
@@ -338,6 +443,31 @@ def test_ledger_validation_rejects_noncanonical_replay_categories() -> None:
     }
     _validate_ledger_row(row, **validation_args)
 
+    extra_top_level = copy.deepcopy(row)
+    extra_top_level["implementation_defined"] = 0
+    with pytest.raises(ValueError, match="incorrect top-level fields"):
+        _validate_ledger_row(extra_top_level, **validation_args)
+
+    missing_top_level = copy.deepcopy(row)
+    del missing_top_level["observables"]
+    with pytest.raises(ValueError, match="incorrect top-level fields"):
+        _validate_ledger_row(missing_top_level, **validation_args)
+
+    extra_telemetry = copy.deepcopy(row)
+    extra_telemetry["telemetry"]["implementation_defined"] = 0
+    with pytest.raises(ValueError, match="telemetry has incorrect fields"):
+        _validate_ledger_row(extra_telemetry, **validation_args)
+
+    missing_telemetry = copy.deepcopy(row)
+    del missing_telemetry["telemetry"]["success_shots"]
+    with pytest.raises(ValueError, match="telemetry has incorrect fields"):
+        _validate_ledger_row(missing_telemetry, **validation_args)
+
+    noncanonical_digest = copy.deepcopy(row)
+    noncanonical_digest["detectors"]["sha256"] = "G" * 64
+    with pytest.raises(ValueError, match="digest metadata"):
+        _validate_ledger_row(noncanonical_digest, **validation_args)
+
     malformed = copy.deepcopy(row)
     malformed["replay_samples"] = [None]
     with pytest.raises(ValueError, match="malformed replay"):
@@ -431,6 +561,25 @@ def test_scientific_collection_rejects_draft_before_repository_checks() -> None:
     with pytest.raises(ValueError, match="status='FROZEN'"):
         validate_experiment_protocol(
             protocol, phase="pilot", scientific=True, processes=32
+        )
+
+
+def test_scientific_collection_requires_exactly_32_processes() -> None:
+    protocol = default_smoke_protocol(processes=16, shots=1)
+    protocol.update(
+        phase="pilot",
+        status="FROZEN",
+        frozen=True,
+        claim_bearing=False,
+        sampler_seed_roots={"pilot": "3a" * 32},
+    )
+    protocol["experiment_id"] = manifest_experiment_id(protocol)
+    with pytest.raises(ValueError, match="exactly 32 processes"):
+        validate_experiment_protocol(
+            protocol,
+            phase="pilot",
+            scientific=True,
+            processes=16,
         )
 
 

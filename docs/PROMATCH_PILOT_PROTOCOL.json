@@ -1,8 +1,8 @@
 {
   "schema": "yoked.promatch.l1.protocol",
-  "schema_version": 2,
+  "schema_version": 3,
   "protocol_kind": "pilot",
-  "protocol_version": "promatch-l1-pilot-v2",
+  "protocol_version": "promatch-l1-pilot-v3",
   "status": "DRAFT_TEMPLATE_NOT_FROZEN",
   "frozen": false,
   "claim_bearing": false,
@@ -82,7 +82,7 @@
     },
     "pu_boundary": {
       "name": "promatch-l1-v1-windowd-hw10-stages1234-parityboundary-zeroframe-pymatching",
-      "role": "mandatory_exploratory_boundary_comparator"
+      "role": "deferred_exploratory_not_required_in_v3"
     },
     "pu_full": {
       "name": "promatch-l1-v1-fullhistory-hw10-stages1234-noboundary-zeroframe-pymatching",
@@ -155,11 +155,11 @@
     ]
   },
   "sampler_seed_roots": {
-    "pilot": "2a7726512bc656068cf7dbf6221e1f8c97843ec56c48517ffb55b3bbb5c288e5",
-    "confirmatory_holdout": "ba4df6460b1848846c5f55ba4a5981250b9a32a72bc3f8f9890d59eec52684c9",
-    "target_workload": "e3dd75362e009a342c3465b1d5e1b69cc932fd00f3e2cffaf1f5b7ec65d5c93c",
-    "timing_corpus": "d1d6747f169d2904233323d996586b50cb7300014d13574502f56862e80810d1",
-    "timing_bootstrap": "6de6f6303bcfc13942776e3d7e38bb904e67af7334d2332cc573bcc57b16bb7d"
+    "pilot": "4f7401ad44aad8bd7cdeb56ef71a6d9169da557ab30bf3d6cbeaa13e072fd365",
+    "confirmatory_holdout": "02fab9266d8ae982b4ae96144a9215ae66a324d420415a8b58543ec4b6e5731d",
+    "target_workload": "ce973cb24ab66860bdb5e3fcc72a0abed24d0bc526bd22bf765af52b4abf3a02",
+    "timing_corpus": "5e8bbe25215c3ac1b8b9af42815a74dc218fc61b2e8a6fc26466a4e267f61a63",
+    "timing_bootstrap": "65bafd6b1e1c8aca13da51e006b62af03dae49ff194ca70bbf9b0ea631daa631"
   },
   "seed_derivation": {
     "algorithm": "SHA-256",
@@ -230,6 +230,7 @@
     "scope": "recorded now so pilot outcomes cannot tune confirmatory timing",
     "input_generation": "pregenerated_outside_timed_regions",
     "clock": "time.perf_counter_ns",
+    "diagnostic_intervals": ["total", "backend"],
     "primary_mode_batch_size": 1,
     "secondary_batch_sizes": [64, 1024],
     "timing_corpus_shots_per_restart": 10000,
@@ -257,42 +258,160 @@
     "promatch_reference_commit": "78929be805c602c1ee74fcff9c334fc959afbbb8"
   },
   "output_schema": {
-    "schema_version": 2,
-    "required_files": [
-      "experiment.json",
-      "protocol.json",
-      "batches/<cell_id>/batch-<batch_id>.json",
-      "summary.json",
-      "analysis.json",
-      "analysis.md",
-      "pilot_selection.json"
-    ],
+    "schema_version": 3,
+    "artifact_schemas": {
+      "experiment": "promatch-l1-paired-protocol-v3",
+      "batch_ledger": "promatch-l1-paired-batch-v1",
+      "summary": "promatch-l1-paired-summary-v1",
+      "analysis": "promatch-l1-analysis-v1",
+      "pilot_selection": "promatch-l1-pilot-selection-v1",
+      "latency_restart": "promatch-l1-latency-restart-v1",
+      "latency_suite": "promatch-l1-latency-suite-v1",
+      "latency_analysis": "promatch-l1-latency-analysis-v1"
+    },
+    "artifact_sets": {
+      "pilot_collection": [
+        "experiment.json",
+        "protocol.json",
+        "batches/<cell_id>/batch-<batch_id:08d>.json",
+        "summary.json"
+      ],
+      "pilot_analysis": [
+        "analysis.json",
+        "analysis.md",
+        "pilot_selection.json"
+      ],
+      "confirm_collection": [
+        "experiment.json",
+        "protocol.json",
+        "batches/<cell_id>/batch-<batch_id:08d>.json",
+        "summary.json"
+      ],
+      "target_collection": [
+        "experiment.json",
+        "protocol.json",
+        "batches/<cell_id>/batch-<batch_id:08d>.json",
+        "summary.json"
+      ],
+      "accuracy_analysis": [
+        "analysis.json",
+        "analysis.md"
+      ],
+      "latency_collection_per_cell": [
+        "protocol.json",
+        "suite.json",
+        "batch-<batch_size>.restart-<restart_index:02d>.json"
+      ],
+      "latency_analysis_per_cell": [
+        "latency_analysis.json",
+        "latency_analysis.md"
+      ]
+    },
     "batch_ledger_required_fields": [
+      "schema",
       "experiment_id",
-      "cell_id",
       "phase",
+      "cell_id",
       "batch.{batch_id,shot_start,shots}",
       "stim_seed",
-      "detectors.{shape,dtype,sha256}",
-      "observables.{shape,dtype,sha256}",
-      "provenance",
-      "paired_contingency",
+      "detectors.{sha256,shape,dtype}",
+      "observables.{sha256,shape,dtype}",
+      "provenance.{circuit_sha256,dem_sha256,layout_fingerprint,graph_fingerprint,num_detectors,num_observables}",
+      "paired_contingency.{both_correct,regressions,recoveries,both_wrong}",
       "telemetry",
       "replay_samples"
     ],
-    "aggregate_required_fields": [
+    "telemetry_required_fields": [
       "shots",
-      "paired_contingency.{both_correct,regressions,recoveries,both_wrong}",
+      "original_event_sum",
+      "residual_event_sum",
+      "original_hw_histogram",
+      "residual_hw_histogram",
+      "original_residual_hw_joint_histogram",
+      "domain_initial_hw_histogram",
+      "domain_attempted_hw_histogram",
+      "domain_final_hw_histogram",
+      "domain_status_counts",
+      "domain_identity_counts",
+      "fallback_reason_counts",
+      "decision_weight_histogram_float_hex",
+      "xor_support_weight_histogram_float_hex",
+      "committed_path_length_histogram",
+      "terminal_withheld_event_sum",
+      "yoke_withheld_event_sum",
+      "attempted_stage_counts",
+      "committed_stage_counts",
+      "attempted_matches",
+      "committed_matches",
+      "boundary_added_domains",
+      "boundary_used_domains",
+      "boundary_discarded_domains",
       "activated_shots",
-      "activated_domains",
-      "initial_detector_events",
-      "residual_detector_events",
-      "success_shots",
       "rollback_shots",
-      "stage_attempts",
-      "stage_commits",
-      "original_residual_hw_joint_histogram"
+      "success_shots"
     ],
+    "replay_sample_required_fields": [
+      "selection_sha256",
+      "category",
+      "batch_id",
+      "shot_offset",
+      "shot_index",
+      "stim_seed",
+      "detection_events_hex",
+      "observables_hex",
+      "u0_prediction_hex",
+      "pu_prediction_hex"
+    ],
+    "summary_required_fields": {
+      "top_level": ["schema", "experiment_id", "phase", "collection_scope", "cells"],
+      "cell": ["cell_id", "batches", "shots", "paired_contingency", "telemetry", "replay_samples"]
+    },
+    "analysis_required_fields": {
+      "common_top_level": ["schema", "experiment_id", "phase", "claim_bearing", "collection_scope", "accuracy_claim_scope", "cells", "analysis_sha256"],
+      "pilot_additional_top_level": ["blinded_selection"],
+      "cell": [
+        "cell_id",
+        "shots",
+        "paired_contingency",
+        "u0_failure_rate",
+        "pu_failure_rate",
+        "delta_pu_minus_u0",
+        "tango_upper_one_sided",
+        "alpha_one_sided",
+        "delta_noninferiority",
+        "noninferiority_passed",
+        "ordered_superiority_passed",
+        "exact_mcnemar_superiority_p",
+        "activation_fraction",
+        "rollback_fraction",
+        "original_detector_events",
+        "residual_detector_events",
+        "workload_ratio",
+        "workload_ratio_upper_one_sided",
+        "workload_bootstrap_replicates",
+        "workload_improvement_passed",
+        "workload_ratio_upper_threshold"
+      ]
+    },
+    "pilot_selection_required_fields": {
+      "top_level": ["schema", "experiment_id", "selection_used_signed_difference", "cells", "selected", "status", "selection_sha256"],
+      "row": [
+        "cell_id",
+        "shots",
+        "activation_fraction",
+        "u0_failures",
+        "discordant_pairs",
+        "integrity_checks_passed",
+        "p_u0_design",
+        "delta_noninferiority",
+        "discordance_upper",
+        "normal_rule_raw_shots",
+        "confirmatory_shots",
+        "power_estimate",
+        "power_lower_bound",
+        "passed"
+      ]
+    },
     "bounded_replay_policy": {
       "categories": ["regression", "recovery", "rollback"],
       "maximum_candidate_rows_per_category_per_batch_ledger": 100,
@@ -304,7 +423,16 @@
       "invariant_violation_policy": "fatal_run_error_no_replay_row",
       "must_be_replayable": true
     },
-    "integrity": "reject missing or duplicate ranges, digest mismatches, nonreconciling counts, wrong fixed N, or manifest-hash mismatches"
+    "verification_policy": {
+      "exact_preexisting_collection_required_before_analysis": true,
+      "analysis_must_not_create_or_modify_collection_artifacts": true,
+      "exact_batch_schedule_required": true,
+      "exact_protocol_identity_required": true,
+      "summary_must_reconcile_before_regeneration": true,
+      "scientific_batches_regenerated_without_writes": true,
+      "deterministic_payload_equality_required": true,
+      "duplicate_json_keys_rejected": true
+    }
   },
   "freeze_requirements": {
     "required_nulls_to_fill": [

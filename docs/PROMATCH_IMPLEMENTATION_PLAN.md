@@ -37,7 +37,8 @@ Four decisions make the first round auditable:
 3. Accuracy, workload, residual-backend latency, and end-to-end software
    latency are separate endpoints with separate claim gates.
 4. Pilot/discovery data select and power one measurable accuracy cell. A
-   disjoint, fixed-size holdout is then analyzed using a frozen protocol.
+   disjoint, fixed-size holdout is analyzed using a frozen protocol only if the
+   V3 pilot passes every preregistered unsigned viability gate.
 
 The experiment is falsifiable. Ordinary MWPM already finds a minimum-weight
 correction under its graph model. A greedy prefix can improve empirical logical
@@ -251,14 +252,15 @@ No Figure 8 or hardware-style latency conclusion may be based on this variant.
 
 ## 5. Decoder Variants and Controls
 
-The first round uses the following fixed variants:
+The decoder/control namespace distinguishes the following fixed variants; the
+V3 claim-bearing comparison itself collects only `U0-direct` and `PU-window`:
 
 | Label | Definition | Role |
 | --- | --- | --- |
 | `U0-direct` | Packed syndrome directly into ordinary uncorrelated PyMatching | Causal baseline and deployable software baseline |
 | `U0-wrap` | Unpack, classify/traverse, repack unchanged syndrome, then the same PyMatching call | Measures interface and Python traversal overhead |
 | `PU-window` | `d`-round L1-window ProMatch stages 1-4, `HW=10`, no boundary, zero frame, then the same PyMatching call | Primary treatment |
-| `PU-boundary` | Same as `PU-window`, with the parity-aware actual-boundary policy in Section 9 | Mandatory fidelity/sensitivity comparator; exploratory |
+| `PU-boundary` | Parity-aware actual-boundary prototype described in Section 9 | Deferred exploratory design; V3 does not require or collect it, and it is not claim-bearing |
 | `PU-full` | Full-history version of the primary algorithm | Phase-0 diagnostic only |
 | `C0` | Sinter `pymatching-correlated` | Context only |
 
@@ -268,7 +270,8 @@ The primary registered treatment name is:
 promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching
 ```
 
-The mandatory boundary comparator and no-op control are:
+The reserved exploratory boundary-comparator name and implemented no-op control
+are:
 
 ```text
 promatch-l1-v1-windowd-hw10-stages1234-parityboundary-zeroframe-pymatching
@@ -481,15 +484,16 @@ ceil((initial_hw - hw_limit) / 2)
 If no candidate exists before reaching the limit, the domain attempt rolls
 back as specified in Section 10.
 
-## 9. Boundary Policy
+## 9. Deferred Boundary-Policy Exploration
 
 The primary `PU-window` variant disables local boundary matches. This is an
 experimental restriction, **not** an accuracy guarantee. Removing boundary
 alternatives changes degrees, singleton classification, coverage, and candidate
 confidence.
 
-The first round must therefore include the separately named `PU-boundary`
-sensitivity comparator. It is parity-aware:
+V3 does not include or require a `PU-boundary` comparator in its scientific
+experiment. A future, separately versioned exploratory study may use the
+following parity-aware design:
 
 1. If a domain's initial active HW is odd, add one active virtual boundary
    vertex for that domain; otherwise add none.
@@ -502,21 +506,21 @@ sensitivity comparator. It is parity-aware:
 5. The strict zero-frame boundary comparator admits only zero-mask boundary
    corrections. A frame-bearing boundary study uses another decoder name.
 
-For this comparator, the virtual vertex participates in active-neighbor sets
-and therefore changes degree/singleton predicates. A direct
+In that future comparator, the virtual vertex would participate in
+active-neighbor sets and therefore change degree/singleton predicates. A direct
 detector-to-virtual-boundary edge may be considered in stages 1, 2, and 4 with
 the same deterministic keys. The virtual vertex is not a stage-3 endpoint or
 internal vertex. If it has no actual eligible boundary edge, it cannot be
 matched and the ordinary no-progress/rollback rule applies.
 
-If the domain reaches the HW limit without using its virtual vertex, discard
-that unmatched bookkeeping vertex with no correction contribution; all real
-residual detectors still go to the global matcher. This rule and its frequency
-are recorded in comparator telemetry.
+If such a domain reached the HW limit without using its virtual vertex, the
+study would discard that unmatched bookkeeping vertex with no correction
+contribution; all real residual detectors would still go to the global matcher.
+That study would record the rule's frequency in comparator telemetry.
 
-This comparator is diagnostic because a time-window interface is not itself a
-physical matching boundary. Cross-window evidence remains exclusively for the
-global residual decoder.
+This proposed comparator would remain exploratory because a time-window
+interface is not itself a physical matching boundary. Cross-window evidence
+remains exclusively for the global residual decoder in V3.
 
 ## 10. Correction Algebra and Transactional Rollback
 
@@ -691,9 +695,12 @@ registration option to collection:
 --custom_decoders_module_function yoked.decoding:custom_decoders
 ```
 
-The factory registers `PU-window`, `PU-boundary`, `PU-full`, and `U0-wrap`
-under distinct names. Built-in `pymatching` and `pymatching-correlated` remain
-the authoritative `U0-direct` and `C0` implementations.
+The factory exposes `PU-window`, the deferred `PU-boundary` prototype,
+`PU-full`, and `U0-wrap` under distinct names. The V3 scientific protocol
+collects only `PU-window` versus `U0-direct`; merely exposing another adapter
+does not make it a required comparator. Built-in `pymatching` and
+`pymatching-correlated` remain the authoritative `U0-direct` and `C0`
+implementations.
 
 ### 12.1 Paired batch sampling and resume
 
@@ -913,10 +920,17 @@ confirmatory test.
 
 Before the first pilot shot, freeze the draft
 `docs/PROMATCH_PILOT_PROTOCOL.json` from a clean implementation HEAD. Commit
-the exact generated `docs/PROMATCH_PILOT_FROZEN_V2.json` as the sole change after
+the exact generated `docs/PROMATCH_PILOT_FROZEN_V3.json` as the sole change after
 that HEAD, then sample from the resulting clean worktree. The frozen protocol
 contains the table, fixed `200,000` shots/cell, seed ranges, gates, priority
 rule, software hashes, and output schema.
+
+V1 and V2 are immutable diagnostic corpora, not inputs to V3. V1 exposed the
+two-stage replay-cap mismatch. V2 fixed that cap but retained an unscoped
+artifact contract under which analysis could write into the collection
+directory; it also showed regressions greater than recoveries in all five
+cells. V3 therefore uses fresh roots and must be frozen and collected from
+scratch. Neither earlier corpus may be edited, resumed, or promoted.
 
 After pilot collection, run the scientific analyzer before constructing the
 confirmatory protocol. It regenerates every scheduled pilot batch with the
@@ -928,7 +942,9 @@ the verified pilot. Manually populated adaptive literals are not trusted.
 
 If no candidate qualifies, the first round reports accuracy confirmation as
 infeasible. Adding another cell requires a versioned protocol amendment made
-before generating its data; it is not silently called confirmatory.
+before generating its data; it is not silently called confirmatory. In this
+case the workflow stops after the V3 pilot: do not freeze a first-round
+confirmatory manifest and do not sample a holdout.
 
 ### 15.3 Frozen accuracy design
 
@@ -1028,8 +1044,9 @@ fallback prediction and remains in the paired table. A crash, invariant
 violation, missing prediction, or malformed output fails the run; it is not
 dropped from `N`.
 
-Use of `MAX_ERRORS` is limited to smoke tests and is forbidden in confirmatory
-collection.
+Every documented V3 command keeps `MAX_ERRORS` unset, including smoke tests.
+Pilot, confirmatory, and target collection additionally reject any
+result-dependent stopping rule.
 
 ## 16. Workload and Coverage Analysis
 
@@ -1089,21 +1106,20 @@ Measure direct wall-clock intervals with `time.perf_counter_ns()`:
 T_total:
     adapter entry -> returned packed predictions
 
-Diagnostic components:
-    T_unpack
-    T_layout_traversal
-    T_prematch
-    T_repack
+Diagnostic interval:
     T_backend
 ```
 
 `T_total` is measured directly, not defined as the sum of instrumented
-components. Sampling, circuit/DEM compilation, file I/O, logging, telemetry
-serialization, and result analysis are outside it and reported separately.
-Input batches are pregenerated before timing.
+components. V3 persists only total-adapter and residual-backend intervals,
+because those are the intervals emitted and validated by the current latency
+harness. It makes no promised breakdown into unpack, layout traversal,
+prematch, or repack time. Sampling, circuit/DEM compilation, file I/O, logging,
+telemetry serialization, and result analysis are outside `T_total`. Input
+batches are pregenerated before timing.
 
-Measure uninstrumented `T_total` in separate runs from component diagnostics so
-nested timer calls do not perturb the primary endpoint. For `T_backend`, first
+Measure uninstrumented `T_total` separately from the backend diagnostic so the
+backend timer does not perturb the primary endpoint. For `T_backend`, first
 pregenerate paired original/residual packed corpora, then time only the matcher
 call on each corpus; the predecoder is outside this diagnostic interval.
 
@@ -1213,8 +1229,9 @@ hardware latency.
 ### Phase 1: discovery pilot
 
 Use exactly the ordered table and `200,000` shots/cell in Section 15.2. All
-pilot tuning, boundary comparisons, and stage/HW exploration are labeled
-discovery.
+V3 pilot output comes only from the fixed primary comparison. Any later tuning,
+boundary comparison, or stage/HW exploration is a separately versioned
+discovery study.
 
 ### Phase 2A: confirmatory measurable cell
 
@@ -1244,13 +1261,14 @@ the frozen latency protocol from Section 17
 Report workload, activation, overflow, backend latency, and total latency. Any
 natural-noise accuracy counts are descriptive bounds only.
 
-### Phase 3: mandatory sensitivity and exploratory ablations
+### Phase 3: optional exploratory sensitivities and ablations
 
 Run after the confirmatory manifest and results are frozen:
 
 - stages 1 only, 1-2, 1-3, and 1-4;
 - `HW in {6,8,10}`;
-- `PU-window` versus mandatory `PU-boundary`;
+- a separately versioned `PU-window` versus `PU-boundary` study, if the
+  boundary prototype and its artifact contract are completed and validated;
 - zero-frame versus separately named frame-bearing paths;
 - window widths `d/2`, `d`, and `2d` where integral and structurally valid;
 - full-history duration-scaling diagnostic; and
@@ -1332,8 +1350,8 @@ make commit B whose only change is the exact generated
 `docs/*FROZEN*.json`. Collection accepts B only when A is its ancestor and the
 single A-to-B change is that exact protocol file; any source, test, or other
 documentation change is rejected. Apply this sequence first to
-`docs/PROMATCH_PILOT_FROZEN_V2.json` and again to
-`docs/PROMATCH_FIRST_ROUND_FROZEN.json` before holdout, target, or latency
+`docs/PROMATCH_PILOT_FROZEN_V3.json` and again to
+`docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json` before holdout, target, or latency
 collection.
 
 The decoder, sampler, and statistical-analysis content hashes in the derived
@@ -1357,6 +1375,45 @@ protocol/result hashes and contains literal values for:
 - output schema and analysis-script hash; and
 - bounded replay-retention policy.
 
+V3 replaces the old unscoped `required_files` list with six explicit artifact
+sets that match the emitters:
+
+```text
+pilot_collection:
+    experiment.json
+    protocol.json
+    batches/<cell_id>/batch-<batch_id:08d>.json
+    summary.json
+pilot_analysis:
+    analysis.json
+    analysis.md
+    pilot_selection.json
+confirm_collection and target_collection, each:
+    experiment.json
+    protocol.json
+    batches/<cell_id>/batch-<batch_id:08d>.json
+    summary.json
+accuracy_analysis:
+    analysis.json
+    analysis.md
+latency_collection_per_cell:
+    protocol.json
+    suite.json
+    batch-<batch_size>.restart-<restart_index:02d>.json
+latency_analysis_per_cell:
+    latency_analysis.json
+    latency_analysis.md
+```
+
+Each set has its own directory. Scientific analysis requires an exact,
+preexisting collection, writes only to a distinct analysis directory, and must
+leave collection bytes unchanged. Before regeneration it checks the exact
+protocol identity, batch schedule, file set, duplicate-free JSON parse, and
+summary reconciliation. It then regenerates scientific batches without writes
+and requires deterministic payload equality. The V3 schema records exact
+emitted ledger, telemetry, replay, summary, analysis-cell, and selection-row
+keys; prose aliases are not accepted.
+
 The canonical JSON hash is the experiment ID. Resume is allowed only when the
 current manifest hash matches. Raw output retains:
 
@@ -1371,9 +1428,10 @@ current manifest hash matches. Raw output retains:
   category in each cell summary, with enough information to replay them.
 
 Invariant violations are fatal run errors and are not converted into replay
-rows. The completed V1 pilot and `docs/PROMATCH_PILOT_FROZEN.json` are retained
-as diagnostic audit artifacts only; they must never be resumed or promoted as
-V2 results.
+rows. The completed V1 and V2 pilots and their frozen manifests are retained as
+diagnostic audit artifacts only. They must never be edited, resumed, promoted,
+or relabeled as V3 results. In particular, preserve V2's unfavorable paired
+accuracy direction when reporting why a fresh V3 pilot is a go/no-go gate.
 
 Regression and recovery replay semantics are self-verifying from the retained
 logical predictions. Rollback is internal predecoder control flow, so the row
@@ -1409,6 +1467,8 @@ payload before computing a result.
 
 - Pilot and holdout seeds/ranges are disjoint.
 - A cell passes every fixed selection gate without reading signed `b-c`.
+- The V3 pilot analysis is written to its separate artifact-set directory and
+  leaves the exact pilot collection byte-for-byte unchanged.
 - The numeric margin, fixed N, score method, thresholds, and analysis hash are
   committed before holdout.
 - The paired interval/power implementation passes simulated-coverage tests.
@@ -1455,84 +1515,115 @@ python -m pytest
 Integration smoke under the required scratch directory:
 
 ```bash
+env -u MAX_ERRORS \
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 BLIS_NUM_THREADS=1 \
 DECODER=promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching \
-MAX_SHOTS=10000 \
-MAX_ERRORS=20 \
-PROCESSES=32 \
+MAX_SHOTS=10000 PROCESSES=32 THREADS_PER_PROCESS=1 \
 ./reproduce_fig8_1d smoke "$TMPDIR/yoked-promatch-smoke"
 ```
 
-`MAX_ERRORS` is acceptable here because this is only a non-claim Sinter smoke
-test. The paired `smoke` and `latency-smoke` commands are likewise explicitly
-non-claim-bearing; they cannot substitute for a frozen pilot, holdout, target,
-or latency suite.
+All documented simulations keep `MAX_ERRORS` unset, use exactly 32 processes,
+and pin every supported native numerical runtime to one thread. The paired
+`smoke` and `latency-smoke` commands remain explicitly non-claim-bearing; they
+cannot substitute for a frozen pilot, holdout, target, or latency suite.
 
 The end-to-end scientific workflow is:
 
 ```bash
+# Keep these settings in the shell for every command below.
+unset MAX_ERRORS
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export BLIS_NUM_THREADS=1
+
 git status --short
 tools/benchmark_promatch_l1 freeze \
     --protocol docs/PROMATCH_PILOT_PROTOCOL.json \
-    --out-protocol docs/PROMATCH_PILOT_FROZEN_V2.json
-git add docs/PROMATCH_PILOT_FROZEN_V2.json
-git commit -m "Freeze ProMatch L1 pilot protocol V2"
+    --out-protocol docs/PROMATCH_PILOT_FROZEN_V3.json
+git add docs/PROMATCH_PILOT_FROZEN_V3.json
+git commit -m "Freeze ProMatch L1 pilot protocol V3"
 
-env -u MAX_ERRORS tools/benchmark_promatch_l1 pilot \
-    --protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
-    --out "$TMPDIR/yoked-promatch-pilot-v2" \
+tools/benchmark_promatch_l1 pilot \
+    --protocol docs/PROMATCH_PILOT_FROZEN_V3.json \
+    --out "$TMPDIR/yoked-promatch-pilot-v3" \
     --processes 32
 
-env -u MAX_ERRORS tools/analyze_promatch_l1 \
-    --protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
-    --input "$TMPDIR/yoked-promatch-pilot-v2"
+tools/analyze_promatch_l1 \
+    --protocol docs/PROMATCH_PILOT_FROZEN_V3.json \
+    --input "$TMPDIR/yoked-promatch-pilot-v3" \
+    --out "$TMPDIR/yoked-promatch-pilot-v3-analysis"
+
+# Stop here unless the exact frozen selection gate returns "selected".
+jq -e '.status == "selected"' \
+    "$TMPDIR/yoked-promatch-pilot-v3-analysis/pilot_selection.json"
 
 tools/benchmark_promatch_l1 freeze \
     --protocol docs/PROMATCH_FIRST_ROUND_PROTOCOL.json \
-    --pilot-protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
-    --pilot-input "$TMPDIR/yoked-promatch-pilot-v2" \
-    --out-protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json
-git add docs/PROMATCH_FIRST_ROUND_FROZEN.json
-git commit -m "Freeze ProMatch L1 first-round protocol"
+    --pilot-protocol docs/PROMATCH_PILOT_FROZEN_V3.json \
+    --pilot-input "$TMPDIR/yoked-promatch-pilot-v3" \
+    --out-protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json
+git add docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json
+git commit -m "Freeze ProMatch L1 first-round protocol V3"
 
 tools/benchmark_promatch_l1 confirm \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
-    --out "$TMPDIR/yoked-promatch-confirm" \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --out "$TMPDIR/yoked-promatch-confirm-v3" \
     --processes 32
 
 tools/benchmark_promatch_l1 target \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
-    --out "$TMPDIR/yoked-promatch-target" \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --out "$TMPDIR/yoked-promatch-target-v3" \
     --processes 32
 
-SELECTED_CELL_ID='<analysis_config.selection.selected_cell_id from the frozen protocol>'
+tools/analyze_promatch_l1 \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --input "$TMPDIR/yoked-promatch-confirm-v3" \
+    --out "$TMPDIR/yoked-promatch-confirm-v3-analysis"
+
+tools/analyze_promatch_l1 \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --input "$TMPDIR/yoked-promatch-target-v3" \
+    --out "$TMPDIR/yoked-promatch-target-v3-analysis"
+
+SELECTED_CELL_ID=$(jq -r '.analysis_config.selection.selected_cell_id' \
+    docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json)
 TARGET_CELL_ID='target-d11-n6-y2-r44-p0.001'
 
 tools/benchmark_promatch_l1 latency \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
     --cell-id "$SELECTED_CELL_ID" \
-    --out "$TMPDIR/yoked-promatch-latency-selected" \
+    --out "$TMPDIR/yoked-promatch-latency-selected-v3" \
     --processes 32
 
 tools/benchmark_promatch_l1 latency \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
     --cell-id "$TARGET_CELL_ID" \
-    --out "$TMPDIR/yoked-promatch-latency-target" \
+    --out "$TMPDIR/yoked-promatch-latency-target-v3" \
     --processes 32
 
 tools/analyze_promatch_l1 \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
-    --input "$TMPDIR/yoked-promatch-confirm" \
-    --latency-input "$TMPDIR/yoked-promatch-latency-selected" \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --latency-input "$TMPDIR/yoked-promatch-latency-selected-v3" \
     --latency-cell "$SELECTED_CELL_ID" \
-    --out "$TMPDIR/yoked-promatch-analysis-selected"
+    --out "$TMPDIR/yoked-promatch-latency-selected-v3-analysis"
 
 tools/analyze_promatch_l1 \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
-    --input "$TMPDIR/yoked-promatch-target" \
-    --latency-input "$TMPDIR/yoked-promatch-latency-target" \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --latency-input "$TMPDIR/yoked-promatch-latency-target-v3" \
     --latency-cell "$TARGET_CELL_ID" \
-    --out "$TMPDIR/yoked-promatch-analysis-target"
+    --out "$TMPDIR/yoked-promatch-latency-target-v3-analysis"
 ```
+
+If the V3 pilot reports `confirmation-infeasible`, do not execute the
+first-round freeze or any holdout command. A changed algorithm or grid requires
+another versioned draft and fresh pilot; the V2 negative signal remains part of
+the record. A `selected` result means only that the frozen unsigned
+measurability and power gates passed, not that pilot accuracy favored the
+treatment.
 
 All simulation collection and scientific regeneration commands use exactly 32
 processes and reject values above 32. Latency records the same frozen global
@@ -1546,7 +1637,7 @@ each restart cycles through a distinct deterministic 10,000-shot corpus.
 | Syndrome history | Approximately `d` rounds for one surface-code decode | Nonoverlapping `d`-round body windows; terminal/cross-window evidence left global |
 | Capacity policy | Timing-adaptive handoff to a finite-capacity real-time matcher | Fixed `HW=10` primary; limits 6/8/10 are later sensitivity points |
 | Domains | One surface-code matching problem | Independent `(patch, basis, window)` L1 units |
-| Boundary | Surface-code boundary behavior in the source model | No-boundary primary plus mandatory parity-aware actual-boundary comparator |
+| Boundary | Surface-code boundary behavior in the source model | No-boundary V3 primary; parity-aware comparator deferred to a separate exploratory study |
 | Outer code | None | Yoke constraints retained only in flat residual matching |
 | Backend | Astrea/real-time finite-capacity setting in the paper | Unrestricted software PyMatching fallback |
 | Correlations | Independent-error decoding graph | Ordinary PyMatching's merged uncorrelated graph |

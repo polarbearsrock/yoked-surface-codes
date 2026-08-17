@@ -32,15 +32,20 @@ from typing import Any, Protocol
 
 import numpy as np
 
+from yoked.decoding._promatch_experiment import normalize_protocol
 from yoked.decoding._promatch_stats import (
     canonical_json_bytes,
+    manifest_experiment_id,
     validate_process_count,
 )
 
 
 __all__ = [
     "LATENCY_RESTART_SCHEMA",
+    "LATENCY_RESTART_FIELDS",
     "LATENCY_SUITE_SCHEMA",
+    "LATENCY_SUITE_FIELDS",
+    "LATENCY_PAIR_FIELDS",
     "LatencyProtocol",
     "LatencyRestartFactory",
     "LatencyRestartTask",
@@ -55,6 +60,59 @@ __all__ = [
 
 LATENCY_RESTART_SCHEMA = "promatch-l1-latency-restart-v1"
 LATENCY_SUITE_SCHEMA = "promatch-l1-latency-suite-v1"
+LATENCY_RESTART_FIELDS = frozenset(
+    {
+        "schema",
+        "protocol_id",
+        "suite_id",
+        "workload_id",
+        "workload_identity",
+        "claim_bearing",
+        "protocol",
+        "restart_index",
+        "restart_seed",
+        "batch_size",
+        "clock",
+        "timing_scope",
+        "warmup",
+        "pair_execution_order",
+        "corpus",
+        "provenance",
+        "pairs",
+    }
+)
+LATENCY_SUITE_FIELDS = frozenset(
+    {
+        "schema",
+        "protocol_id",
+        "suite_id",
+        "workload_id",
+        "workload_identity",
+        "claim_bearing",
+        "protocol",
+        "processes",
+        "process_cap",
+        "timed_restart_concurrency",
+        "restart_concurrency_policy",
+        "affinity_policy",
+        "fresh_process_per_restart",
+        "restart_ledgers",
+        "restart_ledger_sha256",
+    }
+)
+LATENCY_PAIR_FIELDS = frozenset(
+    {
+        "pair",
+        "numerator",
+        "denominator",
+        "order_by_block",
+        "numerator_calls_ns",
+        "denominator_calls_ns",
+        "numerator_block_totals_ns",
+        "denominator_block_totals_ns",
+        "block_total_definition",
+    }
+)
 
 PRIMARY_RESTARTS = 10
 PRIMARY_BLOCKS_PER_RESTART = 100
@@ -796,6 +854,11 @@ def _measure_latency_workload(
         },
         "pairs": pairs,
     }
+    if set(record) != LATENCY_RESTART_FIELDS or any(
+        not isinstance(pair, Mapping) or set(pair) != LATENCY_PAIR_FIELDS
+        for pair in pairs.values()
+    ):
+        raise AssertionError("latency restart emitter drifted from its exact schema")
     # Catch accidental NumPy scalars/nonfinite data before returning to a
     # parent process or writing a ledger.
     canonical_json_bytes(record)
@@ -863,6 +926,37 @@ def _tmpdir() -> Path:
     return result
 
 
+def _strict_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key {key!r}")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> Any:
+    raise ValueError(f"nonfinite JSON constant {value!r}")
+
+
+def _load_json_strict(path: Path) -> dict[str, Any]:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"latency artifact must be a regular non-symlink file: {path}")
+    try:
+        with path.open(encoding="utf-8") as source:
+            value = json.load(
+                source,
+                object_pairs_hook=_strict_json_object,
+                parse_constant=_reject_json_constant,
+            )
+    except (OSError, UnicodeError, json.JSONDecodeError) as ex:
+        raise ValueError(f"cannot read strict JSON latency artifact {path}") from ex
+    if not isinstance(value, dict):
+        raise ValueError(f"latency artifact must contain one JSON object: {path}")
+    canonical_json_bytes(value)
+    return value
+
+
 def write_restart_ledger_atomic(
     path: str | os.PathLike[str],
     record: Mapping[str, Any],
@@ -916,12 +1010,14 @@ def _load_existing_restart(
     suite_id: str,
     workload_id: str,
     workload_identity: Mapping[str, Any],
+    protocol_json: Mapping[str, Any],
     scientific: bool,
     batch_size: int,
     restart_index: int,
 ) -> dict[str, Any]:
-    with path.open(encoding="utf-8") as source:
-        record = json.load(source)
+    record = _load_json_strict(path)
+    if set(record) != LATENCY_RESTART_FIELDS:
+        raise ValueError(f"existing latency ledger has incorrect fields: {path}")
     if record.get("schema") != LATENCY_RESTART_SCHEMA:
         raise ValueError(f"existing latency ledger has wrong schema: {path}")
     if record.get("protocol_id") != protocol_id:
@@ -935,8 +1031,8 @@ def _load_existing_restart(
     if record.get("batch_size") != batch_size or record.get("restart_index") != restart_index:
         raise ValueError(f"existing latency ledger has wrong task identity: {path}")
     protocol = record.get("protocol")
-    if not isinstance(protocol, Mapping):
-        raise ValueError(f"existing latency ledger has no protocol object: {path}")
+    if protocol != dict(protocol_json):
+        raise ValueError(f"existing latency ledger has wrong protocol object: {path}")
     calls = protocol.get("calls_per_block")
     blocks = protocol.get("blocks_per_restart")
     pairs = record.get("pairs")
@@ -945,7 +1041,7 @@ def _load_existing_restart(
     if set(pairs) != set(PAIR_NAMES):
         raise ValueError(f"existing latency ledger has wrong timing pairs: {path}")
     for pair_name, pair in pairs.items():
-        if not isinstance(pair, Mapping):
+        if not isinstance(pair, Mapping) or set(pair) != LATENCY_PAIR_FIELDS:
             raise ValueError(f"existing latency pair {pair_name!r} is malformed: {path}")
         if len(pair.get("order_by_block", [])) != blocks:
             raise ValueError(f"existing latency pair has wrong block count: {path}")
@@ -969,6 +1065,7 @@ def _load_existing_restart(
 def run_latency_benchmark(
     restart_factory: LatencyRestartFactory,
     *,
+    manifest: Mapping[str, Any],
     protocol: LatencyProtocol = LatencyProtocol(),
     out_dir: str | os.PathLike[str],
     processes: int = 32,
@@ -983,6 +1080,8 @@ def run_latency_benchmark(
     """
 
     processes = validate_process_count(processes)
+    normalized_manifest = normalize_protocol(manifest)
+    canonical_json_bytes(normalized_manifest)
     protocol.validate(scientific=scientific)
     if not callable(restart_factory):
         raise TypeError("restart_factory must be callable")
@@ -991,6 +1090,17 @@ def run_latency_benchmark(
     workload_identity = _factory_suite_identity(
         restart_factory, scientific=scientific
     )
+    if scientific and (
+        processes != 32
+        or normalized_manifest.get("processes") != processes
+        or manifest_experiment_id(normalized_manifest)
+        != normalized_manifest.get("experiment_id")
+        or workload_identity.get("experiment_id")
+        != normalized_manifest.get("experiment_id")
+    ):
+        raise ValueError(
+            "scientific latency manifest, process count, and workload identity differ"
+        )
     workload_id = hashlib.sha256(
         canonical_json_bytes(workload_identity)
     ).hexdigest()
@@ -1006,27 +1116,61 @@ def run_latency_benchmark(
             }
         )
     ).hexdigest()
-    output = Path(out_dir)
+    output = Path(out_dir).resolve()
+    ordered_ledgers = [
+        _restart_filename(batch_size=batch_size, restart_index=restart_index)
+        for batch_size in protocol.batch_sizes
+        for restart_index in range(protocol.restarts)
+    ]
+    expected_names = {"protocol.json", "suite.json", *ordered_ledgers}
+    existing_suite: dict[str, Any] | None = None
     existing_suite_path = output / "suite.json"
-    if existing_suite_path.exists():
-        with existing_suite_path.open(encoding="utf-8") as source:
-            existing_suite = json.load(source)
-        expected_suite_identity = {
-            "schema": LATENCY_SUITE_SCHEMA,
-            "protocol_id": protocol_id,
-            "suite_id": suite_id,
-            "workload_id": workload_id,
-            "workload_identity": workload_identity,
-            "claim_bearing": bool(scientific),
-        }
-        if any(
-            existing_suite.get(key) != value
-            for key, value in expected_suite_identity.items()
-        ):
+    if output.exists():
+        if not output.is_dir() or output.is_symlink():
+            raise ValueError("latency output must be a regular directory")
+        actual_names = {entry.name for entry in output.iterdir()}
+        extras = sorted(actual_names - expected_names)
+        if extras:
+            raise ValueError(f"latency output contains unexpected artifacts: {extras}")
+        protocol_path = output / "protocol.json"
+        if "protocol.json" not in actual_names:
+            raise ValueError("existing latency output is missing protocol.json")
+        if _load_json_strict(protocol_path) != normalized_manifest:
             raise ValueError(
-                "existing latency output belongs to a different protocol or workload"
+                "existing latency protocol.json differs from the runtime manifest"
             )
-    output.mkdir(parents=True, exist_ok=True)
+        if existing_suite_path.exists():
+            if actual_names != expected_names:
+                missing = sorted(expected_names - actual_names)
+                raise ValueError(
+                    "completed latency suite has missing artifacts: " + str(missing)
+                )
+            existing_suite = _load_json_strict(existing_suite_path)
+            if set(existing_suite) != LATENCY_SUITE_FIELDS:
+                raise ValueError("existing latency suite has incorrect fields")
+            expected_suite_identity = {
+                "schema": LATENCY_SUITE_SCHEMA,
+                "protocol_id": protocol_id,
+                "suite_id": suite_id,
+                "workload_id": workload_id,
+                "workload_identity": workload_identity,
+                "claim_bearing": bool(scientific),
+            }
+            if any(
+                existing_suite.get(key) != value
+                for key, value in expected_suite_identity.items()
+            ):
+                raise ValueError(
+                    "existing latency output belongs to a different protocol or workload"
+                )
+        if not resume and actual_names - {"protocol.json"}:
+            raise FileExistsError("latency output already contains collection artifacts")
+    else:
+        output.mkdir(parents=True, exist_ok=False)
+        write_restart_ledger_atomic(
+            output / "protocol.json",
+            normalized_manifest,
+        )
 
     records: dict[tuple[int, int], dict[str, Any]] = {}
     tasks: list[LatencyRestartTask] = []
@@ -1046,6 +1190,7 @@ def run_latency_benchmark(
                     suite_id=suite_id,
                     workload_id=workload_id,
                     workload_identity=workload_identity,
+                    protocol_json=protocol_json,
                     scientific=scientific,
                     batch_size=batch_size,
                     restart_index=restart_index,
@@ -1095,11 +1240,6 @@ def run_latency_benchmark(
                     write_restart_ledger_atomic(path, record)
                     records[key] = record
 
-    ordered_ledgers = [
-        _restart_filename(batch_size=batch_size, restart_index=restart_index)
-        for batch_size in protocol.batch_sizes
-        for restart_index in range(protocol.restarts)
-    ]
     if len(records) != len(ordered_ledgers):
         raise RuntimeError("latency suite completed without all restart ledgers")
     suite = {
@@ -1126,5 +1266,11 @@ def run_latency_benchmark(
             for restart_index in range(protocol.restarts)
         },
     }
-    write_restart_ledger_atomic(output / "suite.json", suite, overwrite=True)
+    if set(suite) != LATENCY_SUITE_FIELDS:
+        raise AssertionError("latency suite emitter drifted from its exact schema")
+    if existing_suite is not None:
+        if existing_suite != suite:
+            raise ValueError("existing latency suite does not exactly reconcile")
+    else:
+        write_restart_ledger_atomic(output / "suite.json", suite)
     return suite

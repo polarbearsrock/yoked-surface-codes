@@ -28,7 +28,10 @@ from yoked.decoding._promatch_experiment import (
 )
 from yoked.decoding._promatch_latency import (
     BACKEND_RESIDUAL_VS_ORIGINAL,
+    LATENCY_PAIR_FIELDS,
+    LATENCY_RESTART_FIELDS,
     LATENCY_RESTART_SCHEMA,
+    LATENCY_SUITE_FIELDS,
     LATENCY_SUITE_SCHEMA,
     PAIR_NAMES,
     THREAD_ENVIRONMENT,
@@ -78,53 +81,6 @@ _SCIENTIFIC_GATES = {
     "backend_geometric_ratio_upper": 0.90,
     "total_geometric_ratio_upper": 0.95,
     "total_p99_ratio_upper": 1.05,
-}
-_RESTART_FIELDS = {
-    "schema",
-    "protocol_id",
-    "suite_id",
-    "workload_id",
-    "workload_identity",
-    "claim_bearing",
-    "protocol",
-    "restart_index",
-    "restart_seed",
-    "batch_size",
-    "clock",
-    "timing_scope",
-    "warmup",
-    "pair_execution_order",
-    "corpus",
-    "provenance",
-    "pairs",
-}
-_SUITE_FIELDS = {
-    "schema",
-    "protocol_id",
-    "suite_id",
-    "workload_id",
-    "workload_identity",
-    "claim_bearing",
-    "protocol",
-    "processes",
-    "process_cap",
-    "timed_restart_concurrency",
-    "restart_concurrency_policy",
-    "affinity_policy",
-    "fresh_process_per_restart",
-    "restart_ledgers",
-    "restart_ledger_sha256",
-}
-_PAIR_FIELDS = {
-    "pair",
-    "numerator",
-    "denominator",
-    "order_by_block",
-    "numerator_calls_ns",
-    "denominator_calls_ns",
-    "numerator_block_totals_ns",
-    "denominator_block_totals_ns",
-    "block_total_definition",
 }
 _TIMING_SCOPE = {
     "total": "direct adapter-entry-to-packed-prediction-return",
@@ -513,7 +469,7 @@ def _validate_suite(
     identity: Mapping[str, Any],
     scientific: bool,
 ) -> tuple[str, str, str, list[str], dict[str, str]]:
-    if set(suite) != _SUITE_FIELDS:
+    if set(suite) != LATENCY_SUITE_FIELDS:
         raise ValueError("suite.json fields do not exactly match latency suite v1")
     if suite.get("schema") != LATENCY_SUITE_SCHEMA:
         raise ValueError("suite.json has the wrong latency schema")
@@ -722,7 +678,10 @@ def _validate_restart(
     restart_index: int,
     timing_corpus_root: str,
 ) -> tuple[dict[str, tuple[np.ndarray, np.ndarray]], dict[str, Any]]:
-    if set(record) != _RESTART_FIELDS or record.get("schema") != LATENCY_RESTART_SCHEMA:
+    if (
+        set(record) != LATENCY_RESTART_FIELDS
+        or record.get("schema") != LATENCY_RESTART_SCHEMA
+    ):
         raise ValueError("restart ledger fields/schema do not exactly match latency v1")
     expected_header = {
         "protocol_id": protocol_id,
@@ -835,7 +794,7 @@ def _validate_restart(
     arrays: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     for pair_name in PAIR_NAMES:
         pair = pairs[pair_name]
-        if not isinstance(pair, Mapping) or set(pair) != _PAIR_FIELDS:
+        if not isinstance(pair, Mapping) or set(pair) != LATENCY_PAIR_FIELDS:
             raise ValueError(f"latency pair {pair_name!r} has incorrect fields")
         numerator_name, denominator_name = _PAIR_VARIANTS[pair_name]
         if (
@@ -948,6 +907,25 @@ def analyze_latency_suite(
     path = Path(suite_path)
     suite_file = path if path.name == "suite.json" else path / "suite.json"
     root = suite_file.parent
+    expected_names = {
+        "protocol.json",
+        "suite.json",
+        *_expected_restart_names(protocol),
+    }
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError("latency input must be a regular directory")
+    actual_names = {entry.name for entry in root.iterdir()}
+    if actual_names != expected_names:
+        missing = sorted(expected_names - actual_names)
+        extra = sorted(actual_names - expected_names)
+        raise ValueError(
+            f"latency artifact set mismatch: missing={missing}, extra={extra}"
+        )
+    stored_manifest = _load_json(root / "protocol.json")
+    if stored_manifest != normalized:
+        raise ValueError(
+            "latency protocol.json differs from the supplied normalized manifest"
+        )
     suite = _load_json(suite_file)
     protocol_id, workload_id, suite_id, ledger_names, ledger_hashes = _validate_suite(
         suite,

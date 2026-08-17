@@ -188,6 +188,7 @@ def _smoke_inputs(tmp_path: Path) -> tuple[Path, dict[str, Any], TinyLatencyAnal
     )
     output = tmp_path / "latency"
     output.mkdir(parents=True)
+    _write_json(output / "protocol.json", manifest)
     ledgers: list[str] = []
     for batch_size in protocol.batch_sizes:
         for restart_index in range(protocol.restarts):
@@ -298,7 +299,7 @@ def test_missing_and_extra_restart_ledgers_fail_closed(tmp_path: Path) -> None:
     output, manifest, smoke = _smoke_inputs(tmp_path)
     cell_id = manifest["cells"][0]["cell_id"]
     (output / "batch-1.restart-00.json").unlink()
-    with pytest.raises(ValueError, match="restart set mismatch"):
+    with pytest.raises(ValueError, match="artifact set mismatch"):
         analyze_latency_suite(
             output,
             manifest=manifest,
@@ -309,7 +310,7 @@ def test_missing_and_extra_restart_ledgers_fail_closed(tmp_path: Path) -> None:
 
     output, manifest, smoke = _smoke_inputs(tmp_path / "second")
     _write_json(output / "batch-99.restart-99.json", {"extra": True})
-    with pytest.raises(ValueError, match="restart set mismatch"):
+    with pytest.raises(ValueError, match="artifact set mismatch"):
         analyze_latency_suite(
             output,
             manifest=manifest,
@@ -378,6 +379,56 @@ def test_duplicate_json_keys_are_rejected(tmp_path: Path) -> None:
             scientific=False,
             smoke=smoke,
         )
+
+
+def _latency_artifact_snapshot(path: Path) -> dict[str, bytes]:
+    return {
+        item.relative_to(path).as_posix(): item.read_bytes()
+        for item in path.rglob("*")
+        if item.is_file()
+    }
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing-protocol",
+        "tampered-protocol",
+        "duplicate-protocol-key",
+        "duplicate-restart-key",
+        "unexpected-analysis",
+    ],
+)
+def test_latency_analysis_preflight_is_exact_and_read_only(
+    tmp_path: Path, mutation: str
+) -> None:
+    output, manifest, smoke = _smoke_inputs(tmp_path)
+    protocol_path = output / "protocol.json"
+    if mutation == "missing-protocol":
+        protocol_path.unlink()
+    elif mutation == "tampered-protocol":
+        changed = json.loads(protocol_path.read_text())
+        changed["processes"] = 2
+        _write_json(protocol_path, changed)
+    elif mutation == "duplicate-protocol-key":
+        protocol_path.write_text('{"schema":"first","schema":"second"}')
+    elif mutation == "duplicate-restart-key":
+        restart = output / "batch-1.restart-00.json"
+        restart.write_text('{"schema":"first","schema":"second"}')
+    elif mutation == "unexpected-analysis":
+        (output / "analysis.json").write_text("{}")
+    else:  # pragma: no cover - parameter list is exhaustive
+        raise AssertionError(mutation)
+    before = _latency_artifact_snapshot(output)
+    with pytest.raises(ValueError):
+        analyze_latency_suite(
+            output,
+            manifest=manifest,
+            cell_id=manifest["cells"][0]["cell_id"],
+            scientific=False,
+            smoke=smoke,
+        )
+    assert _latency_artifact_snapshot(output) == before
 
 
 def _frozen_scientific_manifest() -> dict[str, Any]:
@@ -458,6 +509,14 @@ def test_scientific_suite_requires_exactly_32_processes(
     ).hexdigest()
     output = tmp_path / "scientific"
     output.mkdir()
+    _write_json(output / "protocol.json", manifest)
+    restart_names = [
+        f"batch-{batch}.restart-{restart:02d}.json"
+        for batch in protocol.batch_sizes
+        for restart in range(protocol.restarts)
+    ]
+    for name in restart_names:
+        _write_json(output / name, {})
     _write_json(
         output / "suite.json",
         {
@@ -474,11 +533,7 @@ def test_scientific_suite_requires_exactly_32_processes(
             "restart_concurrency_policy": "serialized-to-avoid-mutual-contention",
             "affinity_policy": "inherit-and-record",
             "fresh_process_per_restart": True,
-            "restart_ledgers": [
-                f"batch-{batch}.restart-{restart:02d}.json"
-                for batch in protocol.batch_sizes
-                for restart in range(protocol.restarts)
-            ],
+            "restart_ledgers": restart_names,
             "restart_ledger_sha256": {
                 f"batch-{batch}.restart-{restart:02d}.json": "00" * 32
                 for batch in protocol.batch_sizes

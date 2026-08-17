@@ -80,6 +80,10 @@ the installed Matplotlib and font versions.
 ## Stage 2: run a small end-to-end full-circuit smoke test
 
 ```bash
+env -u MAX_ERRORS \
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 BLIS_NUM_THREADS=1 \
+PROCESSES=32 THREADS_PER_PROCESS=1 \
 ./reproduce_fig8_1d smoke
 ```
 
@@ -93,7 +97,10 @@ worker processes and refuse values above 32. Native numerical libraries use
 one thread per worker by default:
 
 ```bash
-MAX_SHOTS=1000000 MAX_ERRORS=1000 PROCESSES=32 THREADS_PER_PROCESS=1 \
+env -u MAX_ERRORS \
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 BLIS_NUM_THREADS=1 \
+MAX_SHOTS=1000000 PROCESSES=32 THREADS_PER_PROCESS=1 \
 ./reproduce_fig8_1d smoke
 ```
 
@@ -108,6 +115,10 @@ Generating the circuits is inexpensive compared with sampling them:
 An open correlated-decoder baseline can then be collected with:
 
 ```bash
+env -u MAX_ERRORS \
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 BLIS_NUM_THREADS=1 \
+PROCESSES=32 THREADS_PER_PROCESS=1 \
 ./reproduce_fig8_1d collect-open-validation-grid
 ```
 
@@ -115,7 +126,7 @@ The command defaults to Sinter's `pymatching-correlated` decoder and is
 resumable through
 `out/fig8_1d/validation_grid/pymatching-correlated_stats.csv`. To collect an
 ordinary matching baseline instead, set `DECODER=pymatching`; this writes to
-`pymatching_stats.csv`. Start with small shot and error limits. The
+`pymatching_stats.csv`. Start with a small fixed shot limit. The
 larger-distance paper points required tens or hundreds of millions of shots,
 and some checked-in runs used one billion shots per circuit.
 
@@ -126,8 +137,10 @@ reserved for explicitly non-claim local smoke/debug work. A bounded resumable
 debug collection that follows the project CPU setting is:
 
 ```bash
-PROCESSES=32 THREADS_PER_PROCESS=1 \
-MAX_SHOTS=1000000 MAX_ERRORS=100 \
+env -u MAX_ERRORS \
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 BLIS_NUM_THREADS=1 \
+PROCESSES=32 THREADS_PER_PROCESS=1 MAX_SHOTS=1000000 \
 ./reproduce_fig8_1d collect-open-validation-grid
 ```
 
@@ -179,7 +192,7 @@ L1 predecoder in front of the existing flat, joint PyMatching residual decode:
 | Short role | Sinter decoder name | Scientific scope |
 | --- | --- | --- |
 | `PU-window` | `promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching` | Primary ProMatch-style treatment: independent `(patch, basis, d-round window)` attempts, `HW=10`, stages 1--4, no boundary matching, zero observable-frame local paths. |
-| `PU-boundary` | `promatch-l1-v1-windowd-hw10-stages1234-parityboundary-zeroframe-pymatching` | Mandatory exploratory boundary-policy comparator, not the primary treatment. |
+| `PU-boundary` | `promatch-l1-v1-windowd-hw10-stages1234-parityboundary-zeroframe-pymatching` | Deferred exploratory boundary-policy prototype; V3 does not require or collect it, and it is not claim-bearing. |
 | `PU-full` | `promatch-l1-v1-fullhistory-hw10-stages1234-noboundary-zeroframe-pymatching` | Full-history diagnostic only; it is not claim-bearing because it changes the online-window model. |
 | `U0-wrap` | `pymatching-u0-wrap-v1-windowd` | Identity adapter control used to measure packing/layout overhead. |
 
@@ -194,14 +207,17 @@ The custom decoders can be exercised through the Figure 8 integration runner,
 for example:
 
 ```bash
+env -u MAX_ERRORS \
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
+NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 BLIS_NUM_THREADS=1 \
 DECODER=promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching \
-PROCESSES=32 THREADS_PER_PROCESS=1 MAX_SHOTS=10000 MAX_ERRORS=20 \
+PROCESSES=32 THREADS_PER_PROCESS=1 MAX_SHOTS=10000 \
 ./reproduce_fig8_1d smoke "$TMPDIR/yoked-promatch-sinter-smoke"
 ```
 
-`MAX_ERRORS` is acceptable in this integration smoke only. It is forbidden in
-the fixed-shot paired pilot, confirmatory, and target collections (even though
-target-cell accuracy is descriptive rather than claim-bearing).
+All documented collections keep `MAX_ERRORS` unset and use a fixed shot count.
+This keeps smoke and scientific command lines operationally consistent; the
+smoke remains non-claim-bearing.
 
 ## Paired ProMatch experiment workflow
 
@@ -233,25 +249,46 @@ The frozen JSON records the implementation parent commit; the runner permits
 exactly this one protocol-only child commit and rejects any intervening source
 or documentation change.
 
-The complete freeze/run sequence is:
+The completed V1 pilot (`docs/PROMATCH_PILOT_FROZEN.json`) exposed a mismatch
+between per-batch replay retention and the per-cell summary cap. The completed
+V2 pilot (`docs/PROMATCH_PILOT_FROZEN_V2.json`) fixed that cap, but a later audit
+found that its unscoped output contract allowed analysis to create files inside
+the collection directory. V2 also produced an unfavorable accuracy signal in
+all five cells: regressions exceeded recoveries. V1 and V2 manifests and results
+are immutable diagnostic artifacts. Do not resume, edit, or promote either
+corpus.
 
-The completed V1 pilot (`docs/PROMATCH_PILOT_FROZEN.json`) exposed an output-
-contract mismatch between per-batch replay candidates and the per-cell summary
-cap. Its artifacts are diagnostic-only and must not be resumed. V2 uses a fresh
-pilot seed, an explicit two-stage replay policy, and a new output directory.
+V3 starts from fresh literal seed roots and separates collection, accuracy
+analysis, and per-cell latency artifacts. A collection directory contains
+exactly `experiment.json`, `protocol.json`, `summary.json`, and the frozen
+`batches/<cell_id>/batch-<batch_id:08d>.json` schedule. Analysis always writes
+to a distinct, initially absent directory. The analyzer must verify the exact
+preexisting collection before deterministic regeneration and must not create or
+modify any collection artifact.
+
+The complete V3 freeze/run sequence is:
 
 ```bash
+# Apply the required process/thread policy to the whole workflow.
+unset MAX_ERRORS
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export BLIS_NUM_THREADS=1
+
 # 1. Commit the implementation and verify that the worktree is clean. Freeze
 #    the pilot against that implementation HEAD.
 git status --short
 tools/benchmark_promatch_l1 freeze \
     --protocol docs/PROMATCH_PILOT_PROTOCOL.json \
-    --out-protocol docs/PROMATCH_PILOT_FROZEN_V2.json
+    --out-protocol docs/PROMATCH_PILOT_FROZEN_V3.json
 
 # 2. Make the exact frozen pilot JSON the only post-freeze change, commit it,
 #    and return to a clean worktree before sampling.
-git add docs/PROMATCH_PILOT_FROZEN_V2.json
-git commit -m "Freeze ProMatch L1 pilot protocol V2"
+git add docs/PROMATCH_PILOT_FROZEN_V3.json
+git commit -m "Freeze ProMatch L1 pilot protocol V3"
 git status --short
 
 # 3. Optional functional paired smoke. It is explicitly non-claim-bearing even
@@ -262,87 +299,108 @@ tools/benchmark_promatch_l1 smoke \
     --shots 10000
 
 # 4. Run all five ordered, 200,000-shot discovery cells at exactly 32 workers.
-env -u MAX_ERRORS tools/benchmark_promatch_l1 pilot \
-    --protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
-    --out "$TMPDIR/yoked-promatch-pilot-v2" \
+tools/benchmark_promatch_l1 pilot \
+    --protocol docs/PROMATCH_PILOT_FROZEN_V3.json \
+    --out "$TMPDIR/yoked-promatch-pilot-v3" \
     --processes 32
 
 # 5. Verify the pilot and apply the frozen unsigned selection rule. Scientific
-#    analysis regenerates every pilot batch with the manifest's 32 processes.
-env -u MAX_ERRORS tools/analyze_promatch_l1 \
-    --protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
-    --input "$TMPDIR/yoked-promatch-pilot-v2"
+#    analysis regenerates every pilot batch with the manifest's 32 processes,
+#    writes only to the separate analysis directory, and leaves collection
+#    artifacts byte-for-byte unchanged.
+tools/analyze_promatch_l1 \
+    --protocol docs/PROMATCH_PILOT_FROZEN_V3.json \
+    --input "$TMPDIR/yoked-promatch-pilot-v3" \
+    --out "$TMPDIR/yoked-promatch-pilot-v3-analysis"
+
+# This must succeed before any confirmatory protocol is frozen or any holdout
+# shot is sampled. If it fails, stop and report the V3 pilot as non-viable.
+jq -e '.status == "selected"' \
+    "$TMPDIR/yoked-promatch-pilot-v3-analysis/pilot_selection.json"
 
 # 6. From the resulting clean implementation/protocol HEAD, derive and freeze
 #    the confirmatory protocol. Manual selection literals are not trusted.
 tools/benchmark_promatch_l1 freeze \
     --protocol docs/PROMATCH_FIRST_ROUND_PROTOCOL.json \
-    --pilot-protocol docs/PROMATCH_PILOT_FROZEN_V2.json \
-    --pilot-input "$TMPDIR/yoked-promatch-pilot-v2" \
-    --out-protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json
+    --pilot-protocol docs/PROMATCH_PILOT_FROZEN_V3.json \
+    --pilot-input "$TMPDIR/yoked-promatch-pilot-v3" \
+    --out-protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json
 
 # 7. Again, commit only the exact generated frozen JSON and restore a clean
 #    worktree before any holdout, target, or latency measurement.
-git add docs/PROMATCH_FIRST_ROUND_FROZEN.json
-git commit -m "Freeze ProMatch L1 first-round protocol"
+git add docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json
+git commit -m "Freeze ProMatch L1 first-round protocol V3"
 git status --short
 
-# 8. Collect the selected-cell fixed-N holdout. MAX_ERRORS is forbidden.
+# 8. Only after the V3 viability check, collect the selected-cell fixed-N
+#    holdout. MAX_ERRORS remains unset.
 tools/benchmark_promatch_l1 confirm \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
-    --out "$TMPDIR/yoked-promatch-confirm" \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --out "$TMPDIR/yoked-promatch-confirm-v3" \
     --processes 32
 
 # 9. Collect the fixed one-million-shot target performance corpus. Target-cell
 #    accuracy remains descriptive and cannot support an accuracy claim.
 tools/benchmark_promatch_l1 target \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
-    --out "$TMPDIR/yoked-promatch-target" \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --out "$TMPDIR/yoked-promatch-target-v3" \
     --processes 32
 
-# 10. Analyze accuracy/workload. Each scientific analysis independently
-#     regenerates every declared batch at 32 processes before trusting ledgers.
+# 10. Analyze accuracy/workload into separate artifact-set directories. Each
+#     scientific analysis independently regenerates every declared batch at 32
+#     processes before trusting ledgers.
 tools/analyze_promatch_l1 \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
-    --input "$TMPDIR/yoked-promatch-confirm"
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --input "$TMPDIR/yoked-promatch-confirm-v3" \
+    --out "$TMPDIR/yoked-promatch-confirm-v3-analysis"
 
 tools/analyze_promatch_l1 \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
-    --input "$TMPDIR/yoked-promatch-target"
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --input "$TMPDIR/yoked-promatch-target-v3" \
+    --out "$TMPDIR/yoked-promatch-target-v3-analysis"
 ```
 
-Read `analysis_config.selection.selected_cell_id` from the frozen first-round
-protocol and use it together with the fixed target ID for the two latency suites:
+If `pilot_selection.json` reports `confirmation-infeasible`, stop after the
+pilot. Do not freeze the first-round protocol or collect holdout data. A new
+cell grid or algorithm requires a versioned protocol change and another fresh
+pilot; the unfavorable V2 direction must not be erased or relabeled. Here,
+`selected` means that the frozen unsigned measurability and power gates passed;
+it is not a claim that the pilot showed a favorable accuracy direction.
+
+After a viable pilot, read `analysis_config.selection.selected_cell_id` from
+the frozen first-round protocol and use it together with the fixed target ID
+for the two separate per-cell latency suites and directories. Both suites use
+the one frozen `timing_corpus` root; their cell identities and artifact
+directories remain distinct:
 
 ```bash
-SELECTED_CELL_ID='<analysis_config.selection.selected_cell_id from the frozen protocol>'
+SELECTED_CELL_ID=$(jq -r '.analysis_config.selection.selected_cell_id' \
+    docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json)
 TARGET_CELL_ID='target-d11-n6-y2-r44-p0.001'
 
 tools/benchmark_promatch_l1 latency \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
     --cell-id "$SELECTED_CELL_ID" \
-    --out "$TMPDIR/yoked-promatch-latency-selected" \
+    --out "$TMPDIR/yoked-promatch-latency-selected-v3" \
     --processes 32
 
 tools/benchmark_promatch_l1 latency \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
     --cell-id "$TARGET_CELL_ID" \
-    --out "$TMPDIR/yoked-promatch-latency-target" \
+    --out "$TMPDIR/yoked-promatch-latency-target-v3" \
     --processes 32
 
 tools/analyze_promatch_l1 \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
-    --input "$TMPDIR/yoked-promatch-confirm" \
-    --latency-input "$TMPDIR/yoked-promatch-latency-selected" \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --latency-input "$TMPDIR/yoked-promatch-latency-selected-v3" \
     --latency-cell "$SELECTED_CELL_ID" \
-    --out "$TMPDIR/yoked-promatch-analysis-selected"
+    --out "$TMPDIR/yoked-promatch-latency-selected-v3-analysis"
 
 tools/analyze_promatch_l1 \
-    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN.json \
-    --input "$TMPDIR/yoked-promatch-target" \
-    --latency-input "$TMPDIR/yoked-promatch-latency-target" \
+    --protocol docs/PROMATCH_FIRST_ROUND_FROZEN_V3.json \
+    --latency-input "$TMPDIR/yoked-promatch-latency-target-v3" \
     --latency-cell "$TARGET_CELL_ID" \
-    --out "$TMPDIR/yoked-promatch-analysis-target"
+    --out "$TMPDIR/yoked-promatch-latency-target-v3-analysis"
 ```
 
 Latency uses the frozen 10,000-shot corpus per restart. The ten fresh timing
@@ -360,8 +418,8 @@ tools/benchmark_promatch_l1 latency-smoke \
     --processes 32
 ```
 
-Neither `smoke`, `latency-smoke`, nor the Sinter smoke with `MAX_ERRORS` can
-support accuracy, workload, or latency claims.
+Neither `smoke`, `latency-smoke`, nor the Sinter smoke can support accuracy,
+workload, or latency claims.
 
 Freezing is not merely a JSON format conversion. It fills every required
 placeholder, verifies a clean implementation commit, records package and

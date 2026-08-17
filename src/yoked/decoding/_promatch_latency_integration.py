@@ -63,6 +63,8 @@ _SCIENTIFIC_GATES = {
 _SCIENTIFIC_PRIMARY_BATCH = 1
 _SCIENTIFIC_SECONDARY_BATCHES = (64, 1024)
 _SCIENTIFIC_CORPUS_SHOTS_PER_RESTART = 10_000
+_SCIENTIFIC_PRIMARY_INTERVAL = "adapter entry through packed prediction return"
+_SCIENTIFIC_DIAGNOSTIC_INTERVALS = ["total", "backend"]
 _SCIENTIFIC_DECODER = {
     "residual_hw_limit": 10,
     "domain_mode": "windowd",
@@ -215,6 +217,17 @@ def latency_protocol_from_manifest(
         raise ValueError("scientific timing inputs must be pregenerated")
     if timing.get("clock") != "time.perf_counter_ns":
         raise ValueError("scientific timing requires time.perf_counter_ns")
+    if timing.get("diagnostic_intervals") != _SCIENTIFIC_DIAGNOSTIC_INTERVALS:
+        raise ValueError(
+            "scientific timing requires diagnostic_intervals=['total', 'backend']"
+        )
+    if (
+        manifest.get("phase") == "confirm"
+        and timing.get("primary_interval") != _SCIENTIFIC_PRIMARY_INTERVAL
+    ):
+        raise ValueError(
+            "scientific confirmatory timing requires the frozen adapter interval"
+        )
     if timing.get("block_order") != "randomized_balanced_AB_BA":
         raise ValueError("scientific timing requires randomized balanced AB/BA blocks")
     if (

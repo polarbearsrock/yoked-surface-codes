@@ -7,7 +7,7 @@ PU.  Completed batches are independent JSON ledger records, making resume a
 set difference over predeclared batch IDs instead of a continuation of an RNG
 stream.
 
-Frozen protocol schema (``promatch-l1-paired-protocol-v2``):
+Frozen protocol schema (``promatch-l1-paired-protocol-v3``):
 
 * ``phase`` is ``pilot`` or ``confirm``, ``status`` is ``FROZEN``, and
   ``frozen`` is true; a frozen confirm manifest also owns the separate
@@ -71,10 +71,14 @@ from yoked.decoding._promatch_stats import (
 )
 
 
-PROTOCOL_SCHEMA = "promatch-l1-paired-protocol-v2"
+PROTOCOL_SCHEMA = "promatch-l1-paired-protocol-v3"
 PROTOCOL_KIND = "promatch-l1-paired-fixed-shot"
 LEDGER_SCHEMA = "promatch-l1-paired-batch-v1"
 SUMMARY_SCHEMA = "promatch-l1-paired-summary-v1"
+PILOT_PROTOCOL_VERSION = "promatch-l1-pilot-v3"
+CONFIRM_PROTOCOL_VERSION = "promatch-l1-first-round-v3"
+DOCUMENTED_PROTOCOL_SCHEMA = "yoked.promatch.l1.protocol"
+DOCUMENTED_PROTOCOL_SCHEMA_VERSION = 3
 SEED_DERIVATION = "sha256-root+stim-batch+uint64le-first8-uint64le"
 GENERATOR = "yoked._yoked_memory_circuits:yoked_magic_memory_circuit"
 REPLAY_CATEGORIES = ("regression", "recovery", "rollback")
@@ -86,6 +90,153 @@ REPLAY_CELL_SELECTION = (
     "lowest_selection_sha256_across_batch_candidates_within_cell_and_category"
 )
 INVARIANT_VIOLATION_POLICY = "fatal_run_error_no_replay_row"
+LEDGER_REQUIRED_FIELDS = (
+    "schema",
+    "experiment_id",
+    "phase",
+    "cell_id",
+    "batch.{batch_id,shot_start,shots}",
+    "stim_seed",
+    "detectors.{sha256,shape,dtype}",
+    "observables.{sha256,shape,dtype}",
+    (
+        "provenance.{circuit_sha256,dem_sha256,layout_fingerprint,"
+        "graph_fingerprint,num_detectors,num_observables}"
+    ),
+    "paired_contingency.{both_correct,regressions,recoveries,both_wrong}",
+    "telemetry",
+    "replay_samples",
+)
+LEDGER_TOP_LEVEL_KEYS = frozenset(
+    {
+        "schema",
+        "experiment_id",
+        "phase",
+        "cell_id",
+        "batch",
+        "stim_seed",
+        "detectors",
+        "observables",
+        "provenance",
+        "paired_contingency",
+        "telemetry",
+        "replay_samples",
+    }
+)
+TELEMETRY_REQUIRED_FIELDS = (
+    "shots",
+    "original_event_sum",
+    "residual_event_sum",
+    "original_hw_histogram",
+    "residual_hw_histogram",
+    "original_residual_hw_joint_histogram",
+    "domain_initial_hw_histogram",
+    "domain_attempted_hw_histogram",
+    "domain_final_hw_histogram",
+    "domain_status_counts",
+    "domain_identity_counts",
+    "fallback_reason_counts",
+    "decision_weight_histogram_float_hex",
+    "xor_support_weight_histogram_float_hex",
+    "committed_path_length_histogram",
+    "terminal_withheld_event_sum",
+    "yoke_withheld_event_sum",
+    "attempted_stage_counts",
+    "committed_stage_counts",
+    "attempted_matches",
+    "committed_matches",
+    "boundary_added_domains",
+    "boundary_used_domains",
+    "boundary_discarded_domains",
+    "activated_shots",
+    "rollback_shots",
+    "success_shots",
+)
+REPLAY_SAMPLE_REQUIRED_FIELDS = (
+    "selection_sha256",
+    "category",
+    "batch_id",
+    "shot_offset",
+    "shot_index",
+    "stim_seed",
+    "detection_events_hex",
+    "observables_hex",
+    "u0_prediction_hex",
+    "pu_prediction_hex",
+)
+SUMMARY_TOP_LEVEL_FIELDS = (
+    "schema",
+    "experiment_id",
+    "phase",
+    "collection_scope",
+    "cells",
+)
+SUMMARY_CELL_FIELDS = (
+    "cell_id",
+    "batches",
+    "shots",
+    "paired_contingency",
+    "telemetry",
+    "replay_samples",
+)
+ANALYSIS_COMMON_TOP_LEVEL_FIELDS = (
+    "schema",
+    "experiment_id",
+    "phase",
+    "claim_bearing",
+    "collection_scope",
+    "accuracy_claim_scope",
+    "cells",
+    "analysis_sha256",
+)
+ANALYSIS_CELL_FIELDS = (
+    "cell_id",
+    "shots",
+    "paired_contingency",
+    "u0_failure_rate",
+    "pu_failure_rate",
+    "delta_pu_minus_u0",
+    "tango_upper_one_sided",
+    "alpha_one_sided",
+    "delta_noninferiority",
+    "noninferiority_passed",
+    "ordered_superiority_passed",
+    "exact_mcnemar_superiority_p",
+    "activation_fraction",
+    "rollback_fraction",
+    "original_detector_events",
+    "residual_detector_events",
+    "workload_ratio",
+    "workload_ratio_upper_one_sided",
+    "workload_bootstrap_replicates",
+    "workload_improvement_passed",
+    "workload_ratio_upper_threshold",
+)
+PILOT_SELECTION_TOP_LEVEL_FIELDS = (
+    "schema",
+    "experiment_id",
+    "selection_used_signed_difference",
+    "cells",
+    "selected",
+    "status",
+    "selection_sha256",
+)
+PILOT_SELECTION_ROW_FIELDS = (
+    "cell_id",
+    "shots",
+    "activation_fraction",
+    "u0_failures",
+    "discordant_pairs",
+    "integrity_checks_passed",
+    "p_u0_design",
+    "delta_noninferiority",
+    "discordance_upper",
+    "normal_rule_raw_shots",
+    "confirmatory_shots",
+    "power_estimate",
+    "power_lower_bound",
+    "passed",
+)
 THREAD_ENVIRONMENT = (
     "OMP_NUM_THREADS",
     "OPENBLAS_NUM_THREADS",
@@ -135,6 +286,25 @@ def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key {key!r}")
+        result[key] = value
+    return result
+
+
+def _load_json_artifact(path: Path) -> Any:
+    """Load an artifact while rejecting ambiguous duplicate object keys."""
+
+    try:
+        with path.open(encoding="utf-8") as f:
+            return json.load(f, object_pairs_hook=_unique_json_object)
+    except json.JSONDecodeError as ex:
+        raise ValueError(f"invalid JSON artifact {path}: {ex}") from ex
+
+
 def _canonical_replay_policy(cap: int) -> dict[str, Any]:
     return {
         "categories": list(REPLAY_CATEGORIES),
@@ -169,6 +339,106 @@ def _validate_replay_policy(value: Any) -> dict[str, Any]:
     expected = _canonical_replay_policy(batch_cap)
     if dict(value) != expected:
         raise ValueError(f"replay_policy must be exactly {expected}")
+    return expected
+
+
+def canonical_output_schema(replay_cap: int) -> dict[str, Any]:
+    """Return the one executable V3 artifact contract used by every phase."""
+
+    if (
+        isinstance(replay_cap, bool)
+        or not isinstance(replay_cap, int)
+        or replay_cap < 0
+    ):
+        raise ValueError("output-schema replay cap must be a nonnegative integer")
+    return {
+        "schema_version": 3,
+        "artifact_schemas": {
+            "experiment": PROTOCOL_SCHEMA,
+            "batch_ledger": LEDGER_SCHEMA,
+            "summary": SUMMARY_SCHEMA,
+            "analysis": "promatch-l1-analysis-v1",
+            "pilot_selection": "promatch-l1-pilot-selection-v1",
+            "latency_restart": "promatch-l1-latency-restart-v1",
+            "latency_suite": "promatch-l1-latency-suite-v1",
+            "latency_analysis": "promatch-l1-latency-analysis-v1",
+        },
+        "artifact_sets": {
+            "pilot_collection": [
+                "experiment.json",
+                "protocol.json",
+                "batches/<cell_id>/batch-<batch_id:08d>.json",
+                "summary.json",
+            ],
+            "pilot_analysis": [
+                "analysis.json",
+                "analysis.md",
+                "pilot_selection.json",
+            ],
+            "confirm_collection": [
+                "experiment.json",
+                "protocol.json",
+                "batches/<cell_id>/batch-<batch_id:08d>.json",
+                "summary.json",
+            ],
+            "target_collection": [
+                "experiment.json",
+                "protocol.json",
+                "batches/<cell_id>/batch-<batch_id:08d>.json",
+                "summary.json",
+            ],
+            "accuracy_analysis": ["analysis.json", "analysis.md"],
+            "latency_collection_per_cell": [
+                "protocol.json",
+                "suite.json",
+                "batch-<batch_size>.restart-<restart_index:02d>.json",
+            ],
+            "latency_analysis_per_cell": [
+                "latency_analysis.json",
+                "latency_analysis.md",
+            ],
+        },
+        "batch_ledger_required_fields": list(LEDGER_REQUIRED_FIELDS),
+        "telemetry_required_fields": list(TELEMETRY_REQUIRED_FIELDS),
+        "replay_sample_required_fields": list(REPLAY_SAMPLE_REQUIRED_FIELDS),
+        "summary_required_fields": {
+            "top_level": list(SUMMARY_TOP_LEVEL_FIELDS),
+            "cell": list(SUMMARY_CELL_FIELDS),
+        },
+        "analysis_required_fields": {
+            "common_top_level": list(ANALYSIS_COMMON_TOP_LEVEL_FIELDS),
+            "pilot_additional_top_level": ["blinded_selection"],
+            "cell": list(ANALYSIS_CELL_FIELDS),
+        },
+        "pilot_selection_required_fields": {
+            "top_level": list(PILOT_SELECTION_TOP_LEVEL_FIELDS),
+            "row": list(PILOT_SELECTION_ROW_FIELDS),
+        },
+        "bounded_replay_policy": _canonical_replay_policy(replay_cap),
+        "verification_policy": {
+            "exact_preexisting_collection_required_before_analysis": True,
+            "analysis_must_not_create_or_modify_collection_artifacts": True,
+            "exact_batch_schedule_required": True,
+            "exact_protocol_identity_required": True,
+            "summary_must_reconcile_before_regeneration": True,
+            "scientific_batches_regenerated_without_writes": True,
+            "deterministic_payload_equality_required": True,
+            "duplicate_json_keys_rejected": True,
+        },
+    }
+
+
+def _validate_output_schema(value: Any) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        raise ValueError("output_schema must be an object")
+    replay = value.get("bounded_replay_policy")
+    replay_policy = _validate_replay_policy(replay)
+    replay_cap = replay_policy[
+        "maximum_candidate_rows_per_category_per_batch_ledger"
+    ]
+    expected = canonical_output_schema(replay_cap)
+    if dict(value) != expected:
+        raise ValueError(f"output_schema must be exactly {expected}")
     return expected
 
 
@@ -246,8 +516,8 @@ def _validate_post_freeze_protocol_commit(
             "post-freeze file must be docs/*FROZEN*.json"
         )
     try:
-        committed_manifest = json.loads(candidate.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as ex:
+        committed_manifest = _load_json_artifact(candidate)
+    except (OSError, ValueError) as ex:
         raise ValueError("committed frozen protocol is not valid JSON") from ex
     if committed_manifest != dict(manifest):
         raise ValueError(
@@ -587,14 +857,16 @@ def normalize_protocol(manifest: Mapping[str, Any], *, for_freeze: bool = False)
     if manifest.get("schema") == PROTOCOL_SCHEMA:
         return json.loads(json.dumps(manifest))
     if (
-        manifest.get("schema") != "yoked.promatch.l1.protocol"
-        or manifest.get("schema_version") != 2
+        manifest.get("schema") != DOCUMENTED_PROTOCOL_SCHEMA
+        or manifest.get("schema_version") != DOCUMENTED_PROTOCOL_SCHEMA_VERSION
     ):
         raise ValueError("unsupported documented protocol schema")
     kind = manifest.get("protocol_kind")
     if kind == "pilot":
-        if manifest.get("protocol_version") != "promatch-l1-pilot-v2":
-            raise ValueError("pilot protocol_version must be promatch-l1-pilot-v2")
+        if manifest.get("protocol_version") != PILOT_PROTOCOL_VERSION:
+            raise ValueError(
+                f"pilot protocol_version must be {PILOT_PROTOCOL_VERSION}"
+            )
         phase = "pilot"
         raw_cells = manifest.get("pilot", {}).get("cells")
         if not isinstance(raw_cells, list) or not raw_cells:
@@ -612,9 +884,9 @@ def normalize_protocol(manifest: Mapping[str, Any], *, for_freeze: bool = False)
             if schedules[cell["cell_id"]][-1]["batch_id"] != cell["batch_id_end_inclusive"]:
                 raise ValueError("documented pilot batch ID range does not match its shot count")
     elif kind == "first_round_confirmatory":
-        if manifest.get("protocol_version") != "promatch-l1-first-round-v2":
+        if manifest.get("protocol_version") != CONFIRM_PROTOCOL_VERSION:
             raise ValueError(
-                "confirmatory protocol_version must be promatch-l1-first-round-v2"
+                f"confirmatory protocol_version must be {CONFIRM_PROTOCOL_VERSION}"
             )
         phase = "confirm"
         selected = manifest.get("selection", {}).get("selected_cell")
@@ -672,9 +944,8 @@ def normalize_protocol(manifest: Mapping[str, Any], *, for_freeze: bool = False)
     output_schema = manifest.get("output_schema")
     if not isinstance(output_schema, Mapping):
         raise ValueError("documented output_schema must be an object")
-    if output_schema.get("schema_version") != 2:
-        raise ValueError("documented output_schema.schema_version must be 2")
-    replay_policy = _validate_replay_policy(output_schema.get("bounded_replay_policy"))
+    output_schema = _validate_output_schema(output_schema)
+    replay_policy = output_schema["bounded_replay_policy"]
     normalized = {
         "schema": PROTOCOL_SCHEMA,
         "kind": PROTOCOL_KIND,
@@ -947,6 +1218,8 @@ def validate_experiment_protocol(
     if manifest.get("sample_batch_size") != ROUND_ONE_BATCH_SIZE:
         raise ValueError(f"sample_batch_size must be {ROUND_ONE_BATCH_SIZE}")
     protocol_processes = validate_process_count(manifest.get("processes", 32))
+    if scientific and protocol_processes != 32:
+        raise ValueError("scientific collection requires exactly 32 processes")
     if processes is not None and protocol_processes != validate_process_count(processes):
         raise ValueError("CLI processes must exactly match frozen protocol processes")
     _decoder_config(manifest)
@@ -966,9 +1239,8 @@ def validate_experiment_protocol(
         output_schema = analysis_config.get("output_schema")
         if not isinstance(output_schema, Mapping):
             raise ValueError("frozen output_schema must be an object")
-        if output_schema.get("schema_version") != 2:
-            raise ValueError("frozen output_schema.schema_version must be 2")
-        documented_policy = output_schema.get("bounded_replay_policy")
+        output_schema = _validate_output_schema(output_schema)
+        documented_policy = output_schema["bounded_replay_policy"]
         if documented_policy != replay_policy:
             raise ValueError(
                 "frozen output-schema replay policy differs from the executable policy"
@@ -977,9 +1249,7 @@ def validate_experiment_protocol(
         if not isinstance(scientific_contract, Mapping):
             raise ValueError("frozen scientific_contract must be an object")
         expected_protocol_version = (
-            "promatch-l1-pilot-v2"
-            if phase == "pilot"
-            else "promatch-l1-first-round-v2"
+            PILOT_PROTOCOL_VERSION if phase == "pilot" else CONFIRM_PROTOCOL_VERSION
         )
         if scientific_contract.get("protocol_version") != expected_protocol_version:
             raise ValueError(
@@ -1549,6 +1819,67 @@ def _worker_collect(task: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+def _verify_scientific_regeneration_without_writes(
+    manifest: Mapping[str, Any],
+    *,
+    phase: str,
+    recorded_rows: Iterable[Mapping[str, Any]],
+    processes: int,
+) -> None:
+    """Regenerate and compare all frozen batches without touching artifacts."""
+
+    processes = validate_process_count(processes)
+    cells = _phase_cells(manifest, phase)
+    schedules = _phase_schedules(manifest, phase, cells)
+    split = _protocol_split(manifest, phase)
+    recorded: dict[tuple[str, int], Mapping[str, Any]] = {}
+    for row in recorded_rows:
+        batch = row.get("batch")
+        if not isinstance(batch, Mapping):
+            raise ValueError("recorded scientific ledger has no batch identity")
+        key = (str(row.get("cell_id")), int(batch.get("batch_id")))
+        if key in recorded:
+            raise ValueError("recorded scientific ledgers contain a duplicate batch")
+        recorded[key] = row
+    tasks: list[dict[str, Any]] = []
+    for cell in cells:
+        for batch in schedules[cell["cell_id"]]:
+            key = (str(cell["cell_id"]), batch.batch_id)
+            if key not in recorded:
+                raise ValueError("recorded scientific collection is incomplete")
+            tasks.append(
+                {
+                    "cell": dict(cell),
+                    "batch": dataclasses.asdict(batch),
+                    "decoder": _decoder_config(manifest),
+                    "dem_options": _dem_options(manifest),
+                    "verify_hashes": True,
+                    "seed_root": manifest["sampler_seed_roots"][split],
+                    "experiment_id": manifest["experiment_id"],
+                    "phase": phase,
+                    "replay_policy": manifest["replay_policy"],
+                }
+            )
+    if len(recorded) != len(tasks):
+        raise ValueError("recorded scientific collection has unexpected batches")
+    configure_single_thread_runtime()
+    with ProcessPoolExecutor(
+        max_workers=processes,
+        initializer=configure_single_thread_runtime,
+        mp_context=multiprocessing.get_context("fork"),
+    ) as executor:
+        future_to_task = {executor.submit(_worker_collect, task): task for task in tasks}
+        for future in as_completed(future_to_task):
+            regenerated = future.result()
+            task = future_to_task[future]
+            key = (str(task["cell"]["cell_id"]), int(task["batch"]["batch_id"]))
+            _verify_regenerated_scientific_ledger(
+                recorded[key],
+                regenerated,
+                path=f"batches/{key[0]}/batch-{key[1]:08d}.json",
+            )
+
+
 def _ledger_path(out: Path, *, cell_id: str, batch_id: int) -> Path:
     return out / "batches" / cell_id / f"batch-{batch_id:08d}.json"
 
@@ -1588,6 +1919,211 @@ def _verify_regenerated_scientific_ledger(
         )
 
 
+def _validate_counter_mapping(
+    value: Any,
+    *,
+    name: str,
+    allow_zero: bool = False,
+) -> Mapping[str, int]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"existing ledger telemetry {name} must be an object")
+    for key, count in value.items():
+        if not isinstance(key, str):
+            raise ValueError(f"existing ledger telemetry {name} has a non-string key")
+        if (
+            isinstance(count, bool)
+            or not isinstance(count, int)
+            or count < (0 if allow_zero else 1)
+        ):
+            raise ValueError(f"existing ledger telemetry {name} has an invalid count")
+    return value
+
+
+def _canonical_nonnegative_int_key(key: str, *, name: str) -> int:
+    try:
+        parsed = int(key)
+    except ValueError as ex:
+        raise ValueError(
+            f"existing ledger telemetry {name} has an invalid histogram key"
+        ) from ex
+    if parsed < 0 or str(parsed) != key:
+        raise ValueError(
+            f"existing ledger telemetry {name} has a noncanonical histogram key"
+        )
+    return parsed
+
+
+def _validate_telemetry(value: Any, *, shots: int) -> None:
+    if not isinstance(value, Mapping) or set(value) != set(TELEMETRY_REQUIRED_FIELDS):
+        raise ValueError("existing ledger telemetry has incorrect fields")
+    scalar_fields = {
+        "shots",
+        "original_event_sum",
+        "residual_event_sum",
+        "terminal_withheld_event_sum",
+        "yoke_withheld_event_sum",
+        "attempted_matches",
+        "committed_matches",
+        "boundary_added_domains",
+        "boundary_used_domains",
+        "boundary_discarded_domains",
+        "activated_shots",
+        "rollback_shots",
+        "success_shots",
+    }
+    for key in scalar_fields:
+        item = value[key]
+        if isinstance(item, bool) or not isinstance(item, int) or item < 0:
+            raise ValueError(f"existing ledger telemetry has invalid {key}")
+    if value["shots"] != shots:
+        raise ValueError("existing ledger telemetry does not reconcile to batch shots")
+    for key in ("activated_shots", "rollback_shots", "success_shots"):
+        if value[key] > shots:
+            raise ValueError(f"existing ledger telemetry has invalid {key}")
+    if value["rollback_shots"] > value["activated_shots"]:
+        raise ValueError("existing ledger telemetry rollback exceeds activation")
+    if value["success_shots"] > value["activated_shots"]:
+        raise ValueError("existing ledger telemetry success exceeds activation")
+    if value["committed_matches"] > value["attempted_matches"]:
+        raise ValueError("existing ledger telemetry commits exceed attempts")
+    if value["boundary_used_domains"] > value["boundary_added_domains"]:
+        raise ValueError("existing ledger telemetry used boundaries exceed additions")
+    if value["boundary_discarded_domains"] > value["boundary_added_domains"]:
+        raise ValueError("existing ledger telemetry discarded boundaries exceed additions")
+
+    for key in ("attempted_stage_counts", "committed_stage_counts"):
+        item = value[key]
+        if (
+            not isinstance(item, list)
+            or len(item) != 4
+            or any(
+                isinstance(count, bool) or not isinstance(count, int) or count < 0
+                for count in item
+            )
+        ):
+            raise ValueError(f"existing ledger telemetry has invalid {key}")
+    if any(
+        committed > attempted
+        for attempted, committed in zip(
+            value["attempted_stage_counts"], value["committed_stage_counts"]
+        )
+    ):
+        raise ValueError("existing ledger telemetry stage commits exceed attempts")
+
+    histogram_names = (
+        "original_hw_histogram",
+        "residual_hw_histogram",
+        "domain_initial_hw_histogram",
+        "domain_attempted_hw_histogram",
+        "domain_final_hw_histogram",
+        "committed_path_length_histogram",
+    )
+    histograms: dict[str, Mapping[str, int]] = {}
+    for name in histogram_names:
+        histogram = _validate_counter_mapping(value[name], name=name)
+        for key in histogram:
+            _canonical_nonnegative_int_key(key, name=name)
+        histograms[name] = histogram
+
+    joint = _validate_counter_mapping(
+        value["original_residual_hw_joint_histogram"],
+        name="original_residual_hw_joint_histogram",
+    )
+    joint_pairs: dict[tuple[int, int], int] = {}
+    for key, count in joint.items():
+        pieces = key.split(",")
+        if len(pieces) != 2:
+            raise ValueError("existing ledger telemetry has an invalid joint histogram key")
+        pair = (
+            _canonical_nonnegative_int_key(
+                pieces[0], name="original_residual_hw_joint_histogram"
+            ),
+            _canonical_nonnegative_int_key(
+                pieces[1], name="original_residual_hw_joint_histogram"
+            ),
+        )
+        if pair in joint_pairs:
+            raise ValueError("existing ledger telemetry has duplicate normalized joint keys")
+        joint_pairs[pair] = count
+
+    for name in (
+        "domain_status_counts",
+        "fallback_reason_counts",
+        "decision_weight_histogram_float_hex",
+        "xor_support_weight_histogram_float_hex",
+    ):
+        counter = _validate_counter_mapping(value[name], name=name)
+        if name == "domain_status_counts" and not set(counter) <= {
+            "below-limit",
+            "success",
+            "rollback",
+        }:
+            raise ValueError("existing ledger telemetry has an invalid domain status")
+        if name == "fallback_reason_counts" and not set(counter) <= {
+            "no-candidate",
+            "disconnected",
+            "boundary-unavailable",
+        }:
+            raise ValueError("existing ledger telemetry has an invalid fallback reason")
+        if name.endswith("_float_hex"):
+            for key in counter:
+                try:
+                    parsed = float.fromhex(key)
+                except ValueError as ex:
+                    raise ValueError(
+                        f"existing ledger telemetry {name} has an invalid float key"
+                    ) from ex
+                if not math.isfinite(parsed) or parsed.hex() != key:
+                    raise ValueError(
+                        f"existing ledger telemetry {name} has a noncanonical float key"
+                    )
+    _validate_counter_mapping(
+        value["domain_identity_counts"],
+        name="domain_identity_counts",
+        allow_zero=True,
+    )
+
+    original_hist = histograms["original_hw_histogram"]
+    residual_hist = histograms["residual_hw_histogram"]
+    if sum(original_hist.values()) != shots or sum(residual_hist.values()) != shots:
+        raise ValueError("existing ledger telemetry shot histograms do not reconcile")
+    if sum(joint_pairs.values()) != shots:
+        raise ValueError("existing ledger telemetry joint histogram does not reconcile")
+    original_sum = sum(
+        _canonical_nonnegative_int_key(key, name="original_hw_histogram") * count
+        for key, count in original_hist.items()
+    )
+    residual_sum = sum(
+        _canonical_nonnegative_int_key(key, name="residual_hw_histogram") * count
+        for key, count in residual_hist.items()
+    )
+    if (
+        original_sum != value["original_event_sum"]
+        or residual_sum != value["residual_event_sum"]
+        or sum(before * count for (before, _), count in joint_pairs.items())
+        != original_sum
+        or sum(after * count for (_, after), count in joint_pairs.items())
+        != residual_sum
+    ):
+        raise ValueError("existing ledger telemetry event sums do not reconcile")
+    domain_total = sum(value["domain_status_counts"].values())
+    for name in (
+        "domain_initial_hw_histogram",
+        "domain_attempted_hw_histogram",
+        "domain_final_hw_histogram",
+    ):
+        if sum(histograms[name].values()) != domain_total:
+            raise ValueError("existing ledger telemetry domain histograms do not reconcile")
+    if sum(value["fallback_reason_counts"].values()) > domain_total:
+        raise ValueError("existing ledger telemetry fallback counts do not reconcile")
+    for name in (
+        "decision_weight_histogram_float_hex",
+        "xor_support_weight_histogram_float_hex",
+    ):
+        if sum(value[name].values()) != shots:
+            raise ValueError(f"existing ledger telemetry {name} does not reconcile")
+
+
 def _validate_ledger_row(
     row: Mapping[str, Any],
     *,
@@ -1599,6 +2135,8 @@ def _validate_ledger_row(
     expected_provenance: Mapping[str, Any],
     replay_policy: Mapping[str, Any],
 ) -> None:
+    if not isinstance(row, Mapping) or set(row) != LEDGER_TOP_LEVEL_KEYS:
+        raise ValueError("existing ledger has incorrect top-level fields")
     replay_policy = _validate_replay_policy(replay_policy)
     batch_candidate_cap = replay_policy[
         "maximum_candidate_rows_per_category_per_batch_ledger"
@@ -1637,13 +2175,13 @@ def _validate_ledger_row(
         if (
             not isinstance(digest["sha256"], str)
             or len(digest["sha256"]) != 64
+            or any(ch not in "0123456789abcdef" for ch in digest["sha256"])
             or digest["shape"] != [batch.shots, expected_width]
             or digest["dtype"] != "|u1"
         ):
             raise ValueError(f"existing ledger has mismatched {key} digest metadata")
     telemetry = row.get("telemetry")
-    if not isinstance(telemetry, Mapping) or telemetry.get("shots") != batch.shots:
-        raise ValueError("existing ledger telemetry does not reconcile to batch shots")
+    _validate_telemetry(telemetry, shots=batch.shots)
     rollback_shots = telemetry.get("rollback_shots")
     if (
         isinstance(rollback_shots, bool)
@@ -1654,18 +2192,7 @@ def _validate_ledger_row(
     replay = row.get("replay_samples")
     if not isinstance(replay, list):
         raise ValueError("existing ledger replay_samples must be an array")
-    replay_fields = {
-        "selection_sha256",
-        "category",
-        "batch_id",
-        "shot_offset",
-        "shot_index",
-        "stim_seed",
-        "detection_events_hex",
-        "observables_hex",
-        "u0_prediction_hex",
-        "pu_prediction_hex",
-    }
+    replay_fields = set(REPLAY_SAMPLE_REQUIRED_FIELDS)
     replay_counts: Counter[str] = Counter()
     selection_hashes: set[str] = set()
     for sample in replay:
@@ -1859,7 +2386,7 @@ def run_collection(
     out = out.resolve()
     identity_path = out / "experiment.json"
     if identity_path.exists():
-        identity = json.loads(identity_path.read_text())
+        identity = _load_json_artifact(identity_path)
         if identity != {
             "schema": PROTOCOL_SCHEMA,
             "experiment_id": experiment_id,
@@ -1874,7 +2401,7 @@ def run_collection(
         )
     protocol_path = out / "protocol.json"
     if protocol_path.exists():
-        if json.loads(protocol_path.read_text(encoding="utf-8")) != manifest:
+        if _load_json_artifact(protocol_path) != manifest:
             raise ValueError("output protocol.json differs from the runtime manifest")
     else:
         _atomic_json_write(protocol_path, manifest)
@@ -1897,7 +2424,7 @@ def run_collection(
         for batch in schedules[cell["cell_id"]]:
             path = _ledger_path(out, cell_id=cell["cell_id"], batch_id=batch.batch_id)
             if path.exists():
-                row = json.loads(path.read_text())
+                row = _load_json_artifact(path)
                 _validate_ledger_row(
                     row,
                     experiment_id=experiment_id,
@@ -1949,7 +2476,7 @@ def run_collection(
                 )
                 existing_path = task.get("verify_existing_path")
                 if existing_path is not None:
-                    existing = json.loads(Path(existing_path).read_text())
+                    existing = _load_json_artifact(Path(existing_path))
                     _verify_regenerated_scientific_ledger(
                         existing, row, path=existing_path
                     )
@@ -2022,6 +2549,7 @@ __all__ = [
     "REPLAY_CATEGORIES",
     "SUMMARY_SCHEMA",
     "build_batch_schedule",
+    "canonical_output_schema",
     "collect_prepared_batch",
     "configure_single_thread_runtime",
     "current_software_versions",

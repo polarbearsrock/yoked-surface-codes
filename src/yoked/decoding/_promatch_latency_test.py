@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 import yoked.decoding._promatch_latency as latency
+from yoked.decoding._promatch_experiment import default_smoke_protocol
 from yoked.decoding._promatch_latency import (
     BACKEND_RESIDUAL_VS_ORIGINAL,
     TOTAL_PU_VS_DIRECT,
@@ -211,6 +212,7 @@ def test_orchestrator_hard_rejects_more_than_32_processes(tmp_path: Path) -> Non
     with pytest.raises(ValueError, match="exceeds the frozen cap"):
         run_latency_benchmark(
             _SyntheticFactory(),
+            manifest=default_smoke_protocol(processes=32, shots=1),
             protocol=_small_protocol(),
             out_dir=tmp_path / "must-not-be-created",
             processes=33,
@@ -251,9 +253,11 @@ def test_orchestrator_persists_all_ledgers_and_resumes(
     monkeypatch.setattr(latency, "as_completed", lambda futures: list(futures))
 
     protocol = _small_protocol(restarts=2, calls_per_block=1, batch_sizes=(1,))
+    manifest = default_smoke_protocol(processes=32, shots=1)
     output = tmp_path / "latency"
     suite = run_latency_benchmark(
         _SyntheticFactory(),
+        manifest=manifest,
         protocol=protocol,
         out_dir=output,
         processes=32,
@@ -270,6 +274,7 @@ def test_orchestrator_persists_all_ledgers_and_resumes(
     assert suite["timed_restart_concurrency"] == 1
     assert created_executors[0]["max_tasks_per_child"] == 1
     assert (output / "suite.json").exists()
+    assert json.loads((output / "protocol.json").read_text()) == manifest
     for name in suite["restart_ledgers"]:
         ledger = json.loads((output / name).read_text(encoding="utf-8"))
         assert ledger["schema"] == latency.LATENCY_RESTART_SCHEMA
@@ -280,6 +285,7 @@ def test_orchestrator_persists_all_ledgers_and_resumes(
     # A completed suite is a pure resume; no new executor is constructed.
     again = run_latency_benchmark(
         _SyntheticFactory(),
+        manifest=manifest,
         protocol=protocol,
         out_dir=output,
         processes=32,
@@ -288,3 +294,57 @@ def test_orchestrator_persists_all_ledgers_and_resumes(
     )
     assert again == suite
     assert len(created_executors) == 1
+
+
+def _file_snapshot(path: Path) -> dict[str, bytes]:
+    return {
+        item.relative_to(path).as_posix(): item.read_bytes()
+        for item in path.rglob("*")
+        if item.is_file()
+    }
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing-protocol",
+        "unexpected-analysis",
+        "duplicate-protocol-key",
+        "duplicate-suite-key",
+        "duplicate-restart-key",
+    ],
+)
+def test_latency_resume_preflight_rejects_without_mutation(
+    tmp_path: Path, mutation: str
+) -> None:
+    output = tmp_path / "latency"
+    output.mkdir()
+    manifest = default_smoke_protocol(processes=1, shots=1)
+    protocol = _small_protocol(restarts=1, calls_per_block=1, batch_sizes=(1,))
+    protocol_path = output / "protocol.json"
+    restart_path = output / "batch-1.restart-00.json"
+    if mutation != "missing-protocol":
+        protocol_path.write_text(json.dumps(manifest))
+    if mutation == "unexpected-analysis":
+        (output / "analysis.json").write_text("{}")
+    elif mutation == "duplicate-protocol-key":
+        protocol_path.write_text('{"schema":"first","schema":"second"}')
+    elif mutation == "duplicate-suite-key":
+        restart_path.write_text("{}")
+        (output / "suite.json").write_text(
+            '{"schema":"first","schema":"second"}'
+        )
+    elif mutation == "duplicate-restart-key":
+        restart_path.write_text('{"schema":"first","schema":"second"}')
+    before = _file_snapshot(output)
+    with pytest.raises((ValueError, FileExistsError)):
+        run_latency_benchmark(
+            _SyntheticFactory(),
+            manifest=manifest,
+            protocol=protocol,
+            out_dir=output,
+            processes=1,
+            scientific=False,
+            resume=True,
+        )
+    assert _file_snapshot(output) == before

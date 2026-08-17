@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -11,10 +13,18 @@ from yoked.decoding._promatch_analysis import (
     analyze_cell,
     analyze_summary,
     construct_confirmatory_draft_from_pilot,
+    load_verified_summary,
     render_markdown,
     select_pilot_cell,
+    validate_generated_analysis_artifact,
 )
-from yoked.decoding._promatch_experiment import PROTOCOL_SCHEMA, SUMMARY_SCHEMA
+from yoked.decoding._promatch_experiment import (
+    PROTOCOL_SCHEMA,
+    SUMMARY_SCHEMA,
+    default_smoke_protocol,
+    summarize_ledgers,
+)
+from yoked.decoding._promatch_stats import canonical_json_bytes
 
 
 def test_confirmatory_derivation_copies_the_verified_pilot_seed_root(
@@ -169,6 +179,16 @@ def test_confirmatory_analysis_reports_ordered_accuracy_and_workload_gates() -> 
     assert result["exact_mcnemar_superiority_p"] < 0.001
     assert len(analysis["analysis_sha256"]) == 64
 
+    extra = copy.deepcopy(analysis)
+    extra["implementation_defined"] = None
+    with pytest.raises(ValueError, match="incorrect top-level fields"):
+        validate_generated_analysis_artifact(extra)
+
+    missing_cell_field = copy.deepcopy(analysis)
+    del missing_cell_field["cells"][0]["workload_ratio"]
+    with pytest.raises(ValueError, match="cells have incorrect fields"):
+        validate_generated_analysis_artifact(missing_cell_field)
+
 
 def test_zero_discordance_analysis_uses_finite_profile_boundary() -> None:
     manifest = _confirm_manifest()
@@ -253,7 +273,23 @@ def test_pilot_selection_is_fixed_order_and_does_not_emit_signed_difference() ->
             ),
         ],
     }
-    selection = select_pilot_cell(summary, manifest=manifest)
+    with pytest.raises(ValueError, match="scientifically verified summary"):
+        select_pilot_cell(summary, manifest=manifest)
+    verified = promatch_analysis._VerifiedSummary(
+        summary,
+        provenance=promatch_analysis._VerificationProvenance(
+            experiment_id=manifest["experiment_id"],
+            phase="pilot",
+            deterministic_regeneration_passed=True,
+            summary_sha256=promatch_analysis.hashlib.sha256(
+                canonical_json_bytes(summary)
+            ).hexdigest(),
+            manifest_sha256=promatch_analysis.hashlib.sha256(
+                canonical_json_bytes(manifest)
+            ).hexdigest(),
+        ),
+    )
+    selection = select_pilot_cell(verified, manifest=manifest)
     assert selection["selected"]["cell_id"] == "first"
     assert selection["selection_used_signed_difference"] is False
     serialized = json.dumps(selection)
@@ -261,7 +297,22 @@ def test_pilot_selection_is_fixed_order_and_does_not_emit_signed_difference() ->
     assert "recoveries" not in serialized
     assert "signed_accuracy" not in serialized
 
-    analysis = analyze_summary(summary, manifest=manifest)
+    mutated = promatch_analysis._VerifiedSummary(
+        copy.deepcopy(dict(verified)),
+        provenance=verified.provenance,
+    )
+    mutated["cells"][0]["shots"] += 1
+    with pytest.raises(ValueError, match="scientifically verified summary"):
+        select_pilot_cell(mutated, manifest=manifest)
+
+    changed_manifest = copy.deepcopy(manifest)
+    changed_manifest["analysis_config"]["selection_gates"][
+        "minimum_u0_direct_failures"
+    ] += 1
+    with pytest.raises(ValueError, match="scientifically verified summary"):
+        select_pilot_cell(verified, manifest=changed_manifest)
+
+    analysis = analyze_summary(verified, manifest=manifest)
     assert analysis["blinded_selection"] == selection
     markdown = render_markdown(analysis)
     assert "did not compute or emit the signed paired difference" in markdown
@@ -292,3 +343,151 @@ def test_analysis_rejects_missing_or_nonreconciling_paired_workload() -> None:
     cell["telemetry"]["original_residual_hw_joint_histogram"] = {"2,1": 99}
     with pytest.raises(ValueError, match="does not reconcile"):
         analyze_cell(cell, manifest=manifest, delta_noninferiority=0.02)
+
+
+def _raw_collection_fixture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[dict, Path, list[tuple[str, int]]]:
+    manifest = default_smoke_protocol(processes=1, shots=1)
+    cell = manifest["cells"][0]
+    batch = manifest["cell_batch_schedules"][cell["cell_id"]][0]
+    row = {
+        "schema": "promatch-l1-paired-batch-v1",
+        "experiment_id": manifest["experiment_id"],
+        "phase": "smoke",
+        "cell_id": cell["cell_id"],
+        "batch": batch,
+        "stim_seed": 1,
+        "detectors": {},
+        "observables": {},
+        "provenance": {},
+        "paired_contingency": {
+            "both_correct": 1,
+            "regressions": 0,
+            "recoveries": 0,
+            "both_wrong": 0,
+        },
+        "telemetry": {"shots": 1},
+        "replay_samples": [],
+    }
+    summary = summarize_ledgers(
+        [row],
+        experiment_id=manifest["experiment_id"],
+        phase="smoke",
+        replay_policy=manifest["replay_policy"],
+    )
+    collection = tmp_path / "collection"
+    ledger = collection / "batches" / cell["cell_id"] / "batch-00000000.json"
+    ledger.parent.mkdir(parents=True)
+    (collection / "experiment.json").write_text(
+        json.dumps(
+            {
+                "schema": PROTOCOL_SCHEMA,
+                "experiment_id": manifest["experiment_id"],
+                "phase": "smoke",
+            }
+        )
+    )
+    (collection / "protocol.json").write_text(json.dumps(manifest))
+    ledger.write_text(json.dumps(row))
+    (collection / "summary.json").write_text(json.dumps(summary))
+
+    regeneration_calls: list[tuple[str, int]] = []
+    monkeypatch.setattr(
+        promatch_analysis,
+        "validate_experiment_protocol",
+        lambda *_, **__: manifest["experiment_id"],
+    )
+    monkeypatch.setattr(
+        promatch_analysis,
+        "prepare_cell",
+        lambda *_, **__: SimpleNamespace(provenance={}),
+    )
+    monkeypatch.setattr(promatch_analysis, "_validate_ledger_row", lambda *_, **__: None)
+
+    def record_regeneration(*_, phase: str, processes: int, **__) -> None:
+        regeneration_calls.append((phase, processes))
+
+    monkeypatch.setattr(
+        promatch_analysis,
+        "_verify_scientific_regeneration_without_writes",
+        record_regeneration,
+    )
+    return manifest, collection, regeneration_calls
+
+
+def _artifact_snapshot(path: Path) -> dict[str, bytes]:
+    return {
+        item.relative_to(path).as_posix(): item.read_bytes()
+        for item in path.rglob("*")
+        if item.is_file()
+    }
+
+
+def test_verified_summary_reconciles_before_read_only_regeneration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest, collection, regeneration_calls = _raw_collection_fixture(
+        tmp_path, monkeypatch
+    )
+    before = _artifact_snapshot(collection)
+    summary = load_verified_summary(
+        manifest=manifest,
+        input_directory=collection,
+        scientific=True,
+    )
+    assert isinstance(summary, promatch_analysis._VerifiedSummary)
+    assert summary.provenance.deterministic_regeneration_passed is True
+    assert regeneration_calls == [("smoke", 1)]
+    assert _artifact_snapshot(collection) == before
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing-summary",
+        "missing-ledger",
+        "tampered-summary",
+        "corrupt-ledger",
+        "duplicate-summary-key",
+        "unexpected-artifact",
+    ],
+)
+def test_verified_summary_preflight_failures_do_not_mutate_or_regenerate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mutation: str,
+) -> None:
+    manifest, collection, regeneration_calls = _raw_collection_fixture(
+        tmp_path, monkeypatch
+    )
+    ledger = next((collection / "batches").glob("*/*.json"))
+    summary_path = collection / "summary.json"
+    if mutation == "missing-summary":
+        summary_path.unlink()
+    elif mutation == "missing-ledger":
+        ledger.unlink()
+    elif mutation == "tampered-summary":
+        summary = json.loads(summary_path.read_text())
+        summary["cells"][0]["shots"] = 2
+        summary_path.write_text(json.dumps(summary))
+    elif mutation == "corrupt-ledger":
+        ledger.write_text("{")
+    elif mutation == "duplicate-summary-key":
+        summary_path.write_text(
+            '{"schema":"promatch-l1-paired-summary-v1",'
+            '"schema":"duplicate"}'
+        )
+    elif mutation == "unexpected-artifact":
+        (collection / "analysis.json").write_text("{}")
+    else:  # pragma: no cover - parameter list is exhaustive
+        raise AssertionError(mutation)
+    before = _artifact_snapshot(collection)
+    with pytest.raises(ValueError):
+        load_verified_summary(
+            manifest=manifest,
+            input_directory=collection,
+            scientific=True,
+        )
+    assert regeneration_calls == []
+    assert _artifact_snapshot(collection) == before
