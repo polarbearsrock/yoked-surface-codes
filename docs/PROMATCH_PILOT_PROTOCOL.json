@@ -1,0 +1,321 @@
+{
+  "schema": "yoked.promatch.l1.protocol",
+  "schema_version": 1,
+  "protocol_kind": "pilot",
+  "protocol_version": "promatch-l1-pilot-v1",
+  "status": "DRAFT_TEMPLATE_NOT_FROZEN",
+  "frozen": false,
+  "claim_bearing": false,
+  "draft_notice": "DRAFT TEMPLATE ONLY. The pilot runner must refuse this file until the freeze command fills every required null, records a clean commit, computes all hashes, changes status to FROZEN, and writes the canonical experiment_id.",
+  "experiment_id": null,
+  "repository_commit": null,
+  "clean_worktree": null,
+  "created_utc": null,
+  "frozen_utc": null,
+  "processes": 32,
+  "max_processes": 32,
+  "threads_per_process": 1,
+  "sample_batch_size": 10000,
+  "runtime": {
+    "python_version": null,
+    "stim_version": null,
+    "sinter_version": null,
+    "pymatching_version": null,
+    "numpy_version": null,
+    "scipy_version": null,
+    "operating_system": null,
+    "kernel": null,
+    "cpu_model": null,
+    "microcode": null,
+    "cpu_affinity": null,
+    "numa_node": null,
+    "governor": null,
+    "turbo_state": null,
+    "gc_policy": "disabled_during_timed_blocks_only",
+    "thread_environment": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "BLIS_NUM_THREADS": "1"
+    }
+  },
+  "generator_contract": {
+    "function": "yoked._yoked_memory_circuits:yoked_magic_memory_circuit",
+    "style": "magic",
+    "gateset": "cz",
+    "remove_x_yoke": false,
+    "noise_model": "SI1000",
+    "circuit_metadata_hashes": null,
+    "circuit_sha256_by_cell": null
+  },
+  "dem": {
+    "construction": "circuit.detector_error_model",
+    "options": {
+      "decompose_errors": true,
+      "approximate_disjoint_errors": true
+    },
+    "serialized_dem_sha256_by_cell": null,
+    "compiled_graph_fingerprint_by_cell": null
+  },
+  "decoders": {
+    "u0_direct": {
+      "name": "pymatching",
+      "role": "primary_causal_baseline"
+    },
+    "u0_wrap": {
+      "name": "pymatching-u0-wrap-v1-windowd",
+      "role": "adapter_overhead_control"
+    },
+    "pu_window": {
+      "name": "promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching",
+      "role": "primary_treatment",
+      "configuration": {
+        "domain_mode": "windowd",
+        "residual_hw_limit": 10,
+        "stages": [1, 2, 3, 4],
+        "boundary_policy": "disabled",
+        "observable_policy": "zero-frame",
+        "residual_backend": "pymatching"
+      }
+    },
+    "pu_boundary": {
+      "name": "promatch-l1-v1-windowd-hw10-stages1234-parityboundary-zeroframe-pymatching",
+      "role": "mandatory_exploratory_boundary_comparator"
+    },
+    "pu_full": {
+      "name": "promatch-l1-v1-fullhistory-hw10-stages1234-noboundary-zeroframe-pymatching",
+      "role": "diagnostic_only"
+    },
+    "c0_context": {
+      "name": "pymatching-correlated",
+      "role": "descriptive_context_only"
+    }
+  },
+  "pilot": {
+    "shots_per_cell": 200000,
+    "fixed_order_selection": "Select the first cell in ascending priority that passes every gate. Selection code may not read regressions minus recoveries or any signed PU-versus-U0 accuracy contrast.",
+    "cells": [
+      {
+        "cell_id": "pilot-01-d7-n6-y2-r28-p0.001",
+        "priority": 1,
+        "d": 7,
+        "patches": 6,
+        "yokes": 2,
+        "rounds": 28,
+        "si1000_p": 0.001,
+        "batch_id_start": 0,
+        "batch_id_end_inclusive": 19
+      },
+      {
+        "cell_id": "pilot-02-d7-n6-y2-r28-p0.002",
+        "priority": 2,
+        "d": 7,
+        "patches": 6,
+        "yokes": 2,
+        "rounds": 28,
+        "si1000_p": 0.002,
+        "batch_id_start": 20,
+        "batch_id_end_inclusive": 39
+      },
+      {
+        "cell_id": "pilot-03-d7-n6-y2-r28-p0.003",
+        "priority": 3,
+        "d": 7,
+        "patches": 6,
+        "yokes": 2,
+        "rounds": 28,
+        "si1000_p": 0.003,
+        "batch_id_start": 40,
+        "batch_id_end_inclusive": 59
+      },
+      {
+        "cell_id": "pilot-04-d5-n6-y2-r20-p0.003",
+        "priority": 4,
+        "d": 5,
+        "patches": 6,
+        "yokes": 2,
+        "rounds": 20,
+        "si1000_p": 0.003,
+        "batch_id_start": 60,
+        "batch_id_end_inclusive": 79
+      },
+      {
+        "cell_id": "pilot-05-d5-n6-y2-r20-p0.005",
+        "priority": 5,
+        "d": 5,
+        "patches": 6,
+        "yokes": 2,
+        "rounds": 20,
+        "si1000_p": 0.005,
+        "batch_id_start": 80,
+        "batch_id_end_inclusive": 99
+      }
+    ]
+  },
+  "sampler_seed_roots": {
+    "pilot": "2226b38b5ab04cd8532b4e26d3abcbf752cf94587068b91426f1e55d2277de9a",
+    "confirmatory_holdout": "ba4df6460b1848846c5f55ba4a5981250b9a32a72bc3f8f9890d59eec52684c9",
+    "target_workload": "e3dd75362e009a342c3465b1d5e1b69cc932fd00f3e2cffaf1f5b7ec65d5c93c",
+    "timing_corpus": "d1d6747f169d2904233323d996586b50cb7300014d13574502f56862e80810d1",
+    "timing_bootstrap": "6de6f6303bcfc13942776e3d7e38bb904e67af7334d2332cc573bcc57b16bb7d"
+  },
+  "seed_derivation": {
+    "algorithm": "SHA-256",
+    "message": "seed_root_bytes || ASCII('stim-batch') || uint64_little_endian(batch_id)",
+    "stim_seed": "first 8 digest bytes interpreted as unsigned little-endian",
+    "resume_unit": "whole_batch",
+    "digest_each_detector_and_observable_array": true
+  },
+  "selection_gates": {
+    "minimum_activation_fraction": 0.05,
+    "minimum_u0_direct_failures": 200,
+    "minimum_discordant_pairs": 100,
+    "minimum_confirmatory_power": 0.9,
+    "maximum_confirmatory_paired_shots": 10000000,
+    "require_integrity_checks": true,
+    "forbidden_selection_inputs": [
+      "regressions_minus_recoveries",
+      "signed_accuracy_difference",
+      "treatment_better_direction"
+    ],
+    "no_qualifying_cell_result": "accuracy_confirmation_infeasible"
+  },
+  "statistical_design": {
+    "primary_outcome": "any_observable_shot_failure",
+    "paired_difference": "Delta = p_PU - p_U0 = (regressions - recoveries) / N",
+    "noninferiority_alpha_one_sided": 0.025,
+    "noninferiority_margin_rule": "delta_NI = 0.05 * p_U0_design",
+    "primary_method": "Tango paired efficient-score upper confidence bound",
+    "primary_confidence_bound": "one-sided 97.5 percent upper",
+    "equality_method_secondary": "exact McNemar",
+    "discordance_upper_method": "one-sided 95 percent Clopper-Pearson",
+    "normal_rule_z_alpha": 1.959963984540054,
+    "normal_rule_z_power": 1.2815515655446004,
+    "sample_size_rounding": 10000,
+    "power_verification": {
+      "replicates": 100000,
+      "rng": "numpy.default_rng",
+      "seed": 1618033988749894,
+      "multinomial_probabilities": "[q_U/2, q_U/2, 1-q_U]",
+      "confidence_method": "one-sided 95 percent Clopper-Pearson lower bound",
+      "power_bound_alpha": 0.05,
+      "accept_if_lower_bound_at_least": 0.9,
+      "increment_shots": 10000,
+      "maximum_shots": 10000000
+    },
+    "tango_solver": {
+      "root_finder": "scipy.optimize.brentq",
+      "parameter_bracket": {
+        "lower": "observed_delta",
+        "upper": "numpy.nextafter(1.0, 0.0)"
+      },
+      "xtol": 1e-12,
+      "maximum_iterations": 200,
+      "zero_discordance": "profiled_boundary_z_squared_over_N_plus_z_squared"
+    },
+    "stopping_rule": "fixed_shots_only; MAX_ERRORS and result-dependent stopping are forbidden"
+  },
+  "workload_protocol": {
+    "primary_estimand": "mean residual detector events / mean original detector events over all shots",
+    "conditioning": "unconditional",
+    "paired_bootstrap_replicates": 10000,
+    "bootstrap_alpha_one_sided": 0.025,
+    "workload_ratio_upper_threshold": 0.9,
+    "quantile_method": "empirical_type_7",
+    "bootstrap_unit": "paired_shot_via_exact_joint_histogram_multinomial"
+  },
+  "timing_protocol": {
+    "scope": "recorded now so pilot outcomes cannot tune confirmatory timing",
+    "input_generation": "pregenerated_outside_timed_regions",
+    "clock": "time.perf_counter_ns",
+    "primary_mode_batch_size": 1,
+    "secondary_batch_sizes": [64, 1024],
+    "timing_corpus_shots_per_restart": 10000,
+    "timing_corpus_reuse_policy": "cycle_pregenerated_natural_noise_corpus",
+    "restart_concurrency": 1,
+    "process_restarts": 10,
+    "warmup_calls_per_decoder_per_restart": 1000,
+    "paired_blocks_per_restart": 100,
+    "calls_per_decoder_per_block": 100,
+    "block_order": "randomized_balanced_AB_BA",
+    "three_way_order": "balanced_Latin_square",
+    "bootstrap_replicates": 10000,
+    "bootstrap_clusters": ["process_restart", "paired_block"],
+    "quantile_method": "empirical_type_7",
+    "upper_confidence_percentile": 97.5,
+    "gates": {
+      "backend_geometric_ratio_upper": 0.9,
+      "total_geometric_ratio_upper": 0.95,
+      "total_p99_ratio_upper": 1.05
+    }
+  },
+  "content_hashes": {
+    "local_source_hashes": "computed_by_freeze_for_every_path_in_source_hashes",
+    "promatch_paper_version": "ASPLOS 2024; arXiv:2404.03136",
+    "promatch_reference_commit": "78929be805c602c1ee74fcff9c334fc959afbbb8"
+  },
+  "output_schema": {
+    "schema_version": 1,
+    "required_files": [
+      "experiment.json",
+      "protocol.json",
+      "batches/<cell_id>/batch-<batch_id>.json",
+      "summary.json",
+      "analysis.json",
+      "analysis.md",
+      "pilot_selection.json"
+    ],
+    "batch_ledger_required_fields": [
+      "experiment_id",
+      "cell_id",
+      "phase",
+      "batch.{batch_id,shot_start,shots}",
+      "stim_seed",
+      "detectors.{shape,dtype,sha256}",
+      "observables.{shape,dtype,sha256}",
+      "provenance",
+      "paired_contingency",
+      "telemetry",
+      "replay_samples"
+    ],
+    "aggregate_required_fields": [
+      "shots",
+      "paired_contingency.{both_correct,regressions,recoveries,both_wrong}",
+      "activated_shots",
+      "activated_domains",
+      "initial_detector_events",
+      "residual_detector_events",
+      "success_shots",
+      "rollback_shots",
+      "stage_attempts",
+      "stage_commits",
+      "original_residual_hw_joint_histogram"
+    ],
+    "bounded_disagreement_policy": {
+      "maximum_rows_per_category_per_cell": 100,
+      "categories": ["regression", "recovery", "rollback", "invariant_debug"],
+      "selection": "lowest_SHA256_of_cell_batch_shot_category",
+      "must_be_replayable": true
+    },
+    "integrity": "reject missing or duplicate ranges, digest mismatches, nonreconciling counts, wrong fixed N, or manifest-hash mismatches"
+  },
+  "freeze_requirements": {
+    "required_nulls_to_fill": [
+      "repository_commit",
+      "clean_worktree",
+      "created_utc",
+      "frozen_utc",
+      "runtime versions and machine fields",
+      "generator_contract.circuit_metadata_hashes",
+      "generator_contract.circuit_sha256_by_cell",
+      "dem.serialized_dem_sha256_by_cell",
+      "dem.compiled_graph_fingerprint_by_cell",
+      "all content_hashes",
+      "experiment_id"
+    ],
+    "required_transition": "status=FROZEN, frozen=true, claim_bearing=false",
+    "runner_behavior_while_draft": "refuse_sampling"
+  }
+}

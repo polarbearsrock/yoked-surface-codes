@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""Collect or prepare paired L1 ProMatch experiments."""
+
+from __future__ import annotations
+
+# Set native-thread limits before importing NumPy/PyMatching through the harness.
+import os
+for _name in (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+):
+    os.environ[_name] = "1"
+
+import argparse
+import json
+from pathlib import Path
+import sys
+
+_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_ROOT / "src"))
+
+from yoked.decoding._promatch_experiment import (  # noqa: E402
+    default_smoke_protocol,
+    freeze_protocol,
+    inspect_protocol,
+    normalize_protocol,
+    run_collection,
+    validate_experiment_protocol,
+)
+from yoked.decoding._promatch_analysis import (  # noqa: E402
+    construct_confirmatory_draft_from_pilot,
+)
+from yoked.decoding._promatch_stats import validate_process_count  # noqa: E402
+from yoked.decoding._promatch_latency import run_latency_benchmark  # noqa: E402
+from yoked.decoding._promatch_latency_integration import (  # noqa: E402
+    TinyLatencySmokeConfig,
+    YokedPromatchLatencyFactory,
+    latency_protocol_from_manifest,
+)
+
+
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key {key!r}")
+        result[key] = value
+    return result
+
+
+def _load_json(path: Path):
+    with path.open(encoding="utf-8") as f:
+        return json.load(f, object_pairs_hook=_unique_object)
+
+
+def _write_new_json(path: Path, value) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("x", encoding="utf-8") as f:
+        json.dump(value, f, sort_keys=True, indent=2, allow_nan=False)
+        f.write("\n")
+
+
+def _ensure_json(path: Path, value) -> None:
+    if path.exists():
+        if _load_json(path) != value:
+            raise ValueError(f"existing {path} differs from the runtime protocol")
+        return
+    _write_new_json(path, value)
+
+
+def _common_collection(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--protocol", type=Path, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument(
+        "--processes",
+        type=int,
+        default=32,
+        help="worker processes (default 32; hard maximum 32)",
+    )
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Paired, fixed-shot L1 ProMatch experiment harness"
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    inspect = subparsers.add_parser(
+        "inspect", help="compute current circuit/DEM/graph provenance without sampling"
+    )
+    inspect.add_argument("--protocol", type=Path, required=True)
+
+    freeze = subparsers.add_parser(
+        "freeze", help="freeze a clean-worktree draft into a new protocol file"
+    )
+    freeze.add_argument("--protocol", type=Path, required=True)
+    freeze.add_argument("--out-protocol", type=Path, required=True)
+    freeze.add_argument("--pilot-protocol", type=Path)
+    freeze.add_argument("--pilot-input", type=Path)
+
+    smoke = subparsers.add_parser(
+        "smoke", help="run a non-claim-bearing paired d=3 fixed-shot smoke"
+    )
+    smoke.add_argument("--protocol", type=Path)
+    smoke.add_argument("--out", type=Path, required=True)
+    smoke.add_argument("--processes", type=int, default=32)
+    smoke.add_argument("--shots", type=int, default=10_000)
+
+    _common_collection(subparsers.add_parser("pilot", help="collect a frozen pilot"))
+    _common_collection(
+        subparsers.add_parser("confirm", help="collect a frozen confirmatory holdout")
+    )
+    _common_collection(
+        subparsers.add_parser(
+            "target",
+            help="collect the frozen target-performance corpus (no accuracy claim)",
+        )
+    )
+
+    latency = subparsers.add_parser(
+        "latency",
+        help="collect frozen restart-isolated latency for one declared cell",
+    )
+    latency.add_argument("--protocol", type=Path, required=True)
+    latency.add_argument("--cell-id", required=True)
+    latency.add_argument("--out", type=Path, required=True)
+    latency.add_argument("--processes", type=int, default=32)
+    latency.add_argument("--no-resume", action="store_true")
+
+    latency_smoke = subparsers.add_parser(
+        "latency-smoke",
+        help="run a tiny explicit non-claim latency smoke on a real d=3 circuit",
+    )
+    latency_smoke.add_argument("--out", type=Path, required=True)
+    latency_smoke.add_argument("--processes", type=int, default=32)
+    return parser
+
+
+def main() -> int:
+    args = _parser().parse_args()
+    try:
+        if hasattr(args, "processes"):
+            validate_process_count(args.processes)
+        if args.command == "inspect":
+            print(json.dumps(inspect_protocol(_load_json(args.protocol)), indent=2, sort_keys=True))
+            return 0
+        if args.command == "freeze":
+            draft = _load_json(args.protocol)
+            is_confirm = draft.get("protocol_kind") == "first_round_confirmatory"
+            if is_confirm:
+                if args.pilot_protocol is None or args.pilot_input is None:
+                    raise ValueError(
+                        "confirmatory freeze requires --pilot-protocol and --pilot-input; "
+                        "manual selection literals are not trusted"
+                    )
+                draft = construct_confirmatory_draft_from_pilot(
+                    draft,
+                    pilot_manifest=_load_json(args.pilot_protocol),
+                    pilot_protocol_path=args.pilot_protocol,
+                    pilot_input_directory=args.pilot_input,
+                )
+            elif args.pilot_protocol is not None or args.pilot_input is not None:
+                raise ValueError("pilot provenance options are only valid for confirmatory freeze")
+            frozen = freeze_protocol(draft)
+            _write_new_json(args.out_protocol, frozen)
+            print(f"wrote frozen protocol {args.out_protocol}")
+            print(f"experiment_id={frozen['experiment_id']}")
+            return 0
+        if args.command == "latency":
+            manifest = normalize_protocol(_load_json(args.protocol))
+            validate_experiment_protocol(
+                manifest,
+                phase="confirm",
+                scientific=True,
+                processes=args.processes,
+            )
+            protocol = latency_protocol_from_manifest(manifest, scientific=True)
+            factory = YokedPromatchLatencyFactory.from_manifest(
+                manifest,
+                cell_id=args.cell_id,
+                scientific=True,
+            )
+            suite = run_latency_benchmark(
+                factory,
+                protocol=protocol,
+                out_dir=args.out,
+                processes=args.processes,
+                scientific=True,
+                resume=not args.no_resume,
+            )
+            _ensure_json(args.out.resolve() / "protocol.json", manifest)
+            print(json.dumps(suite, indent=2, sort_keys=True))
+            return 0
+        if args.command == "latency-smoke":
+            manifest = default_smoke_protocol(processes=args.processes, shots=10_000)
+            smoke_config = TinyLatencySmokeConfig()
+            protocol = latency_protocol_from_manifest(
+                manifest,
+                scientific=False,
+                smoke=smoke_config,
+            )
+            factory = YokedPromatchLatencyFactory.from_manifest(
+                manifest,
+                cell_id=manifest["cells"][0]["cell_id"],
+                scientific=False,
+                smoke=smoke_config,
+            )
+            suite = run_latency_benchmark(
+                factory,
+                protocol=protocol,
+                out_dir=args.out,
+                processes=args.processes,
+                scientific=False,
+                resume=True,
+            )
+            _ensure_json(args.out.resolve() / "protocol.json", manifest)
+            print(json.dumps(suite, indent=2, sort_keys=True))
+            return 0
+        if args.command == "smoke":
+            if args.protocol is not None:
+                raise ValueError(
+                    "smoke does not accept scientific protocols; it always uses one "
+                    "explicit built-in d=3 cell"
+                )
+            if args.shots <= 0 or args.shots > 10_000:
+                raise ValueError("smoke --shots must be in [1, 10000]")
+            manifest = default_smoke_protocol(
+                processes=args.processes, shots=args.shots
+            )
+            summary = run_collection(
+                manifest,
+                phase="smoke",
+                out=args.out,
+                processes=args.processes,
+                scientific=False,
+            )
+        else:
+            manifest = _load_json(args.protocol)
+            summary = run_collection(
+                manifest,
+                phase=args.command,
+                out=args.out,
+                processes=args.processes,
+                scientific=True,
+            )
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
+    except (ValueError, TypeError, RuntimeError, OSError, NotImplementedError) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

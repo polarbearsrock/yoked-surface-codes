@@ -1,0 +1,413 @@
+{
+  "schema": "yoked.promatch.l1.protocol",
+  "schema_version": 1,
+  "protocol_kind": "first_round_confirmatory",
+  "protocol_version": "promatch-l1-first-round-v1",
+  "status": "DRAFT_TEMPLATE_NOT_FROZEN",
+  "frozen": false,
+  "claim_bearing": false,
+  "draft_notice": "DRAFT TEMPLATE ONLY. This file is not a preregistration, is not runnable, and cannot support a claim. Freeze it after the independent pilot, before any holdout shot, by filling every required null from the committed pilot artifacts and clean implementation commit.",
+  "experiment_id": null,
+  "repository_commit": null,
+  "clean_worktree": null,
+  "created_utc": null,
+  "frozen_utc": null,
+  "processes": 32,
+  "max_processes": 32,
+  "threads_per_process": 1,
+  "sample_batch_size": 10000,
+  "pilot_provenance": {
+    "pilot_protocol_path": "docs/PROMATCH_PILOT_PROTOCOL.json",
+    "pilot_protocol_experiment_id": null,
+    "pilot_protocol_sha256": null,
+    "raw_pilot_result_sha256": null,
+    "pilot_analysis_sha256": null,
+    "selection_log_sha256": null,
+    "selection_did_not_read_signed_difference": null
+  },
+  "runtime": {
+    "python_version": null,
+    "stim_version": null,
+    "sinter_version": null,
+    "pymatching_version": null,
+    "numpy_version": null,
+    "scipy_version": null,
+    "operating_system": null,
+    "kernel": null,
+    "cpu_model": null,
+    "microcode": null,
+    "cpu_affinity": null,
+    "numa_node": null,
+    "governor": null,
+    "turbo_state": null,
+    "host_load_acceptance_rule": null,
+    "gc_policy": "disabled_during_timed_blocks_only",
+    "thread_environment": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "BLIS_NUM_THREADS": "1"
+    }
+  },
+  "generator_contract": {
+    "function": "yoked._yoked_memory_circuits:yoked_magic_memory_circuit",
+    "style": "magic",
+    "gateset": "cz",
+    "remove_x_yoke": false,
+    "noise_model": "SI1000",
+    "selected_cell_metadata": null,
+    "selected_cell_circuit_sha256": null,
+    "target_cell_metadata": {
+      "cell_id": "target-d11-n6-y2-r44-p0.001",
+      "d": 11,
+      "patches": 6,
+      "yokes": 2,
+      "rounds": 44,
+      "si1000_p": 0.001
+    },
+    "target_cell_circuit_sha256": null
+  },
+  "dem": {
+    "construction": "circuit.detector_error_model",
+    "options": {
+      "decompose_errors": true,
+      "approximate_disjoint_errors": true
+    },
+    "selected_cell_dem_sha256": null,
+    "selected_cell_compiled_graph_fingerprint": null,
+    "target_cell_dem_sha256": null,
+    "target_cell_compiled_graph_fingerprint": null
+  },
+  "decoders": {
+    "u0_direct": {
+      "name": "pymatching",
+      "role": "primary_causal_baseline"
+    },
+    "u0_wrap": {
+      "name": "pymatching-u0-wrap-v1-windowd",
+      "role": "adapter_overhead_control"
+    },
+    "pu_window": {
+      "name": "promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching",
+      "role": "primary_treatment",
+      "configuration": {
+        "domain_mode": "windowd",
+        "residual_hw_limit": 10,
+        "stages": [1, 2, 3, 4],
+        "boundary_policy": "disabled",
+        "observable_policy": "zero-frame",
+        "residual_backend": "pymatching"
+      }
+    },
+    "pu_boundary": {
+      "name": "promatch-l1-v1-windowd-hw10-stages1234-parityboundary-zeroframe-pymatching",
+      "role": "post_confirmation_exploratory_comparator"
+    },
+    "pu_full": {
+      "name": "promatch-l1-v1-fullhistory-hw10-stages1234-noboundary-zeroframe-pymatching",
+      "role": "diagnostic_only"
+    },
+    "c0_context": {
+      "name": "pymatching-correlated",
+      "role": "descriptive_context_only"
+    }
+  },
+  "committed_pilot_grid": [
+    {
+      "priority": 1,
+      "cell_id": "pilot-01-d7-n6-y2-r28-p0.001",
+      "d": 7,
+      "patches": 6,
+      "yokes": 2,
+      "rounds": 28,
+      "si1000_p": 0.001,
+      "shots": 200000
+    },
+    {
+      "priority": 2,
+      "cell_id": "pilot-02-d7-n6-y2-r28-p0.002",
+      "d": 7,
+      "patches": 6,
+      "yokes": 2,
+      "rounds": 28,
+      "si1000_p": 0.002,
+      "shots": 200000
+    },
+    {
+      "priority": 3,
+      "cell_id": "pilot-03-d7-n6-y2-r28-p0.003",
+      "d": 7,
+      "patches": 6,
+      "yokes": 2,
+      "rounds": 28,
+      "si1000_p": 0.003,
+      "shots": 200000
+    },
+    {
+      "priority": 4,
+      "cell_id": "pilot-04-d5-n6-y2-r20-p0.003",
+      "d": 5,
+      "patches": 6,
+      "yokes": 2,
+      "rounds": 20,
+      "si1000_p": 0.003,
+      "shots": 200000
+    },
+    {
+      "priority": 5,
+      "cell_id": "pilot-05-d5-n6-y2-r20-p0.005",
+      "d": 5,
+      "patches": 6,
+      "yokes": 2,
+      "rounds": 20,
+      "si1000_p": 0.005,
+      "shots": 200000
+    }
+  ],
+  "selection": {
+    "rule": "first priority cell satisfying every committed gate without inspecting signed b-c",
+    "selected_cell_id": null,
+    "selected_cell": null,
+    "gate_inputs": {
+      "activation_fraction": null,
+      "u0_direct_failures": null,
+      "discordant_pairs": null,
+      "integrity_checks_passed": null,
+      "resource_gate_passed": null
+    },
+    "p_u0_design": null,
+    "delta_noninferiority": null,
+    "discordance_clopper_pearson_upper": null,
+    "normal_rule_raw_shots": null,
+    "power_verified_confirmatory_shots": null,
+    "n_confirm": null,
+    "maximum_confirmatory_shots": 10000000
+  },
+  "sampler_seed_roots": {
+    "pilot": "2226b38b5ab04cd8532b4e26d3abcbf752cf94587068b91426f1e55d2277de9a",
+    "confirmatory_holdout": "ba4df6460b1848846c5f55ba4a5981250b9a32a72bc3f8f9890d59eec52684c9",
+    "target_workload": "e3dd75362e009a342c3465b1d5e1b69cc932fd00f3e2cffaf1f5b7ec65d5c93c",
+    "timing_corpus": "d1d6747f169d2904233323d996586b50cb7300014d13574502f56862e80810d1",
+    "timing_bootstrap": "6de6f6303bcfc13942776e3d7e38bb904e67af7334d2332cc573bcc57b16bb7d"
+  },
+  "seed_derivation": {
+    "algorithm": "SHA-256",
+    "message": "seed_root_bytes || ASCII('stim-batch') || uint64_little_endian(batch_id)",
+    "stim_seed": "first 8 digest bytes interpreted as unsigned little-endian",
+    "resume_unit": "whole_batch",
+    "digest_each_detector_and_observable_array": true
+  },
+  "expected_shots": {
+    "confirmatory_holdout": null,
+    "target_workload": 1000000,
+    "timing_corpus": null
+  },
+  "batch_schedules": {
+    "confirmatory_holdout": null,
+    "target_workload": {
+      "batch_id_start": 0,
+      "batch_id_end_inclusive": 99,
+      "shots_per_batch": 10000
+    },
+    "timing_corpus": null
+  },
+  "accuracy_protocol": {
+    "primary_outcome": "one iff any predicted observable differs from any actual observable in a shot",
+    "paired_table": {
+      "regressions_b": "U0 correct and PU wrong",
+      "recoveries_c": "U0 wrong and PU correct",
+      "delta": "(b-c)/N = p_PU-p_U0"
+    },
+    "hypotheses": {
+      "null": "Delta >= delta_NI",
+      "alternative": "Delta < delta_NI"
+    },
+    "alpha_one_sided": 0.025,
+    "primary_method": "Tango paired efficient-score upper confidence bound",
+    "primary_bound": "one-sided 97.5 percent upper",
+    "noninferiority_pass_rule": "upper_bound_Delta < delta_NI",
+    "ordered_superiority_rule": "only after noninferiority passes, claim improvement if the same hierarchical upper bound is below zero",
+    "equality_method_secondary": "exact McNemar",
+    "relative_risk": "secondary; undefined when holdout U0 failures are zero",
+    "tango_solver": {
+      "root_finder": "scipy.optimize.brentq",
+      "parameter_bracket": {
+        "lower": "observed_delta",
+        "upper": "numpy.nextafter(1.0, 0.0)"
+      },
+      "xtol": 1e-12,
+      "maximum_iterations": 200,
+      "zero_discordance": "profiled_boundary_z_squared_over_N_plus_z_squared"
+    },
+    "fixed_stopping": "collect exactly n_confirm paired shots; MAX_ERRORS and result-dependent stopping are forbidden",
+    "exclusions": "none by decoder result; crashes, invariant failures, and malformed output fail the run"
+  },
+  "power_protocol": {
+    "discordance_upper_method": "one-sided 95 percent Clopper-Pearson",
+    "design_alternative": "Delta=0 with b=c=q_U/2",
+    "normal_rule_z_alpha": 1.959963984540054,
+    "normal_rule_z_power": 1.2815515655446004,
+    "round_up_to_shots": 10000,
+    "simulation_replicates": 100000,
+    "simulation_rng": "numpy.default_rng",
+    "simulation_seed": 1618033988749894,
+    "power_confidence_method": "one-sided 95 percent Clopper-Pearson lower bound",
+    "accept_if_power_lower_bound_at_least": 0.9,
+    "increment_shots": 10000,
+    "maximum_shots": 10000000
+  },
+  "workload_protocol": {
+    "primary_estimand": "mean residual detector events / mean original detector events over all shots",
+    "conditioning": "unconditional",
+    "selected_cell_shots": null,
+    "target_cell_shots": 1000000,
+    "target_accuracy_scope": "descriptive_only_not_powered",
+    "paired_bootstrap_replicates": 10000,
+    "bootstrap_alpha_one_sided": 0.025,
+    "workload_ratio_upper_threshold": 0.9,
+    "quantile_method": "empirical_type_7",
+    "bootstrap_unit": "paired_shot_via_exact_joint_histogram_multinomial",
+    "required_telemetry": [
+      "initial_and_residual_HW_per_domain",
+      "initial_and_residual_global_HW",
+      "activation_counts",
+      "success_rollback_overflow_counts",
+      "stage_attempts_and_commits",
+      "decision_XOR_support_and_path_length_histograms",
+      "withheld_cross_window_terminal_yoke_counts"
+    ]
+  },
+  "timing_protocol": {
+    "scope": "in_process_software_latency_not_hardware_or_real_time",
+    "input_generation": "pregenerated_outside_timed_regions",
+    "clock": "time.perf_counter_ns",
+    "primary_interval": "adapter entry through packed prediction return",
+    "diagnostic_intervals": ["unpack", "layout_traversal", "prematch", "repack", "backend"],
+    "primary_mode_batch_size": 1,
+    "secondary_batch_sizes": [64, 1024],
+    "timing_corpus_shots_per_restart": 10000,
+    "timing_corpus_reuse_policy": "cycle_pregenerated_natural_noise_corpus",
+    "restart_concurrency": 1,
+    "process_restarts": 10,
+    "warmup_calls_per_decoder_per_restart": 1000,
+    "paired_blocks_per_restart": 100,
+    "calls_per_decoder_per_block": 100,
+    "total_recorded_calls_per_decoder_batch1": 100000,
+    "inferential_pairs": [
+      "PU-window/U0-direct",
+      "PU-window/U0-wrap",
+      "residual-backend/original-backend"
+    ],
+    "block_order": "randomized_balanced_AB_BA",
+    "three_way_order": "balanced_Latin_square",
+    "bootstrap_replicates": 10000,
+    "bootstrap_clusters": ["process_restart", "paired_block"],
+    "quantile_method": "empirical_type_7",
+    "upper_confidence_percentile": 97.5,
+    "reported_quantiles": [0.5, 0.9, 0.99],
+    "claim_gates": {
+      "backend_geometric_ratio_upper": 0.9,
+      "total_geometric_ratio_upper": 0.95,
+      "total_p99_ratio_upper": 1.05
+    }
+  },
+  "content_hashes": {
+    "local_source_hashes": "computed_by_freeze_for_every_path_in_source_hashes",
+    "promatch_paper_version": "ASPLOS 2024; arXiv:2404.03136",
+    "promatch_reference_commit": "78929be805c602c1ee74fcff9c334fc959afbbb8"
+  },
+  "output_schema": {
+    "schema_version": 1,
+    "required_files": [
+      "experiment.json",
+      "protocol.json",
+      "batches/<cell_id>/batch-<batch_id>.json",
+      "summary.json",
+      "latency/suite.json",
+      "latency/batch-<batch_size>.restart-<restart_id>.json",
+      "analysis.json",
+      "analysis.md",
+      "latency_analysis.json",
+      "latency_analysis.md"
+    ],
+    "batch_ledger_required_fields": [
+      "experiment_id",
+      "cell_id",
+      "phase",
+      "batch.{batch_id,shot_start,shots}",
+      "stim_seed",
+      "detectors.{shape,dtype,sha256}",
+      "observables.{shape,dtype,sha256}",
+      "provenance",
+      "paired_contingency",
+      "telemetry",
+      "replay_samples"
+    ],
+    "paired_accuracy_required_fields": [
+      "shots",
+      "paired_contingency.{both_correct,regressions,recoveries,both_wrong}",
+      "delta",
+      "tango_upper_one_sided",
+      "delta_noninferiority",
+      "noninferiority_passed",
+      "ordered_superiority_passed"
+    ],
+    "timing_block_required_fields": [
+      "experiment_id",
+      "corpus_sha256",
+      "restart_index",
+      "batch_size",
+      "pair",
+      "order_by_block",
+      "numerator_calls_ns",
+      "denominator_calls_ns",
+      "numerator_block_totals_ns",
+      "denominator_block_totals_ns"
+    ],
+    "bounded_disagreement_policy": {
+      "maximum_rows_per_category_per_cell": 100,
+      "categories": ["regression", "recovery", "rollback", "invariant_debug"],
+      "selection": "lowest_SHA256_of_cell_batch_shot_category",
+      "must_be_replayable": true
+    },
+    "integrity": "analyzer rejects missing or duplicate ranges, digest mismatches, nonreconciling counts, totals unequal to fixed N, or manifest-hash mismatches"
+  },
+  "claim_scope": {
+    "selected_measurable_cell": "accuracy, workload, and software-latency only if their independent gates pass",
+    "fixed_target_cell": "activation, workload, and software latency; accuracy descriptive only",
+    "forbidden_claims": [
+      "accuracy preservation at target geometry",
+      "hardware latency",
+      "real-time deadline compliance",
+      "fully hierarchical L1/L2 decoding",
+      "correlated-MWPM causal comparison"
+    ]
+  },
+  "freeze_requirements": {
+    "required_nulls_to_fill": [
+      "all pilot_provenance fields",
+      "repository_commit",
+      "clean_worktree",
+      "created_utc",
+      "frozen_utc",
+      "runtime versions and machine fields",
+      "generator and DEM hashes/fingerprints",
+      "selection.selected_cell and every selection result",
+      "expected_shots and exact batch schedules",
+      "workload_protocol.selected_cell_shots",
+      "all content_hashes",
+      "experiment_id"
+    ],
+    "required_transition": "status=FROZEN, frozen=true, claim_bearing=true",
+    "cross_checks": [
+      "decoder, sampler, and statistics hashes equal the pilot versions",
+      "holdout, workload, timing, and pilot seed roots are distinct",
+      "holdout batch schedule is exactly n_confirm shots",
+      "selected cell is the first passing priority cell",
+      "pilot signed b-c was not an input to selection"
+    ],
+    "runner_behavior_while_draft": "refuse_sampling"
+  }
+}

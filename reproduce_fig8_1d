@@ -10,6 +10,7 @@ set -euo pipefail
 
 readonly REPOSITORY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly DEFAULT_OUTPUT_DIRECTORY="out/fig8_1d"
+readonly MAX_WORKER_PROCESSES=32
 
 
 print_usage() {
@@ -38,7 +39,7 @@ Actions:
 Collection environment variables:
   MAX_SHOTS             Per-circuit shot limit (smoke: 100000; grid: 1000000)
   MAX_ERRORS            Per-circuit logical-error limit (default: 100)
-  PROCESSES             Number of Sinter worker processes (default: 4)
+  PROCESSES             Sinter worker processes, 1..32 (default: 32)
   THREADS_PER_PROCESS   Native numerical threads per worker (default: 1)
   DECODER               Sinter decoder (default: pymatching-correlated)
 
@@ -66,16 +67,27 @@ require_positive_integer() {
 }
 
 
+require_at_most() {
+    local name=$1
+    local value=$2
+    local maximum=$3
+    if (( value > maximum )); then
+        die "$name must be at most $maximum; got '$value'"
+    fi
+}
+
+
 configure_runtime() {
     # Sinter parallelizes with processes. Numerical libraries may also create
     # thread pools, so cap those pools to avoid processes × threads
     # oversubscription.
-    worker_processes=${PROCESSES:-4}
+    worker_processes=${PROCESSES:-32}
     threads_per_process=${THREADS_PER_PROCESS:-1}
     max_errors=${MAX_ERRORS:-100}
     decoder=${DECODER:-pymatching-correlated}
 
     require_positive_integer PROCESSES "$worker_processes"
+    require_at_most PROCESSES "$worker_processes" "$MAX_WORKER_PROCESSES"
     require_positive_integer THREADS_PER_PROCESS "$threads_per_process"
     require_positive_integer MAX_ERRORS "$max_errors"
 
@@ -85,6 +97,7 @@ configure_runtime() {
     export NUMEXPR_NUM_THREADS=$threads_per_process
     export VECLIB_MAXIMUM_THREADS=$threads_per_process
     export BLIS_NUM_THREADS=$threads_per_process
+    export PYTHONPATH="$REPOSITORY_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 
     # Matplotlib otherwise attempts to cache fonts under the home directory.
     # This workspace provides TMPDIR as its designated scratch location.
@@ -173,6 +186,7 @@ collect_circuits() {
         --save_resume_filepath "$statistics_path" \
         --metadata_func auto \
         --decoders "$decoder" \
+        --custom_decoders_module_function yoked.decoding:custom_decoders \
         --max_shots "$max_shots" \
         --max_errors "$max_errors" \
         --processes "$worker_processes"
