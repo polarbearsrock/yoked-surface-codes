@@ -1,0 +1,669 @@
+#!/usr/bin/env python3
+"""Diagnose why L1 ProMatch predecoding (PU) disagrees with flat PyMatching (U0).
+
+Two subcommands:
+
+  replay  Replay the regression/recovery samples retained in a paired collection's
+          ``summary.json`` bit-exactly, then classify every committed prematch
+          against the flat MWPM solution ``M*`` for the same shot: does M* match
+          the same pair, and if not, where did M* send each endpoint (yoke hub,
+          true boundary, next window, terminal layer, in-domain)?  Also reports
+          how the residual matching re-routed yoke/boundary edges, i.e. how a
+          local commit turned into a two-observable logical error.
+
+  probe   Sample fresh shots for a cell (from a protocol or explicit d/n/r/p),
+          run PU and U0, and report activation, commits per stage, the
+          per-stage rate at which commits disagree with M*, the M*-partner
+          kinds of disagreeing endpoints, and paired U0/PU failures.
+
+Both are diagnostics only: they are not claim-bearing and never write into a
+collection directory.  Single process; one native thread.
+"""
+
+from __future__ import annotations
+
+# Set native-thread limits before importing NumPy/PyMatching through the harness.
+import os
+for _name in (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+):
+    os.environ[_name] = "1"
+
+import argparse
+import json
+import sys
+import time
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_ROOT / "src"))
+
+from yoked.decoding._promatch import predecode  # noqa: E402
+from yoked.decoding._promatch_experiment import (  # noqa: E402
+    GENERATOR,
+    PreparedCell,
+    prepare_cell,
+)
+from yoked.decoding._promatch_layout import (  # noqa: E402
+    L1BodyDetector,
+    L1TerminalDetector,
+)
+
+
+PRIMARY_DECODER = {
+    "residual_hw_limit": 10,
+    "domain_mode": "windowd",
+    "boundary_policy": "disabled",
+    "observable_policy": "zero-frame",
+}
+DEM_OPTIONS = {"decompose_errors": True, "approximate_disjoint_errors": True}
+STOLEN_PRIORITY = ("YOKE", "BOUNDARY", "cross-window", "terminal")
+
+
+# --------------------------------------------------------------------------- io
+
+
+def _unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key {key!r}")
+        result[key] = value
+    return result
+
+
+def _load_json(path: Path) -> Any:
+    with path.open(encoding="utf-8") as f:
+        return json.load(f, object_pairs_hook=_unique_object)
+
+
+def _unpack(hexstr: str, count: int) -> np.ndarray:
+    packed = np.frombuffer(bytes.fromhex(hexstr), dtype=np.uint8)
+    return np.unpackbits(packed, bitorder="little", count=count).astype(np.uint8)
+
+
+# ------------------------------------------------------------------ analysis
+
+
+class Diagnoser:
+    """Shared classification helpers bound to one prepared cell."""
+
+    def __init__(self, prepared: PreparedCell, decoder_config: dict[str, Any]) -> None:
+        self.prepared = prepared
+        self.cfg = dict(decoder_config)
+        self.graph = prepared.compiled_pu.graph
+        self.layout = self.graph.layout
+        self.matcher = self.graph.matcher
+        self.num_detectors = prepared.dem.num_detectors
+        self.num_observables = prepared.dem.num_observables
+        self.yoke_ids = set(self.layout.yoke_detector_ids)
+
+    # -- structure -----------------------------------------------------------
+
+    def graph_structure(self) -> dict[str, Any]:
+        edges = self.graph.edges
+        yoke = self.yoke_ids
+        nonzero = [e for e in edges if any(e.observable_mask)]
+        boundary = [e for e in edges if e.target is None]
+        yoke_edges = [e for e in edges if e.source in yoke or e.target in yoke]
+        det_det_nonzero = [
+            e for e in nonzero
+            if e.target is not None and e.source not in yoke and e.target not in yoke
+        ]
+        domain_weights = [
+            e.weight
+            for dg in self.graph.domain_graphs.values()
+            for e in dg.edges
+            if e.target is not None
+        ]
+
+        def summary(values):
+            if not values:
+                return None
+            v = np.asarray(values, dtype=float)
+            return {
+                "min": float(v.min()),
+                "median": float(np.median(v)),
+                "max": float(v.max()),
+                "count": int(v.size),
+            }
+
+        return {
+            "num_detectors": self.num_detectors,
+            "num_observables": self.num_observables,
+            "distance": self.layout.distance,
+            "rounds": self.layout.rounds,
+            "patches": self.layout.num_patches,
+            "windows": self.layout.num_windows,
+            "domains": len(self.graph.domain_graphs),
+            "domain_sizes": sorted({len(g.detector_ids) for g in self.graph.domain_graphs.values()}),
+            "edges": len(edges),
+            "edges_with_observable_mask": len(nonzero),
+            "true_boundary_edges": len(boundary),
+            "true_boundary_edges_with_mask": sum(1 for e in boundary if any(e.observable_mask)),
+            "yoke_incident_edges": len(yoke_edges),
+            "yoke_incident_edges_with_mask": sum(1 for e in yoke_edges if any(e.observable_mask)),
+            "detector_detector_edges_with_mask_excluding_yoke": len(det_det_nonzero),
+            "yoke_degrees": {
+                int(y): sum(1 for e in edges if e.source == y or e.target == y)
+                for y in sorted(yoke)
+            },
+            "domain_edge_weight": summary(domain_weights),
+            "true_boundary_edge_weight": summary([e.weight for e in boundary]),
+            "yoke_edge_weight": summary([e.weight for e in yoke_edges]),
+        }
+
+    # -- matching helpers ----------------------------------------------------
+
+    def edge_partners(self, dets: np.ndarray) -> dict[int, list[int]]:
+        """Detector -> list of partners in the flat MWPM edge solution (-1 = boundary)."""
+        partners: dict[int, list[int]] = {}
+        for u, v in self.matcher.decode_to_edges_array(dets):
+            u, v = int(u), int(v)
+            partners.setdefault(u, []).append(v)
+            if v != -1:
+                partners.setdefault(v, []).append(u)
+        return partners
+
+    def partner_kind(self, det: int, partner: int) -> str:
+        if partner == -1:
+            return "BOUNDARY"
+        if partner in self.yoke_ids:
+            return "YOKE"
+        role, other = self.layout.role_of(det), self.layout.role_of(partner)
+        if isinstance(other, L1TerminalDetector):
+            return "terminal"
+        if isinstance(role, L1BodyDetector) and isinstance(other, L1BodyDetector):
+            if role.patch_id != other.patch_id:
+                return "cross-patch"
+            if role.check_basis != other.check_basis:
+                return "cross-basis"
+            if role.window_id != other.window_id:
+                return "cross-window"
+            return "in-domain"
+        return "other"
+
+    def endpoint_kinds(self, det: int, partners: dict[int, list[int]]) -> str:
+        kinds = sorted({self.partner_kind(det, q) for q in partners.get(det, [])})
+        return "+".join(kinds) if kinds else "none"
+
+    def yoke_boundary_usage(self, dets: np.ndarray) -> Counter:
+        usage: Counter = Counter()
+        for u, v in self.matcher.decode_to_edges_array(dets):
+            u, v = int(u), int(v)
+            if v == -1:
+                role = self.layout.role_of(u)
+                usage[("bdry", role.patch_id, role.check_basis)] += 1
+            elif u in self.yoke_ids or v in self.yoke_ids:
+                other = v if u in self.yoke_ids else u
+                role = self.layout.role_of(other)
+                usage[("yoke", role.patch_id, role.check_basis)] += 1
+        return usage
+
+    def run_pu(self, dets: np.ndarray):
+        result = predecode(
+            self.graph,
+            dets,
+            residual_hw_limit=self.cfg["residual_hw_limit"],
+            boundary_policy=self.cfg["boundary_policy"],
+            observable_policy=self.cfg["observable_policy"],
+        )
+        prediction = self.matcher.decode(result.residual_syndrome).astype(np.uint8)
+        prediction ^= result.observable_frame.astype(np.uint8)
+        return result, prediction
+
+    def role_str(self, det: int) -> str:
+        role = self.layout.role_of(det)
+        if isinstance(role, L1BodyDetector):
+            return f"body(p{role.patch_id},{role.check_basis},t{role.time},w{role.window_id})"
+        if isinstance(role, L1TerminalDetector):
+            return f"term(p{role.patch_id},{role.check_basis},t{role.time})"
+        return f"YOKE{det}"
+
+
+def _observable_basis(k: int) -> str:
+    return "X" if k % 2 == 0 else "Z"
+
+
+def _fmt_counter(counter: Counter, *, limit: int | None = None) -> str:
+    items = counter.most_common(limit)
+    return ", ".join(f"{k}: {v}" for k, v in items) if items else "(none)"
+
+
+# ------------------------------------------------------------------- replay
+
+
+def _replay_cell(diag: Diagnoser, cell_summary: dict[str, Any], *, show: int) -> dict[str, Any]:
+    samples = cell_summary["replay_samples"]
+    nd, no = diag.num_detectors, diag.num_observables
+    categories = Counter(s["category"] for s in samples)
+    u0_mismatch = pu_mismatch = 0
+    stage_kind: Counter = Counter()          # (category, stage, "agree"/"disagree", (kind_a, kind_b))
+    endpoint_kind: Counter = Counter()       # category -> kind of each endpoint of a disagreeing commit
+    per_sample_category: Counter = Counter()  # (category, dominant blind spot)
+    diff_sizes: Counter = Counter()
+    two_same_basis: Counter = Counter()
+    yoke_parity_changes: Counter = Counter()  # (category, basis, #patches whose yoke-edge parity changed)
+    details: list[str] = []
+
+    for index, sample in enumerate(samples):
+        category = sample["category"]
+        dets = _unpack(sample["detection_events_hex"], nd)
+        u0_recorded = _unpack(sample["u0_prediction_hex"], no)
+        pu_recorded = _unpack(sample["pu_prediction_hex"], no)
+        u0 = diag.matcher.decode(dets).astype(np.uint8)
+        result, pu = diag.run_pu(dets)
+        u0_mismatch += not np.array_equal(u0, u0_recorded)
+        pu_mismatch += not np.array_equal(pu, pu_recorded)
+
+        partners = diag.edge_partners(dets)
+        stolen: set[str] = set()
+        disagreeing = 0
+        lines: list[str] = []
+        for path in result.paths:
+            a, b = path.endpoints
+            if b in partners.get(a, []):
+                stage_kind[(category, path.stage, "agree", ())] += 1
+                continue
+            disagreeing += 1
+            ka, kb = diag.endpoint_kinds(a, partners), diag.endpoint_kinds(b, partners)
+            stage_kind[(category, path.stage, "disagree", tuple(sorted((ka, kb))))] += 1
+            for kind in (ka, kb):
+                endpoint_kind[(category, kind)] += 1
+                for token in kind.split("+"):
+                    stolen.add(token)
+            lines.append(
+                f"      stage{path.stage} {path.domain.patch_id}{path.domain.check_basis}"
+                f"w{path.domain.window_id}: {a}={diag.role_str(a)} {b}={diag.role_str(b)}"
+                f"  M*: a->{ka}, b->{kb}"
+            )
+        dominant = next((k for k in STOLEN_PRIORITY if k in stolen), None)
+        if dominant is None:
+            dominant = "in-domain-only" if disagreeing else "all-agree"
+        per_sample_category[(category, dominant)] += 1
+
+        diff = [k for k in range(no) if u0[k] != pu[k]]
+        diff_sizes[(category, len(diff))] += 1
+        if len(diff) == 2 and _observable_basis(diff[0]) == _observable_basis(diff[1]):
+            two_same_basis[category] += 1
+        use_star = diag.yoke_boundary_usage(dets)
+        use_res = diag.yoke_boundary_usage(result.residual_syndrome)
+        for basis in ("X", "Z"):
+            changed = [
+                p for p in range(diag.layout.num_patches)
+                if use_star.get(("yoke", p, basis), 0) % 2 != use_res.get(("yoke", p, basis), 0) % 2
+            ]
+            if changed:
+                yoke_parity_changes[(category, basis, len(changed))] += 1
+        if index < show:
+            details.append(
+                f"[{index:3d}] {category:10s} commits={len(result.paths):3d} disagreeing={disagreeing}"
+                f" obs_diff(PU^U0)={diff}"
+            )
+            transitions = ", ".join(
+                f"{k}:{use_star.get(k, 0)}->{use_res.get(k, 0)}"
+                for k in sorted(set(use_star) | set(use_res))
+                if use_star.get(k, 0) != use_res.get(k, 0)
+            )
+            details.append(f"      yoke/boundary edge usage M*->residual: {transitions or '(unchanged)'}")
+            details.extend(lines)
+
+    return {
+        "cell_id": cell_summary["cell_id"],
+        "shots": cell_summary["shots"],
+        "paired_contingency": cell_summary["paired_contingency"],
+        "samples": dict(categories),
+        "u0_replay_mismatches": u0_mismatch,
+        "pu_replay_mismatches": pu_mismatch,
+        "stage_kind": stage_kind,
+        "endpoint_kind": endpoint_kind,
+        "per_sample_category": per_sample_category,
+        "diff_sizes": diff_sizes,
+        "two_same_basis": two_same_basis,
+        "yoke_parity_changes": yoke_parity_changes,
+        "details": details,
+    }
+
+
+def _print_replay(report: dict[str, Any], structure: dict[str, Any]) -> None:
+    print(f"== {report['cell_id']}: shots={report['shots']} paired={report['paired_contingency']}")
+    print(
+        f"   graph: detectors={structure['num_detectors']} edges={structure['edges']}"
+        f" domains={structure['domains']} (sizes {structure['domain_sizes']});"
+        f" edges with observable mask={structure['edges_with_observable_mask']}"
+        f" of which yoke-incident={structure['yoke_incident_edges_with_mask']},"
+        f" true-boundary={structure['true_boundary_edges_with_mask']},"
+        f" detector-detector={structure['detector_detector_edges_with_mask_excluding_yoke']};"
+        f" yoke degrees={structure['yoke_degrees']}"
+    )
+    print(f"   replay samples: {report['samples']}")
+    print(
+        f"   replay bit-exact: U0 mismatches={report['u0_replay_mismatches']},"
+        f" PU mismatches={report['pu_replay_mismatches']}"
+    )
+    print("   committed prematches vs flat MWPM (category, stage, agree/disagree, M* kinds of endpoints):")
+    for key, value in sorted(report["stage_kind"].items(), key=lambda kv: (kv[0][0], -kv[1])):
+        category, stage, verdict, kinds = key
+        suffix = f" {kinds}" if kinds else ""
+        print(f"      {value:7d}  {category:10s} stage {stage} {verdict}{suffix}")
+    print("   M* partner kind of each endpoint of a disagreeing commit, by category:")
+    for category in sorted({k[0] for k in report["endpoint_kind"]}):
+        sub = Counter({k[1]: v for k, v in report["endpoint_kind"].items() if k[0] == category})
+        print(f"      {category:10s} {_fmt_counter(sub)}")
+    print("   per-sample dominant blind spot (category, kind):")
+    for key, value in sorted(report["per_sample_category"].items()):
+        print(f"      {value:5d}  {key}")
+    print("   number of observables where PU != U0 (category, count):")
+    for key, value in sorted(report["diff_sizes"].items()):
+        print(f"      {value:5d}  {key}")
+    print(f"   samples with exactly two differing observables in the same basis: {dict(report['two_same_basis'])}")
+    print("   yoke-edge parity changed M*->residual (category, basis, #patches):")
+    for key, value in sorted(report["yoke_parity_changes"].items()):
+        print(f"      {value:5d}  {key}")
+    if report["details"]:
+        print("   sample details:")
+        for line in report["details"]:
+            print("   " + line)
+
+
+def _cmd_replay(args: argparse.Namespace) -> int:
+    protocol = _load_json(args.input / "protocol.json")
+    summary = _load_json(args.input / "summary.json")
+    if summary.get("experiment_id") != protocol.get("experiment_id"):
+        raise ValueError("summary.json and protocol.json experiment_id differ")
+    cells = summary["cells"]
+    if args.cell is not None:
+        cells = [c for c in cells if c["cell_id"] in set(args.cell)]
+        missing = set(args.cell) - {c["cell_id"] for c in cells}
+        if missing:
+            raise ValueError(f"unknown cell IDs {sorted(missing)}")
+    decoder_config = dict(protocol["decoder"])
+    reports = []
+    for cell_summary in cells:
+        cell = next(c for c in protocol["cells"] if c["cell_id"] == cell_summary["cell_id"])
+        prepared = prepare_cell(
+            cell,
+            decoder_config=decoder_config,
+            dem_options=dict(protocol["dem_options"]),
+            verify_hashes=True,
+        )
+        diag = Diagnoser(prepared, decoder_config)
+        structure = diag.graph_structure()
+        report = _replay_cell(diag, cell_summary, show=args.show)
+        _print_replay(report, structure)
+        report["graph_structure"] = structure
+        reports.append(report)
+    if args.out_json is not None:
+        _write_json(args.out_json, {"command": "replay", "input": str(args.input), "cells": reports})
+    if any(r["u0_replay_mismatches"] or r["pu_replay_mismatches"] for r in reports):
+        print("error: replay is not bit-exact with the recorded predictions", file=sys.stderr)
+        return 1
+    return 0
+
+
+# -------------------------------------------------------------------- probe
+
+
+def _probe_cell(diag: Diagnoser, *, shots: int, seed: int) -> dict[str, Any]:
+    sampler = diag.prepared.circuit.compile_detector_sampler(seed=seed)
+    dets_all, obs_all = sampler.sample(shots, separate_observables=True)
+    dets_all = dets_all.astype(np.uint8)
+    obs_all = obs_all.astype(np.uint8)
+
+    started = time.perf_counter()
+    domain_status: Counter = Counter()
+    initial_hw: list[int] = []
+    stage_commits: Counter = Counter()
+    stage_disagree: Counter = Counter()
+    endpoint_kind: Counter = Counter()
+    changed_with_stage: Counter = Counter()
+    activated = with_disagreement = changed = changed_without_disagreement = 0
+    u0_fail = pu_fail = regressions = recoveries = 0
+    for i in range(shots):
+        dets = dets_all[i]
+        result, pu = diag.run_pu(dets)
+        u0 = diag.matcher.decode(dets).astype(np.uint8)
+        for stats in result.domain_stats.values():
+            domain_status[stats.status] += 1
+            initial_hw.append(stats.initial_hw)
+        fu = bool(np.any(u0 != obs_all[i]))
+        fp = bool(np.any(pu != obs_all[i]))
+        u0_fail += fu
+        pu_fail += fp
+        regressions += (not fu) and fp
+        recoveries += fu and (not fp)
+        if not result.paths:
+            continue
+        activated += 1
+        partners = diag.edge_partners(dets)
+        disagreeing_stages: set[int] = set()
+        for path in result.paths:
+            a, b = path.endpoints
+            stage_commits[path.stage] += 1
+            if b in partners.get(a, []):
+                continue
+            stage_disagree[path.stage] += 1
+            disagreeing_stages.add(path.stage)
+            endpoint_kind[diag.endpoint_kinds(a, partners)] += 1
+            endpoint_kind[diag.endpoint_kinds(b, partners)] += 1
+        is_changed = bool(np.any(pu != u0))
+        with_disagreement += bool(disagreeing_stages)
+        changed += is_changed
+        changed_without_disagreement += is_changed and not disagreeing_stages
+        if is_changed:
+            for stage in disagreeing_stages:
+                changed_with_stage[stage] += 1
+    elapsed = time.perf_counter() - started
+    hw = np.asarray(initial_hw, dtype=float)
+    return {
+        "shots": shots,
+        "seed": seed,
+        "seconds_per_shot": elapsed / shots,
+        "domain_status": dict(domain_status),
+        "domain_activation_fraction": domain_status["success"] / max(sum(domain_status.values()), 1),
+        "domain_initial_hw": {
+            "mean": float(hw.mean()),
+            "p50": float(np.median(hw)),
+            "p90": float(np.percentile(hw, 90)),
+            "max": int(hw.max()),
+        },
+        "activated_shots": activated,
+        "commits_per_shot": sum(stage_commits.values()) / shots,
+        "stage_commits": dict(sorted(stage_commits.items())),
+        "stage_disagree": dict(sorted(stage_disagree.items())),
+        "changed_shots_involving_stage": dict(sorted(changed_with_stage.items())),
+        "shots_with_disagreeing_commit": with_disagreement,
+        "shots_where_pu_differs_from_u0": changed,
+        "changed_without_disagreeing_commit": changed_without_disagreement,
+        "endpoint_kind_of_disagreeing_commits": dict(endpoint_kind.most_common()),
+        "u0_failures": u0_fail,
+        "pu_failures": pu_fail,
+        "regressions": regressions,
+        "recoveries": recoveries,
+    }
+
+
+def _print_probe(cell_id: str, decoder_config: dict[str, Any], structure: dict[str, Any], report: dict[str, Any]) -> None:
+    print(f"== {cell_id}  decoder={decoder_config}")
+    print(
+        f"   detectors={structure['num_detectors']} domains={structure['domains']}"
+        f" (sizes {structure['domain_sizes']}) shots={report['shots']} seed={report['seed']}"
+        f" ({report['seconds_per_shot']:.3f}s/shot)"
+    )
+    print(
+        f"   domain status={report['domain_status']} -> activation fraction"
+        f" {report['domain_activation_fraction']:.3f}; domain initial HW"
+        f" mean={report['domain_initial_hw']['mean']:.1f} p50={report['domain_initial_hw']['p50']:.0f}"
+        f" p90={report['domain_initial_hw']['p90']:.0f} max={report['domain_initial_hw']['max']}"
+    )
+    print(f"   activated shots={report['activated_shots']}  commits/shot={report['commits_per_shot']:.1f}")
+    for stage, commits in report["stage_commits"].items():
+        disagree = report["stage_disagree"].get(stage, 0)
+        print(
+            f"      stage {stage}: commits={commits} disagree with MWPM={disagree}"
+            f" ({disagree / commits:.4f}) shots changed involving stage="
+            f"{report['changed_shots_involving_stage'].get(stage, 0)}"
+        )
+    total = sum(report["stage_commits"].values())
+    disagree = sum(report["stage_disagree"].values())
+    if total:
+        print(f"      all: commits={total} disagree={disagree} ({disagree / total:.4f})")
+    print(
+        f"   shots with >=1 disagreeing commit={report['shots_with_disagreeing_commit']}"
+        f"  shots where PU!=U0={report['shots_where_pu_differs_from_u0']}"
+        f"  (changed without any disagreeing commit: {report['changed_without_disagreeing_commit']})"
+    )
+    if report["shots_with_disagreeing_commit"]:
+        print(
+            "   P(PU!=U0 | >=1 disagreeing commit) ="
+            f" {report['shots_where_pu_differs_from_u0'] / report['shots_with_disagreeing_commit']:.3f}"
+        )
+    print(f"   M* partner kinds of endpoints of disagreeing commits: {report['endpoint_kind_of_disagreeing_commits']}")
+    print(
+        f"   U0 fail={report['u0_failures']}  PU fail={report['pu_failures']}"
+        f"  regressions={report['regressions']}  recoveries={report['recoveries']}"
+    )
+
+
+def _cmd_probe(args: argparse.Namespace) -> int:
+    decoder_config = dict(PRIMARY_DECODER)
+    dem_options = dict(DEM_OPTIONS)
+    if args.protocol is not None:
+        protocol = _load_json(args.protocol)
+        decoder_config = dict(protocol["decoder"])
+        dem_options = dict(protocol["dem_options"])
+        if args.cell is None:
+            raise ValueError("--cell is required with --protocol")
+        cell = next((c for c in protocol["cells"] if c["cell_id"] == args.cell), None)
+        if cell is None:
+            raise ValueError(f"unknown cell {args.cell!r}")
+        verify = True
+    else:
+        if None in (args.d, args.patches, args.rounds, args.p):
+            raise ValueError("either --protocol/--cell or all of --d/--patches/--rounds/--p are required")
+        cell = {
+            "cell_id": f"probe-d{args.d}-n{args.patches}-y{args.yokes}-r{args.rounds}-p{args.p}",
+            "generator": GENERATOR,
+            "d": args.d,
+            "r": args.rounds,
+            "p": args.p,
+            "patches": args.patches,
+            "yokes": args.yokes,
+            "style": "cz",
+            "noise": "si1000",
+            "remove_x_yoke": False,
+        }
+        verify = False
+    for name in ("residual_hw_limit", "domain_mode", "boundary_policy", "observable_policy"):
+        value = getattr(args, name)
+        if value is not None:
+            decoder_config[name] = value
+    prepared = prepare_cell(
+        cell,
+        decoder_config=decoder_config,
+        dem_options=dem_options,
+        verify_hashes=verify,
+    )
+    diag = Diagnoser(prepared, decoder_config)
+    structure = diag.graph_structure()
+    report = _probe_cell(diag, shots=args.shots, seed=args.seed)
+    _print_probe(cell["cell_id"], decoder_config, structure, report)
+    if args.out_json is not None:
+        _write_json(
+            args.out_json,
+            {
+                "command": "probe",
+                "cell": cell,
+                "decoder": decoder_config,
+                "graph_structure": structure,
+                "report": report,
+            },
+        )
+    return 0
+
+
+# ---------------------------------------------------------------------- cli
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, Counter):
+        return {" | ".join(map(str, k)) if isinstance(k, tuple) else str(k): v for k, v in value.items()}
+    if isinstance(value, dict):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(v) for v in value]
+    if isinstance(value, (np.integer,)):
+        return int(value)
+    if isinstance(value, (np.floating,)):
+        return float(value)
+    return value
+
+
+def _write_json(path: Path, value: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(_jsonable(value), f, indent=2, sort_keys=True)
+        f.write("\n")
+    print(f"wrote {path}")
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    replay = sub.add_parser(
+        "replay",
+        help="replay retained regression/recovery samples of a paired collection and classify commits",
+    )
+    replay.add_argument(
+        "--input",
+        type=Path,
+        required=True,
+        help="collection directory containing protocol.json and summary.json (read-only)",
+    )
+    replay.add_argument("--cell", action="append", help="restrict to this cell_id (repeatable)")
+    replay.add_argument("--show", type=int, default=10, help="print per-sample detail for the first N samples")
+    replay.add_argument("--out-json", type=Path, default=None)
+
+    probe = sub.add_parser("probe", help="sample fresh shots and measure per-stage disagreement with flat MWPM")
+    probe.add_argument("--protocol", type=Path, default=None, help="protocol JSON providing decoder, DEM options and cells")
+    probe.add_argument("--cell", type=str, default=None, help="cell_id inside --protocol")
+    probe.add_argument("--d", type=int, default=None)
+    probe.add_argument("--patches", type=int, default=None)
+    probe.add_argument("--rounds", type=int, default=None)
+    probe.add_argument("--p", type=float, default=None, help="SI1000 physical error rate")
+    probe.add_argument("--yokes", type=int, default=2, choices=(0, 1, 2))
+    probe.add_argument("--shots", type=int, required=True)
+    probe.add_argument("--seed", type=int, required=True, help="Stim detector-sampler seed")
+    probe.add_argument("--residual-hw-limit", type=int, default=None, help="override decoder HW limit")
+    probe.add_argument("--domain-mode", choices=("windowd", "fullhistory"), default=None)
+    probe.add_argument("--boundary-policy", choices=("disabled", "odd-parity"), default=None)
+    probe.add_argument("--observable-policy", choices=("zero-frame", "path-zero", "any"), default=None)
+    probe.add_argument("--out-json", type=Path, default=None)
+    return parser
+
+
+def main() -> int:
+    args = _parser().parse_args()
+    try:
+        if args.command == "replay":
+            return _cmd_replay(args)
+        if args.command == "probe":
+            return _cmd_probe(args)
+        raise ValueError(f"unknown command {args.command!r}")
+    except (ValueError, KeyError, FileNotFoundError) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

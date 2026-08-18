@@ -435,6 +435,30 @@ Both paired templates set `processes=32`, `max_processes=32`,
 collection and regeneration use exactly 32 processes. Every path refuses more
 than 32 regardless of command-line or environment overrides.
 
+### Diagnosing PU-versus-U0 disagreements
+
+`tools/diagnose_promatch_l1` is a read-only diagnostic (single process, one
+native thread, not claim-bearing). `replay` re-decodes the regression and
+recovery samples retained in a paired collection's `summary.json`, checks that
+they reproduce bit-for-bit, and classifies every committed prematch against
+the flat MWPM solution for the same shot (which endpoint MWPM instead sent to
+the yoke hub, the true boundary, the neighbouring window, or the terminal
+layer, and how the residual matching re-routed yoke edges). `probe` samples
+fresh shots for a protocol cell or an explicit `--d/--patches/--rounds/--p`
+and reports activation, commits and disagreement rate per stage, and paired
+U0/PU failures:
+
+```bash
+tools/diagnose_promatch_l1 replay \
+    --input out/promatch_l1_round1_v3_20260817_32p/pilot \
+    --cell pilot-01-d7-n6-y2-r28-p0.001 --show 5
+tools/diagnose_promatch_l1 probe \
+    --protocol out/promatch_l1_round1_v3_20260817_32p/pilot/protocol.json \
+    --cell pilot-01-d7-n6-y2-r28-p0.001 --shots 20000 --seed 12345
+tools/diagnose_promatch_l1 probe --d 11 --patches 10 --rounds 88 --p 0.001 \
+    --shots 100 --seed 777 --out-json "$TMPDIR/probe-d11.json"
+```
+
 ## Accuracy and rare-event limitations
 
 Direct Monte Carlo cost scales with the inverse logical failure probability.

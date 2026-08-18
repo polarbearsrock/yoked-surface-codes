@@ -1,0 +1,7 @@
+# Repository-level uv configuration for this workstation.
+#
+# The home directory (/homes/s2chitni) is at its disk quota, so uv's download
+# and wheel cache must live on /data2. Managed Python interpreters cannot be
+# configured here (uv only reads UV_PYTHON_INSTALL_DIR from the environment);
+# see AGENTS.md for the full environment setup.
+cache-dir = "/data2/s2chitni/.cache/uv"

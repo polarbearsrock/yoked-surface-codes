@@ -5,6 +5,20 @@ import os
 import pathlib
 import sys
 
+# Simulations on this workstation run at most 32 worker processes with one
+# native numerical thread each (see AGENTS.md). Pin the thread pools before
+# NumPy/PyMatching are imported so every Sinter worker inherits the limit.
+MAX_WORKER_PROCESSES = 32
+for _name in (
+    'OMP_NUM_THREADS',
+    'OPENBLAS_NUM_THREADS',
+    'MKL_NUM_THREADS',
+    'NUMEXPR_NUM_THREADS',
+    'VECLIB_MAXIMUM_THREADS',
+    'BLIS_NUM_THREADS',
+):
+    os.environ.setdefault(_name, '1')
+
 src_path = pathlib.Path(__file__).parent.parent / 'src'
 assert src_path.exists()
 sys.path.append(str(src_path))
@@ -23,7 +37,14 @@ def main():
     parser.add_argument('--flush_period', type=float, default=30)
     args = parser.parse_args()
 
-    num_workers = os.cpu_count() if args.processes == 'auto' else int(args.processes)
+    if args.processes == 'auto':
+        num_workers = min(os.cpu_count() or 1, MAX_WORKER_PROCESSES)
+    else:
+        num_workers = int(args.processes)
+    if not 1 <= num_workers <= MAX_WORKER_PROCESSES:
+        parser.error(
+            f'--processes must be in 1..{MAX_WORKER_PROCESSES} (or auto); got {args.processes}'
+        )
     collect_circuit_paths(
         max_shots=args.max_shots,
         circuit_paths=args.circuits,
