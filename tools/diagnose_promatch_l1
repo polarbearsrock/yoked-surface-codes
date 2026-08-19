@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Diagnose why L1 ProMatch predecoding (PU) disagrees with flat PyMatching (U0).
 
-Two subcommands:
+Three subcommands:
 
   replay  Replay the regression/recovery samples retained in a paired collection's
           ``summary.json`` bit-exactly, then classify every committed prematch
@@ -16,7 +16,12 @@ Two subcommands:
           per-stage rate at which commits disagree with M*, the M*-partner
           kinds of disagreeing endpoints, and paired U0/PU failures.
 
-Both are diagnostics only: they are not claim-bearing and never write into a
+  oracle-replay  Run the frozen Phase-A full-graph oracle arms over retained
+          physical shots.  This is read-only and single-process; it collects no
+          new shots but regenerates archived origin batches for verification.
+          Actual observables are joined only after oracle decisions.
+
+All are diagnostics only: they are not claim-bearing and never write into a
 collection directory.  Single process; one native thread.
 """
 
@@ -35,10 +40,14 @@ for _name in (
     os.environ[_name] = "1"
 
 import argparse
+import hashlib
 import json
+import math
+import subprocess
 import sys
 import time
 from collections import Counter
+from decimal import Decimal, Inexact, Rounded, localcontext
 from pathlib import Path
 from typing import Any
 
@@ -51,11 +60,28 @@ from yoked.decoding._promatch import predecode  # noqa: E402
 from yoked.decoding._promatch_experiment import (  # noqa: E402
     GENERATOR,
     PreparedCell,
+    PROTOCOL_KIND,
+    PROTOCOL_SCHEMA,
+    REPLAY_CATEGORIES,
+    REPLAY_SAMPLE_REQUIRED_FIELDS,
+    SUMMARY_CELL_FIELDS,
+    SUMMARY_SCHEMA,
+    SUMMARY_TOP_LEVEL_FIELDS,
+    _replay_selection_sha256,
+    current_execution_environment,
+    current_software_versions,
     prepare_cell,
+    validate_experiment_protocol,
 )
+from yoked.decoding._promatch_oracle import OracleTolerance  # noqa: E402
+from yoked.decoding._promatch_oracle_replay import run_phase_a_replay  # noqa: E402
 from yoked.decoding._promatch_layout import (  # noqa: E402
     L1BodyDetector,
     L1TerminalDetector,
+)
+from yoked.decoding._promatch_stats import (  # noqa: E402
+    derive_stim_batch_seed,
+    digest_array,
 )
 
 
@@ -67,6 +93,22 @@ PRIMARY_DECODER = {
 }
 DEM_OPTIONS = {"decompose_errors": True, "approximate_disjoint_errors": True}
 STOLEN_PRIORITY = ("YOKE", "BOUNDARY", "cross-window", "terminal")
+ORACLE_REPLAY_CONFIG_SCHEMA = "promatch-l1-global-context-oracle-replay-v1"
+ORACLE_REPLAY_OUTPUT_SCHEMA = "promatch-l1-global-context-oracle-output-v1"
+ORACLE_ARM_FIELDS = {
+    "shadow": "shadow",
+    "o-cost-tx": "cost_tx",
+    "o-frame-tx": "frame_tx",
+    "o-frame-partial": "frame_partial",
+}
+ORACLE_ARMS = tuple(ORACLE_ARM_FIELDS)
+ORACLE_TOLERANCE_SENSITIVITY = (
+    {"relative": 1e-7, "absolute": 1e-10},
+    {"relative": 1e-6, "absolute": 1e-9},
+    {"relative": 1e-5, "absolute": 1e-8},
+)
+ORACLE_PRIMARY_TOLERANCE = {"relative": 1e-6, "absolute": 1e-9}
+ORACLE_DECIMAL_PRECISION = 4096
 
 
 # --------------------------------------------------------------------------- io
@@ -89,6 +131,247 @@ def _load_json(path: Path) -> Any:
 def _unpack(hexstr: str, count: int) -> np.ndarray:
     packed = np.frombuffer(bytes.fromhex(hexstr), dtype=np.uint8)
     return np.unpackbits(packed, bitorder="little", count=count).astype(np.uint8)
+
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _canonical_json_bytes(value: Any) -> bytes:
+    return json.dumps(
+        _jsonable(value),
+        sort_keys=True,
+        ensure_ascii=False,
+        allow_nan=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def _require_exact_keys(value: Any, expected: set[str], *, label: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be a JSON object")
+    actual = set(value)
+    if actual != expected:
+        raise ValueError(
+            f"{label} fields differ: missing={sorted(expected - actual)}, "
+            f"extra={sorted(actual - expected)}"
+        )
+    return value
+
+
+def _resolve_frozen_path(raw: Any, *, label: str) -> Path:
+    if not isinstance(raw, str) or not raw:
+        raise ValueError(f"{label} must be a nonempty path string")
+    path = Path(raw)
+    return (path if path.is_absolute() else _ROOT / path).resolve()
+
+
+def _git_output(*args: str) -> str:
+    completed = subprocess.run(
+        ("git", "-C", str(_ROOT), *args),
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return completed.stdout.strip()
+
+
+def _validate_frozen_oracle_config(config: dict[str, Any]) -> dict[str, Any]:
+    _require_exact_keys(
+        config,
+        {
+            "schema", "status", "frozen", "input", "selection", "oracle",
+            "arms", "decoder", "implementation", "experiment_id", "processes",
+            "native_threads_per_process", "software_versions",
+        },
+        label="oracle replay config",
+    )
+    if config["schema"] != ORACLE_REPLAY_CONFIG_SCHEMA:
+        raise ValueError(f"oracle replay config schema must be {ORACLE_REPLAY_CONFIG_SCHEMA!r}")
+    if config["status"] != "FROZEN" or config["frozen"] is not True:
+        raise ValueError("oracle replay config must have status='FROZEN' and frozen=true")
+    recorded_experiment_id = config["experiment_id"]
+    if not isinstance(recorded_experiment_id, str) or len(recorded_experiment_id) != 64:
+        raise ValueError("oracle replay experiment_id must be 64 hex characters")
+    semantic = dict(config)
+    del semantic["experiment_id"]
+    computed_experiment_id = hashlib.sha256(_canonical_json_bytes(semantic)).hexdigest()
+    if recorded_experiment_id != computed_experiment_id:
+        raise ValueError("oracle replay experiment_id does not match its canonical semantic config")
+    if config["processes"] != 1 or config["native_threads_per_process"] != 1:
+        raise ValueError("oracle replay must freeze one process and one native thread")
+    runtime_versions = current_software_versions()
+    _require_exact_keys(
+        config["software_versions"], set(runtime_versions),
+        label="oracle replay software_versions",
+    )
+    if config["software_versions"] != runtime_versions:
+        raise ValueError(
+            "oracle replay runtime versions differ from the frozen versions: "
+            f"expected={config['software_versions']}, actual={runtime_versions}"
+        )
+
+    input_cfg = _require_exact_keys(
+        config["input"],
+        {"path", "experiment_id", "protocol_sha256", "summary_sha256"},
+        label="oracle replay config input",
+    )
+    for name in ("experiment_id", "protocol_sha256", "summary_sha256"):
+        value = input_cfg[name]
+        if not isinstance(value, str) or len(value) != 64:
+            raise ValueError(f"oracle replay config input.{name} must be 64 hex characters")
+        try:
+            bytes.fromhex(value)
+        except ValueError as ex:
+            raise ValueError(f"oracle replay config input.{name} is not hexadecimal") from ex
+
+    selection = _require_exact_keys(
+        config["selection"], {"cell_ids", "categories"}, label="oracle replay selection"
+    )
+    cell_ids = selection["cell_ids"]
+    categories = selection["categories"]
+    if (
+        not isinstance(cell_ids, list) or not cell_ids
+        or any(not isinstance(v, str) or not v for v in cell_ids)
+        or cell_ids != sorted(set(cell_ids))
+    ):
+        raise ValueError("selection.cell_ids must be a nonempty sorted unique string array")
+    if (
+        not isinstance(categories, list) or not categories
+        or len(categories) != len(set(categories))
+        or not set(categories).issubset(REPLAY_CATEGORIES)
+    ):
+        raise ValueError(
+            f"selection.categories must be a nonempty unique subset of {REPLAY_CATEGORIES}"
+        )
+
+    oracle = _require_exact_keys(
+        config["oracle"],
+        {
+            "absolute", "relative", "veto_budget", "sensitivity_grid",
+            "decimal_precision",
+        },
+        label="oracle replay oracle",
+    )
+    for name in ("absolute", "relative"):
+        value = oracle[name]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value) or value < 0:
+            raise ValueError(f"oracle.{name} must be a finite nonnegative number")
+    veto_budget = oracle["veto_budget"]
+    if veto_budget is not None and (
+        isinstance(veto_budget, bool) or not isinstance(veto_budget, int) or veto_budget <= 0
+    ):
+        raise ValueError("oracle.veto_budget must be null or a positive integer")
+    if {
+        "relative": oracle["relative"],
+        "absolute": oracle["absolute"],
+    } != ORACLE_PRIMARY_TOLERANCE:
+        raise ValueError(
+            "oracle operational tolerance differs from the preregistered primary pair"
+        )
+    if (
+        isinstance(oracle["decimal_precision"], bool)
+        or not isinstance(oracle["decimal_precision"], int)
+        or oracle["decimal_precision"] != ORACLE_DECIMAL_PRECISION
+    ):
+        raise ValueError(
+            f"oracle.decimal_precision must be {ORACLE_DECIMAL_PRECISION}"
+        )
+    if config["oracle"]["sensitivity_grid"] != list(
+        ORACLE_TOLERANCE_SENSITIVITY
+    ):
+        raise ValueError(
+            "oracle.sensitivity_grid differs from the preregistered grid"
+        )
+    if config["arms"] != list(ORACLE_ARMS):
+        raise ValueError(f"oracle replay arms must be exactly {list(ORACLE_ARMS)}")
+
+    decoder = _require_exact_keys(
+        config["decoder"],
+        {"residual_hw_limit", "domain_mode", "boundary_policy", "observable_policy"},
+        label="oracle replay decoder",
+    )
+    if (
+        isinstance(decoder["residual_hw_limit"], bool)
+        or not isinstance(decoder["residual_hw_limit"], int)
+        or decoder["residual_hw_limit"] < 0
+    ):
+        raise ValueError("decoder.residual_hw_limit must be a nonnegative integer")
+    if decoder["domain_mode"] not in ("windowd", "fullhistory"):
+        raise ValueError("decoder.domain_mode is unsupported")
+    if decoder["boundary_policy"] not in ("disabled", "odd-parity"):
+        raise ValueError("decoder.boundary_policy is unsupported")
+    if decoder["observable_policy"] not in ("zero-frame", "edge-zero", "path-zero", "any"):
+        raise ValueError("decoder.observable_policy is unsupported")
+
+    implementation = _require_exact_keys(
+        config["implementation"], {"repository_commit", "source_hashes"},
+        label="oracle replay implementation",
+    )
+    commit = implementation["repository_commit"]
+    if not isinstance(commit, str) or len(commit) != 40:
+        raise ValueError("implementation.repository_commit must be a full Git commit hash")
+    try:
+        bytes.fromhex(commit)
+    except ValueError as ex:
+        raise ValueError("implementation.repository_commit is not hexadecimal") from ex
+    hashes = implementation["source_hashes"]
+    required_sources = {
+        "tools/diagnose_promatch_l1",
+        "src/yoked/decoding/_promatch.py",
+        "src/yoked/decoding/_promatch_experiment.py",
+        "src/yoked/decoding/_promatch_graph.py",
+        "src/yoked/decoding/_promatch_layout.py",
+        "src/yoked/decoding/_promatch_oracle.py",
+        "src/yoked/decoding/_promatch_oracle_replay.py",
+        "requirements.txt",
+    }
+    _require_exact_keys(hashes, required_sources, label="implementation.source_hashes")
+    for relpath, expected in hashes.items():
+        if not isinstance(expected, str) or len(expected) != 64:
+            raise ValueError(f"source hash for {relpath!r} must be 64 hex characters")
+        source = (_ROOT / relpath).resolve()
+        if not source.is_relative_to(_ROOT) or not source.is_file():
+            raise ValueError(f"frozen source path is missing or outside the repository: {relpath!r}")
+        if _sha256_file(source) != expected:
+            raise ValueError(f"frozen source hash mismatch for {relpath!r}")
+    return config
+
+
+def _validate_clean_implementation(
+    config: dict[str, Any], *, config_path: Path
+) -> dict[str, Any]:
+    if _git_output("status", "--porcelain", "--untracked-files=all"):
+        raise ValueError("oracle replay requires a clean worktree")
+    head = _git_output("rev-parse", "HEAD")
+    commit = config["implementation"]["repository_commit"]
+    ancestry = subprocess.run(
+        ("git", "-C", str(_ROOT), "merge-base", "--is-ancestor", commit, head),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if ancestry.returncode != 0:
+        raise ValueError("frozen implementation commit is not an ancestor of HEAD")
+    resolved_config = config_path.resolve()
+    if not resolved_config.is_relative_to(_ROOT):
+        raise ValueError("frozen oracle replay config must be inside the repository")
+    config_relpath = resolved_config.relative_to(_ROOT).as_posix()
+    changed = tuple(
+        line for line in _git_output("diff", "--name-only", f"{commit}..{head}").splitlines()
+        if line
+    )
+    if changed != (config_relpath,):
+        raise ValueError(
+            "post-implementation commits must change exactly the frozen config; "
+            f"expected {[config_relpath]}, got {list(changed)}"
+        )
+    return {
+        "repository_head": head,
+        "implementation_commit": commit,
+        "clean_worktree": True,
+        "post_implementation_changed_paths": list(changed),
+    }
 
 
 # ------------------------------------------------------------------ analysis
@@ -410,6 +693,1171 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     return 0
 
 
+# ------------------------------------------------------------- oracle replay
+
+
+def _ensure_oracle_output_target(input_dir: Path, output_dir: Path) -> Path:
+    output_dir = output_dir.resolve()
+    if output_dir == input_dir or output_dir.is_relative_to(input_dir):
+        raise ValueError("oracle replay output must not be the input directory or nested inside it")
+    if output_dir.exists():
+        if not output_dir.is_dir():
+            raise ValueError("oracle replay output exists and is not a directory")
+        if any(output_dir.iterdir()):
+            raise ValueError("oracle replay output directory must not already contain files")
+    return output_dir
+
+
+def _validate_packed_hex(value: Any, *, bit_count: int, label: str) -> bytes:
+    byte_count = (bit_count + 7) // 8
+    if not isinstance(value, str) or value != value.lower() or len(value) != 2 * byte_count:
+        raise ValueError(f"{label} must be canonical lowercase hex with exactly {byte_count} bytes")
+    try:
+        packed = bytes.fromhex(value)
+    except ValueError as ex:
+        raise ValueError(f"{label} is not hexadecimal") from ex
+    if bit_count % 8 and packed and packed[-1] >> (bit_count % 8):
+        raise ValueError(f"{label} has nonzero unused high bits")
+    return packed
+
+
+def _load_oracle_replay_corpus(
+    config_path: Path,
+) -> tuple[dict[str, Any], Path, dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+    config_path = config_path.resolve()
+    config = _validate_frozen_oracle_config(_load_json(config_path))
+    input_dir = _resolve_frozen_path(config["input"]["path"], label="input.path")
+    protocol_path = input_dir / "protocol.json"
+    summary_path = input_dir / "summary.json"
+    if not input_dir.is_dir():
+        raise FileNotFoundError(f"frozen input directory does not exist: {input_dir}")
+    for path, key in (
+        (protocol_path, "protocol_sha256"), (summary_path, "summary_sha256")
+    ):
+        if _sha256_file(path) != config["input"][key]:
+            raise ValueError(f"frozen input hash mismatch for {path.name}")
+
+    protocol = _load_json(protocol_path)
+    summary = _load_json(summary_path)
+    if protocol.get("schema") != PROTOCOL_SCHEMA or protocol.get("kind") != PROTOCOL_KIND:
+        raise ValueError("oracle replay accepts only the paired V3 protocol schema and kind")
+    phase = protocol.get("phase")
+    computed_experiment_id = validate_experiment_protocol(
+        protocol, phase=phase, scientific=False
+    )
+    frozen_id = config["input"]["experiment_id"]
+    if computed_experiment_id != frozen_id or protocol.get("experiment_id") != frozen_id:
+        raise ValueError("frozen input experiment ID does not match the validated protocol")
+    _require_exact_keys(summary, set(SUMMARY_TOP_LEVEL_FIELDS), label="summary.json")
+    if (
+        summary.get("schema") != SUMMARY_SCHEMA
+        or summary.get("experiment_id") != frozen_id
+        or summary.get("phase") != phase
+    ):
+        raise ValueError("summary schema, phase, or experiment ID differs from the protocol")
+    if config["decoder"] != protocol.get("decoder"):
+        raise ValueError("oracle replay decoder differs from the frozen input decoder")
+    if config["software_versions"] != protocol.get("software_versions"):
+        raise ValueError(
+            "oracle replay software versions differ from the frozen V3 input"
+        )
+
+    protocol_cells = {cell["cell_id"]: cell for cell in protocol["cells"]}
+    selected_ids = config["selection"]["cell_ids"]
+    if not set(selected_ids).issubset(protocol_cells):
+        raise ValueError(f"unknown selected cell IDs {sorted(set(selected_ids) - set(protocol_cells))}")
+    if not isinstance(summary["cells"], list):
+        raise ValueError("summary cells must be an array")
+    summary_cells: dict[str, dict[str, Any]] = {}
+    for row in summary["cells"]:
+        _require_exact_keys(row, set(SUMMARY_CELL_FIELDS), label="summary cell")
+        cell_id = row.get("cell_id")
+        if cell_id in summary_cells:
+            raise ValueError(f"summary contains duplicate cell {cell_id!r}")
+        summary_cells[cell_id] = row
+    if set(summary_cells) != set(protocol_cells):
+        raise ValueError("summary cells do not exactly cover protocol cells")
+
+    categories = set(config["selection"]["categories"])
+    schedules = protocol.get("cell_batch_schedules")
+    seed_roots = protocol.get("sampler_seed_roots")
+    split = {"confirm": "confirmatory_holdout", "target": "target_workload"}.get(phase, phase)
+    if not isinstance(schedules, dict) or not isinstance(seed_roots, dict) or split not in seed_roots:
+        raise ValueError("protocol is missing its frozen batch schedule or sampler seed root")
+    physical: dict[tuple[str, int, int], dict[str, Any]] = {}
+    for cell_id in selected_ids:
+        cell = protocol_cells[cell_id]
+        nd, no = int(cell["num_detectors"]), int(cell["num_observables"])
+        cell_batches = {
+            row["batch_id"]: row for row in schedules[cell_id]
+            if isinstance(row, dict) and "batch_id" in row
+        }
+        for sample in summary_cells[cell_id]["replay_samples"]:
+            _require_exact_keys(sample, set(REPLAY_SAMPLE_REQUIRED_FIELDS), label="replay sample")
+            category = sample["category"]
+            if category not in REPLAY_CATEGORIES:
+                raise ValueError(f"unsupported replay category {category!r}")
+            if category not in categories:
+                continue
+            batch_id, shot_index = sample["batch_id"], sample["shot_index"]
+            if (
+                isinstance(batch_id, bool) or not isinstance(batch_id, int) or batch_id < 0
+                or isinstance(shot_index, bool) or not isinstance(shot_index, int) or shot_index < 0
+            ):
+                raise ValueError("replay batch_id and shot_index must be nonnegative integers")
+            batch = cell_batches.get(batch_id)
+            offset = sample["shot_offset"]
+            if (
+                batch is None
+                or isinstance(offset, bool) or not isinstance(offset, int)
+                or offset < 0 or offset >= batch["shots"]
+                or shot_index != batch["shot_start"] + offset
+            ):
+                raise ValueError("replay sample identity is outside its frozen batch")
+            expected_seed = derive_stim_batch_seed(
+                seed_root=seed_roots[split], batch_id=batch_id
+            )
+            if sample["stim_seed"] != expected_seed:
+                raise ValueError("replay sample Stim seed differs from the frozen derivation")
+            expected_selection = _replay_selection_sha256(
+                cell_id=cell_id, batch_id=batch_id, shot_index=shot_index, category=category
+            )
+            if sample["selection_sha256"] != expected_selection:
+                raise ValueError("replay sample selection hash mismatch")
+            packed = {
+                "detection_events_hex": _validate_packed_hex(
+                    sample["detection_events_hex"], bit_count=nd, label="detection_events_hex"
+                ).hex(),
+                "observables_hex": _validate_packed_hex(
+                    sample["observables_hex"], bit_count=no, label="observables_hex"
+                ).hex(),
+                "u0_prediction_hex": _validate_packed_hex(
+                    sample["u0_prediction_hex"], bit_count=no, label="u0_prediction_hex"
+                ).hex(),
+                "pu_prediction_hex": _validate_packed_hex(
+                    sample["pu_prediction_hex"], bit_count=no, label="pu_prediction_hex"
+                ).hex(),
+            }
+            identity = (cell_id, batch_id, shot_index)
+            stable = {
+                "cell_id": cell_id,
+                "batch_id": batch_id,
+                "shot_index": shot_index,
+                "shot_offset": sample["shot_offset"],
+                "stim_seed": sample["stim_seed"],
+                **packed,
+            }
+            label = {"category": category, "selection_sha256": sample["selection_sha256"]}
+            if identity in physical:
+                existing = physical[identity]
+                if any(existing[key] != value for key, value in stable.items()):
+                    raise ValueError(f"conflicting retained payloads for physical shot {identity}")
+                if label in existing["selection_labels"]:
+                    raise ValueError(f"duplicate retained selection label for physical shot {identity}")
+                existing["selection_labels"].append(label)
+            else:
+                physical[identity] = {**stable, "selection_labels": [label]}
+
+    shots = []
+    for identity in sorted(physical):
+        shot = physical[identity]
+        shot["selection_labels"] = sorted(
+            shot["selection_labels"], key=lambda v: (v["category"], v["selection_sha256"])
+        )
+        shot["shot_id"] = hashlib.sha256(
+            f"{identity[0]}:{identity[1]}:{identity[2]}".encode("ascii")
+        ).hexdigest()
+        shots.append(shot)
+    if not shots:
+        raise ValueError("the frozen selection contains no retained physical shots")
+    return config, input_dir, protocol, summary, shots
+
+
+def _pack_bits(bits: np.ndarray) -> bytes:
+    return bytes(np.packbits(np.asarray(bits, dtype=np.uint8), bitorder="little"))
+
+
+def _prediction_failed_one(prediction: bytes, actual: bytes, *, count: int) -> bool:
+    return bool(np.any(_unpack(prediction.hex(), count) != _unpack(actual.hex(), count)))
+
+
+def _prepare_oracle_replay_cells(
+    config: dict[str, Any], protocol: dict[str, Any]
+) -> dict[str, PreparedCell]:
+    cells = {cell["cell_id"]: cell for cell in protocol["cells"]}
+    return {
+        cell_id: prepare_cell(
+            cells[cell_id],
+            decoder_config=dict(config["decoder"]),
+            dem_options=dict(protocol["dem_options"]),
+            verify_hashes=True,
+        )
+        for cell_id in config["selection"]["cell_ids"]
+    }
+
+
+def _regenerate_retained_batches(
+    *,
+    prepared_by_cell: dict[str, PreparedCell],
+    protocol: dict[str, Any],
+    shots: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Re-samples every retained origin batch once and verifies retained rows."""
+
+    schedule_by_cell = {
+        cell_id: {row["batch_id"]: row for row in rows}
+        for cell_id, rows in protocol["cell_batch_schedules"].items()
+    }
+    grouped: dict[tuple[str, int], list[dict[str, Any]]] = {}
+    for retained in shots:
+        grouped.setdefault(
+            (retained["cell_id"], retained["batch_id"]), []
+        ).append(retained)
+
+    ledgers: list[dict[str, Any]] = []
+    for (cell_id, batch_id), retained_rows in sorted(grouped.items()):
+        prepared = prepared_by_cell[cell_id]
+        batch = schedule_by_cell[cell_id][batch_id]
+        seeds = {int(row["stim_seed"]) for row in retained_rows}
+        if len(seeds) != 1:
+            raise ValueError("retained rows in one batch have different Stim seeds")
+        seed = next(iter(seeds))
+        sampler = prepared.circuit.compile_detector_sampler(seed=seed)
+        detectors, observables = sampler.sample(
+            shots=batch["shots"],
+            separate_observables=True,
+            bit_packed=True,
+        )
+        detectors = np.asarray(detectors, dtype=np.uint8)
+        observables = np.asarray(observables, dtype=np.uint8)
+        for retained in retained_rows:
+            offset = retained["shot_offset"]
+            if detectors[offset].tobytes().hex() != retained["detection_events_hex"]:
+                raise ValueError(
+                    "regenerated detector row differs from retained replay input"
+                )
+            if observables[offset].tobytes().hex() != retained["observables_hex"]:
+                raise ValueError(
+                    "regenerated observable row differs from retained replay input"
+                )
+        detector_digest = digest_array(detectors)
+        observable_digest = digest_array(observables)
+        ledgers.append(
+            {
+                "cell_id": cell_id,
+                "batch_id": batch_id,
+                "shot_start": batch["shot_start"],
+                "shots": batch["shots"],
+                "stim_seed": seed,
+                "retained_rows_verified": len(retained_rows),
+                "detectors": {
+                    "sha256": detector_digest.sha256,
+                    "shape": list(detector_digest.shape),
+                    "dtype": detector_digest.dtype,
+                },
+                "observables": {
+                    "sha256": observable_digest.sha256,
+                    "shape": list(observable_digest.shape),
+                    "dtype": observable_digest.dtype,
+                },
+            }
+        )
+    return ledgers
+
+
+def _proposal_rows(
+    *, experiment_id: str, retained: dict[str, Any], phase_json: dict[str, Any],
+    diag: Diagnoser, legacy_result: Any,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    edge_by_id = {edge.edge_id: edge for edge in diag.graph.edges}
+    for arm in ORACLE_ARMS:
+        arm_json = phase_json[arm]
+        proposals = arm_json.pop("proposals")
+        for proposal in proposals:
+            evaluation = proposal["evaluation"]
+            ordinal = int(proposal["ordinal"])
+            partners: dict[int, list[int]] = {}
+            for edge_id in evaluation["base_support_edge_ids"]:
+                edge = edge_by_id[edge_id]
+                target = -1 if edge.target is None else edge.target
+                partners.setdefault(edge.source, []).append(target)
+                if edge.target is not None:
+                    partners.setdefault(edge.target, []).append(edge.source)
+            proposal_data = proposal.get("proposal", proposal.get("path"))
+            endpoint_rows = []
+            omitted_labels: set[str] = set()
+            candidate_edge_ids = tuple(int(v) for v in evaluation["candidate_edge_ids"])
+            base_edge_ids = frozenset(int(v) for v in evaluation["base_support_edge_ids"])
+            for raw_endpoint in proposal_data["endpoints"]:
+                if raw_endpoint is None:
+                    continue
+                endpoint = int(raw_endpoint)
+                partner_ids = sorted(partners.get(endpoint, []))
+                if not partner_ids:
+                    raise AssertionError("proposal endpoint is unmatched in the base MWPM support")
+                kinds = sorted({diag.partner_kind(endpoint, partner) for partner in partner_ids})
+                candidate_partners: list[int] = []
+                for edge_id in candidate_edge_ids:
+                    edge = edge_by_id[edge_id]
+                    if edge.source == endpoint:
+                        candidate_partners.append(-1 if edge.target is None else edge.target)
+                    elif edge.target == endpoint:
+                        candidate_partners.append(edge.source)
+                candidate_partners = sorted(set(candidate_partners))
+                if len(candidate_partners) != 1:
+                    raise AssertionError(
+                        "proposal endpoint must have degree one in its candidate support"
+                    )
+                expected_partner = candidate_partners[0]
+                omitted_labels.update(
+                    diag.partner_kind(endpoint, partner)
+                    for partner in partner_ids
+                    if partner != expected_partner
+                )
+                endpoint_rows.append({
+                    "endpoint": endpoint,
+                    "base_mwpm_partner_ids": partner_ids,
+                    "base_mwpm_partner_kinds": kinds,
+                    "candidate_adjacent_partner_id": expected_partner,
+                    "base_mwpm_follows_candidate_edge": expected_partner in partner_ids,
+                })
+            if arm == "shadow":
+                path = legacy_result.paths[ordinal]
+                stats = legacy_result.domain_stats[path.domain]
+                domain_outcome = {
+                    "transaction_policy": "legacy-v3-tx",
+                    "status": stats.status,
+                    "fallback_reason": (
+                        None if stats.fallback_reason is None
+                        else stats.fallback_reason.value
+                    ),
+                    "proposal_start": None,
+                    "proposal_stop": None,
+                }
+            else:
+                domain_row = next(
+                    (
+                        row for row in arm_json["domains"]
+                        if row["proposal_start"] <= ordinal < row["proposal_stop"]
+                    ),
+                    None,
+                )
+                if domain_row is None:
+                    raise AssertionError("proposal is not linked to a domain outcome")
+                outcome = domain_row["outcome"]
+                domain_outcome = {
+                    "transaction_policy": outcome["transaction_policy"],
+                    "status": outcome["status"],
+                    "fallback_reason": outcome["fallback_reason"],
+                    "exhaustion_kind": outcome["exhaustion_kind"],
+                    "proposal_start": domain_row["proposal_start"],
+                    "proposal_stop": domain_row["proposal_stop"],
+                }
+            state_candidate_count = proposal_data.get("state_total_candidate_count")
+            veto_count_before = proposal_data.get("state_veto_count_before", 0)
+            veto_count_after = proposal.get("state_veto_count_after", 0)
+            row = {
+                "schema": ORACLE_REPLAY_OUTPUT_SCHEMA,
+                "experiment_id": experiment_id,
+                "shot_id": retained["shot_id"],
+                "cell_id": retained["cell_id"],
+                "physical_identity": {
+                    "batch_id": retained["batch_id"],
+                    "shot_index": retained["shot_index"],
+                    "shot_offset": retained["shot_offset"],
+                    "stim_seed": retained["stim_seed"],
+                },
+                "selection_labels": retained["selection_labels"],
+                "arm": arm,
+                "graph_fingerprint": diag.graph.fingerprint,
+                "input_syndrome_sha256": hashlib.sha256(
+                    bytes.fromhex(retained["detection_events_hex"])
+                ).hexdigest(),
+                "pre_state_fingerprint": proposal["pre_state_fingerprint"],
+                "post_decision_state_fingerprint": proposal[
+                    "post_decision_state_fingerprint"
+                ],
+                "domain_outcome": domain_outcome,
+                "state_candidate_count": state_candidate_count,
+                "state_veto_count_before": veto_count_before,
+                "state_veto_count_after": veto_count_after,
+                "oracle_evaluation_ordinal": proposal[
+                    "oracle_evaluation_ordinal"
+                ],
+                "oracle_call_count": 1,
+                **proposal,
+            }
+            row["base_mwpm_endpoint_partners"] = endpoint_rows
+            row["omitted_context_labels"] = sorted(omitted_labels)
+            row["base_mwpm_contains_candidate_support"] = set(
+                candidate_edge_ids
+            ).issubset(base_edge_ids)
+            row["proposal_sha256"] = hashlib.sha256(_canonical_json_bytes(row)).hexdigest()
+            rows.append(row)
+    return rows
+
+
+def _decimal_reference_sums(
+    *,
+    base_weights: tuple[float, ...],
+    composite_weights: tuple[float, ...],
+    precision: int,
+) -> tuple[Decimal, Decimal, Decimal]:
+    """Returns exact sums of binary64 inputs using ``Decimal.from_float``.
+
+    The frozen precision is deliberately much wider than a binary64 decimal
+    expansion.  Inexact and rounded arithmetic trap instead of silently
+    changing a classification.
+    """
+
+    base_decimals = tuple(Decimal.from_float(value) for value in base_weights)
+    composite_decimals = tuple(
+        Decimal.from_float(value) for value in composite_weights
+    )
+    with localcontext() as context:
+        context.prec = precision
+        context.traps[Inexact] = True
+        context.traps[Rounded] = True
+        base = sum(base_decimals, Decimal(0))
+        composite = sum(composite_decimals, Decimal(0))
+        return base, composite, composite - base
+
+
+def _decimal_cost_classification(
+    *,
+    cost_excess: Decimal,
+    base_weight: Decimal,
+    composite_weight: Decimal,
+    relative: float,
+    absolute: float,
+    precision: int,
+) -> str:
+    """Classifies an exact binary64-input reference sum under one grid point."""
+
+    with localcontext() as context:
+        context.prec = precision
+        context.traps[Inexact] = True
+        context.traps[Rounded] = True
+        tau = Decimal.from_float(absolute) + Decimal.from_float(relative) * max(
+            Decimal(1), abs(base_weight), abs(composite_weight)
+        )
+        if cost_excess > tau:
+            return "positive-cost-excess"
+        if cost_excess < -tau:
+            return "numeric-accounting-anomaly"
+        return "numerically-cost-compatible"
+
+
+def _float_cost_classification(*, cost_excess: float, tau: float) -> str:
+    if not math.isfinite(cost_excess) or not math.isfinite(tau) or tau < 0:
+        raise ValueError("nonfinite numeric characterization input")
+    if cost_excess > tau:
+        return "positive-cost-excess"
+    if cost_excess < -tau:
+        return "numeric-accounting-anomaly"
+    return "numerically-cost-compatible"
+
+
+def _characterize_numeric_proposals(
+    *,
+    config: dict[str, Any],
+    proposal_rows: list[dict[str, Any]],
+    prepared_by_cell: dict[str, PreparedCell],
+) -> dict[str, Any]:
+    """Runs the preregistered fail-closed §6.2 checks over every proposal."""
+
+    grid = config["oracle"].get("sensitivity_grid")
+    if grid is None:
+        raise ValueError("oracle numeric characterization requires sensitivity_grid")
+    default_relative = float(config["oracle"]["relative"])
+    default_absolute = float(config["oracle"]["absolute"])
+    decimal_precision = int(config["oracle"]["decimal_precision"])
+    edge_tables = {
+        cell_id: {
+            int(edge.edge_id): edge
+            for edge in prepared.compiled_pu.graph.edges
+        }
+        for cell_id, prepared in prepared_by_cell.items()
+    }
+
+    def new_stats() -> dict[str, Any]:
+        return {
+            "proposal_evaluations": 0,
+            "classification_counts": Counter(),
+            "proposal_evaluations_by_arm": Counter(),
+            "classification_counts_by_arm": {
+                arm: Counter() for arm in ORACLE_ARMS
+            },
+            "backend_support_comparisons": 0,
+            "max_backend_support_absolute_difference": 0.0,
+            "max_backend_support_relative_difference": 0.0,
+            "max_backend_support_tau_scaled_difference": 0.0,
+            "max_backend_support_absolute_difference_proposal_sha256": None,
+            "max_backend_support_relative_difference_proposal_sha256": None,
+            "max_backend_support_tau_scaled_difference_proposal_sha256": None,
+            "max_decimal_vs_fsum_cost_excess_difference": Decimal(0),
+            "max_decimal_difference_proposal_sha256": None,
+        }
+
+    pooled = new_stats()
+    per_cell = {cell_id: new_stats() for cell_id in sorted(prepared_by_cell)}
+
+    def update_maximum(
+        stats: dict[str, Any],
+        *,
+        absolute_difference: float,
+        relative_difference: float,
+        tau_scaled_difference: float,
+        proposal_sha256: str,
+    ) -> None:
+        if absolute_difference > stats["max_backend_support_absolute_difference"]:
+            stats["max_backend_support_absolute_difference"] = absolute_difference
+            stats[
+                "max_backend_support_absolute_difference_proposal_sha256"
+            ] = proposal_sha256
+        if relative_difference > stats["max_backend_support_relative_difference"]:
+            stats["max_backend_support_relative_difference"] = relative_difference
+            stats[
+                "max_backend_support_relative_difference_proposal_sha256"
+            ] = proposal_sha256
+        if tau_scaled_difference > stats[
+            "max_backend_support_tau_scaled_difference"
+        ]:
+            stats[
+                "max_backend_support_tau_scaled_difference"
+            ] = tau_scaled_difference
+            stats[
+                "max_backend_support_tau_scaled_difference_proposal_sha256"
+            ] = proposal_sha256
+
+    for row in proposal_rows:
+        cell_id = row["cell_id"]
+        try:
+            edge_by_id = edge_tables[cell_id]
+        except KeyError as ex:
+            raise ValueError(
+                f"numeric characterization has no frozen graph for cell {cell_id!r}"
+            ) from ex
+        if row["graph_fingerprint"] != prepared_by_cell[
+            cell_id
+        ].compiled_pu.graph.fingerprint:
+            raise ValueError("proposal graph fingerprint differs from its frozen graph")
+        evaluation = row["evaluation"]
+        support_ids = {}
+        for name in (
+            "base_support_edge_ids",
+            "residual_support_edge_ids",
+            "candidate_edge_ids",
+        ):
+            raw_ids = evaluation[name]
+            if not isinstance(raw_ids, list) or any(
+                isinstance(value, bool) or not isinstance(value, int)
+                for value in raw_ids
+            ):
+                raise ValueError(f"{name} must contain only canonical integer IDs")
+            support_ids[name] = tuple(raw_ids)
+        for name, edge_ids in support_ids.items():
+            if len(edge_ids) != len(set(edge_ids)):
+                raise ValueError(f"{name} contains repeated canonical edge IDs")
+            if tuple(sorted(edge_ids)) != edge_ids:
+                raise ValueError(f"{name} is not in canonical edge-ID order")
+            if any(edge_id not in edge_by_id for edge_id in edge_ids):
+                raise ValueError(f"{name} references an unknown canonical edge")
+
+        base_weights = tuple(
+            float(edge_by_id[edge_id].weight)
+            for edge_id in support_ids["base_support_edge_ids"]
+        )
+        residual_weights = tuple(
+            float(edge_by_id[edge_id].weight)
+            for edge_id in support_ids["residual_support_edge_ids"]
+        )
+        candidate_weights = tuple(
+            float(edge_by_id[edge_id].weight)
+            for edge_id in support_ids["candidate_edge_ids"]
+        )
+        if any(not math.isfinite(value) or value <= 0 for value in (
+            *base_weights, *residual_weights, *candidate_weights
+        )):
+            raise ValueError("numeric characterization encountered a nonpositive weight")
+
+        base_fsum = math.fsum(base_weights)
+        residual_fsum = math.fsum(residual_weights)
+        candidate_fsum = math.fsum(candidate_weights)
+        composite_weights = (*candidate_weights, *residual_weights)
+        composite_fsum = math.fsum(composite_weights)
+        cost_excess_fsum = composite_fsum - base_fsum
+        tau_k_default = default_absolute + default_relative * max(
+            1.0, abs(base_fsum), abs(composite_fsum)
+        )
+        base_backend = float(evaluation["base_backend_weight"])
+        residual_backend = float(evaluation["residual_backend_weight"])
+        for name, value in (
+            ("base_backend_weight", base_backend),
+            ("residual_backend_weight", residual_backend),
+        ):
+            if not math.isfinite(value):
+                raise ValueError(f"{name} is nonfinite")
+            if value.hex() != evaluation.get(f"{name}_hex"):
+                raise ValueError(
+                    f"{name} exact-float companion is missing or inconsistent"
+                )
+        expected_float_fields = {
+            "base_support_weight": base_fsum,
+            "residual_support_weight": residual_fsum,
+            "candidate_weight": candidate_fsum,
+            "composite_weight": composite_fsum,
+            "cost_excess": cost_excess_fsum,
+            "tau_k": tau_k_default,
+            "base_tau_weight": default_absolute + default_relative * max(
+                1.0, abs(base_fsum), abs(base_backend)
+            ),
+            "residual_tau_weight": default_absolute + default_relative * max(
+                1.0, abs(residual_fsum), abs(residual_backend)
+            ),
+        }
+        for name, expected in expected_float_fields.items():
+            recorded = float(evaluation[name])
+            if recorded.hex() != evaluation.get(f"{name}_hex"):
+                raise ValueError(f"{name} exact-float companion is missing or inconsistent")
+            if recorded.hex() != expected.hex():
+                raise ValueError(
+                    f"{name} differs from canonical math.fsum reconstruction"
+                )
+
+        recorded_classification = evaluation["cost_classification"]
+        default_classification = _float_cost_classification(
+            cost_excess=cost_excess_fsum,
+            tau=tau_k_default,
+        )
+        if default_classification != recorded_classification:
+            raise ValueError("recorded cost classification is not reproducible")
+        if default_classification == "numeric-accounting-anomaly":
+            raise ValueError("negative cost_excess exceeds the frozen tolerance")
+
+        base_decimal, composite_decimal, excess_decimal = _decimal_reference_sums(
+            base_weights=base_weights,
+            composite_weights=composite_weights,
+            precision=decimal_precision,
+        )
+        decimal_difference = abs(
+            excess_decimal - Decimal.from_float(cost_excess_fsum)
+        )
+        proposal_sha256 = row["proposal_sha256"]
+        for stats in (pooled, per_cell[cell_id]):
+            stats["proposal_evaluations"] += 1
+            stats["classification_counts"][recorded_classification] += 1
+            stats["proposal_evaluations_by_arm"][row["arm"]] += 1
+            stats["classification_counts_by_arm"][row["arm"]][
+                recorded_classification
+            ] += 1
+            if decimal_difference > stats[
+                "max_decimal_vs_fsum_cost_excess_difference"
+            ]:
+                stats[
+                    "max_decimal_vs_fsum_cost_excess_difference"
+                ] = decimal_difference
+                stats["max_decimal_difference_proposal_sha256"] = proposal_sha256
+
+        for point in grid:
+            relative = float(point["relative"])
+            absolute = float(point["absolute"])
+            tau_float = absolute + relative * max(
+                1.0, abs(base_fsum), abs(composite_fsum)
+            )
+            float_classification = _float_cost_classification(
+                cost_excess=cost_excess_fsum,
+                tau=tau_float,
+            )
+            decimal_classification = _decimal_cost_classification(
+                cost_excess=excess_decimal,
+                base_weight=base_decimal,
+                composite_weight=composite_decimal,
+                relative=relative,
+                absolute=absolute,
+                precision=decimal_precision,
+            )
+            if (
+                float_classification != recorded_classification
+                or decimal_classification != recorded_classification
+            ):
+                raise ValueError(
+                    "cost classification changes under the preregistered "
+                    f"numeric sensitivity grid for proposal {proposal_sha256}"
+                )
+
+            for support_weight, backend_weight in (
+                (base_fsum, base_backend),
+                (residual_fsum, residual_backend),
+            ):
+                difference = abs(support_weight - backend_weight)
+                tau_weight = absolute + relative * max(
+                    1.0, abs(support_weight), abs(backend_weight)
+                )
+                if difference > tau_weight:
+                    raise ValueError(
+                        "backend and canonical-support weights fail a "
+                        "preregistered tolerance sensitivity point"
+                    )
+
+        # Aggregate backend/support diagnostics once per support, not once per
+        # sensitivity point.
+        for support_weight, backend_weight in (
+            (base_fsum, base_backend),
+            (residual_fsum, residual_backend),
+        ):
+            difference = abs(support_weight - backend_weight)
+            denominator = max(abs(support_weight), abs(backend_weight))
+            relative_difference = difference / denominator if denominator else 0.0
+            tau_scaled_difference = difference / max(
+                1.0, abs(support_weight), abs(backend_weight)
+            )
+            for stats in (pooled, per_cell[cell_id]):
+                stats["backend_support_comparisons"] += 1
+                update_maximum(
+                    stats,
+                    absolute_difference=difference,
+                    relative_difference=relative_difference,
+                    tau_scaled_difference=tau_scaled_difference,
+                    proposal_sha256=proposal_sha256,
+                )
+
+    missing_cells = [
+        cell_id
+        for cell_id, stats in per_cell.items()
+        if stats["proposal_evaluations"] == 0
+    ]
+    if missing_cells:
+        raise ValueError(
+            "numeric characterization saw no proposals for frozen cells "
+            f"{missing_cells}"
+        )
+
+    def finalized(stats: dict[str, Any]) -> dict[str, Any]:
+        absolute_difference = stats["max_backend_support_absolute_difference"]
+        relative_difference = stats["max_backend_support_relative_difference"]
+        tau_scaled_difference = stats[
+            "max_backend_support_tau_scaled_difference"
+        ]
+        decimal_difference = stats[
+            "max_decimal_vs_fsum_cost_excess_difference"
+        ]
+        return {
+            "proposal_evaluations": stats["proposal_evaluations"],
+            "classification_counts": dict(sorted(
+                stats["classification_counts"].items()
+            )),
+            "proposal_evaluations_by_arm": dict(sorted(
+                stats["proposal_evaluations_by_arm"].items()
+            )),
+            "classification_counts_by_arm": {
+                arm: dict(sorted(counts.items()))
+                for arm, counts in sorted(
+                    stats["classification_counts_by_arm"].items()
+                )
+                if counts
+            },
+            "backend_support_comparisons": stats[
+                "backend_support_comparisons"
+            ],
+            "max_backend_support_absolute_difference": absolute_difference,
+            "max_backend_support_absolute_difference_hex": absolute_difference.hex(),
+            "max_backend_support_relative_difference": relative_difference,
+            "max_backend_support_relative_difference_hex": relative_difference.hex(),
+            "max_backend_support_tau_scaled_difference": tau_scaled_difference,
+            "max_backend_support_tau_scaled_difference_hex": (
+                tau_scaled_difference.hex()
+            ),
+            "max_backend_support_absolute_difference_proposal_sha256": stats[
+                "max_backend_support_absolute_difference_proposal_sha256"
+            ],
+            "max_backend_support_relative_difference_proposal_sha256": stats[
+                "max_backend_support_relative_difference_proposal_sha256"
+            ],
+            "max_backend_support_tau_scaled_difference_proposal_sha256": stats[
+                "max_backend_support_tau_scaled_difference_proposal_sha256"
+            ],
+            "max_decimal_vs_fsum_cost_excess_difference": str(decimal_difference),
+            "max_decimal_difference_proposal_sha256": stats[
+                "max_decimal_difference_proposal_sha256"
+            ],
+        }
+
+    return {
+        "status": "passed",
+        "default_tolerance": {
+            "relative": default_relative,
+            "absolute": default_absolute,
+        },
+        "decimal_precision": decimal_precision,
+        "sensitivity_grid": grid,
+        "checks": {
+            "canonical_fsum_reconstruction_exact": True,
+            "exact_float_companions_verified": True,
+            "backend_support_reconciles_at_every_grid_point": True,
+            "decimal_reference_classifications_match": True,
+            "classification_changes_across_grid": 0,
+            "negative_cost_excess_anomalies": 0,
+        },
+        "pooled": finalized(pooled),
+        "per_cell": {
+            cell_id: finalized(stats)
+            for cell_id, stats in sorted(per_cell.items())
+        },
+    }
+
+
+def _run_oracle_replay_shots(
+    config: dict[str, Any],
+    protocol: dict[str, Any],
+    shots: list[dict[str, Any]],
+    *,
+    prepared_by_cell: dict[str, PreparedCell] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    decoder = config["decoder"]
+    tolerance = OracleTolerance(
+        absolute=float(config["oracle"]["absolute"]),
+        relative=float(config["oracle"]["relative"]),
+    )
+    if prepared_by_cell is None:
+        prepared_by_cell = _prepare_oracle_replay_cells(config, protocol)
+    shot_rows: list[dict[str, Any]] = []
+    proposal_rows: list[dict[str, Any]] = []
+    counters: dict[str, Counter] = {arm: Counter() for arm in ORACLE_ARMS}
+    cell_counters: dict[str, dict[str, Counter]] = {
+        cell_id: {arm: Counter() for arm in ORACLE_ARMS}
+        for cell_id in config["selection"]["cell_ids"]
+    }
+
+    def count(cell_id: str, arm: str, key: str, value: int = 1) -> None:
+        counters[arm][key] += value
+        cell_counters[cell_id][arm][key] += value
+
+    for retained in shots:
+        cell_id = retained["cell_id"]
+        prepared = prepared_by_cell[cell_id]
+        diag = Diagnoser(prepared, decoder)
+        nd, no = diag.num_detectors, diag.num_observables
+        syndrome = _unpack(retained["detection_events_hex"], nd)
+        u0_recorded = bytes.fromhex(retained["u0_prediction_hex"])
+        pu_recorded = bytes.fromhex(retained["pu_prediction_hex"])
+        u0 = diag.matcher.decode(syndrome).astype(np.uint8)
+        legacy_result, pu = diag.run_pu(syndrome)
+        if _pack_bits(u0) != u0_recorded:
+            raise ValueError(f"recorded U0 is not bit-exact for shot {retained['shot_id']}")
+        if _pack_bits(pu) != pu_recorded:
+            raise ValueError(f"recorded legacy PU is not bit-exact for shot {retained['shot_id']}")
+
+        # This call cannot see the sampled observable.  Labels are joined below.
+        phase_result = run_phase_a_replay(
+            diag.graph,
+            syndrome,
+            legacy_result.paths,
+            residual_hw_limit=decoder["residual_hw_limit"],
+            boundary_policy=decoder["boundary_policy"],
+            observable_policy=decoder["observable_policy"],
+            veto_budget=config["oracle"]["veto_budget"],
+            tolerance=tolerance,
+        )
+        phase_repeat = run_phase_a_replay(
+            diag.graph,
+            syndrome,
+            legacy_result.paths,
+            residual_hw_limit=decoder["residual_hw_limit"],
+            boundary_policy=decoder["boundary_policy"],
+            observable_policy=decoder["observable_policy"],
+            veto_budget=config["oracle"]["veto_budget"],
+            tolerance=tolerance,
+        )
+        if _canonical_json_bytes(phase_result.to_json()) != _canonical_json_bytes(
+            phase_repeat.to_json()
+        ):
+            raise AssertionError(
+                "independent full oracle replays are not bit-for-bit deterministic"
+            )
+        if phase_result.shadow.initial_u0_prediction != u0_recorded:
+            raise AssertionError("oracle initial U0 differs from the bit-exact legacy U0")
+        if phase_result.shadow.final_prediction != pu_recorded:
+            raise AssertionError("shadow trajectory does not reproduce the bit-exact legacy PU")
+        phase_raw = phase_result.to_json()
+        phase_json = {
+            arm: phase_raw[field] for arm, field in ORACLE_ARM_FIELDS.items()
+        }
+        proposal_rows.extend(_proposal_rows(
+            experiment_id=config["experiment_id"], retained=retained,
+            phase_json=phase_json, diag=diag, legacy_result=legacy_result,
+        ))
+
+        original_hw = int(np.count_nonzero(syndrome))
+        workload = {"original_detector_events": original_hw}
+        first_conflicts: dict[str, int | None] = {}
+        # Proposals have already moved to the separate ledger.  Use the frozen
+        # in-memory result for first-conflict positions and event counts.
+        first_conflicts["cost"] = next(
+            (record.ordinal for record in phase_result.shadow.proposals if not record.oracle_cost_accepts),
+            None,
+        )
+        first_conflicts["frame"] = next(
+            (record.ordinal for record in phase_result.shadow.proposals if not record.oracle_frame_accepts),
+            None,
+        )
+        if u0_recorded != pu_recorded and first_conflicts["frame"] is None:
+            raise AssertionError(
+                "U0/legacy-PU-discordant shot has no durable shadow frame conflict"
+            )
+        for arm, trajectory in (
+            ("shadow", phase_result.shadow),
+            ("o-cost-tx", phase_result.cost_tx),
+            ("o-frame-tx", phase_result.frame_tx),
+            ("o-frame-partial", phase_result.frame_partial),
+        ):
+            residual_hw = sum(trajectory.final_residual_syndrome)
+            workload[arm] = {"final_residual_detector_events": residual_hw}
+            count(cell_id, arm, "original_detector_events", original_hw)
+            count(cell_id, arm, "final_residual_detector_events", residual_hw)
+        if first_conflicts["cost"] is not None:
+            count(
+                cell_id, "shadow",
+                f"first_cost_conflict_ordinal:{first_conflicts['cost']}",
+            )
+        if first_conflicts["frame"] is not None:
+            count(
+                cell_id, "shadow",
+                f"first_frame_conflict_ordinal:{first_conflicts['frame']}",
+            )
+        for arm, trajectory_json in (
+            ("o-cost-tx", phase_json["o-cost-tx"]),
+            ("o-frame-tx", phase_json["o-frame-tx"]),
+            ("o-frame-partial", phase_json["o-frame-partial"]),
+        ):
+            for domain in trajectory_json["domains"]:
+                status = domain["outcome"]["status"]
+                count(cell_id, arm, f"domain_status:{status}")
+
+        actual = bytes.fromhex(retained["observables_hex"])
+        predictions = {
+            "u0": u0_recorded,
+            "legacy_pu": pu_recorded,
+            "shadow": phase_result.shadow.final_prediction,
+            "o-cost-tx": phase_result.cost_tx.final_prediction,
+            "o-frame-tx": phase_result.frame_tx.final_prediction,
+            "o-frame-partial": phase_result.frame_partial.final_prediction,
+        }
+        labels = {
+            name: {
+                "prediction_hex": prediction.hex(),
+                "logical_failure": _prediction_failed_one(prediction, actual, count=no),
+                "differs_from_u0": prediction != u0_recorded,
+            }
+            for name, prediction in predictions.items()
+        }
+        for arm in ORACLE_ARMS:
+            count(cell_id, arm, "shots")
+            count(
+                cell_id, arm, "logical_failures",
+                int(labels[arm]["logical_failure"]),
+            )
+            count(
+                cell_id, arm, "differs_from_u0",
+                int(labels[arm]["differs_from_u0"]),
+            )
+        for selection_label in retained["selection_labels"]:
+            category = selection_label["category"]
+            u0_failed = labels["u0"]["logical_failure"]
+            pu_failed = labels["legacy_pu"]["logical_failure"]
+            is_rollback = any(
+                stats.status == "rollback" for stats in legacy_result.domain_stats.values()
+            )
+            valid = {
+                "regression": (not u0_failed) and pu_failed,
+                "recovery": u0_failed and (not pu_failed),
+                "rollback": is_rollback,
+            }[category]
+            if not valid:
+                raise ValueError(
+                    f"retained category {category!r} does not match shot {retained['shot_id']}"
+                )
+        row = {
+            "schema": ORACLE_REPLAY_OUTPUT_SCHEMA,
+            "experiment_id": config["experiment_id"],
+            "shot_id": retained["shot_id"],
+            "cell_id": cell_id,
+            "physical_identity": {
+                "batch_id": retained["batch_id"], "shot_index": retained["shot_index"],
+                "shot_offset": retained["shot_offset"], "stim_seed": retained["stim_seed"],
+            },
+            "selection_labels": retained["selection_labels"],
+            "detection_events_hex": retained["detection_events_hex"],
+            "actual_observables_hex": actual.hex(),
+            "labels_joined_post_oracle": labels,
+            "workload": workload,
+            "first_shadow_conflict_ordinal": first_conflicts,
+            "oracle_preflight": {
+                "independent_full_replay_verified": True,
+                "scalar_vs_recorded_batch_u0_verified": True,
+                "decode_vs_reconstructed_support_frame_verified": True,
+                "initial_uncached_repeatability_verified": phase_raw[
+                    "initial_uncached_repeatability_verified"
+                ],
+                "initial_cached_equivalence_verified": phase_raw[
+                    "initial_cached_equivalence_verified"
+                ],
+            },
+            "oracle_cache_stats": phase_raw.get("cache_stats"),
+            "trajectories": phase_json,
+        }
+        row["shot_sha256"] = hashlib.sha256(_canonical_json_bytes(row)).hexdigest()
+        shot_rows.append(row)
+
+    for row in proposal_rows:
+        arm = row["arm"]
+        cell_id = row["cell_id"]
+        if arm == "shadow":
+            count(cell_id, arm, "oracle_cost_accepts", int(row["oracle_cost_accepts"]))
+            count(cell_id, arm, "oracle_frame_accepts", int(row["oracle_frame_accepts"]))
+        else:
+            count(cell_id, arm, "accepted", int(row["accepted"]))
+            count(cell_id, arm, "vetoed", int(row["vetoed"]))
+            count(cell_id, arm, "durable", int(row["durable"]))
+            count(cell_id, arm, "rolled_back", int(row["rolled_back"]))
+
+    def summarize_arms(source: dict[str, Counter]) -> dict[str, dict[str, Any]]:
+        result: dict[str, dict[str, Any]] = {}
+        for arm in ORACLE_ARMS:
+            values = dict(sorted(source[arm].items()))
+            original = values.get("original_detector_events", 0)
+            residual = values.get("final_residual_detector_events", 0)
+            values["R_event_ratio_of_sums"] = (
+                residual / original if original else None
+            )
+            result[arm] = values
+        return result
+
+    pooled_arm_summary = summarize_arms(counters)
+    per_cell = {}
+    for cell_id in config["selection"]["cell_ids"]:
+        cell_shots = [row for row in shot_rows if row["cell_id"] == cell_id]
+        per_cell[cell_id] = {
+            "physical_shots": len(cell_shots),
+            "selection_labels": sum(
+                len(row["selection_labels"]) for row in cell_shots
+            ),
+            "categories": dict(sorted(Counter(
+                label["category"]
+                for row in cell_shots
+                for label in row["selection_labels"]
+            ).items())),
+            "arms": summarize_arms(cell_counters[cell_id]),
+        }
+    summary = {
+        "schema": ORACLE_REPLAY_OUTPUT_SCHEMA,
+        "experiment_id": config["experiment_id"],
+        "physical_shots": len(shot_rows),
+        "selection_labels": sum(len(row["selection_labels"]) for row in shot_rows),
+        "cell_shot_counts": dict(sorted(Counter(
+            row["cell_id"] for row in shot_rows
+        ).items())),
+        "categories": dict(sorted(Counter(
+            label["category"] for row in shot_rows for label in row["selection_labels"]
+        ).items())),
+        "per_cell": per_cell,
+        "pooled_arms": pooled_arm_summary,
+    }
+    summary["numeric_characterization"] = _characterize_numeric_proposals(
+        config=config,
+        proposal_rows=proposal_rows,
+        prepared_by_cell=prepared_by_cell,
+    )
+    return shot_rows, proposal_rows, summary
+
+
+def _write_json_quiet(path: Path, value: Any) -> None:
+    with path.open("w", encoding="utf-8") as f:
+        f.write(_canonical_json_bytes(value).decode("utf-8"))
+        f.write("\n")
+
+
+def _cmd_oracle_replay(args: argparse.Namespace) -> int:
+    config_path = args.config.resolve()
+    config, input_dir, protocol, _summary, shots = _load_oracle_replay_corpus(config_path)
+    output_dir = _ensure_oracle_output_target(input_dir, args.out)
+    repository = _validate_clean_implementation(config, config_path=config_path)
+    input_hashes_before = {
+        "protocol.json": _sha256_file(input_dir / "protocol.json"),
+        "summary.json": _sha256_file(input_dir / "summary.json"),
+    }
+    prepared_by_cell = _prepare_oracle_replay_cells(config, protocol)
+    regenerated_batches = _regenerate_retained_batches(
+        prepared_by_cell=prepared_by_cell,
+        protocol=protocol,
+        shots=shots,
+    )
+    shot_rows, proposal_rows, summary = _run_oracle_replay_shots(
+        config,
+        protocol,
+        shots,
+        prepared_by_cell=prepared_by_cell,
+    )
+    summary["regenerated_batches"] = regenerated_batches
+    summary["regenerated_batch_count"] = len(regenerated_batches)
+    summary["regenerated_retained_rows_verified"] = sum(
+        row["retained_rows_verified"] for row in regenerated_batches
+    )
+    if input_hashes_before != {
+        "protocol.json": _sha256_file(input_dir / "protocol.json"),
+        "summary.json": _sha256_file(input_dir / "summary.json"),
+    }:
+        raise ValueError("frozen input changed during oracle replay")
+
+    shots_bytes = _canonical_json_bytes(shot_rows) + b"\n"
+    proposals_bytes = b"".join(_canonical_json_bytes(row) + b"\n" for row in proposal_rows)
+    summary["shots_sha256"] = hashlib.sha256(shots_bytes).hexdigest()
+    summary["proposals_sha256"] = hashlib.sha256(proposals_bytes).hexdigest()
+    summary_bytes = _canonical_json_bytes(summary) + b"\n"
+    experiment = {
+        "schema": ORACLE_REPLAY_OUTPUT_SCHEMA,
+        "experiment_id": config["experiment_id"],
+        "mode": "retained-shot-read-only-no-new-collection-single-process",
+        "config_path": str(config_path),
+        "config_sha256": _sha256_file(config_path),
+        "frozen_config": config,
+        "input_path": str(input_dir),
+        "input_experiment_id": protocol["experiment_id"],
+        "input_hashes": input_hashes_before,
+        "input_decoder": protocol["decoder"],
+        "input_dem_options": protocol["dem_options"],
+        "input_software_versions": protocol.get("software_versions"),
+        "selected_cell_provenance": [
+            cell
+            for cell in protocol["cells"]
+            if cell["cell_id"] in set(config["selection"]["cell_ids"])
+        ],
+        "repository": repository,
+        "replay_execution_environment": current_execution_environment(),
+        "replay_software_versions": current_software_versions(),
+        "implementation_source_hashes": config["implementation"]["source_hashes"],
+        "selection": config["selection"],
+        "oracle": config["oracle"],
+        "arms": config["arms"],
+        "artifacts": {
+            "shots.json": hashlib.sha256(shots_bytes).hexdigest(),
+            "proposals.jsonl": hashlib.sha256(proposals_bytes).hexdigest(),
+            "summary.json": hashlib.sha256(summary_bytes).hexdigest(),
+        },
+    }
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "shots.json").write_bytes(shots_bytes)
+    (output_dir / "proposals.jsonl").write_bytes(proposals_bytes)
+    (output_dir / "summary.json").write_bytes(summary_bytes)
+    _write_json_quiet(output_dir / "experiment.json", experiment)
+    print(
+        f"wrote oracle replay: {len(shot_rows)} physical shots, "
+        f"{len(proposal_rows)} proposals -> {output_dir}"
+    )
+    return 0
+
+
 # -------------------------------------------------------------------- probe
 
 
@@ -634,6 +2082,22 @@ def _parser() -> argparse.ArgumentParser:
     replay.add_argument("--show", type=int, default=10, help="print per-sample detail for the first N samples")
     replay.add_argument("--out-json", type=Path, default=None)
 
+    oracle_replay = sub.add_parser(
+        "oracle-replay",
+        help=(
+            "run the frozen full-graph oracle experiment over retained shots "
+            "(no new collection)"
+        ),
+    )
+    oracle_replay.add_argument(
+        "--config", type=Path, required=True,
+        help="frozen JSON fixing the corpus hashes, selection and implementation",
+    )
+    oracle_replay.add_argument(
+        "--out", type=Path, required=True,
+        help="new or empty output directory outside the frozen input",
+    )
+
     probe = sub.add_parser("probe", help="sample fresh shots and measure per-stage disagreement with flat MWPM")
     probe.add_argument("--protocol", type=Path, default=None, help="protocol JSON providing decoder, DEM options and cells")
     probe.add_argument("--cell", type=str, default=None, help="cell_id inside --protocol")
@@ -657,6 +2121,8 @@ def main() -> int:
     try:
         if args.command == "replay":
             return _cmd_replay(args)
+        if args.command == "oracle-replay":
+            return _cmd_oracle_replay(args)
         if args.command == "probe":
             return _cmd_probe(args)
         raise ValueError(f"unknown command {args.command!r}")

@@ -1,9 +1,9 @@
 # ProMatch L1 Global-Context Oracle Experiment
 
-- **Status:** draft exploratory experiment specification
+- **Status:** active exploratory experiment specification
 - **Date:** 2026-08-18
 - **Claim-bearing:** no
-- **Implementation status:** not yet implemented
+- **Implementation status:** Phase-A retained replay implemented; Phases B--D pending
 - **Collection status:** no new shots have been sampled for this experiment
 
 This document specifies the next diagnostic experiment following the V3
@@ -485,8 +485,9 @@ graph and require:
    `tau_weight(s)`;
 4. repeated support reconstruction and candidate/residual concatenation are
    deterministic;
-5. replacing `math.fsum` by a `decimal.Decimal.from_float` reference sum causes
-   zero cost-classification changes; and
+5. replacing `math.fsum` by a `decimal.Decimal.from_float` reference sum at
+   protocol-frozen precision 4096, with inexact and rounded arithmetic trapped,
+   causes zero cost-classification changes; and
 6. no cost classifications change across the preregistered sensitivity set:
 
    ```text
@@ -1665,17 +1666,25 @@ implemented and tested before any proposed CLI is advertised as runnable.
 10. Fail closed on missing proposals, malformed weights, invariant violations,
    crashes, or incomplete batches.
 
-### 15.3 Planned diagnostic interface
+### 15.3 Retained-replay diagnostic interface
 
-A future interface may look like:
+The Phase-A retained replay is implemented as:
 
 ```bash
-# Planned only; not implemented at the time of this specification.
 tools/diagnose_promatch_l1 oracle-replay \
-    --input out/promatch_l1_round1_v3_20260817_32p/pilot \
-    --cell pilot-01-d7-n6-y2-r28-p0.001 \
-    --out "$TMPDIR/promatch-oracle-replay-v1"
+    --config docs/PROMATCH_ORACLE_REPLAY_FROZEN_V1.json \
+    --out out/promatch_l1_global_context_oracle_v1/replay
 ```
+
+The frozen config authenticates the immutable V3 input hashes, selected cells
+and categories, oracle tolerance and arms, implementation commit, and exact
+source hashes. The command additionally requires a clean worktree whose only
+change after the implementation commit is that frozen config. It is a
+single-process, one-native-thread deterministic decode of already retained
+shots. It performs no new collection, but it does deterministically regenerate
+each archived origin batch once from its frozen Stim seed and verifies every
+selected retained row. The 32-process requirement applies to the later fresh
+Phase-B collection, not this replay.
 
 Fresh sampling requires a separate frozen protocol and benchmark-harness mode.
 Do not overload the existing V3 decoder name or output schema.

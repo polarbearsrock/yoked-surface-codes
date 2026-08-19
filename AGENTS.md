@@ -153,6 +153,7 @@ MAX_SHOTS=10000 PROCESSES=32 THREADS_PER_PROCESS=1 \
 | ProMatch pilot/confirm/target/latency | see `REPRODUCING_FIG8_1D.md` §"Paired ProMatch experiment workflow"; always `--processes 32`, `MAX_ERRORS` unset |
 | Legacy gap collection | `tools/collect_gap ... --processes 32` (never `auto`; legacy `step*`/`gap_step*` scripts also need GNU `parallel`, which is not installed here) |
 | Diagnose PU-vs-U0 disagreements | `tools/diagnose_promatch_l1 replay --input <collection dir> [--cell ID]` (bit-exact replay of retained regressions) and `tools/diagnose_promatch_l1 probe --protocol P.json --cell ID --shots N --seed S` or `probe --d D --patches N --rounds R --p P ...` (single process; read-only) |
+| Phase-A global-context oracle replay | `tools/diagnose_promatch_l1 oracle-replay --config docs/PROMATCH_ORACLE_REPLAY_FROZEN_V1.json --out out/promatch_l1_global_context_oracle_v1/replay` (single process, one native thread, retained shots only; no fresh sampling) |
 
 `OUT_DIR` defaults to `out/fig8_1d`; anything scientific should be written to
 a fresh directory under `$TMPDIR` or a new `out/<name>` so existing corpora

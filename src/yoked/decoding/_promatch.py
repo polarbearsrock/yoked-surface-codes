@@ -23,6 +23,8 @@ from yoked.decoding._promatch_layout import L1DomainKey
 
 ObservablePolicy: TypeAlias = Literal["edge-zero", "path-zero", "any", "zero-frame"]
 BoundaryPolicy: TypeAlias = Literal["disabled", "odd-parity"]
+TransactionPolicy: TypeAlias = Literal["tx", "partial"]
+ExhaustionKind: TypeAlias = Literal["proposal", "veto-budget"]
 
 # Detector IDs are nonnegative.  This sentinel exists only inside the domain
 # algorithm and is never written into a syndrome or PrematchedPath.
@@ -37,6 +39,69 @@ class PrematchedPath:
     edge_ids: tuple[int, ...]
     decision_weight: float
     observable_mask: bytes
+
+
+@dataclasses.dataclass(frozen=True)
+class CommitProposal:
+    """An immutable candidate presented before it changes domain state.
+
+    ``active_state_fingerprint`` is the sorted active-detector tuple, prefixed
+    by the private negative boundary sentinel when the virtual parity boundary
+    is active.  Detector IDs are nonnegative, so this representation is exact
+    and unambiguous without containing mutable arrays.
+
+    ``detector_boundary`` is the sorted set of detector bits toggled by the
+    proposed path.  Internal path vertices cancel over GF(2); a path to the
+    virtual boundary therefore has one detector in this tuple.
+    """
+
+    domain: L1DomainKey
+    stage: int
+    endpoints: tuple[int, int | None]
+    detector_boundary: tuple[int, ...]
+    edge_ids: tuple[int, ...]
+    observable_frame: bytes
+    decision_weight: float
+    active_state_fingerprint: tuple[int, ...]
+    within_state_stage_rank: int
+    state_stage_candidate_count: int
+    state_total_candidate_count: int
+    state_veto_count_before: int
+
+    @property
+    def signature(
+        self,
+    ) -> tuple[L1DomainKey, int, tuple[int, int | None], tuple[int, ...]]:
+        """Returns the exact state-local blacklist signature."""
+
+        return self.domain, self.stage, self.endpoints, self.edge_ids
+
+
+def apply_detector_boundary(
+    syndrome: np.ndarray, detector_boundary: Iterable[int]
+) -> np.ndarray:
+    """Returns a copy of ``syndrome`` with a compact GF(2) boundary applied."""
+
+    array = np.asarray(syndrome)
+    if array.ndim != 1:
+        raise ValueError(f"syndrome must be one-dimensional, got shape {array.shape}")
+    if not np.issubdtype(array.dtype, np.bool_) and not np.issubdtype(
+        array.dtype, np.integer
+    ):
+        raise TypeError("syndrome must contain boolean or integer bits")
+    if np.any((array != 0) & (array != 1)):
+        raise ValueError("syndrome entries must be binary")
+
+    detector_ids = tuple(int(v) for v in detector_boundary)
+    if detector_ids != tuple(sorted(set(detector_ids))):
+        raise ValueError("detector_boundary must contain sorted unique detector IDs")
+    if detector_ids and (detector_ids[0] < 0 or detector_ids[-1] >= len(array)):
+        raise ValueError("detector_boundary contains an out-of-range detector ID")
+
+    result = np.asarray(array, dtype=np.uint8).copy()
+    if detector_ids:
+        result[np.asarray(detector_ids, dtype=np.int64)] ^= 1
+    return result
 
 
 class FallbackReason(enum.Enum):
@@ -59,6 +124,33 @@ class DomainPrematchStats:
     boundary_was_added: bool = False
     boundary_was_used: bool = False
     boundary_discarded_unused: bool = False
+
+
+@dataclasses.dataclass(frozen=True)
+class DomainStepOutcome:
+    """Terminal state of a proposal stepper under one transaction policy."""
+
+    transaction_policy: TransactionPolicy
+    status: Literal["below-limit", "success", "rollback", "partial-exhausted"]
+    initial_active: frozenset[int]
+    provisional_active: frozenset[int]
+    durable_active: frozenset[int]
+    provisional_paths: tuple[PrematchedPath, ...]
+    durable_paths: tuple[PrematchedPath, ...]
+    attempted_proposals: int
+    accepted_proposals: int
+    vetoed_proposals: int
+    proposal_stage_counts: tuple[int, int, int, int]
+    accepted_stage_counts: tuple[int, int, int, int]
+    vetoed_stage_counts: tuple[int, int, int, int]
+    durable_stage_counts: tuple[int, int, int, int]
+    fallback_reason: FallbackReason | None
+    exhaustion_kind: ExhaustionKind | None
+    boundary_was_added: bool
+    boundary_was_used: bool
+    boundary_discarded_unused: bool
+    veto_budget: int | None
+    veto_budget_hit: bool
 
 
 @dataclasses.dataclass(frozen=True)
@@ -470,6 +562,77 @@ class _DomainEngine:
         )
         return candidate, saw_unreachable
 
+    def _ordered_candidate_stages(
+        self, active: set[int], *, boundary_active: bool
+    ) -> tuple[tuple[tuple[_Candidate, ...], ...], bool]:
+        """Enumerates each V3 stage without changing legacy selection.
+
+        The legacy engine asks the four stage helpers only for their minimum.
+        A veto-capable caller instead needs every candidate from the current
+        stage, in the same ``_Candidate.key`` order, before advancing to the
+        next stage.  This deliberately mirrors (rather than replaces) the
+        legacy methods so :meth:`run` remains on its established code path.
+        """
+
+        neighbors = self._active_neighbors(active, boundary_active=boundary_active)
+        direct = self._direct_candidates(active, boundary_active=boundary_active)
+
+        stage1: list[_Candidate] = []
+        stage2: list[_Candidate] = []
+        stage4: list[_Candidate] = []
+        for endpoints, edge in direct:
+            a, b = endpoints
+            if neighbors[a] == frozenset((b,)) and neighbors[b] == frozenset((a,)):
+                stage1.append(
+                    _Candidate(1, endpoints, (edge,), self._direct_key(endpoints, edge))
+                )
+
+            creates = self._creates_new_singleton(endpoints, neighbors)
+            substage = 0 if min(len(neighbors[v]) for v in endpoints) == 1 else 1
+            adjacent = _Candidate(
+                2 if not creates else 4,
+                endpoints,
+                (edge,),
+                self._direct_key(endpoints, edge, substage=substage),
+            )
+            (stage4 if creates else stage2).append(adjacent)
+
+        stage3: list[_Candidate] = []
+        saw_unreachable = False
+        singletons = sorted(v for v in active if not neighbors[v])
+        for singleton in singletons:
+            for other in sorted(active):
+                if other == singleton:
+                    continue
+                if self._creates_new_singleton((singleton, other), neighbors):
+                    continue
+                path = self._shortest_path(singleton, other)
+                if path is None:
+                    saw_unreachable = True
+                    continue
+                mask = _path_mask(path, mask_bytes=self.mask_bytes)
+                if self.observable_policy in {
+                    "edge-zero",
+                    "path-zero",
+                } and not _is_zero_mask(mask):
+                    continue
+                edge_ids = tuple(edge.edge_id for edge in path)
+                weight = math.fsum(edge.weight for edge in path)
+                stage3.append(
+                    _Candidate(
+                        3,
+                        (singleton, other),
+                        path,
+                        (weight, singleton, other, len(path), edge_ids),
+                    )
+                )
+
+        stages = tuple(
+            tuple(sorted(candidates, key=lambda candidate: candidate.key))
+            for candidates in (stage1, stage2, stage3, stage4)
+        )
+        return stages, saw_unreachable
+
     def run(self, initial_active: set[int]) -> _DomainAttempt:
         active = set(initial_active)
         boundary_was_added = (
@@ -536,6 +699,360 @@ class _DomainEngine:
             fallback_reason=None,
             boundary_was_added=boundary_was_added,
             boundary_was_used=boundary_was_used,
+        )
+
+
+_CandidateSignature: TypeAlias = tuple[int, tuple[int, int], tuple[int, ...]]
+
+
+def _candidate_signature(candidate: _Candidate) -> _CandidateSignature:
+    return (
+        candidate.stage,
+        candidate.endpoints,
+        tuple(edge.edge_id for edge in candidate.edges),
+    )
+
+
+def _candidate_detector_boundary(candidate: _Candidate) -> tuple[int, ...]:
+    toggled: set[int] = set()
+    for edge in candidate.edges:
+        if edge.source in toggled:
+            toggled.remove(edge.source)
+        else:
+            toggled.add(edge.source)
+        if edge.target is not None:
+            if edge.target in toggled:
+                toggled.remove(edge.target)
+            else:
+                toggled.add(edge.target)
+
+    result = tuple(sorted(toggled))
+    expected = tuple(sorted(v for v in candidate.endpoints if v != _BOUNDARY))
+    if result != expected:
+        raise AssertionError(
+            "candidate path boundary does not equal its active detector endpoints"
+        )
+    return result
+
+
+class DomainProposalStepper:
+    """Deterministic accept/veto stepping for one predecode domain.
+
+    The stepper presents a proposal before mutating active detector or frame
+    state.  Calling :meth:`veto` blacklists only that proposal at the exact
+    current state.  Calling :meth:`accept` removes its active endpoints,
+    records the path, clears state-local vetoes, and restarts V3 stage
+    precedence on the new state.
+
+    This is an additive oracle-facing API.  :func:`predecode` deliberately
+    continues to use :meth:`_DomainEngine.run` so disabled/current V3 behavior
+    does not depend on this class.
+    """
+
+    def __init__(
+        self,
+        graph: DomainGraph,
+        initial_active: Iterable[int],
+        *,
+        num_detectors: int,
+        num_observables: int,
+        residual_hw_limit: int,
+        boundary_policy: BoundaryPolicy = "disabled",
+        observable_policy: ObservablePolicy = "edge-zero",
+        veto_budget: int | None = None,
+    ) -> None:
+        if isinstance(residual_hw_limit, bool) or not isinstance(
+            residual_hw_limit, (int, np.integer)
+        ):
+            raise TypeError("residual_hw_limit must be an integer")
+        residual_hw_limit = int(residual_hw_limit)
+        if residual_hw_limit < 0:
+            raise ValueError("residual_hw_limit must be nonnegative")
+
+        if veto_budget is not None:
+            if isinstance(veto_budget, bool) or not isinstance(
+                veto_budget, (int, np.integer)
+            ):
+                raise TypeError("veto_budget must be a positive integer or None")
+            veto_budget = int(veto_budget)
+            if veto_budget <= 0:
+                raise ValueError("veto_budget must be a positive integer or None")
+
+        vertices = frozenset(int(v) for v in graph.detector_ids)
+        if any(v < 0 or v >= num_detectors for v in vertices):
+            raise ValueError("domain contains an out-of-range detector ID")
+        active_values = tuple(int(v) for v in initial_active)
+        if len(active_values) != len(set(active_values)):
+            raise ValueError("initial_active contains duplicate detector IDs")
+        active = set(active_values)
+        outside = active.difference(vertices)
+        if outside:
+            raise ValueError(
+                f"initial_active contains detectors outside the domain: {sorted(outside)}"
+            )
+
+        policy = _normalized_observable_policy(observable_policy)
+        self._engine = _DomainEngine(
+            graph,
+            num_detectors=num_detectors,
+            num_observables=num_observables,
+            hw_limit=residual_hw_limit,
+            boundary_policy=boundary_policy,
+            observable_policy=policy,  # type: ignore[arg-type]
+        )
+        self._initial_active = frozenset(active)
+        self._active = active
+        self._hw_limit = residual_hw_limit
+        self._veto_budget = veto_budget
+        self._boundary_was_added = (
+            len(active) > residual_hw_limit
+            and boundary_policy == "odd-parity"
+            and len(active) % 2 == 1
+        )
+        self._boundary_active = self._boundary_was_added
+        self._boundary_was_used = False
+
+        self._paths: list[PrematchedPath] = []
+        self._blacklisted: dict[
+            tuple[int, ...], set[_CandidateSignature]
+        ] = defaultdict(set)
+        self._vetoes_in_state = 0
+        self._pending: tuple[CommitProposal, _Candidate] | None = None
+
+        self._attempted_proposals = 0
+        self._accepted_proposals = 0
+        self._vetoed_proposals = 0
+        self._proposal_stage_counts = [0, 0, 0, 0]
+        self._accepted_stage_counts = [0, 0, 0, 0]
+        self._vetoed_stage_counts = [0, 0, 0, 0]
+
+        self._finished = len(active) <= residual_hw_limit
+        self._fallback_reason: FallbackReason | None = None
+        self._exhaustion_kind: ExhaustionKind | None = None
+        # Match the legacy engine's diagnostic semantics: an unreachable
+        # stage-3 route remains relevant after later accepted proposals.
+        # Eager enumeration computes stage 3 even when stage 1/2 wins, so the
+        # flag is updated only once selection actually reaches stage 3.
+        self._saw_unreachable = False
+
+    @property
+    def active(self) -> frozenset[int]:
+        return frozenset(self._active)
+
+    @property
+    def accepted_paths(self) -> tuple[PrematchedPath, ...]:
+        return tuple(self._paths)
+
+    @property
+    def active_state_fingerprint(self) -> tuple[int, ...]:
+        prefix = (_BOUNDARY,) if self._boundary_active else ()
+        return (*prefix, *sorted(self._active))
+
+    @property
+    def is_finished(self) -> bool:
+        return self._finished
+
+    def _fallback(self, *, saw_unreachable: bool) -> FallbackReason:
+        if self._boundary_active and not any(
+            edge.source in self._active and self._engine._edge_allowed_directly(edge)
+            for edge in self._engine.boundary_edges
+        ):
+            return FallbackReason.BOUNDARY_UNAVAILABLE
+        if saw_unreachable:
+            return FallbackReason.DISCONNECTED
+        return FallbackReason.NO_CANDIDATE
+
+    def _to_proposal(
+        self,
+        candidate: _Candidate,
+        *,
+        within_state_stage_rank: int,
+        state_stage_candidate_count: int,
+        state_total_candidate_count: int,
+    ) -> CommitProposal:
+        edge_ids = tuple(edge.edge_id for edge in candidate.edges)
+        return CommitProposal(
+            domain=self._engine.graph.domain,
+            stage=candidate.stage,
+            endpoints=_public_endpoints(candidate.endpoints),
+            detector_boundary=_candidate_detector_boundary(candidate),
+            edge_ids=edge_ids,
+            observable_frame=_path_mask(
+                candidate.edges, mask_bytes=self._engine.mask_bytes
+            ),
+            decision_weight=math.fsum(edge.weight for edge in candidate.edges),
+            active_state_fingerprint=self.active_state_fingerprint,
+            within_state_stage_rank=within_state_stage_rank,
+            state_stage_candidate_count=state_stage_candidate_count,
+            state_total_candidate_count=state_total_candidate_count,
+            state_veto_count_before=self._vetoes_in_state,
+        )
+
+    def next_proposal(self) -> CommitProposal | None:
+        """Returns the next proposal, or ``None`` after terminalization.
+
+        Repeated calls before an accept/veto decision return the same immutable
+        proposal and do not increment counters.
+        """
+
+        if self._pending is not None:
+            return self._pending[0]
+        if self._finished:
+            return None
+
+        stages, saw_unreachable = self._engine._ordered_candidate_stages(
+            self._active, boundary_active=self._boundary_active
+        )
+        fingerprint = self.active_state_fingerprint
+        blacklisted = self._blacklisted[fingerprint]
+        total_candidates = sum(len(candidates) for candidates in stages)
+        for stage_index, candidates in enumerate(stages):
+            for stage_rank, candidate in enumerate(candidates):
+                if _candidate_signature(candidate) in blacklisted:
+                    continue
+                if stage_index >= 2:
+                    self._saw_unreachable |= saw_unreachable
+                proposal = self._to_proposal(
+                    candidate,
+                    within_state_stage_rank=stage_rank,
+                    state_stage_candidate_count=len(candidates),
+                    state_total_candidate_count=total_candidates,
+                )
+                self._pending = proposal, candidate
+                self._attempted_proposals += 1
+                self._proposal_stage_counts[candidate.stage - 1] += 1
+                return proposal
+
+        self._finished = True
+        self._saw_unreachable |= saw_unreachable
+        self._fallback_reason = self._fallback(
+            saw_unreachable=self._saw_unreachable
+        )
+        self._exhaustion_kind = "proposal"
+        return None
+
+    def _take_pending(self, proposal: CommitProposal) -> _Candidate:
+        if self._pending is None:
+            raise RuntimeError("there is no pending proposal")
+        pending, candidate = self._pending
+        if proposal != pending:
+            raise ValueError("proposal is stale or was not issued by this stepper")
+        if proposal.active_state_fingerprint != self.active_state_fingerprint:
+            raise AssertionError("pending proposal fingerprint does not match state")
+        self._pending = None
+        return candidate
+
+    def accept(self, proposal: CommitProposal) -> None:
+        """Commits the pending proposal and restarts selection at stage 1."""
+
+        candidate = self._take_pending(proposal)
+        path = PrematchedPath(
+            domain=proposal.domain,
+            stage=proposal.stage,
+            endpoints=proposal.endpoints,
+            edge_ids=proposal.edge_ids,
+            decision_weight=proposal.decision_weight,
+            observable_mask=proposal.observable_frame,
+        )
+        self._paths.append(path)
+        self._accepted_proposals += 1
+        self._accepted_stage_counts[candidate.stage - 1] += 1
+
+        for endpoint in candidate.endpoints:
+            if endpoint == _BOUNDARY:
+                if not self._boundary_active:
+                    raise AssertionError("inactive virtual boundary was selected")
+                self._boundary_active = False
+                self._boundary_was_used = True
+            else:
+                if endpoint not in self._active:
+                    raise AssertionError("inactive detector endpoint was selected")
+                self._active.remove(endpoint)
+
+        # A commitment changes the exact state.  No veto from the previous
+        # state is eligible to suppress a candidate in the new state.
+        self._blacklisted.clear()
+        self._vetoes_in_state = 0
+        if len(self._active) <= self._hw_limit:
+            self._finished = True
+
+    def veto(self, proposal: CommitProposal) -> None:
+        """Rejects the pending proposal without changing correction state."""
+
+        candidate = self._take_pending(proposal)
+        fingerprint = self.active_state_fingerprint
+        self._blacklisted[fingerprint].add(_candidate_signature(candidate))
+        self._vetoes_in_state += 1
+        self._vetoed_proposals += 1
+        self._vetoed_stage_counts[candidate.stage - 1] += 1
+
+        if (
+            self._veto_budget is not None
+            and self._vetoes_in_state == self._veto_budget
+        ):
+            # The Bth veto is recorded, then this state stops immediately.
+            # Candidate B+1 is never enumerated or presented.
+            self._finished = True
+            self._exhaustion_kind = "veto-budget"
+
+    def outcome(self, transaction_policy: TransactionPolicy) -> DomainStepOutcome:
+        """Applies tx/partial durability semantics to a terminal prefix."""
+
+        if transaction_policy not in {"tx", "partial"}:
+            raise ValueError(f"unsupported transaction policy {transaction_policy!r}")
+        if self._pending is not None or not self._finished:
+            raise RuntimeError("cannot produce an outcome before stepping terminates")
+
+        reached_target = len(self._active) <= self._hw_limit
+        below_limit = len(self._initial_active) <= self._hw_limit
+        provisional_paths = tuple(self._paths)
+        provisional_active = frozenset(self._active)
+
+        if reached_target:
+            status: Literal[
+                "below-limit", "success", "rollback", "partial-exhausted"
+            ] = "below-limit" if below_limit else "success"
+            durable_paths = provisional_paths
+            durable_active = provisional_active
+        elif transaction_policy == "tx":
+            status = "rollback"
+            durable_paths = ()
+            durable_active = self._initial_active
+        else:
+            status = "partial-exhausted"
+            durable_paths = provisional_paths
+            durable_active = provisional_active
+
+        accepted_counts = tuple(self._accepted_stage_counts)
+        durable_counts = (
+            accepted_counts if status != "rollback" else (0, 0, 0, 0)
+        )
+        return DomainStepOutcome(
+            transaction_policy=transaction_policy,
+            status=status,
+            initial_active=self._initial_active,
+            provisional_active=provisional_active,
+            durable_active=durable_active,
+            provisional_paths=provisional_paths,
+            durable_paths=durable_paths,
+            attempted_proposals=self._attempted_proposals,
+            accepted_proposals=self._accepted_proposals,
+            vetoed_proposals=self._vetoed_proposals,
+            proposal_stage_counts=tuple(self._proposal_stage_counts),  # type: ignore[arg-type]
+            accepted_stage_counts=accepted_counts,  # type: ignore[arg-type]
+            vetoed_stage_counts=tuple(self._vetoed_stage_counts),  # type: ignore[arg-type]
+            durable_stage_counts=durable_counts,  # type: ignore[arg-type]
+            fallback_reason=self._fallback_reason,
+            exhaustion_kind=self._exhaustion_kind,
+            boundary_was_added=self._boundary_was_added,
+            boundary_was_used=self._boundary_was_used,
+            boundary_discarded_unused=(
+                status != "rollback"
+                and self._boundary_was_added
+                and not self._boundary_was_used
+            ),
+            veto_budget=self._veto_budget,
+            veto_budget_hit=self._exhaustion_kind == "veto-budget",
         )
 
 
@@ -734,10 +1251,16 @@ def predecode(
 
 __all__ = [
     "BoundaryPolicy",
+    "CommitProposal",
     "DomainPrematchStats",
+    "DomainProposalStepper",
+    "DomainStepOutcome",
+    "ExhaustionKind",
     "FallbackReason",
     "ObservablePolicy",
     "PrematchResult",
     "PrematchedPath",
+    "TransactionPolicy",
+    "apply_detector_boundary",
     "predecode",
 ]
