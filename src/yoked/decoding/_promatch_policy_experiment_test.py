@@ -22,6 +22,8 @@ from yoked.decoding._promatch_policy_experiment import (
     SCIENTIFIC_WORKERS,
     WorkerSpec,
     _audit_policy_shot,
+    _validate_support_difference_ledger,
+    _worker_tail_censor_attestation,
     attest_completed_policy_probe,
     collect_policy_worker_shard,
     default_policy_audit_draft,
@@ -36,6 +38,35 @@ from yoked.decoding._promatch_policy_experiment import (
     verify_worker_shard,
 )
 from yoked.decoding._promatch_oracle import OracleTolerance
+
+
+def test_tail_censor_attestation_canonicalizes_structured_proposal_signatures():
+    rows = [
+        {
+            "original_state_sha256": "state-a",
+            "censored": False,
+            "veto_budget": None,
+            "proposal_signature": [1, [2, None], {"stage": 3}],
+        },
+        {
+            "original_state_sha256": "state-a",
+            "censored": False,
+            "veto_budget": None,
+            "proposal_signature": [1, [2, None], {"stage": 3}],
+        },
+        {
+            "original_state_sha256": "state-b",
+            "censored": False,
+            "veto_budget": None,
+            "proposal_signature": [1, [2, None], {"stage": 3}],
+        },
+    ]
+    assert _worker_tail_censor_attestation(rows) == {
+        "uncapped_counterfactuals": True,
+        "censored_states": 0,
+        "repeated_same_state_proposal_signatures": 1,
+        "output_truncations": 0,
+    }
 
 
 class _FakeSampler:
@@ -113,6 +144,32 @@ def _audit(graph, syndrome, *, tolerance):
                 "observable_frame": "00",
                 "decision_weight": 1.25,
                 "decision_weight_hex": (1.25).hex(),
+                "support_difference_representation_version": "promatch-support-difference-v2",
+                "support_difference_components": [],
+                "detector_boundary_ids": [],
+                "support_difference_component_labels": [],
+                "support_cancellation_edge_ids": [],
+                "disconnected_support_reconfiguration": False,
+                "exclusive_support_component_context": None,
+                "degeneracy_diagnostics": [],
+                "cost_compatible": True,
+                "frame_compatible": True,
+                "oracle_policy_accepts": True,
+                "B_base_support_edge_ids": [],
+                "P_candidate_support_edge_ids": [],
+                "R_residual_support_edge_ids": [],
+                "base_support_edge_ids": [],
+                "candidate_support_edge_ids": [],
+                "residual_support_edge_ids": [],
+                "Q_forced_parity_support_edge_ids": [],
+                "X_support_difference_edge_ids": [],
+                "P_intersection_R_edge_ids": [],
+                "supports_square_free": True,
+                "B_base_support_square_free": True,
+                "P_candidate_support_square_free": True,
+                "R_residual_support_square_free": True,
+                "Q_forced_parity_support_square_free": True,
+                "X_support_difference_square_free": True,
             }
         ],
         "counterfactuals": [],
@@ -449,6 +506,12 @@ def test_draft_enforces_fixed_cell_20k_and_exact_arms() -> None:
         (lambda value: value["arms"][2].update(policy="wrong"), "five-arm"),
         (lambda value: value["counterfactual"].update(stop="wrong"), "counterfactual"),
         (
+            lambda value: value["context_taxonomy"].update(
+                version="promatch-support-context-v1"
+            ),
+            "context taxonomy",
+        ),
+        (
             lambda value: value["report_contract"]["human_report"].update(
                 format="wrong"
             ),
@@ -651,6 +714,55 @@ def test_fresh_shard_is_verified_before_atomic_install(
             config=config, mode="smoke", spec=spec,
         )
     assert not (tmp_path / "invalid" / "shards" / "worker-00").exists()
+
+
+def test_fresh_shard_rejects_tampered_v2_support_before_install(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TMPDIR", str(tmp_path))
+    config = _runtime_config()
+    spec = WorkerSpec(0, 0, 1)
+    shard, payloads = collect_policy_worker_shard(
+        _prepared(), config=config, mode="smoke", spec=spec, audit_fn=_audit
+    )
+    _rewrite_first_ledger_row(
+        payloads, "proposals",
+        lambda row: row.__setitem__("support_difference_representation_version", "v1"),
+    )
+    shard = json.loads(payloads["shard.json"])
+    with pytest.raises(ValueError, match="exact v2 support-difference"):
+        install_worker_shard(
+            tmp_path / "invalid-support", shard=shard, payloads=payloads,
+            config=config, mode="smoke", spec=spec,
+        )
+    assert not (tmp_path / "invalid-support" / "shards" / "worker-00").exists()
+
+
+def test_fresh_core_rejects_component_detector_witness_tamper() -> None:
+    graph = SimpleNamespace(
+        fingerprint="04" * 32,
+        edges=(SimpleNamespace(source=0, target=1),),
+    )
+    row = _audit(graph, np.zeros(3, dtype=np.uint8), tolerance=OracleTolerance())["proposals"][0]
+    row.update({
+        "detector_boundary_ids": [0],
+        "base_support_edge_ids": [], "candidate_support_edge_ids": [0],
+        "residual_support_edge_ids": [], "B_base_support_edge_ids": [],
+        "P_candidate_support_edge_ids": [0], "R_residual_support_edge_ids": [],
+        "Q_forced_parity_support_edge_ids": [0],
+        "X_support_difference_edge_ids": [0], "P_intersection_R_edge_ids": [],
+        "support_difference_component_labels": ["in-domain"],
+        "support_difference_components": [{
+            "certificate_kind": "real-x-component", "canonical_edge_ids": [0],
+            "support_cancellation_edge_ids": [], "component_detector_ids": [2],
+            "candidate_support_witness_edge_ids": [0],
+            "candidate_boundary_witness_detector_ids": [], "labels": ["in-domain"],
+            "candidate_relevant": True,
+            "candidate_relevance_reasons": ["candidate-support-edge"],
+        }],
+    })
+    with pytest.raises(ValueError, match="detector witness disagrees with graph"):
+        _validate_support_difference_ledger(row, path="test", graph=graph)
 
 
 def test_scientific_ledgers_are_bit_exact_while_timing_is_excluded() -> None:

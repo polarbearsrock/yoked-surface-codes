@@ -21,11 +21,35 @@ from yoked.decoding._promatch_policy_analysis import (
     load_policy_audit,
     policy_human_report_bytes,
     select_casebook,
+    _context,
     _sum_optional,
     verify_existing_policy_analysis,
     write_policy_analysis,
 )
 from yoked.decoding._promatch_policy_experiment import ARM_IDS
+
+
+def test_disconnected_only_support_has_no_candidate_context() -> None:
+    row = _proposal(0, "a", stage=1, safe=False, context="yoke", commit_index=0)
+    row["support_difference_components"][0]["candidate_relevant"] = False
+    row["support_difference_components"][0]["candidate_relevance_reasons"] = []
+    row["support_difference_components"][0]["component_detector_ids"] = []
+    row["support_difference_components"][0]["candidate_support_witness_edge_ids"] = []
+    row["support_difference_components"][0]["candidate_boundary_witness_detector_ids"] = []
+    row["base_support_edge_ids"] = row["X_support_difference_edge_ids"]
+    row["B_base_support_edge_ids"] = row["X_support_difference_edge_ids"]
+    row["candidate_support_edge_ids"] = []
+    row["P_candidate_support_edge_ids"] = []
+    row["Q_forced_parity_support_edge_ids"] = []
+    row["support_difference_component_labels"] = []
+    row["exclusive_support_component_context"] = None
+    row["disconnected_support_reconfiguration"] = True
+    row["degeneracy_diagnostics"] = [
+        "disconnected-support-reconfiguration", "equal-weight-logical-class"
+    ]
+    context = _context(row)
+    assert context["support_difference_component_labels"] == ()
+    assert context["exclusive_support_component_context"] is None
 
 
 def _digest(data: bytes) -> str:
@@ -121,10 +145,25 @@ def _proposal(
         "decision_weight_hex": weight.hex(),
         "canonical_edge_count": stage,
         "ordered_endpoints": endpoints,
+        "detector_boundary_ids": endpoints,
         "canonical_edge_ids": edge_ids,
         "base_matched_active_pairs": [[1000, 1001]],
-        "base_support_edge_ids": edge_ids,
+        "base_support_edge_ids": [],
         "candidate_support_edge_ids": edge_ids,
+        "residual_support_edge_ids": [],
+        "B_base_support_edge_ids": [],
+        "P_candidate_support_edge_ids": edge_ids,
+        "R_residual_support_edge_ids": [],
+        "Q_forced_parity_support_edge_ids": edge_ids,
+        "X_support_difference_edge_ids": edge_ids,
+        "P_intersection_R_edge_ids": [],
+        "support_cancellation_edge_ids": [],
+        "supports_square_free": True,
+        "B_base_support_square_free": True,
+        "P_candidate_support_square_free": True,
+        "R_residual_support_square_free": True,
+        "Q_forced_parity_support_square_free": True,
+        "X_support_difference_square_free": True,
         "base_frame": "00",
         "candidate_frame": "00",
         "absolute_weight_margin": margin,
@@ -140,11 +179,26 @@ def _proposal(
         "base_matched_partner_labels": [context],
         "base_support_path_labels": [context],
         "support_difference_component_labels": [context],
+        "support_difference_representation_version": "promatch-support-difference-v2",
+        "support_difference_components": [{
+            "certificate_kind": "real-x-component",
+            "canonical_edge_ids": edge_ids,
+            "support_cancellation_edge_ids": [],
+            "component_detector_ids": endpoints,
+            "candidate_support_witness_edge_ids": edge_ids,
+            "candidate_boundary_witness_detector_ids": endpoints,
+            "labels": [context],
+            "candidate_relevant": True,
+            "candidate_relevance_reasons": [
+                "candidate-boundary-detector", "candidate-support-edge"
+            ],
+        }],
         "exclusive_support_component_context": context,
         "omitted_context_labels": [context],
         "degeneracy_diagnostics": degeneracy,
         "same_pair_different_path_or_frame": False,
         "equal_weight_logical_class": not safe,
+        "disconnected_support_reconfiguration": False,
         "degeneracy_unclassified": False,
     }
 
@@ -429,6 +483,7 @@ def test_loader_analysis_reconciliation_ratio_of_sums_and_first_conflict(tmp_pat
     assert all("bootstrap" in row for row in analysis["tables"]["certificate_by_domain"])
     assert all("bootstrap" in row for row in analysis["tables"]["first_safe_rank"])
     assert analysis["tables"]["local_competitor_summary"]["availability_fractions"]
+    assert "none" in analysis["tables"]["cost_excess_ecdf_by_context"]
     assert analysis["tables"]["unsafe_count_distribution"]
     assert all(
         row["evidence"] for row in analysis["tables"]["fatal_gates"]
@@ -475,6 +530,12 @@ def test_counterfactual_gate_is_recomputed_from_rows(
         (lambda row: row.__setitem__("matched_partner_labels", ["unknown"]), "unknown labels"),
         (lambda row: row.__setitem__("omitted_context_labels", []), "matched/support-path union"),
         (lambda row: row.__setitem__("degeneracy_diagnostics", []), "explicit diagnostic flags"),
+        (
+            lambda row: row["support_difference_components"][0].__setitem__(
+                "candidate_support_witness_edge_ids", []
+            ),
+            "relevance disagrees",
+        ),
         (lambda row: row.pop("durable"), "missing semantic field"),
         (lambda row: row.pop("decision"), "missing semantic field"),
     ],

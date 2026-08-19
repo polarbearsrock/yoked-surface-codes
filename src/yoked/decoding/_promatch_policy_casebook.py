@@ -51,8 +51,13 @@ _GROUND_TRUTH_KEYS = {
     "correctness", "correct", "regression", "recovery", "posthoc",
     "posthoc_ground_truth",
 }
-
-
+_SUPPORT_DIFFERENCE_REPRESENTATION = "promatch-support-difference-v2"
+_SUPPORT_COMPONENT_FIELDS = {
+    "certificate_kind", "canonical_edge_ids", "support_cancellation_edge_ids",
+    "component_detector_ids", "candidate_support_witness_edge_ids",
+    "candidate_boundary_witness_detector_ids",
+    "labels", "candidate_relevant", "candidate_relevance_reasons",
+}
 class PolicyCasebookError(ValueError):
     pass
 
@@ -134,6 +139,267 @@ def _deterministic_gzip(data: bytes) -> bytes:
     return output.getvalue()
 
 
+def _canonical_edge_ids(value: Any, *, field: str) -> list[int]:
+    if not isinstance(value, list) or any(
+        isinstance(edge_id, bool) or not isinstance(edge_id, int) or edge_id < 0
+        for edge_id in value
+    ):
+        raise PolicyCasebookError(f"{field} must be an array of nonnegative integer edge IDs")
+    if value != sorted(set(value)):
+        raise PolicyCasebookError(f"{field} must be sorted and duplicate-free")
+    return list(value)
+
+
+def _canonical_detector_ids(value: Any, *, field: str) -> list[int]:
+    if not isinstance(value, list) or any(
+        isinstance(detector_id, bool)
+        or not isinstance(detector_id, int)
+        or detector_id < 0
+        for detector_id in value
+    ):
+        raise PolicyCasebookError(
+            f"{field} must be an array of nonnegative integer detector IDs"
+        )
+    if value != sorted(set(value)):
+        raise PolicyCasebookError(f"{field} must be sorted and duplicate-free")
+    return list(value)
+
+
+def _canonical_labels(value: Any, *, field: str) -> list[str]:
+    if not isinstance(value, list) or any(
+        not isinstance(label, str) or not label for label in value
+    ):
+        raise PolicyCasebookError(f"{field} must be an array of nonempty strings")
+    if value != sorted(set(value)):
+        raise PolicyCasebookError(f"{field} must be sorted and duplicate-free")
+    return list(value)
+
+
+def _support_evidence(row: Mapping[str, Any], *, graph: Any) -> dict[str, Any]:
+    """Validates and normalizes the producer's exhaustive-row v2 evidence."""
+    if row.get("support_difference_representation_version") != (
+        _SUPPORT_DIFFERENCE_REPRESENTATION
+    ):
+        raise PolicyCasebookError(
+            "exhaustive row requires support_difference_representation_version "
+            f"{_SUPPORT_DIFFERENCE_REPRESENTATION!r}"
+        )
+    candidate = _canonical_edge_ids(
+        row.get("P_candidate_support_edge_ids"), field="P_candidate_support_edge_ids"
+    )
+    difference = _canonical_edge_ids(
+        row.get("X_support_difference_edge_ids"), field="X_support_difference_edge_ids"
+    )
+    cancellation = _canonical_edge_ids(
+        row.get("P_intersection_R_edge_ids"), field="P_intersection_R_edge_ids"
+    )
+    cancellation_alias = _canonical_edge_ids(
+        row.get("support_cancellation_edge_ids"), field="support_cancellation_edge_ids"
+    )
+    if cancellation_alias != cancellation:
+        raise PolicyCasebookError(
+            "support_cancellation_edge_ids must exactly equal P_intersection_R_edge_ids"
+        )
+    if not set(cancellation).issubset(candidate):
+        raise PolicyCasebookError("P_intersection_R_edge_ids must be a subset of candidate P")
+    candidate_boundary = _canonical_detector_ids(
+        row.get("detector_boundary_ids"), field="detector_boundary_ids"
+    )
+    context_labels = _canonical_labels(
+        row.get("support_difference_component_labels"),
+        field="support_difference_component_labels",
+    )
+    components = row.get("support_difference_components")
+    if not isinstance(components, list):
+        raise PolicyCasebookError("support_difference_components must be an array")
+    disconnected_flag = row.get("disconnected_support_reconfiguration")
+    if not isinstance(disconnected_flag, bool):
+        raise PolicyCasebookError("disconnected_support_reconfiguration must be boolean")
+
+    real_edge_ids: set[int] = set()
+    cancellation_edge_ids: set[int] = set()
+    relevant_edge_ids: set[int] = set()
+    disconnected_edge_ids: set[int] = set()
+    derived_context: set[str] = set()
+    remote_labels: set[str] = set()
+    normalized_components: list[dict[str, Any]] = []
+    seen_cancellation = False
+    previous_real_key: tuple[int, ...] | None = None
+    for index, raw_component in enumerate(components):
+        if not isinstance(raw_component, Mapping) or set(raw_component) != _SUPPORT_COMPONENT_FIELDS:
+            raise PolicyCasebookError(
+                f"support_difference_components[{index}] must have the exact v2 component fields"
+            )
+        component = dict(raw_component)
+        kind = component["certificate_kind"]
+        canonical = _canonical_edge_ids(
+            component["canonical_edge_ids"],
+            field=f"support_difference_components[{index}].canonical_edge_ids",
+        )
+        component_cancellation = _canonical_edge_ids(
+            component["support_cancellation_edge_ids"],
+            field=(
+                f"support_difference_components[{index}].support_cancellation_edge_ids"
+            ),
+        )
+        component_detectors = _canonical_detector_ids(
+            component["component_detector_ids"],
+            field=f"support_difference_components[{index}].component_detector_ids",
+        )
+        support_witness = _canonical_edge_ids(
+            component["candidate_support_witness_edge_ids"],
+            field=(
+                f"support_difference_components[{index}]."
+                "candidate_support_witness_edge_ids"
+            ),
+        )
+        boundary_witness = _canonical_detector_ids(
+            component["candidate_boundary_witness_detector_ids"],
+            field=(
+                f"support_difference_components[{index}]."
+                "candidate_boundary_witness_detector_ids"
+            ),
+        )
+        labels = _canonical_labels(
+            component["labels"], field=f"support_difference_components[{index}].labels"
+        )
+        candidate_relevant = component["candidate_relevant"]
+        reasons = _canonical_labels(
+            component["candidate_relevance_reasons"],
+            field=f"support_difference_components[{index}].candidate_relevance_reasons",
+        )
+        if not isinstance(candidate_relevant, bool):
+            raise PolicyCasebookError(
+                f"support_difference_components[{index}].candidate_relevant must be boolean"
+            )
+        if kind == "real-x-component":
+            if seen_cancellation:
+                raise PolicyCasebookError("real X components must precede support-cancellation")
+            if not canonical or component_cancellation:
+                raise PolicyCasebookError(
+                    "real-x-component requires canonical edges and no cancellation edges"
+                )
+            real_key = tuple(canonical)
+            if previous_real_key is not None and real_key <= previous_real_key:
+                raise PolicyCasebookError("real X components must be in canonical edge order")
+            previous_real_key = real_key
+            computed_detectors: set[int] = set()
+            for edge_id in canonical:
+                try:
+                    edge = graph.edges[edge_id]
+                except (AttributeError, IndexError) as ex:
+                    raise PolicyCasebookError(
+                        f"support component references unknown edge {edge_id}"
+                    ) from ex
+                computed_detectors.add(int(edge.source))
+                if edge.target is not None:
+                    computed_detectors.add(int(edge.target))
+            expected_support_witness = sorted(set(canonical).intersection(candidate))
+            expected_boundary_witness = sorted(
+                computed_detectors.intersection(candidate_boundary)
+            )
+            if component_detectors != sorted(computed_detectors):
+                raise PolicyCasebookError(
+                    "real-x-component detector vertices disagree with graph topology"
+                )
+            if support_witness != expected_support_witness:
+                raise PolicyCasebookError(
+                    "real-x-component candidate support witness disagrees with component P"
+                )
+            if boundary_witness != expected_boundary_witness:
+                raise PolicyCasebookError(
+                    "real-x-component candidate boundary witness disagrees with component "
+                    "detectors and detector_boundary_ids"
+                )
+            expected_reasons = []
+            if expected_support_witness:
+                expected_reasons.append("candidate-support-edge")
+            if expected_boundary_witness:
+                expected_reasons.append("candidate-boundary-detector")
+            expected_reasons.sort()
+            if reasons != expected_reasons:
+                raise PolicyCasebookError(
+                    "real-x-component relevance reasons disagree with authenticated witnesses"
+                )
+            if candidate_relevant != bool(expected_reasons):
+                raise PolicyCasebookError(
+                    "real-x-component candidate relevance must exactly match its reasons"
+                )
+            overlap = real_edge_ids.intersection(canonical)
+            if overlap:
+                raise PolicyCasebookError("real X components contain duplicate edge membership")
+            real_edge_ids.update(canonical)
+            if candidate_relevant:
+                relevant_edge_ids.update(canonical)
+                derived_context.update(labels)
+            else:
+                disconnected_edge_ids.update(canonical)
+                remote_labels.update(labels)
+        elif kind == "support-cancellation":
+            if seen_cancellation:
+                raise PolicyCasebookError("support-cancellation certificate must be unique")
+            seen_cancellation = True
+            if canonical or not component_cancellation:
+                raise PolicyCasebookError(
+                    "support-cancellation requires cancellation edges and no canonical edges"
+                )
+            if component_detectors or support_witness or boundary_witness:
+                raise PolicyCasebookError(
+                    "support-cancellation witness arrays must have the deterministic empty shape"
+                )
+            if not candidate_relevant or reasons != [
+                "candidate-residual-support-cancellation"
+            ]:
+                raise PolicyCasebookError(
+                    "support-cancellation has invalid candidate relevance"
+                )
+            if "support-cancellation" not in labels:
+                raise PolicyCasebookError(
+                    "support-cancellation certificate lacks its required label"
+                )
+            cancellation_edge_ids.update(component_cancellation)
+            derived_context.update(labels)
+        else:
+            raise PolicyCasebookError(f"unsupported support component kind {kind!r}")
+        normalized_components.append({
+            "certificate_kind": kind,
+            "canonical_edge_ids": canonical,
+            "support_cancellation_edge_ids": component_cancellation,
+            "component_detector_ids": component_detectors,
+            "candidate_support_witness_edge_ids": support_witness,
+            "candidate_boundary_witness_detector_ids": boundary_witness,
+            "labels": labels,
+            "candidate_relevant": candidate_relevant,
+            "candidate_relevance_reasons": reasons,
+        })
+
+    if sorted(real_edge_ids) != difference:
+        raise PolicyCasebookError("real X components must exactly partition X support")
+    if sorted(cancellation_edge_ids) != cancellation:
+        raise PolicyCasebookError(
+            "support-cancellation certificate must exactly represent P intersection R"
+        )
+    if bool(disconnected_edge_ids) != disconnected_flag:
+        raise PolicyCasebookError(
+            "disconnected_support_reconfiguration disagrees with component relevance"
+        )
+    if sorted(derived_context) != context_labels:
+        raise PolicyCasebookError(
+            "support_difference_component_labels must contain exactly candidate-relevant "
+            "component and cancellation labels"
+        )
+    return {
+        "candidate_edge_ids": candidate,
+        "support_difference_edge_ids": difference,
+        "support_cancellation_edge_ids": cancellation,
+        "candidate_relevant_support_difference_edge_ids": sorted(relevant_edge_ids),
+        "disconnected_support_difference_edge_ids": sorted(disconnected_edge_ids),
+        "context_labels": context_labels,
+        "remote_support_role_labels": sorted(remote_labels),
+        "components": normalized_components,
+    }
+
+
 def _support_graph_snapshot(
     graph: Any, rows: Sequence[Mapping[str, Any]], *, graph_fingerprint: str,
     layout_fingerprint: str,
@@ -144,13 +410,25 @@ def _support_graph_snapshot(
     }
     candidate_ranks: dict[int, list[int]] = {}
     difference_ranks: dict[int, list[int]] = {}
+    relevant_ranks: dict[int, list[int]] = {}
+    disconnected_ranks: dict[int, list[int]] = {}
+    cancellation_ranks: dict[int, list[int]] = {}
     for row in rows:
         rank = int(row["operational_veto_chain_rank"])
-        for edge_id in row.get("P_candidate_support_edge_ids", []):
-            candidate_ranks.setdefault(int(edge_id), []).append(rank)
-        for edge_id in row.get("X_support_difference_edge_ids", []):
-            difference_ranks.setdefault(int(edge_id), []).append(rank)
-    edge_ids = sorted(set(candidate_ranks) | set(difference_ranks))
+        evidence = _support_evidence(row, graph=graph)
+        for edge_id in evidence["candidate_edge_ids"]:
+            candidate_ranks.setdefault(edge_id, []).append(rank)
+        for edge_id in evidence["support_difference_edge_ids"]:
+            difference_ranks.setdefault(edge_id, []).append(rank)
+        for edge_id in evidence["candidate_relevant_support_difference_edge_ids"]:
+            relevant_ranks.setdefault(edge_id, []).append(rank)
+        for edge_id in evidence["disconnected_support_difference_edge_ids"]:
+            disconnected_ranks.setdefault(edge_id, []).append(rank)
+        for edge_id in evidence["support_cancellation_edge_ids"]:
+            cancellation_ranks.setdefault(edge_id, []).append(rank)
+    edge_ids = sorted(
+        set(candidate_ranks) | set(difference_ranks) | set(cancellation_ranks)
+    )
     edges = []
     detector_ids = set(active)
     for edge_id in edge_ids:
@@ -166,12 +444,21 @@ def _support_graph_snapshot(
             membership.append("candidate-P")
         if edge_id in difference_ranks:
             membership.append("support-difference-X")
+        if edge_id in relevant_ranks:
+            membership.append("candidate-relevant-X")
+        if edge_id in disconnected_ranks:
+            membership.append("disconnected-X")
+        if edge_id in cancellation_ranks:
+            membership.append("support-cancellation-P-intersection-R")
         edges.append({
             "edge_id": edge_id, "source": int(edge.source),
             "target": None if edge.target is None else int(edge.target),
             "membership": membership,
             "candidate_ranks": candidate_ranks.get(edge_id, []),
             "support_difference_ranks": difference_ranks.get(edge_id, []),
+            "candidate_relevant_ranks": relevant_ranks.get(edge_id, []),
+            "disconnected_ranks": disconnected_ranks.get(edge_id, []),
+            "support_cancellation_ranks": cancellation_ranks.get(edge_id, []),
         })
     coordinates = getattr(getattr(graph, "layout", None), "coordinates", ())
     roles = getattr(getattr(graph, "layout", None), "roles", ())
@@ -193,10 +480,13 @@ def _support_graph_snapshot(
             },
         })
     return {
-        "schema": "promatch-l1-policy-audit-support-graph-snapshot-v1",
+        "schema": "promatch-l1-policy-audit-support-graph-snapshot-v2",
         "graph_fingerprint": graph_fingerprint,
         "layout_fingerprint": layout_fingerprint,
-        "cropping": "active-local-union-candidate-P-union-support-difference-X",
+        "cropping": (
+            "active-local-union-candidate-P-union-support-difference-X-union-"
+            "support-cancellation-P-intersection-R"
+        ),
         "detectors": detectors, "edges": edges,
     }
 
@@ -210,7 +500,11 @@ def _render_state_diagram(state: Mapping[str, Any], path: Path) -> None:
     stages = [int(row["stage"]) for row in rows]
     first_safe = next((rank for rank, value in zip(ranks, safe) if value), None)
     contexts = sorted({
-        label for row in rows for label in row.get("support_difference_component_labels", [])
+        label for row in rows for label in row["support_difference_component_labels"]
+    })
+    remote_roles = sorted({
+        label for item in state["all_veto_timeline"]
+        for label in item["remote_support_role_labels"]
     })
     visibility = sorted({
         label for row in rows for label in row.get("feature_visibility", {}).values()
@@ -224,8 +518,8 @@ def _render_state_diagram(state: Mapping[str, Any], path: Path) -> None:
         ax.scatter([rank], [value], color=color, marker=marker, s=55, zorder=2)
         ax.annotate(f"S{stage}", (rank, value), xytext=(0, 7), textcoords="offset points",
                     ha="center", fontsize=8)
-        path_count = len(rows[rank - 1].get("P_candidate_support_edge_ids", []))
-        difference_count = len(rows[rank - 1].get("X_support_difference_edge_ids", []))
+        path_count = len(rows[rank - 1]["P_candidate_support_edge_ids"])
+        difference_count = len(rows[rank - 1]["X_support_difference_edge_ids"])
         ax.annotate(f"P={path_count}, X={difference_count}", (rank, value),
                     xytext=(0, -13), textcoords="offset points", ha="center", fontsize=7)
     ax.set(
@@ -251,8 +545,14 @@ def _render_state_diagram(state: Mapping[str, Any], path: Path) -> None:
             if target_id is None else positions[target_id]
         )
         membership = set(edge["membership"])
-        if membership == {"candidate-P", "support-difference-X"}:
+        if "support-cancellation-P-intersection-R" in membership:
+            color, style, width = "#b3443f", ":", 2.8
+        elif "candidate-P" in membership and "candidate-relevant-X" in membership:
             color, style, width = "#7551a6", "-", 2.4
+        elif "candidate-relevant-X" in membership:
+            color, style, width = "#d07724", "-", 2.2
+        elif "disconnected-X" in membership:
+            color, style, width = "#888888", "--", 1.7
         elif "candidate-P" in membership:
             color, style, width = "#326fa8", "-", 2.0
         else:
@@ -275,6 +575,10 @@ def _render_state_diagram(state: Mapping[str, Any], path: Path) -> None:
     graph_ax.plot([], [], color="#d07724", linestyle="--", linewidth=2,
                   label="oracle difference X")
     graph_ax.plot([], [], color="#7551a6", linewidth=2.4, label="P and X")
+    graph_ax.plot([], [], color="#b3443f", linestyle=":", linewidth=2.8,
+                  label="P intersection R cancellation")
+    graph_ax.plot([], [], color="#888888", linestyle="--", linewidth=1.7,
+                  label="disconnected X")
     graph_ax.scatter([], [], color="#222222", s=48, label="active local detector")
     graph_ax.set(
         xlabel="detector coordinate x", ylabel="detector coordinate y",
@@ -285,7 +589,9 @@ def _render_state_diagram(state: Mapping[str, Any], path: Path) -> None:
     caption = (
         f"Original rank 1; first safe rank {first_safe if first_safe is not None else 'none'}; "
         f"all {len(rows)} proposals were enumerated to true exhaustion. "
-        f"Context: {', '.join(contexts) if contexts else 'none recorded'}. "
+        f"Candidate-relevant context: {', '.join(contexts) if contexts else 'none recorded'}. "
+        f"Remote disconnected roles: {', '.join(remote_roles) if remote_roles else 'none recorded'}; "
+        "these are explanatory support evidence, not local candidate context. "
         f"Visibility: {', '.join(visibility) if visibility else 'none recorded'}."
     )
     fig.text(0.5, 0.01, caption, ha="center", va="bottom", fontsize=7, wrap=True)
@@ -451,6 +757,7 @@ def _expansion_payloads(
             for row in rows
         ):
             raise PolicyCasebookError("casebook row schema or graph/layout identity is incomplete")
+        support_evidence = [_support_evidence(row, graph=graph) for row in rows]
         _reject_ground_truth_keys(rows)
         _verify_float_hex(rows)
         first_safe = next(
@@ -458,17 +765,40 @@ def _expansion_payloads(
             None,
         )
         contexts = sorted({
-            label for row in rows
-            for label in row.get("support_difference_component_labels", [])
+            label for evidence in support_evidence
+            for label in evidence["context_labels"]
+        })
+        remote_roles = sorted({
+            label for evidence in support_evidence
+            for label in evidence["remote_support_role_labels"]
         })
         visibility = sorted({
             label for row in rows for label in row.get("feature_visibility", {}).values()
         })
+        relevant_memberships = sum(
+            len(evidence["candidate_relevant_support_difference_edge_ids"])
+            for evidence in support_evidence
+        )
+        disconnected_memberships = sum(
+            len(evidence["disconnected_support_difference_edge_ids"])
+            for evidence in support_evidence
+        )
+        cancellation_memberships = sum(
+            len(evidence["support_cancellation_edge_ids"])
+            for evidence in support_evidence
+        )
         caption = (
             f"Original proposal is rank 1. First safe rank is "
             f"{first_safe if first_safe is not None else 'not present'}. "
             f"All {len(rows)} proposals were enumerated to true exhaustion. "
-            f"Recorded context: {', '.join(contexts) if contexts else 'none'}. "
+            f"Recorded candidate-relevant context: "
+            f"{', '.join(contexts) if contexts else 'none'}. "
+            f"Support evidence contains {relevant_memberships} candidate-relevant X, "
+            f"{disconnected_memberships} disconnected X, and {cancellation_memberships} "
+            "P intersection R cancellation rank-edge memberships. "
+            f"Remote disconnected component roles: "
+            f"{', '.join(remote_roles) if remote_roles else 'none'}; these are explanatory "
+            "support evidence, not local candidate context. "
             f"Recorded visibility: {', '.join(visibility) if visibility else 'none'}."
         )
         support_snapshot = _support_graph_snapshot(
@@ -492,14 +822,29 @@ def _expansion_payloads(
                     "stage": row["stage"],
                     "proposal_sha256": row["proposal_sha256"],
                     "oracle_policy_accepts": row["oracle_policy_accepts"],
-                    "candidate_path_edge_ids": row.get("P_candidate_support_edge_ids", []),
-                    "support_difference_edge_ids": row.get("X_support_difference_edge_ids", []),
-                    "context_labels": row.get("support_difference_component_labels", []),
+                    "candidate_path_edge_ids": evidence["candidate_edge_ids"],
+                    "support_difference_edge_ids": evidence["support_difference_edge_ids"],
+                    "candidate_relevant_support_difference_edge_ids": evidence[
+                        "candidate_relevant_support_difference_edge_ids"
+                    ],
+                    "disconnected_support_difference_edge_ids": evidence[
+                        "disconnected_support_difference_edge_ids"
+                    ],
+                    "support_cancellation_edge_ids": evidence[
+                        "support_cancellation_edge_ids"
+                    ],
+                    "support_difference_components": evidence["components"],
+                    "disconnected_support_reconfiguration": bool(
+                        evidence["disconnected_support_difference_edge_ids"]
+                    ),
+                    "context_labels": evidence["context_labels"],
+                    "remote_support_role_labels": evidence["remote_support_role_labels"],
                 }
-                for row in rows
+                for row, evidence in zip(rows, support_evidence)
             ],
             "information_visibility": visibility,
             "context_labels": contexts,
+            "remote_support_role_labels": remote_roles,
             "factual_caption": caption,
             "support_graph_snapshot": support_snapshot,
             "rows": rows,

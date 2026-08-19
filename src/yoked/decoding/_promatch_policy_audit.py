@@ -244,13 +244,17 @@ def _matched_partner_labels(
 
 def _difference_components(
     graph: CompiledPromatchGraph, evaluation: OracleEvaluation, domain: Any
-) -> tuple[list[dict[str, Any]], list[str]]:
+) -> tuple[list[dict[str, Any]], list[str], bool]:
     candidate = set(evaluation.candidate_edge_ids)
     residual = set(evaluation.residual_support_edge_ids)
     cancellations = candidate.intersection(residual)
     ids = set(evaluation.base_support_edge_ids)
     ids.symmetric_difference_update(evaluation.candidate_edge_ids)
     ids.symmetric_difference_update(evaluation.residual_support_edge_ids)
+    if not ids and not evaluation.frame_compatible:
+        raise AssertionError(
+            "X-empty support decomposition cannot have a different observable frame"
+        )
     by_vertex: dict[int, set[int]] = defaultdict(set)
     for edge_id in ids:
         edge = graph.edges[edge_id]
@@ -259,7 +263,9 @@ def _difference_components(
             by_vertex[edge.target].add(edge_id)
     remaining = set(ids)
     components: list[dict[str, Any]] = []
-    all_labels: set[str] = set()
+    candidate_context_labels: set[str] = set()
+    has_disconnected_reconfiguration = False
+    candidate_boundary = set(evaluation.candidate_boundary_detector_ids)
     while remaining:
         seed = min(remaining)
         component: set[int] = set()
@@ -280,44 +286,71 @@ def _difference_components(
             component_vertices.add(edge.source)
             if edge.target is not None:
                 component_vertices.add(edge.target)
-        candidate_boundary = set(evaluation.candidate_boundary_detector_ids)
-        if not component.intersection(candidate) and not component_vertices.intersection(candidate_boundary):
-            continue
+        relevance_reasons: list[str] = []
+        if component.intersection(candidate):
+            relevance_reasons.append("candidate-support-edge")
+        if component_vertices.intersection(candidate_boundary):
+            relevance_reasons.append("candidate-boundary-detector")
+        relevance_reasons.sort()
+        candidate_relevant = bool(relevance_reasons)
         labels = set(_support_component_labels(graph, sorted(component), (), domain))
         # With no seed endpoints, explicitly classify every component vertex.
         for edge_id in component:
             edge = graph.edges[edge_id]
             labels.update(_role_tags(graph, edge.source, domain))
             labels.update(_role_tags(graph, edge.target, domain))
-        cancellation_ids = sorted(
-            edge_id for edge_id in cancellations
-            if graph.edges[edge_id].source in component_vertices
-            or graph.edges[edge_id].target in component_vertices
-        )
-        if cancellation_ids:
-            labels.add("support-cancellation")
         normalized = _normalized_labels(labels)
-        all_labels.update(normalized)
+        if candidate_relevant:
+            candidate_context_labels.update(normalized)
+        else:
+            has_disconnected_reconfiguration = True
         components.append({
+            "certificate_kind": "real-x-component",
             "canonical_edge_ids": sorted(component),
-            "support_cancellation_edge_ids": cancellation_ids,
+            "support_cancellation_edge_ids": [],
+            "component_detector_ids": sorted(component_vertices),
+            "candidate_support_witness_edge_ids": sorted(component.intersection(candidate)),
+            "candidate_boundary_witness_detector_ids": sorted(
+                component_vertices.intersection(candidate_boundary)
+            ),
             "labels": normalized,
+            "candidate_relevant": candidate_relevant,
+            "candidate_relevance_reasons": relevance_reasons,
         })
     components.sort(key=lambda row: row["canonical_edge_ids"])
+
+    # P intersection R is an independent certificate: these edges disappear
+    # from Q=P xor R but are paid twice by the forced composite.  It must not
+    # be attached to a geometrically unrelated X component.
+    if cancellations:
+        cancellation_labels: set[str] = {"support-cancellation"}
+        for edge_id in cancellations:
+            edge = graph.edges[edge_id]
+            cancellation_labels.update(_role_tags(graph, edge.source, domain))
+            cancellation_labels.update(_role_tags(graph, edge.target, domain))
+        normalized = _normalized_labels(cancellation_labels)
+        candidate_context_labels.update(normalized)
+        components.append({
+            "certificate_kind": "support-cancellation",
+            "canonical_edge_ids": [],
+            "support_cancellation_edge_ids": sorted(cancellations),
+            "component_detector_ids": [],
+            "candidate_support_witness_edge_ids": [],
+            "candidate_boundary_witness_detector_ids": [],
+            "labels": normalized,
+            "candidate_relevant": True,
+            "candidate_relevance_reasons": ["candidate-residual-support-cancellation"],
+        })
     unsafe = not evaluation.accepted
     if unsafe and not components:
-        if not ids and cancellations:
-            components = [{
-                "canonical_edge_ids": [],
-                "support_cancellation_edge_ids": sorted(cancellations),
-                "labels": ["support-cancellation"],
-            }]
-            all_labels.add("support-cancellation")
-        else:
-            raise AssertionError(
-                "unsafe proposal has an empty or unidentified support difference"
-            )
-    return components, _normalized_labels(all_labels)
+        raise AssertionError(
+            "unsafe proposal has neither an X support difference nor a support-cancellation certificate"
+        )
+    return (
+        components,
+        _normalized_labels(candidate_context_labels),
+        has_disconnected_reconfiguration,
+    )
 
 
 def _evaluation_fields(
@@ -335,7 +368,9 @@ def _evaluation_fields(
     support_path = _support_component_labels(
         graph, evaluation.base_support_edge_ids, proposal.endpoints, domain
     )
-    components, difference = _difference_components(graph, evaluation, domain)
+    components, difference, disconnected_reconfiguration = _difference_components(
+        graph, evaluation, domain
+    )
     support_cancellation_ids = sorted(
         set(evaluation.candidate_edge_ids).intersection(evaluation.residual_support_edge_ids)
     )
@@ -354,9 +389,6 @@ def _evaluation_fields(
         diagnostics.add("same-pair-different-path-or-frame")
     if evaluation.cost_compatible and not evaluation.frame_compatible:
         diagnostics.add("equal-weight-logical-class")
-    if not evaluation.accepted and not diagnostics and not difference:
-        diagnostics.add("unclassified")
-    degeneracy = sorted(diagnostics)
     b_support = list(evaluation.base_support_edge_ids)
     p_support = list(evaluation.candidate_edge_ids)
     r_support = list(evaluation.residual_support_edge_ids)
@@ -364,14 +396,19 @@ def _evaluation_fields(
         raise AssertionError("oracle B/P/R supports must be square-free")
     q_support = sorted(set(p_support).symmetric_difference(r_support))
     x_support = sorted(set(b_support).symmetric_difference(q_support))
-    if x_support != sorted(
-        edge_id for component in components for edge_id in component["canonical_edge_ids"]
-    ):
-        component_union = sorted({
-            edge_id for component in components for edge_id in component["canonical_edge_ids"]
-        })
-        if not set(component_union).issubset(x_support):
-            raise AssertionError("support-difference components contain edges outside X")
+    component_union = sorted(
+        edge_id
+        for component in components
+        if component["certificate_kind"] == "real-x-component"
+        for edge_id in component["canonical_edge_ids"]
+    )
+    if component_union != x_support:
+        raise AssertionError("real support-difference components do not partition X exactly")
+    if disconnected_reconfiguration:
+        diagnostics.add("disconnected-support-reconfiguration")
+    if not evaluation.accepted and not diagnostics and not difference:
+        diagnostics.add("unclassified")
+    degeneracy = sorted(diagnostics)
     result = {
         "cost_compatible": evaluation.cost_compatible,
         "frame_compatible": evaluation.frame_compatible,
@@ -421,6 +458,8 @@ def _evaluation_fields(
         "exclusive_support_component_context": exclusive,
         "omitted_context_labels": omitted,
         "degeneracy_diagnostics": degeneracy,
+        "support_difference_representation_version": "promatch-support-difference-v2",
+        "disconnected_support_reconfiguration": disconnected_reconfiguration,
         "same_pair_different_path_or_frame": "same-pair-different-path-or-frame" in diagnostics,
         "equal_weight_logical_class": "equal-weight-logical-class" in diagnostics,
         "degeneracy_unclassified": "unclassified" in diagnostics,

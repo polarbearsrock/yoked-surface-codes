@@ -53,6 +53,7 @@ DEGENERACY_DIAGNOSTICS = frozenset(
     {
         "same-pair-different-path-or-frame",
         "equal-weight-logical-class",
+        "disconnected-support-reconfiguration",
         "unclassified",
     }
 )
@@ -800,32 +801,168 @@ def _sorted_labels(value: Any, *, name: str) -> tuple[str, ...]:
 
 
 def _component_labels(row: Mapping[str, Any]) -> tuple[str, ...]:
-    direct = _at(
-        row,
-        "support_difference_component_labels",
-        "support_difference_labels",
-        "context.support_difference_component_labels",
+    def canonical_edge_ids(value: Any) -> bool:
+        return (
+            isinstance(value, list)
+            and all(type(edge_id) is int and edge_id >= 0 for edge_id in value)
+            and value == sorted(set(value))
+        )
+
+    direct_labels = _sorted_labels(
+        _at(row, "support_difference_component_labels", required=True),
+        name="support_difference_component_labels",
     )
-    direct_labels = (
-        None
-        if direct is None
-        else _sorted_labels(direct, name="support_difference_component_labels")
-    )
-    components = _at(row, "support_difference_components", "context.support_difference_components")
-    if components is None:
-        if direct_labels is None:
-            raise PolicyAnalysisError("proposal lacks support-difference component labels")
-        return direct_labels
+    components = _at(row, "support_difference_components", required=True)
     if not isinstance(components, list):
         raise PolicyAnalysisError("support_difference_components must be an array")
+    if _at(row, "support_difference_representation_version", required=True) != (
+        "promatch-support-difference-v2"
+    ):
+        raise PolicyAnalysisError("unsupported support-difference representation")
     labels: set[str] = set()
+    if not canonical_edge_ids(_at(row, "detector_boundary_ids", required=True)):
+        raise PolicyAnalysisError("detector_boundary_ids is not a canonical detector set")
+    real_edge_union: set[int] = set()
+    cancellation_union: set[int] = set()
+    saw_disconnected = False
+    real_components: list[Mapping[str, Any]] = []
+    cancellation_components: list[Mapping[str, Any]] = []
     for component in components:
         if not isinstance(component, Mapping):
             raise PolicyAnalysisError("support difference component must be an object")
+        if set(component) != {
+            "certificate_kind", "canonical_edge_ids",
+            "support_cancellation_edge_ids", "component_detector_ids",
+            "candidate_support_witness_edge_ids",
+            "candidate_boundary_witness_detector_ids",
+            "labels", "candidate_relevant",
+            "candidate_relevance_reasons",
+        }:
+            raise PolicyAnalysisError("support difference component fields are not exact")
         tags = _at(component, "labels", "tags", required=True)
-        labels.update(_sorted_labels(tags, name="support difference component tags"))
+        component_labels = _sorted_labels(tags, name="support difference component tags")
+        if set(component_labels) - CONTEXT_LABELS:
+            raise PolicyAnalysisError("support difference component contains unknown labels")
+        if "in-domain" in component_labels and len(component_labels) != 1:
+            raise PolicyAnalysisError("in-domain is not exclusive in support component labels")
+        kind = _at(component, "certificate_kind", required=True)
+        relevant = _as_bool(
+            _at(component, "candidate_relevant", required=True),
+            name="support component candidate_relevant",
+        )
+        reasons = _at(component, "candidate_relevance_reasons", required=True)
+        if not isinstance(reasons, list) or reasons != sorted(set(reasons)):
+            raise PolicyAnalysisError("support component relevance reasons are not canonical")
+        if set(reasons) - {
+            "candidate-support-edge",
+            "candidate-boundary-detector",
+            "candidate-residual-support-cancellation",
+        }:
+            raise PolicyAnalysisError("support component has an unknown relevance reason")
+        edge_ids = _at(component, "canonical_edge_ids", required=True)
+        cancellation_ids = _at(component, "support_cancellation_edge_ids", required=True)
+        detector_ids = _at(component, "component_detector_ids", required=True)
+        support_witness = _at(component, "candidate_support_witness_edge_ids", required=True)
+        boundary_witness = _at(
+            component, "candidate_boundary_witness_detector_ids", required=True
+        )
+        if not all(canonical_edge_ids(value) for value in (
+            edge_ids, cancellation_ids, detector_ids, support_witness, boundary_witness
+        )):
+            raise PolicyAnalysisError("support component edge IDs are not canonical sets")
+        if kind == "real-x-component":
+            candidate_support = _at(row, "P_candidate_support_edge_ids", required=True)
+            detector_boundary = _at(row, "detector_boundary_ids", required=True)
+            expected_support_witness = sorted(set(edge_ids).intersection(candidate_support))
+            expected_boundary_witness = sorted(set(detector_ids).intersection(detector_boundary))
+            expected_reasons = sorted(
+                (["candidate-support-edge"] if expected_support_witness else [])
+                + (["candidate-boundary-detector"] if expected_boundary_witness else [])
+            )
+            if not edge_ids or cancellation_ids or "support-cancellation" in component_labels:
+                raise PolicyAnalysisError("real X component has invalid certificate support")
+            if (
+                support_witness != expected_support_witness
+                or boundary_witness != expected_boundary_witness
+                or reasons != expected_reasons
+                or bool(reasons) != relevant
+            ):
+                raise PolicyAnalysisError("real X component relevance disagrees with its reasons")
+            if real_edge_union.intersection(edge_ids):
+                raise PolicyAnalysisError("real X components overlap")
+            real_edge_union.update(edge_ids)
+            saw_disconnected |= not relevant
+            real_components.append(component)
+        elif kind == "support-cancellation":
+            if (
+                edge_ids or not cancellation_ids or detector_ids or support_witness
+                or boundary_witness or not relevant or reasons != [
+                    "candidate-residual-support-cancellation"
+                ] or "support-cancellation" not in component_labels
+            ):
+                raise PolicyAnalysisError("support-cancellation certificate is malformed")
+            if cancellation_union:
+                raise PolicyAnalysisError("multiple support-cancellation certificates")
+            cancellation_union.update(cancellation_ids)
+            cancellation_components.append(component)
+        else:
+            raise PolicyAnalysisError(f"unknown support certificate kind {kind!r}")
+        if relevant:
+            labels.update(component_labels)
+    if components != sorted(
+        real_components, key=lambda component: component["canonical_edge_ids"]
+    ) + cancellation_components:
+        raise PolicyAnalysisError("support certificates are not in canonical order")
+    supports = {}
+    for field in (
+        "B_base_support_edge_ids", "P_candidate_support_edge_ids",
+        "R_residual_support_edge_ids", "Q_forced_parity_support_edge_ids",
+        "X_support_difference_edge_ids", "P_intersection_R_edge_ids",
+    ):
+        value = _at(row, field, required=True)
+        if not canonical_edge_ids(value):
+            raise PolicyAnalysisError(f"{field} is not a canonical square-free support")
+        supports[field] = value
+    b = set(supports["B_base_support_edge_ids"])
+    p = set(supports["P_candidate_support_edge_ids"])
+    r = set(supports["R_residual_support_edge_ids"])
+    for alias, canonical in (
+        ("base_support_edge_ids", supports["B_base_support_edge_ids"]),
+        ("candidate_support_edge_ids", supports["P_candidate_support_edge_ids"]),
+        ("residual_support_edge_ids", supports["R_residual_support_edge_ids"]),
+    ):
+        if _at(row, alias, required=True) != canonical:
+            raise PolicyAnalysisError(f"{alias} disagrees with its named B/P/R support")
+    if supports["Q_forced_parity_support_edge_ids"] != sorted(p ^ r):
+        raise PolicyAnalysisError("Q support does not reconcile P xor R")
+    if supports["X_support_difference_edge_ids"] != sorted(b ^ p ^ r):
+        raise PolicyAnalysisError("X support does not reconcile B xor P xor R")
+    if supports["P_intersection_R_edge_ids"] != sorted(p & r):
+        raise PolicyAnalysisError("cancellation support does not reconcile P intersection R")
+    for flag in (
+        "supports_square_free", "B_base_support_square_free",
+        "P_candidate_support_square_free", "R_residual_support_square_free",
+        "Q_forced_parity_support_square_free", "X_support_difference_square_free",
+    ):
+        if _at(row, flag, required=True) is not True:
+            raise PolicyAnalysisError(f"{flag} must be true")
+    x_support = supports["X_support_difference_edge_ids"]
+    cancellation_support = supports["P_intersection_R_edge_ids"]
+    top_cancellation = _at(row, "support_cancellation_edge_ids", required=True)
+    if top_cancellation != cancellation_support:
+        raise PolicyAnalysisError("top-level cancellation support is inconsistent")
+    if sorted(real_edge_union) != x_support:
+        raise PolicyAnalysisError("real support components do not partition X exactly")
+    if sorted(cancellation_union) != cancellation_support:
+        raise PolicyAnalysisError("cancellation certificates do not reconcile P intersection R")
+    disconnected_flag = _as_bool(
+        _at(row, "disconnected_support_reconfiguration", required=True),
+        name="disconnected_support_reconfiguration",
+    )
+    if disconnected_flag != saw_disconnected:
+        raise PolicyAnalysisError("disconnected support-reconfiguration flag is inconsistent")
     component_labels = tuple(sorted(labels))
-    if direct_labels is not None and direct_labels != component_labels:
+    if direct_labels != component_labels:
         raise PolicyAnalysisError(
             "support-difference component labels disagree with their component union"
         )
@@ -898,6 +1035,10 @@ def _context(row: Mapping[str, Any]) -> dict[str, Any]:
             _at(row, "equal_weight_logical_class", required=True),
             name="equal_weight_logical_class",
         ),
+        "disconnected-support-reconfiguration": _as_bool(
+            _at(row, "disconnected_support_reconfiguration", required=True),
+            name="disconnected_support_reconfiguration",
+        ),
         "unclassified": _as_bool(
             _at(row, "degeneracy_unclassified", required=True),
             name="degeneracy_unclassified",
@@ -955,6 +1096,8 @@ def _context(row: Mapping[str, Any]) -> dict[str, Any]:
         not oracle_accepts
         and not diagnostic_flags["same-pair-different-path-or-frame"]
         and not diagnostic_flags["equal-weight-logical-class"]
+        and not diagnostic_flags["disconnected-support-reconfiguration"]
+        and not difference
     )
     if diagnostic_flags["unclassified"] != expected_unclassified:
         raise PolicyAnalysisError("unclassified degeneracy residual is not reconciled")
@@ -2380,13 +2523,17 @@ def analyze_policy_audit(corpus: PolicyAuditCorpus) -> dict[str, Any]:
         (
             {
                 "first_unsafe_stage": row["first_unsafe_stage"],
-                "first_unsafe_context": row["first_unsafe_context"],
+                "first_unsafe_context": row["first_unsafe_context"] or "none",
             }
             for row in association
             if row["prediction_disagreement"]
         ),
         keys=("first_unsafe_stage", "first_unsafe_context"),
     )
+    if sum(row["count"] for row in first_conflict_discordant) != sum(
+        row["prediction_disagreement"] for row in association
+    ):
+        raise PolicyAnalysisError("first-conflict context totals do not reconcile")
 
     distributions = {
         "cost_excess": distribution_summary(
@@ -2461,12 +2608,17 @@ def analyze_policy_audit(corpus: PolicyAuditCorpus) -> dict[str, Any]:
             [
                 row["cost_excess"]
                 for row in proposals
-                if row["exclusive_support_component_context"] == label
+                if row["exclusive_support_component_context"] == context_value
                 and row["cost_excess"] is not None
             ]
         )
-        for label in CONTEXT_PRIORITY
+        for label in (*CONTEXT_PRIORITY, "none")
+        for context_value in [None if label == "none" else label]
     }
+    if sum(points[-1]["denominator"] for points in cost_ecdf_by_context.values() if points) != sum(
+        row["cost_excess"] is not None for row in proposals
+    ):
+        raise PolicyAnalysisError("cost ECDF context totals do not reconcile")
     original_vs_alternative = [
         {
             key: state[key]
@@ -3146,7 +3298,7 @@ def policy_human_report_bytes(analysis: Mapping[str, Any]) -> bytes:
             "",
             f"Sparse-stratum rule: fewer than {SPARSE_UNSAFE_STATES} unsafe states is insufficient for rule formulation. {sparse_stages:,} / {len(stage_statuses):,} stage strata are marked insufficient; all displayed strata remain descriptive only.",
             f"Tied-support diagnostic `equal-weight-logical-class`: {_report_fraction(degeneracy_counts['equal-weight-logical-class'], unsafe_states)} unsafe commitments.",
-            f"Other tied/degenerate support diagnostics are `same-pair-different-path-or-frame` {_report_fraction(degeneracy_counts['same-pair-different-path-or-frame'], unsafe_states)} and `unclassified` {_report_fraction(degeneracy_counts['unclassified'], unsafe_states)}. Diagnostics can overlap and therefore do not form a partition.",
+            f"Other support diagnostics are `same-pair-different-path-or-frame` {_report_fraction(degeneracy_counts['same-pair-different-path-or-frame'], unsafe_states)}, `disconnected-support-reconfiguration` {_report_fraction(degeneracy_counts['disconnected-support-reconfiguration'], unsafe_states)}, and `unclassified` {_report_fraction(degeneracy_counts['unclassified'], unsafe_states)}. Disconnected component graph roles are retained as structural evidence but excluded from policy-visible candidate context. Diagnostics can overlap and therefore do not form a partition.",
             "",
             "Sparse or tied support can make apparent context and margin patterns unstable. This audit can prioritize follow-up hypotheses; it cannot identify a causal policy rule.",
             "",
@@ -3262,12 +3414,17 @@ def _render_plots(plot_dir: Path, payloads: Mapping[str, Any]) -> list[str]:
 
     rows = payloads["first-conflict-stage-context"]["rows"]
     fig, ax = plt.subplots(figsize=(8, 4.5))
-    contexts = [label for label in CONTEXT_PRIORITY if any(row["first_unsafe_context"] == label for row in rows)]
+    contexts = [
+        label for label in (*CONTEXT_PRIORITY, "none")
+        if any(row["first_unsafe_context"] == label for row in rows)
+    ]
     bottom = np.zeros(4)
     for context in contexts:
         values = [sum(row["count"] for row in rows if row["first_unsafe_stage"] == stage and row["first_unsafe_context"] == context) for stage in range(1, 5)]
         ax.bar(range(1, 5), values, bottom=bottom, label=context)
         bottom += values
+    if int(bottom.sum()) != sum(row["count"] for row in rows):
+        raise PolicyAnalysisError("rendered first-conflict stacks do not reconcile")
     ax.set(xlabel="first unsafe stage", ylabel="U0/PU-discordant shots", title="First conflict context (exclusive display label)", xticks=range(1, 5))
     if contexts:
         ax.legend(fontsize=8)

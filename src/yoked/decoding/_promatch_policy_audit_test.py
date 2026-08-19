@@ -10,10 +10,15 @@ import gen
 from yoked._yoked_memory_circuits import yoked_magic_memory_circuit
 from yoked.decoding._promatch_graph import CompiledPromatchGraph, DomainGraph, Edge, compile_matching_graph
 from yoked.decoding._promatch_layout import L1BodyDetector, L1FullHistoryDomain, compile_layout
-from yoked.decoding._promatch_oracle import OracleTolerance
+from yoked.decoding._promatch_oracle import (
+    CostClassification,
+    OracleEvaluation,
+    OracleTolerance,
+)
 from yoked.decoding._promatch_policy_audit import (
     ARM_IDS,
     _matched_partner_labels,
+    _difference_components,
     _normalized_labels,
     _support_component_labels,
     audit_policy_shot,
@@ -55,6 +60,87 @@ def _unsafe_graph() -> CompiledPromatchGraph:
                                {k: () for k in range(12)})
     return CompiledPromatchGraph(_SyntheticLayout(12), matcher, tuple(edges),
                                  {domain: domain_graph}, "unsafe-synthetic-v1", True, 12, 1)
+
+
+def _evaluation(
+    *, base=(), candidate=(), residual=(), frame_compatible=True, accepted=False
+) -> OracleEvaluation:
+    return OracleEvaluation(
+        policy="frame", accepted=accepted, cost_compatible=accepted,
+        frame_compatible=frame_compatible,
+        cost_classification=(CostClassification.COMPATIBLE if accepted
+                             else CostClassification.POSITIVE_EXCESS),
+        cost_excess=0.0 if accepted else 1.0, tau_k=1e-6,
+        composite_weight=1.0, accumulated_frame=b"\0", base_prediction=b"\0",
+        residual_prediction=b"\0", base_frame=b"\0",
+        candidate_composite_frame=b"\0" if frame_compatible else b"\1",
+        base_support_edge_ids=tuple(base), residual_support_edge_ids=tuple(residual),
+        base_support_weight=0.0, residual_support_weight=0.0,
+        base_backend_weight=0.0, residual_backend_weight=0.0,
+        base_tau_weight=1e-6, residual_tau_weight=1e-6,
+        candidate_edge_ids=tuple(candidate), candidate_boundary_detector_ids=(0, 1),
+        candidate_observable_frame=b"\0", candidate_weight=1.0,
+    )
+
+
+def test_difference_components_retain_remote_x_and_independent_cancellation() -> None:
+    graph = _unsafe_graph()
+    domain = next(iter(graph.domain_graphs))
+    local = next(edge.edge_id for edge in graph.edges if edge.target == 1 and edge.source == 0)
+    remote = next(edge.edge_id for edge in graph.edges if edge.source == 2 and edge.target is None)
+    components, labels, disconnected = _difference_components(
+        graph,
+        _evaluation(candidate=(local,), residual=(local, remote)),
+        domain,
+    )
+    real = [row for row in components if row["certificate_kind"] == "real-x-component"]
+    cancellation = [row for row in components if row["certificate_kind"] == "support-cancellation"]
+    assert [row["canonical_edge_ids"] for row in real] == [[remote]]
+    assert not real[0]["candidate_relevant"]
+    assert real[0]["candidate_relevance_reasons"] == []
+    assert len(cancellation) == 1
+    assert cancellation[0]["support_cancellation_edge_ids"] == [local]
+    assert labels == ["support-cancellation"]
+    assert disconnected
+
+
+def test_difference_components_accept_x_empty_cancellation_and_reject_unexplained() -> None:
+    graph = _unsafe_graph()
+    domain = next(iter(graph.domain_graphs))
+    local = next(edge.edge_id for edge in graph.edges if edge.target == 1 and edge.source == 0)
+    components, labels, disconnected = _difference_components(
+        graph, _evaluation(candidate=(local,), residual=(local,)), domain
+    )
+    assert len(components) == 1
+    assert components[0]["certificate_kind"] == "support-cancellation"
+    assert labels == ["support-cancellation"]
+    assert not disconnected
+    with pytest.raises(AssertionError, match="neither an X support difference"):
+        _difference_components(graph, _evaluation(), domain)
+    with pytest.raises(AssertionError, match="X-empty support decomposition"):
+        _difference_components(
+            graph,
+            _evaluation(candidate=(local,), residual=(local,), frame_compatible=False),
+            domain,
+        )
+
+
+def test_difference_components_retain_remote_x_without_cancellation() -> None:
+    graph = _unsafe_graph()
+    domain = next(iter(graph.domain_graphs))
+    local = next(edge.edge_id for edge in graph.edges if edge.target == 1 and edge.source == 0)
+    remote = next(edge.edge_id for edge in graph.edges if edge.source == 2 and edge.target is None)
+    components, labels, disconnected = _difference_components(
+        graph,
+        _evaluation(base=(local, remote), candidate=(local,)),
+        domain,
+    )
+    assert len(components) == 1
+    assert components[0]["certificate_kind"] == "real-x-component"
+    assert components[0]["canonical_edge_ids"] == [remote]
+    assert not components[0]["candidate_relevant"]
+    assert labels == []
+    assert disconnected
 
 
 def _rollback_accounting_graph() -> CompiledPromatchGraph:
@@ -185,10 +271,32 @@ def test_context_views_are_sorted_and_separate_on_a_nontrivial_shot(graph) -> No
             assert "in-domain" not in row["omitted_context_labels"]
         assert row["degeneracy_diagnostics"] == sorted(set(row["degeneracy_diagnostics"]))
         assert set(row["degeneracy_diagnostics"]) <= {
-            "same-pair-different-path-or-frame", "equal-weight-logical-class", "unclassified"
+            "same-pair-different-path-or-frame", "equal-weight-logical-class",
+            "disconnected-support-reconfiguration", "unclassified"
         }
+        real_union = set()
+        cancellation_union = set()
         for component in row["support_difference_components"]:
             assert "support_cancellation_edge_ids" in component
+            assert component["component_detector_ids"] == sorted(
+                set(component["component_detector_ids"])
+            )
+            assert component["candidate_support_witness_edge_ids"] == sorted(
+                set(component["candidate_support_witness_edge_ids"])
+            )
+            assert component["candidate_boundary_witness_detector_ids"] == sorted(
+                set(component["candidate_boundary_witness_detector_ids"])
+            )
+            assert component["candidate_relevance_reasons"] == sorted(
+                set(component["candidate_relevance_reasons"])
+            )
+            if component["certificate_kind"] == "real-x-component":
+                real_union.update(component["canonical_edge_ids"])
+                assert not component["support_cancellation_edge_ids"]
+            else:
+                assert component["certificate_kind"] == "support-cancellation"
+                assert not component["canonical_edge_ids"]
+                cancellation_union.update(component["support_cancellation_edge_ids"])
         assert row["support_cancellation_edge_ids"] == sorted(
             set(row["candidate_support_edge_ids"]).intersection(row["residual_support_edge_ids"])
         )
@@ -199,6 +307,11 @@ def test_context_views_are_sorted_and_separate_on_a_nontrivial_shot(graph) -> No
         assert row["Q_forced_parity_support_edge_ids"] == sorted(p ^ r)
         assert row["X_support_difference_edge_ids"] == sorted(b ^ p ^ r)
         assert row["P_intersection_R_edge_ids"] == sorted(p & r)
+        assert sorted(real_union) == row["X_support_difference_edge_ids"]
+        assert sorted(cancellation_union) == row["P_intersection_R_edge_ids"]
+        assert row["support_difference_representation_version"] == (
+            "promatch-support-difference-v2"
+        )
         assert row["supports_square_free"]
         for name in (
             "base_support_weight", "residual_support_weight", "base_backend_weight",

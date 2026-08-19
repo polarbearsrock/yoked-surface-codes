@@ -361,12 +361,14 @@ def _expected_context_taxonomy() -> dict[str, Any]:
         "cross-patch-or-basis", "support-cancellation", "in-domain",
     ]
     return {
-        "version": "promatch-support-context-v1",
+        "version": "promatch-support-context-v2",
         "multi_labels": labels,
         "exclusive_display_priority": labels,
+        "no_candidate_context_display_label": "none",
         "degeneracy_diagnostics": [
             "same-pair-different-path-or-frame",
-            "equal-weight-logical-class", "unclassified",
+            "equal-weight-logical-class",
+            "disconnected-support-reconfiguration", "unclassified",
         ],
     }
 
@@ -1620,6 +1622,203 @@ def _require_float_hex_companions(value: Any, *, path: str = "audit") -> None:
             _require_float_hex_companions(item, path=f"{path}[{index}]")
 
 
+def _validate_support_difference_ledger(
+    row: Mapping[str, Any], *, path: str, graph: Any | None = None
+) -> None:
+    """Fail-closed validation of the v2 support certificate before persistence."""
+
+    def canonical_edge_ids(value: Any) -> bool:
+        return (
+            isinstance(value, list)
+            and all(type(edge_id) is int and edge_id >= 0 for edge_id in value)
+            and value == sorted(set(value))
+        )
+
+    if row.get("support_difference_representation_version") != "promatch-support-difference-v2":
+        raise ValueError(f"{path} lacks the exact v2 support-difference representation")
+    components = row.get("support_difference_components")
+    if not isinstance(components, list):
+        raise ValueError(f"{path} support_difference_components must be an array")
+    exact_keys = {
+        "certificate_kind", "canonical_edge_ids", "support_cancellation_edge_ids",
+        "component_detector_ids", "candidate_support_witness_edge_ids",
+        "candidate_boundary_witness_detector_ids",
+        "labels", "candidate_relevant", "candidate_relevance_reasons",
+    }
+    labels_vocab = set(_expected_context_taxonomy()["multi_labels"])
+    reason_vocab = {
+        "candidate-support-edge", "candidate-boundary-detector",
+        "candidate-residual-support-cancellation",
+    }
+    detector_boundary_ids = row.get("detector_boundary_ids")
+    if not canonical_edge_ids(detector_boundary_ids):
+        raise ValueError(f"{path} detector_boundary_ids is not a canonical detector set")
+    real: set[int] = set()
+    cancellations: set[int] = set()
+    candidate_labels: set[str] = set()
+    disconnected = False
+    real_components: list[Mapping[str, Any]] = []
+    cancellation_components: list[Mapping[str, Any]] = []
+    for component in components:
+        if not isinstance(component, Mapping) or set(component) != exact_keys:
+            raise ValueError(f"{path} support component fields are not exact")
+        edges = component["canonical_edge_ids"]
+        cancel = component["support_cancellation_edge_ids"]
+        detector_ids = component["component_detector_ids"]
+        support_witness = component["candidate_support_witness_edge_ids"]
+        boundary_witness = component["candidate_boundary_witness_detector_ids"]
+        labels = component["labels"]
+        reasons = component["candidate_relevance_reasons"]
+        relevant = component["candidate_relevant"]
+        if (
+            not canonical_edge_ids(edges)
+            or not canonical_edge_ids(cancel)
+            or not canonical_edge_ids(detector_ids)
+            or not canonical_edge_ids(support_witness)
+            or not canonical_edge_ids(boundary_witness)
+            or not isinstance(labels, list)
+            or any(not isinstance(label, str) for label in labels)
+            or labels != sorted(set(labels))
+            or set(labels) - labels_vocab
+            or ("in-domain" in labels and len(labels) != 1)
+            or not isinstance(reasons, list)
+            or any(not isinstance(reason, str) for reason in reasons)
+            or reasons != sorted(set(reasons))
+            or set(reasons) - reason_vocab
+            or not isinstance(relevant, bool)
+        ):
+            raise ValueError(f"{path} support component is not canonical")
+        if component["certificate_kind"] == "real-x-component":
+            expected_support_witness = sorted(
+                set(edges).intersection(row.get("P_candidate_support_edge_ids", []))
+            )
+            expected_boundary_witness = sorted(
+                set(detector_ids).intersection(row.get("detector_boundary_ids", []))
+            )
+            expected_reasons = sorted(
+                (["candidate-support-edge"] if expected_support_witness else [])
+                + (["candidate-boundary-detector"] if expected_boundary_witness else [])
+            )
+            if graph is not None:
+                expected_detector_ids: set[int] = set()
+                for edge_id in edges:
+                    if edge_id >= len(graph.edges):
+                        raise ValueError(f"{path} component references an unknown graph edge")
+                    edge = graph.edges[edge_id]
+                    expected_detector_ids.add(int(edge.source))
+                    if edge.target is not None:
+                        expected_detector_ids.add(int(edge.target))
+                if detector_ids != sorted(expected_detector_ids):
+                    raise ValueError(f"{path} component detector witness disagrees with graph")
+            if (
+                not edges
+                or cancel
+                or support_witness != expected_support_witness
+                or boundary_witness != expected_boundary_witness
+                or reasons != expected_reasons
+                or "support-cancellation" in labels
+                or bool(reasons) != relevant
+                or real.intersection(edges)
+            ):
+                raise ValueError(f"{path} real X component is malformed or overlapping")
+            real.update(edges)
+            disconnected |= not relevant
+            real_components.append(component)
+        elif component["certificate_kind"] == "support-cancellation":
+            if (
+                edges
+                or not cancel
+                or detector_ids or support_witness or boundary_witness
+                or cancellations
+                or "support-cancellation" not in labels
+                or not relevant
+                or reasons != ["candidate-residual-support-cancellation"]
+            ):
+                raise ValueError(f"{path} cancellation certificate is malformed")
+            cancellations.update(cancel)
+            cancellation_components.append(component)
+        else:
+            raise ValueError(f"{path} has an unknown support certificate kind")
+        if relevant:
+            candidate_labels.update(labels)
+    if components != sorted(
+        real_components, key=lambda component: component["canonical_edge_ids"]
+    ) + cancellation_components:
+        raise ValueError(f"{path} support certificates are not in canonical order")
+    supports: dict[str, list[int]] = {}
+    for field in (
+        "B_base_support_edge_ids", "P_candidate_support_edge_ids",
+        "R_residual_support_edge_ids", "Q_forced_parity_support_edge_ids",
+        "X_support_difference_edge_ids", "P_intersection_R_edge_ids",
+    ):
+        value = row.get(field)
+        if not canonical_edge_ids(value):
+            raise ValueError(f"{path} {field} is not a canonical support")
+        supports[field] = value
+    b, p, r = (set(supports[name]) for name in (
+        "B_base_support_edge_ids", "P_candidate_support_edge_ids",
+        "R_residual_support_edge_ids",
+    ))
+    for alias, canonical in (
+        ("base_support_edge_ids", supports["B_base_support_edge_ids"]),
+        ("candidate_support_edge_ids", supports["P_candidate_support_edge_ids"]),
+        ("residual_support_edge_ids", supports["R_residual_support_edge_ids"]),
+    ):
+        if row.get(alias) != canonical:
+            raise ValueError(f"{path} {alias} disagrees with its named B/P/R support")
+    if supports["Q_forced_parity_support_edge_ids"] != sorted(p ^ r):
+        raise ValueError(f"{path} Q support does not reconcile")
+    if supports["X_support_difference_edge_ids"] != sorted(b ^ p ^ r):
+        raise ValueError(f"{path} X support does not reconcile")
+    if supports["P_intersection_R_edge_ids"] != sorted(p & r):
+        raise ValueError(f"{path} P intersection R does not reconcile")
+    if sorted(real) != supports["X_support_difference_edge_ids"]:
+        raise ValueError(f"{path} real components do not partition X")
+    if sorted(cancellations) != supports["P_intersection_R_edge_ids"]:
+        raise ValueError(f"{path} cancellation certificates do not reconcile")
+    if row.get("support_cancellation_edge_ids") != sorted(cancellations):
+        raise ValueError(f"{path} top-level cancellation support does not reconcile")
+    if row.get("support_difference_component_labels") != sorted(candidate_labels):
+        raise ValueError(f"{path} candidate-context labels do not reconcile")
+    if row.get("disconnected_support_reconfiguration") is not disconnected:
+        raise ValueError(f"{path} disconnected-support flag does not reconcile")
+    expected_exclusive = next(
+        (
+            label
+            for label in _expected_context_taxonomy()["exclusive_display_priority"]
+            if label in candidate_labels
+        ),
+        None,
+    )
+    if row.get("exclusive_support_component_context") != expected_exclusive:
+        raise ValueError(f"{path} exclusive candidate context does not reconcile")
+    diagnostics = row.get("degeneracy_diagnostics")
+    if (
+        not isinstance(diagnostics, list)
+        or any(not isinstance(label, str) for label in diagnostics)
+        or diagnostics != sorted(set(diagnostics))
+        or set(diagnostics)
+        - set(_expected_context_taxonomy()["degeneracy_diagnostics"])
+        or ("disconnected-support-reconfiguration" in diagnostics) != disconnected
+    ):
+        raise ValueError(f"{path} degeneracy diagnostics do not reconcile")
+    if not supports["X_support_difference_edge_ids"]:
+        if row.get("frame_compatible") is not True:
+            raise ValueError(f"{path} has an algebraically impossible X-empty frame conflict")
+        if (
+            row.get("oracle_policy_accepts") is False
+            and not supports["P_intersection_R_edge_ids"]
+        ):
+            raise ValueError(f"{path} unsafe row has no X or cancellation certificate")
+    for flag in (
+        "supports_square_free", "B_base_support_square_free",
+        "P_candidate_support_square_free", "R_residual_support_square_free",
+        "Q_forced_parity_support_square_free", "X_support_difference_square_free",
+    ):
+        if row.get(flag) is not True:
+            raise ValueError(f"{path} {flag} must be true")
+
+
 def _audit_policy_shot(
     graph: Any,
     syndrome: np.ndarray,
@@ -1660,6 +1859,11 @@ def _audit_policy_shot(
         if not isinstance(values, (tuple, list)) or not all(isinstance(v, Mapping) for v in values):
             raise ValueError(f"policy core {name} must be an array of objects")
         collections[name] = tuple(dict(v) for v in values)
+    for name in ("proposals", "counterfactuals"):
+        for index, row in enumerate(collections[name]):
+            _validate_support_difference_ledger(
+                row, path=f"audit.{name}[{index}]", graph=graph
+            )
     if not isinstance(raw["shot"], Mapping):
         raise ValueError("policy core shot must be an object")
     return NormalizedPolicyShot(
@@ -1974,7 +2178,11 @@ def _worker_tail_censor_attestation(
         signature = row.get("proposal_signature", row.get("proposal_sha256"))
         if signature is None:
             raise ValueError("counterfactual row lacks a proposal signature")
-        key = state, canonical_json_bytes(signature)
+        # Proposal signatures are structured JSON values (normally arrays),
+        # while canonical_json_bytes intentionally accepts only a top-level
+        # object.  Wrap the value in a version-stable object before comparing
+        # exact bytes within one original state.
+        key = state, canonical_json_bytes({"proposal_signature": signature})
         if key in seen:
             repeated += 1
         seen.add(key)
@@ -2159,6 +2367,8 @@ def verify_worker_shard(
                 "graph_fingerprint"
             ) != config["cell"]["graph_fingerprint"]:
                 raise ValueError(f"{name} row graph fingerprint mismatch")
+            if name in {"proposals", "counterfactuals"}:
+                _validate_support_difference_ledger(row, path=name)
             _require_float_hex_companions(row, path=name)
             parsed[name].append(row)
         if name == "shots":

@@ -67,6 +67,7 @@
     "degeneracy_diagnostics": [
       "same-pair-different-path-or-frame",
       "equal-weight-logical-class",
+      "disconnected-support-reconfiguration",
       "unclassified"
     ],
     "exclusive_display_priority": [
@@ -87,7 +88,8 @@
       "support-cancellation",
       "in-domain"
     ],
-    "version": "promatch-support-context-v1"
+    "no_candidate_context_display_label": "none",
+    "version": "promatch-support-context-v2"
   },
   "counterfactual": {
     "casebook_full_slate_only": true,

@@ -16,7 +16,9 @@ def _write_json(path: Path, value) -> None:
     path.write_bytes(canonical_json_bytes(value) + b"\n")
 
 
-def _fixture_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def _fixture_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, mutate_rows=None,
+):
     root = tmp_path / "corpus"
     root.mkdir()
     config = {
@@ -78,7 +80,10 @@ def _fixture_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(casebook, "verify_existing_policy_analysis", lambda *args: {})
     graph = SimpleNamespace(
         num_detectors=8,
-        edges=(SimpleNamespace(edge_id=0, source=0, target=1),),
+        edges=(
+            SimpleNamespace(edge_id=0, source=0, target=1),
+            SimpleNamespace(edge_id=1, source=2, target=3),
+        ),
         layout=SimpleNamespace(
             coordinates=((0.0, 0.0), (1.0, 0.0), *(() for _ in range(6))),
             roles=(SimpleNamespace(patch_id=0, check_basis="X", time=0, window_id=0),) * 8,
@@ -92,7 +97,7 @@ def _fixture_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         observed["syndrome"] = np.asarray(syndrome).copy()
         observed["kwargs"] = kwargs
         assert "actual_observables" not in kwargs
-        return [
+        rows = [
             {
                 "trajectory_origin": "casebook-exhaustive",
                 "graph_fingerprint": "g" * 64, "layout_fingerprint": "l" * 64,
@@ -102,9 +107,42 @@ def _fixture_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
                 "cost_excess": 1.0, "cost_excess_hex": float(1).hex(),
                 "oracle_policy_accepts": False, "stage": 1,
                 "local_active_state_fingerprint": [0, 1],
+                "detector_boundary_ids": [0, 1],
                 "P_candidate_support_edge_ids": [0],
-                "X_support_difference_edge_ids": [0],
-                "support_difference_component_labels": ["in-domain"],
+                "X_support_difference_edge_ids": [1],
+                "P_intersection_R_edge_ids": [0],
+                "support_cancellation_edge_ids": [0],
+                "support_difference_components": [
+                    {
+                        "certificate_kind": "real-x-component",
+                        "canonical_edge_ids": [1],
+                        "support_cancellation_edge_ids": [],
+                        "component_detector_ids": [2, 3],
+                        "candidate_support_witness_edge_ids": [],
+                        "candidate_boundary_witness_detector_ids": [],
+                        "labels": ["yoke-hub"],
+                        "candidate_relevant": False,
+                        "candidate_relevance_reasons": [],
+                    },
+                    {
+                        "certificate_kind": "support-cancellation",
+                        "canonical_edge_ids": [],
+                        "support_cancellation_edge_ids": [0],
+                        "component_detector_ids": [],
+                        "candidate_support_witness_edge_ids": [],
+                        "candidate_boundary_witness_detector_ids": [],
+                        "labels": ["support-cancellation"],
+                        "candidate_relevant": True,
+                        "candidate_relevance_reasons": [
+                            "candidate-residual-support-cancellation"
+                        ],
+                    },
+                ],
+                "support_difference_component_labels": ["support-cancellation"],
+                "support_difference_representation_version": (
+                    "promatch-support-difference-v2"
+                ),
+                "disconnected_support_reconfiguration": True,
                 "feature_visibility": {"candidate": "L1-local-dynamic"},
                 "terminal_action": None, "exhaustion_kind": None,
                 "support_classification_wall_ns": 999,
@@ -118,14 +156,37 @@ def _fixture_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
                 "cost_excess": 0.0, "cost_excess_hex": float(0).hex(),
                 "oracle_policy_accepts": True, "stage": 2,
                 "local_active_state_fingerprint": [0, 1],
+                "detector_boundary_ids": [0, 1],
                 "P_candidate_support_edge_ids": [0],
-                "X_support_difference_edge_ids": [],
-                "support_difference_component_labels": [],
+                "X_support_difference_edge_ids": [0],
+                "P_intersection_R_edge_ids": [],
+                "support_cancellation_edge_ids": [],
+                "support_difference_components": [{
+                    "certificate_kind": "real-x-component",
+                    "canonical_edge_ids": [0],
+                    "support_cancellation_edge_ids": [],
+                    "component_detector_ids": [0, 1],
+                    "candidate_support_witness_edge_ids": [0],
+                    "candidate_boundary_witness_detector_ids": [0, 1],
+                    "labels": ["in-domain"],
+                    "candidate_relevant": True,
+                    "candidate_relevance_reasons": [
+                        "candidate-boundary-detector", "candidate-support-edge",
+                    ],
+                }],
+                "support_difference_component_labels": ["in-domain"],
+                "support_difference_representation_version": (
+                    "promatch-support-difference-v2"
+                ),
+                "disconnected_support_reconfiguration": False,
                 "feature_visibility": {"candidate": "L1-local-dynamic"},
                 "terminal_action": "exhaustive-true-exhaustion",
                 "exhaustion_kind": "proposal", "counterfactual_wall_ns": 888,
             },
         ]
+        if mutate_rows is not None:
+            mutate_rows(rows)
+        return rows
     monkeypatch.setattr(casebook, "expand_policy_casebook_state", expand)
     return root, config, state_id, observed
 
@@ -148,20 +209,160 @@ def test_authenticated_expansion_is_detector_only_atomic_and_idempotent(
     assert state_object["first_safe_rank"] == 2
     assert len(state_object["all_veto_timeline"]) == 2
     assert "true exhaustion" in state_object["factual_caption"]
+    assert "1 candidate-relevant X" in state_object["factual_caption"]
+    assert "1 disconnected X" in state_object["factual_caption"]
+    assert "1 P intersection R cancellation" in state_object["factual_caption"]
+    assert state_object["context_labels"] == ["in-domain", "support-cancellation"]
+    assert state_object["remote_support_role_labels"] == ["yoke-hub"]
+    assert "yoke-hub" not in state_object["context_labels"]
+    assert state_object["all_veto_timeline"][0] == {
+        "rank": 1,
+        "stage": 1,
+        "proposal_sha256": "b" * 64,
+        "oracle_policy_accepts": False,
+        "candidate_path_edge_ids": [0],
+        "support_difference_edge_ids": [1],
+        "candidate_relevant_support_difference_edge_ids": [],
+        "disconnected_support_difference_edge_ids": [1],
+        "support_cancellation_edge_ids": [0],
+        "support_difference_components": [
+            {
+                "certificate_kind": "real-x-component",
+                "canonical_edge_ids": [1],
+                "support_cancellation_edge_ids": [],
+                "component_detector_ids": [2, 3],
+                "candidate_support_witness_edge_ids": [],
+                "candidate_boundary_witness_detector_ids": [],
+                "labels": ["yoke-hub"],
+                "candidate_relevant": False,
+                "candidate_relevance_reasons": [],
+            },
+            {
+                "certificate_kind": "support-cancellation",
+                "canonical_edge_ids": [],
+                "support_cancellation_edge_ids": [0],
+                "component_detector_ids": [],
+                "candidate_support_witness_edge_ids": [],
+                "candidate_boundary_witness_detector_ids": [],
+                "labels": ["support-cancellation"],
+                "candidate_relevant": True,
+                "candidate_relevance_reasons": [
+                    "candidate-residual-support-cancellation"
+                ],
+            },
+        ],
+        "disconnected_support_reconfiguration": True,
+        "context_labels": ["support-cancellation"],
+        "remote_support_role_labels": ["yoke-hub"],
+    }
     snapshot = state_object["support_graph_snapshot"]
+    assert snapshot["schema"] == "promatch-l1-policy-audit-support-graph-snapshot-v2"
     assert snapshot["graph_fingerprint"] == "g" * 64
-    assert [row["detector_id"] for row in snapshot["detectors"]] == [0, 1]
-    assert snapshot["edges"] == [{
-        "candidate_ranks": [1, 2], "edge_id": 0,
-        "membership": ["candidate-P", "support-difference-X"],
-        "source": 0, "support_difference_ranks": [1], "target": 1,
-    }]
+    assert [row["detector_id"] for row in snapshot["detectors"]] == [0, 1, 2, 3]
+    assert snapshot["edges"] == [
+        {
+            "candidate_ranks": [1, 2], "edge_id": 0,
+            "membership": [
+                "candidate-P", "support-difference-X", "candidate-relevant-X",
+                "support-cancellation-P-intersection-R",
+            ],
+            "source": 0, "support_difference_ranks": [2], "target": 1,
+            "candidate_relevant_ranks": [2], "disconnected_ranks": [],
+            "support_cancellation_ranks": [1],
+        },
+        {
+            "candidate_ranks": [], "edge_id": 1,
+            "membership": ["support-difference-X", "disconnected-X"],
+            "source": 2, "support_difference_ranks": [1], "target": 3,
+            "candidate_relevant_ranks": [], "disconnected_ranks": [1],
+            "support_cancellation_ranks": [],
+        },
+    ]
     with __import__("gzip").open(
         root / "casebook" / "expansion" / "exhaustive.jsonl.gz", "rt"
     ) as stream:
         rows = [json.loads(line) for line in stream]
     assert all(not any(key.endswith("_wall_ns") for key in row) for row in rows)
     assert casebook.expand_authenticated_policy_casebook(root, config=config) == manifest
+
+
+def _remove_v2_version(rows) -> None:
+    del rows[0]["support_difference_representation_version"]
+
+
+def _add_component_field(rows) -> None:
+    rows[0]["support_difference_components"][0]["unexpected"] = True
+
+
+def _invalidate_component_kind(rows) -> None:
+    rows[0]["support_difference_components"][0]["certificate_kind"] = "remote-context"
+
+
+def _invalidate_component_relevance(rows) -> None:
+    rows[0]["support_difference_components"][0]["candidate_relevant"] = True
+
+
+def _misstate_candidate_support_relevance(rows) -> None:
+    rows[1]["support_difference_components"][0]["candidate_relevance_reasons"] = [
+        "candidate-boundary-detector"
+    ]
+
+
+def _fake_candidate_support_witness(rows) -> None:
+    rows[0]["support_difference_components"][0][
+        "candidate_support_witness_edge_ids"
+    ] = [1]
+
+
+def _fake_candidate_boundary_witness(rows) -> None:
+    rows[0]["support_difference_components"][0][
+        "candidate_boundary_witness_detector_ids"
+    ] = [2]
+
+
+def _fake_cancellation_witness(rows) -> None:
+    rows[0]["support_difference_components"][1]["component_detector_ids"] = [0]
+
+
+def _disconnect_component_partition(rows) -> None:
+    rows[0]["X_support_difference_edge_ids"] = []
+
+
+def _disconnect_cancellation_certificate(rows) -> None:
+    rows[0]["P_intersection_R_edge_ids"] = []
+    rows[0]["support_cancellation_edge_ids"] = []
+
+
+def _mislabel_remote_component_as_context(rows) -> None:
+    rows[0]["support_difference_component_labels"] = [
+        "support-cancellation", "yoke-hub",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        (_remove_v2_version, "support_difference_representation_version"),
+        (_add_component_field, "exact v2 component fields"),
+        (_invalidate_component_kind, "unsupported support component kind"),
+        (_invalidate_component_relevance, "candidate relevance"),
+        (_misstate_candidate_support_relevance, "relevance reasons disagree"),
+        (_fake_candidate_support_witness, "candidate support witness disagrees"),
+        (_fake_candidate_boundary_witness, "candidate boundary witness disagrees"),
+        (_fake_cancellation_witness, "deterministic empty shape"),
+        (_disconnect_component_partition, "exactly partition X support"),
+        (_disconnect_cancellation_certificate, "exactly represent P intersection R"),
+        (_mislabel_remote_component_as_context, "candidate-relevant component"),
+    ],
+)
+def test_exhaustive_v2_support_evidence_is_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mutation, message: str,
+) -> None:
+    root, config, _, _ = _fixture_root(
+        tmp_path, monkeypatch, mutate_rows=mutation,
+    )
+    with pytest.raises(casebook.PolicyCasebookError, match=message):
+        casebook.expand_authenticated_policy_casebook(root, config=config)
 
 
 def test_expansion_tamper_and_complete_are_fail_closed(

@@ -612,20 +612,38 @@ vertex. Each detector-to-boundary edge receives its own unique virtual boundary
 leaf keyed by canonical edge ID. Never connect all boundary edges through one
 shared virtual vertex; doing so would spuriously merge unrelated components.
 
-The **candidate-relevant components** are components that contain:
+Retain **every** real connected component of `X`. Mark a component
+`candidate_relevant` when it contains:
 
 - an uncancelled candidate edge; or
 - any detector endpoint of `P`.
 
-If `X` is empty for a frame-conflicting or positive-cost proposal, or if no
-candidate-relevant component can be identified, fail closed unless the entire
-difference is explicitly accounted for by `P ∩ R` and a versioned
-`support-cancellation` diagnostic. A correction/frame reconciliation failure
-is fatal, not `unclassified`.
+Record deterministic relevance reasons separately (`candidate-support-edge`
+and/or `candidate-boundary-detector`). Components with neither reason are
+retained as real evidence and produce the versioned
+`disconnected-support-reconfiguration` degeneracy diagnostic, but their graph
+role labels do not enter policy-visible candidate context.
+
+Every real component carries authenticated relevance witnesses:
+`component_detector_ids` is the exact sorted detector incidence of its
+canonical edges, `candidate_support_witness_edge_ids` is the exact component
+intersection with `P`, and `candidate_boundary_witness_detector_ids` is the
+exact detector intersection with the proposal boundary. The producer verifies
+all three against the compiled graph; offline consumers recompute both
+intersections from the self-contained ledger. Cancellation certificates use
+empty arrays for all three witness fields.
+
+Represent nonempty `P ∩ R` independently with one synthetic
+`support-cancellation` certificate whose canonical `X` edge list is empty.
+The union of real-component edges must equal `X` exactly, and the synthetic
+cancellation support must equal `P ∩ R` exactly. `X` empty with nonempty
+`P ∩ R` is valid. An unsafe proposal with both empty is fatal. Because edge
+observable masks compose linearly, `X` empty with a frame conflict is
+algebraically impossible and is also fatal.
 
 ### 8.2 Multi-label component tags
 
-Assign every candidate-relevant component all applicable tags:
+Assign every real component all applicable graph-role tags:
 
 - `yoke`: contains a yoke detector, yoke-hub incidence, or edge whose frozen
   layout role is yoke-mediated;
@@ -641,8 +659,10 @@ Assign every candidate-relevant component all applicable tags:
   way material to the explanation and is recorded explicitly.
 
 `in-domain` is exclusive of the omitted-context tags. The other tags are
-multi-label and may overlap. The ledger stores tags per component and their
-union per proposal.
+multi-label and may overlap. The ledger stores tags per component. Its
+candidate-context union includes only candidate-relevant real components and
+the independent cancellation certificate; disconnected component roles are
+diagnostic evidence and are never conflated with policy-visible context.
 
 Apply the same role vocabulary independently to matched active partners and to
 complete selected-support paths. Store sorted unique
@@ -663,7 +683,9 @@ Also record the following nonexclusive degeneracy diagnostics:
 - `same-pair-different-path-or-frame`: the active pairing agrees with the
   candidate pairing but its selected support path or observable frame differs;
 - `equal-weight-logical-class`: the candidate is cost-compatible but
-  frame-incompatible; and
+  frame-incompatible;
+- `disconnected-support-reconfiguration`: at least one retained real `X`
+  component has no candidate-relevance reason; and
 - `unclassified`: permitted only for a structurally reconciled conflict with
   none of the preceding context or degeneracy labels.
 
@@ -682,7 +704,12 @@ cross-window
 cross-patch-or-basis
 support-cancellation
 in-domain
+none
 ```
+
+`none` is the frozen display category for proposals with no candidate-relevant
+component context. It is included in context-conditioned cost ECDFs and
+first-conflict stacks; category totals must reconcile their full denominator.
 
 The first present tag is the exclusive display label. All scientific tables
 must also show the multi-label counts. Changing this priority after seeing the
@@ -1385,7 +1412,7 @@ excluded from scientific digests and documented.
 
 ### 17.5 Freeze and launch
 
-- [x] Run the full test suite (522 tests passed on 2026-08-18).
+- [x] Run the full test suite (541 tests passed on 2026-08-19).
 - [ ] Commit implementation A and push it.
 - [ ] Run 32-shot integration smoke under `$TMPDIR`.
 - [ ] Run disjoint 100-shot, 32-process timing/storage probe.
@@ -1503,6 +1530,10 @@ Synthetic graph fixtures must cover:
 - cross-patch/basis support;
 - multi-label components;
 - candidate/residual edge cancellation;
+- a nonempty disconnected `X` component with cancellation;
+- a nonempty disconnected `X` component without cancellation;
+- exact real-component union reconciliation against `X`;
+- algebraically impossible empty-`X` frame conflict failure;
 - empty/unknown/ambiguous support failure; and
 - deterministic exclusive display priority.
 
