@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Validate and analyze immutable ProMatch B1 policy-audit shards."""
+
+from __future__ import annotations
+
+import argparse
+import os
+from pathlib import Path
+import sys
+
+
+for _name in (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+):
+    os.environ[_name] = "1"
+if os.environ.get("TMPDIR"):
+    os.environ.setdefault(
+        "MPLCONFIGDIR", str(Path(os.environ["TMPDIR"]) / "yoked-surface-codes-matplotlib")
+    )
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
+
+from yoked.decoding._promatch_policy_analysis import (  # noqa: E402
+    analyze_policy_audit,
+    load_policy_audit,
+    verify_existing_policy_analysis,
+    write_policy_analysis,
+)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Analyze a COLLECTION_READY ProMatch B1 corpus strictly from its "
+            "canonical gzip ledgers; no sampling or decoding is performed."
+        )
+    )
+    parser.add_argument("input", type=Path, help="collection root")
+    parser.add_argument(
+        "--no-plots",
+        action="store_true",
+        help="write all machine-readable plot data but skip PNG rendering",
+    )
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="recompute from frozen ledgers and verify an installed analysis",
+    )
+    args = parser.parse_args()
+    corpus = load_policy_audit(args.input)
+    analysis = analyze_policy_audit(corpus)
+    manifest = (
+        verify_existing_policy_analysis(corpus, analysis)
+        if args.verify
+        else write_policy_analysis(corpus, analysis, render_plots=not args.no_plots)
+    )
+    print(
+        f"{'verified' if args.verify else 'analyzed'} {args.input.resolve()} "
+        f"analysis_sha256={manifest['analysis_sha256']}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

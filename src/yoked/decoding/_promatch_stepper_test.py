@@ -134,6 +134,31 @@ def test_proposal_is_immutable_and_does_not_mutate_before_accept() -> None:
     np.testing.assert_array_equal(corrected, [0, 0])
 
 
+def test_candidate_and_stage3_enumeration_telemetry_is_monotone() -> None:
+    graph = _graph(2, (_edge(0, 0, 1, weight=2),))
+    stepper = _stepper(graph)
+
+    assert stepper.total_candidate_enumeration_ns == 0
+    assert stepper.total_stage3_enumeration_ns == 0
+    proposal = stepper.next_proposal()
+    assert proposal is not None
+    assert stepper.last_candidate_enumeration_ns >= stepper.last_stage3_enumeration_ns >= 0
+    assert stepper.total_candidate_enumeration_ns == stepper.last_candidate_enumeration_ns
+    assert stepper.total_stage3_enumeration_ns == stepper.last_stage3_enumeration_ns
+
+    # Reading an already-pending proposal must not perform or charge another
+    # candidate enumeration.
+    before = (
+        stepper.total_candidate_enumeration_ns,
+        stepper.total_stage3_enumeration_ns,
+    )
+    assert stepper.next_proposal() is proposal
+    assert before == (
+        stepper.total_candidate_enumeration_ns,
+        stepper.total_stage3_enumeration_ns,
+    )
+
+
 def test_veto_is_state_local_and_accept_restarts_stage_order() -> None:
     graph = _graph(
         4,

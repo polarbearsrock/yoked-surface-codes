@@ -1,0 +1,253 @@
+{
+  "arms": [
+    {
+      "arm_id": "u0-joint-y2",
+      "policy": "u0",
+      "transaction": null
+    },
+    {
+      "arm_id": "pu-v3-window-hw10-boundary-disabled-observable-zero-frame-tx-joint-y2-shadow",
+      "policy": "v3-shadow",
+      "transaction": "tx"
+    },
+    {
+      "arm_id": "pu-ocost-window-hw10-boundary-disabled-observable-zero-frame-tx-joint-y2",
+      "policy": "cost",
+      "transaction": "tx"
+    },
+    {
+      "arm_id": "pu-oframe-window-hw10-boundary-disabled-observable-zero-frame-tx-joint-y2",
+      "policy": "frame",
+      "transaction": "tx"
+    },
+    {
+      "arm_id": "pu-oframe-window-hw10-boundary-disabled-observable-zero-frame-partial-joint-y2",
+      "policy": "frame",
+      "transaction": "partial"
+    }
+  ],
+  "artifact": {
+    "format": "canonical-jsonl-gzip",
+    "gzip_filename": "",
+    "gzip_level": 9,
+    "gzip_mtime": 0,
+    "temporary_root": "TMPDIR",
+    "whole_worker_shard_resume": true
+  },
+  "cell": {
+    "cell_id": "b1-d7-n6-y2-r28-p0.002",
+    "d": 7,
+    "generator": "yoked._yoked_memory_circuits:yoked_magic_memory_circuit",
+    "noise": "si1000",
+    "p": 0.002,
+    "patches": 6,
+    "r": 28,
+    "remove_x_yoke": false,
+    "style": "cz",
+    "yokes": 2
+  },
+  "claim_bearing": false,
+  "bootstrap": {
+    "quantile": "empirical-type-7",
+    "replicates": 10000,
+    "seed_roots": {
+      "proposal": "6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+      "workload": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+    },
+    "unit": "complete-physical-shot"
+  },
+  "casebook_selection": {
+    "algorithm": "context-stage-strata-nge20-median-distance-then-state-sha256-v1",
+    "expansion": "separate-post-selection-full-slate",
+    "minimum_stratum_states": 20,
+    "terminal_action_supplement": true,
+    "uses_actual_observables": false
+  },
+  "context_taxonomy": {
+    "degeneracy_diagnostics": [
+      "same-pair-different-path-or-frame",
+      "equal-weight-logical-class",
+      "unclassified"
+    ],
+    "exclusive_display_priority": [
+      "yoke",
+      "true-boundary",
+      "terminal",
+      "cross-window",
+      "cross-patch-or-basis",
+      "support-cancellation",
+      "in-domain"
+    ],
+    "multi_labels": [
+      "yoke",
+      "true-boundary",
+      "terminal",
+      "cross-window",
+      "cross-patch-or-basis",
+      "support-cancellation",
+      "in-domain"
+    ],
+    "version": "promatch-support-context-v1"
+  },
+  "counterfactual": {
+    "casebook_full_slate_only": true,
+    "ordering": "DomainProposalStepper-stage-then-candidate-key-v1",
+    "stop": "first-o-frame-safe-or-true-exhaustion",
+    "veto_budget": null
+  },
+  "decoder": {
+    "boundary_policy": "disabled",
+    "domain_mode": "windowd",
+    "observable_policy": "zero-frame",
+    "residual_hw_limit": 10
+  },
+  "dem_options": {
+    "approximate_disjoint_errors": true,
+    "decompose_errors": true
+  },
+  "frozen": false,
+  "fatal_gates": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+  "launch_gates": {
+    "free_bytes_min": 42949672960,
+    "probe_headroom_factor": 1.5,
+    "projected_artifact_bytes_max": 21474836480,
+    "projected_wall_seconds_max": 7200
+  },
+  "oracle": {
+    "actual_observables_forbidden": true,
+    "decimal_precision_digits": 4096,
+    "tolerance": {
+      "absolute": 1e-09,
+      "relative": 1e-06
+    },
+    "tolerance_sensitivity_relative": [
+      1e-07,
+      1e-06,
+      1e-05
+    ],
+    "weight_sum": "math.fsum-canonical-edge-weights"
+  },
+  "report_contract": {
+    "human_report": {
+      "encoding": "utf-8",
+      "format": "promatch-l1-policy-audit-human-report-v1",
+      "interpretation": "hypothesis-generating-not-causal-proof",
+      "line_endings": "lf",
+      "path": "analysis/report.md"
+    },
+    "bins": [
+      "window-offset-integers",
+      "domain-hw-integers",
+      "candidate-count-integers",
+      "unsafe-count-0-1-2-3-4plus",
+      "continuous-unbinned-ecdf"
+    ],
+    "plots": [
+      "certificate-flow",
+      "unsafe-fraction-by-stage",
+      "first-conflict-stage-context",
+      "cost-excess-ecdf",
+      "first-safe-action-rank",
+      "stage-transition-matrix",
+      "original-versus-alternative",
+      "risk-heatmaps",
+      "disagreement-association",
+      "event-relief",
+      "veto-chain-tails"
+    ],
+    "tables": [
+      "physical-cell-and-provenance",
+      "paired-outcomes",
+      "event-and-transaction-summary",
+      "certificate-by-stage",
+      "counterfactual-action-and-rank",
+      "context-and-visibility",
+      "fatal-and-interpretation-gates"
+    ]
+  },
+  "sampling": {
+    "seed_derivation": "sha256-root+promatch-policy-worker-v1+experiment-id+cell-id+worker-id-first8-uint64le",
+    "seed_roots": {
+      "probe": "c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4",
+      "scientific": "1717171717171717171717171717171717171717171717171717171717171717",
+      "smoke": "2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b"
+    },
+    "shots_per_worker": 625,
+    "total_shots": 20000,
+    "worker_ranges": [
+      {"shot_start": 0, "shots": 625, "worker_id": 0},
+      {"shot_start": 625, "shots": 625, "worker_id": 1},
+      {"shot_start": 1250, "shots": 625, "worker_id": 2},
+      {"shot_start": 1875, "shots": 625, "worker_id": 3},
+      {"shot_start": 2500, "shots": 625, "worker_id": 4},
+      {"shot_start": 3125, "shots": 625, "worker_id": 5},
+      {"shot_start": 3750, "shots": 625, "worker_id": 6},
+      {"shot_start": 4375, "shots": 625, "worker_id": 7},
+      {"shot_start": 5000, "shots": 625, "worker_id": 8},
+      {"shot_start": 5625, "shots": 625, "worker_id": 9},
+      {"shot_start": 6250, "shots": 625, "worker_id": 10},
+      {"shot_start": 6875, "shots": 625, "worker_id": 11},
+      {"shot_start": 7500, "shots": 625, "worker_id": 12},
+      {"shot_start": 8125, "shots": 625, "worker_id": 13},
+      {"shot_start": 8750, "shots": 625, "worker_id": 14},
+      {"shot_start": 9375, "shots": 625, "worker_id": 15},
+      {"shot_start": 10000, "shots": 625, "worker_id": 16},
+      {"shot_start": 10625, "shots": 625, "worker_id": 17},
+      {"shot_start": 11250, "shots": 625, "worker_id": 18},
+      {"shot_start": 11875, "shots": 625, "worker_id": 19},
+      {"shot_start": 12500, "shots": 625, "worker_id": 20},
+      {"shot_start": 13125, "shots": 625, "worker_id": 21},
+      {"shot_start": 13750, "shots": 625, "worker_id": 22},
+      {"shot_start": 14375, "shots": 625, "worker_id": 23},
+      {"shot_start": 15000, "shots": 625, "worker_id": 24},
+      {"shot_start": 15625, "shots": 625, "worker_id": 25},
+      {"shot_start": 16250, "shots": 625, "worker_id": 26},
+      {"shot_start": 16875, "shots": 625, "worker_id": 27},
+      {"shot_start": 17500, "shots": 625, "worker_id": 28},
+      {"shot_start": 18125, "shots": 625, "worker_id": 29},
+      {"shot_start": 18750, "shots": 625, "worker_id": 30},
+      {"shot_start": 19375, "shots": 625, "worker_id": 31}
+    ],
+    "workers": 32
+  },
+  "schema": "promatch-l1-policy-audit-protocol-v1",
+  "source_paths": [
+    "requirements.txt",
+    "src/yoked/_yoked_memory_circuits.py",
+    "src/yoked/decoding/__init__.py",
+    "src/yoked/decoding/_promatch.py",
+    "src/yoked/decoding/_promatch_decoder.py",
+    "src/yoked/decoding/_promatch_experiment.py",
+    "src/yoked/decoding/_promatch_graph.py",
+    "src/yoked/decoding/_promatch_layout.py",
+    "src/yoked/decoding/_promatch_oracle.py",
+    "src/yoked/decoding/_promatch_oracle_test.py",
+    "src/yoked/decoding/_promatch_oracle_replay.py",
+    "src/yoked/decoding/_promatch_oracle_replay_test.py",
+    "src/yoked/decoding/_promatch_stats.py",
+    "src/yoked/decoding/_promatch_stepper_test.py",
+    "src/yoked/decoding/_promatch_policy_audit.py",
+    "src/yoked/decoding/_promatch_policy_audit_test.py",
+    "src/yoked/decoding/_promatch_policy_casebook.py",
+    "src/yoked/decoding/_promatch_policy_casebook_test.py",
+    "src/yoked/decoding/_promatch_policy_experiment.py",
+    "src/yoked/decoding/_promatch_policy_experiment_test.py",
+    "src/yoked/decoding/_promatch_policy_analysis.py",
+    "src/yoked/decoding/_promatch_policy_analysis_test.py",
+    "experiments/PROMATCH_L1_POLICY_AUDIT_20K.md",
+    "tools/benchmark_promatch_policy_audit",
+    "tools/analyze_promatch_policy_audit"
+  ],
+  "status": "DRAFT",
+  "visibility_taxonomy": {
+    "classes": [
+      "L1-local-dynamic",
+      "L1-static-boundary",
+      "temporal-neighbor-dynamic",
+      "nonlocal-yoke-dynamic",
+      "oracle-only",
+      "posthoc-ground-truth"
+    ],
+    "version": "promatch-policy-visibility-v1"
+  }
+}

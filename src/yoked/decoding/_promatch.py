@@ -12,6 +12,7 @@ import dataclasses
 import enum
 import heapq
 import math
+import time
 from collections import defaultdict
 from typing import Iterable, Literal, TypeAlias
 
@@ -564,7 +565,7 @@ class _DomainEngine:
 
     def _ordered_candidate_stages(
         self, active: set[int], *, boundary_active: bool
-    ) -> tuple[tuple[tuple[_Candidate, ...], ...], bool]:
+    ) -> tuple[tuple[tuple[_Candidate, ...], ...], bool, int]:
         """Enumerates each V3 stage without changing legacy selection.
 
         The legacy engine asks the four stage helpers only for their minimum.
@@ -597,6 +598,7 @@ class _DomainEngine:
             )
             (stage4 if creates else stage2).append(adjacent)
 
+        stage3_start_ns = time.perf_counter_ns()
         stage3: list[_Candidate] = []
         saw_unreachable = False
         singletons = sorted(v for v in active if not neighbors[v])
@@ -626,12 +628,13 @@ class _DomainEngine:
                         (weight, singleton, other, len(path), edge_ids),
                     )
                 )
+        stage3_enumeration_ns = time.perf_counter_ns() - stage3_start_ns
 
         stages = tuple(
             tuple(sorted(candidates, key=lambda candidate: candidate.key))
             for candidates in (stage1, stage2, stage3, stage4)
         )
-        return stages, saw_unreachable
+        return stages, saw_unreachable, stage3_enumeration_ns
 
     def run(self, initial_active: set[int]) -> _DomainAttempt:
         active = set(initial_active)
@@ -834,6 +837,13 @@ class DomainProposalStepper:
         # Eager enumeration computes stage 3 even when stage 1/2 wins, so the
         # flag is updated only once selection actually reaches stage 3.
         self._saw_unreachable = False
+        # Performance telemetry is deliberately separate from proposal
+        # identity and ordering.  It never enters a candidate key or a state
+        # fingerprint, but lets the B1 probe expose Stage-3 veto storms.
+        self._last_candidate_enumeration_ns = 0
+        self._last_stage3_enumeration_ns = 0
+        self._total_candidate_enumeration_ns = 0
+        self._total_stage3_enumeration_ns = 0
 
     @property
     def active(self) -> frozenset[int]:
@@ -851,6 +861,22 @@ class DomainProposalStepper:
     @property
     def is_finished(self) -> bool:
         return self._finished
+
+    @property
+    def last_candidate_enumeration_ns(self) -> int:
+        return self._last_candidate_enumeration_ns
+
+    @property
+    def last_stage3_enumeration_ns(self) -> int:
+        return self._last_stage3_enumeration_ns
+
+    @property
+    def total_candidate_enumeration_ns(self) -> int:
+        return self._total_candidate_enumeration_ns
+
+    @property
+    def total_stage3_enumeration_ns(self) -> int:
+        return self._total_stage3_enumeration_ns
 
     def _fallback(self, *, saw_unreachable: bool) -> FallbackReason:
         if self._boundary_active and not any(
@@ -900,9 +926,15 @@ class DomainProposalStepper:
         if self._finished:
             return None
 
-        stages, saw_unreachable = self._engine._ordered_candidate_stages(
+        enumeration_start_ns = time.perf_counter_ns()
+        stages, saw_unreachable, stage3_enumeration_ns = self._engine._ordered_candidate_stages(
             self._active, boundary_active=self._boundary_active
         )
+        candidate_enumeration_ns = time.perf_counter_ns() - enumeration_start_ns
+        self._last_candidate_enumeration_ns = candidate_enumeration_ns
+        self._last_stage3_enumeration_ns = stage3_enumeration_ns
+        self._total_candidate_enumeration_ns += candidate_enumeration_ns
+        self._total_stage3_enumeration_ns += stage3_enumeration_ns
         fingerprint = self.active_state_fingerprint
         blacklisted = self._blacklisted[fingerprint]
         total_candidates = sum(len(candidates) for candidates in stages)

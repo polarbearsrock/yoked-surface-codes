@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 from typing import cast
 
@@ -7,7 +8,7 @@ import numpy as np
 import pymatching
 import pytest
 
-from yoked.decoding._promatch import PrematchedPath
+from yoked.decoding._promatch import DomainProposalStepper, PrematchedPath
 from yoked.decoding._promatch_graph import CompiledPromatchGraph, DomainGraph, Edge
 from yoked.decoding._promatch_layout import (
     L1FullHistoryDomain,
@@ -168,6 +169,28 @@ def test_transaction_rolls_back_an_accepted_prefix_but_partial_retains_it() -> N
     assert partial.final_prediction == partial.initial_u0_prediction
 
 
+@pytest.mark.parametrize("active_field", ["provisional_active", "durable_active"])
+def test_trajectory_fails_if_global_and_stepper_active_sets_disagree(
+    monkeypatch: pytest.MonkeyPatch, active_field: str
+) -> None:
+    original_outcome = DomainProposalStepper.outcome
+
+    def corrupted_outcome(self, transaction_policy):
+        outcome = original_outcome(self, transaction_policy)
+        return dataclasses.replace(outcome, **{active_field: frozenset()})
+
+    monkeypatch.setattr(DomainProposalStepper, "outcome", corrupted_outcome)
+    with pytest.raises(AssertionError, match="stepper state"):
+        run_oracle_trajectory(
+            _rollback_graph(),
+            np.ones(4, dtype=np.uint8),
+            policy="frame",
+            transaction_policy="tx",
+            residual_hw_limit=0,
+            observable_policy="any",
+        )
+
+
 def test_frame_veto_does_not_mutate_global_syndrome_or_frame() -> None:
     graph = _frame_veto_graph()
     syndrome = np.ones(3, dtype=np.uint8)
@@ -261,3 +284,15 @@ def test_phase_a_bundle_is_deterministically_json_serializable() -> None:
         result.frame_partial.final_prediction
         == result.frame_partial.initial_u0_prediction
     )
+
+    def assert_float_companions(value: object) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if isinstance(item, float):
+                    assert value[f"{key}_hex"] == item.hex()
+                assert_float_companions(item)
+        elif isinstance(value, list):
+            for item in value:
+                assert_float_companions(item)
+
+    assert_float_companions(result.to_json())
