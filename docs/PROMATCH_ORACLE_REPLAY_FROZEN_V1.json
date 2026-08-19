@@ -1,0 +1,76 @@
+{
+  "arms": [
+    "shadow",
+    "o-cost-tx",
+    "o-frame-tx",
+    "o-frame-partial"
+  ],
+  "decoder": {
+    "boundary_policy": "disabled",
+    "domain_mode": "windowd",
+    "observable_policy": "zero-frame",
+    "residual_hw_limit": 10
+  },
+  "experiment_id": "1129cfe4862f5abdcea2e40389a58d45eca5388b8ff08344c6fdbee7e83ae0cb",
+  "frozen": true,
+  "implementation": {
+    "repository_commit": "db7a97ad74033e7d2ad4e9b5e52a35d0795ea481",
+    "source_hashes": {
+      "requirements.txt": "57d970156fb9d75ba969521b9fd828423f186ba045f75939d22dbaabd378cd9d",
+      "src/yoked/decoding/_promatch.py": "2b29d408bbb86f5d31014fde5bce802fe7fddbe79e422f5acc52fe0413875f5b",
+      "src/yoked/decoding/_promatch_experiment.py": "b331d01361409dbe338f67cd095cf6be4fcbcd59e059c2b802d064cec50197a9",
+      "src/yoked/decoding/_promatch_graph.py": "c2495d299e35253ed379d4e9542e3f6315494ca40d5a3c7a8f3f3ec7e5ae2820",
+      "src/yoked/decoding/_promatch_layout.py": "448c7f2b5b8fee87cd4e7e07e105ffc5f73e589e12db1dc4f95c5506ad9d3b6a",
+      "src/yoked/decoding/_promatch_oracle.py": "6381471b6afbd823c020d1ee2034a52609fc4526ab11a899ab2ff97294098998",
+      "src/yoked/decoding/_promatch_oracle_replay.py": "dd7750492ae53d0aaab2f9339936e1e2e689a2e308bcca00ef1b2f676f971847",
+      "tools/diagnose_promatch_l1": "c3c24da3d000fd45142014bb1837238137f933b771be095b0cea85701adbe1da"
+    }
+  },
+  "input": {
+    "experiment_id": "08366cf57463271fab2af277cb4fa34bafde237d9935cf942f5ceb9b402f26bc",
+    "path": "out/promatch_l1_round1_v3_20260817_32p/pilot",
+    "protocol_sha256": "f30e7d0454893219fdd0de0472ecca49b5656b4ea8f8bc690071656120d2fd7a",
+    "summary_sha256": "901e08ffd86b7eaae8893ebda3ac99c0601cc5546f8bd0370ec288a449e2fda3"
+  },
+  "native_threads_per_process": 1,
+  "oracle": {
+    "absolute": 1e-09,
+    "decimal_precision": 4096,
+    "relative": 1e-06,
+    "sensitivity_grid": [
+      {
+        "absolute": 1e-10,
+        "relative": 1e-07
+      },
+      {
+        "absolute": 1e-09,
+        "relative": 1e-06
+      },
+      {
+        "absolute": 1e-08,
+        "relative": 1e-05
+      }
+    ],
+    "veto_budget": null
+  },
+  "processes": 1,
+  "schema": "promatch-l1-global-context-oracle-replay-v1",
+  "selection": {
+    "categories": [
+      "recovery",
+      "regression"
+    ],
+    "cell_ids": [
+      "pilot-01-d7-n6-y2-r28-p0.001"
+    ]
+  },
+  "software_versions": {
+    "numpy": "2.5.1",
+    "pymatching": "2.4.0",
+    "python": "3.14.5",
+    "scipy": "1.18.0",
+    "sinter": "1.16.0",
+    "stim": "1.16.0"
+  },
+  "status": "FROZEN"
+}
