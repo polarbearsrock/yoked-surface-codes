@@ -52,6 +52,26 @@ def test_disconnected_only_support_has_no_candidate_context() -> None:
     assert context["exclusive_support_component_context"] is None
 
 
+def test_omitted_context_union_normalizes_in_domain_with_specific_path_labels() -> None:
+    row = _proposal(0, "a", stage=1, safe=False, context="yoke", commit_index=0)
+    row["base_matched_partner_labels"] = ["in-domain"]
+    row["base_support_path_labels"] = [
+        "cross-patch-or-basis", "cross-window", "yoke"
+    ]
+    row["omitted_context_labels"] = [
+        "cross-patch-or-basis", "cross-window", "yoke"
+    ]
+    context = _context(row)
+    assert context["omitted_context_labels"] == (
+        "cross-patch-or-basis", "cross-window", "yoke"
+    )
+    row["omitted_context_labels"] = [
+        "cross-patch-or-basis", "cross-window", "in-domain", "yoke"
+    ]
+    with pytest.raises(PolicyAnalysisError, match="in-domain is not exclusive"):
+        _context(row)
+
+
 def _digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 

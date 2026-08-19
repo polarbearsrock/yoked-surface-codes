@@ -1819,6 +1819,40 @@ def _validate_support_difference_ledger(
             raise ValueError(f"{path} {flag} must be true")
 
 
+def _normalized_context_union(*groups: Any, path: str) -> list[str]:
+    """Returns the frozen context union with ``in-domain`` exclusivity."""
+
+    vocabulary = set(_expected_context_taxonomy()["multi_labels"])
+    labels: set[str] = set()
+    for index, group in enumerate(groups):
+        if (
+            not isinstance(group, list)
+            or any(not isinstance(label, str) for label in group)
+            or group != sorted(set(group))
+            or set(group) - vocabulary
+            or ("in-domain" in group and len(group) != 1)
+        ):
+            raise ValueError(f"{path} context label group {index} is not canonical")
+        labels.update(group)
+    if labels - {"in-domain"}:
+        labels.discard("in-domain")
+    return sorted(labels)
+
+
+def _validate_context_union_ledger(row: Mapping[str, Any], *, path: str) -> None:
+    """Reconciles the three independently persisted omitted-context views."""
+
+    matched = row.get("matched_partner_labels")
+    support_path = row.get("support_path_labels")
+    omitted = row.get("omitted_context_labels")
+    expected = _normalized_context_union(matched, support_path, path=path)
+    if _normalized_context_union(omitted, path=path) != expected or omitted != expected:
+        raise ValueError(
+            f"{path} omitted_context_labels disagrees with the normalized "
+            "matched/support-path union"
+        )
+
+
 def _audit_policy_shot(
     graph: Any,
     syndrome: np.ndarray,
@@ -1863,6 +1897,9 @@ def _audit_policy_shot(
         for index, row in enumerate(collections[name]):
             _validate_support_difference_ledger(
                 row, path=f"audit.{name}[{index}]", graph=graph
+            )
+            _validate_context_union_ledger(
+                row, path=f"audit.{name}[{index}]"
             )
     if not isinstance(raw["shot"], Mapping):
         raise ValueError("policy core shot must be an object")
@@ -2234,6 +2271,15 @@ def install_worker_shard(
             raise ValueError("worker shard manifest differs from returned worker metadata")
         final.parent.mkdir(parents=True, exist_ok=True)
         os.replace(temporary, final)
+        # Authenticate the installed namespace, not only the staging directory.
+        # This keeps worker-side installation parallel while closing the gap
+        # between the bytes verified before rename and the path trusted by the
+        # parent campaign manifest.
+        installed = verify_worker_shard(
+            final, config=config, mode=mode, spec=spec
+        )
+        if installed != verified:
+            raise ValueError("installed worker shard differs from its staged verification")
         return final
     finally:
         if temporary.exists():
@@ -2369,6 +2415,7 @@ def verify_worker_shard(
                 raise ValueError(f"{name} row graph fingerprint mismatch")
             if name in {"proposals", "counterfactuals"}:
                 _validate_support_difference_ledger(row, path=name)
+                _validate_context_union_ledger(row, path=name)
             _require_float_hex_companions(row, path=name)
             parsed[name].append(row)
         if name == "shots":
@@ -2645,7 +2692,7 @@ _WORKER_PREPARED: PreparedCell | None = None
 
 def _worker_task(
     task: dict[str, Any],
-) -> tuple[int, dict[str, Any], dict[str, bytes], int, int]:
+) -> tuple[int, dict[str, Any], int, int]:
     configure_single_thread_runtime()
     global _WORKER_PREPARED
     compile_ns = 0
@@ -2662,7 +2709,18 @@ def _worker_task(
     shard, payloads = collect_policy_worker_shard(
         _WORKER_PREPARED, config=task["config"], mode=task["mode"], spec=spec
     )
-    return spec.worker_id, shard, payloads, os.getpid(), compile_ns
+    # Each worker owns a disjoint final shard directory.  Authenticate and
+    # atomically install that shard here so compression transfer plus a second,
+    # serial parent-side verification cannot dominate the 32-way campaign.
+    install_worker_shard(
+        Path(task["out"]),
+        shard=shard,
+        payloads=payloads,
+        config=task["config"],
+        mode=task["mode"],
+        spec=spec,
+    )
+    return spec.worker_id, shard, os.getpid(), compile_ns
 
 
 def _reject_immutable_output(out: Path) -> None:
@@ -2787,6 +2845,7 @@ def run_policy_collection(
                     "mode": mode,
                     "spec": spec.to_json(),
                     "scientific": scientific,
+                    "out": str(out),
                 }
             )
     manifest_path = out / "manifest.json"
@@ -2832,15 +2891,10 @@ def run_policy_collection(
         ) as executor:
             future_to_task = {executor.submit(_worker_task, task): task for task in tasks}
             for future in as_completed(future_to_task):
-                worker_id, shard, payloads, pid, compile_ns = future.result()
+                worker_id, shard, pid, compile_ns = future.result()
                 worker_pids.add(pid)
                 worker_compile_ns.append(
                     {"worker_id": worker_id, "compile_ns": compile_ns}
-                )
-                spec = WorkerSpec(**future_to_task[future]["spec"])
-                install_worker_shard(
-                    out, shard=shard, payloads=payloads,
-                    config=config, mode=mode, spec=spec,
                 )
                 completed[worker_id] = shard
     worker_phase_ns = time.perf_counter_ns() - worker_phase_start_ns

@@ -1012,7 +1012,10 @@ def _context(row: Mapping[str, Any]) -> dict[str, Any]:
         name="omitted_context_labels",
     )
     _validate_context_labels(omitted, name="omitted_context_labels")
-    expected_omitted = tuple(sorted(set(matched) | set(support_path)))
+    expected_omitted_set = set(matched) | set(support_path)
+    if expected_omitted_set - {"in-domain"}:
+        expected_omitted_set.discard("in-domain")
+    expected_omitted = tuple(sorted(expected_omitted_set))
     if omitted != expected_omitted:
         raise PolicyAnalysisError(
             "omitted_context_labels disagrees with matched/support-path union"

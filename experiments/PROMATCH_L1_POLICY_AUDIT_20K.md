@@ -666,8 +666,12 @@ diagnostic evidence and are never conflated with policy-visible context.
 
 Apply the same role vocabulary independently to matched active partners and to
 complete selected-support paths. Store sorted unique
-`matched_partner_labels`, sorted unique `support_path_labels`, and their sorted
-union as `omitted_context_labels`. A support-path traversal must continue
+`matched_partner_labels`, sorted unique `support_path_labels`, and their
+normalized sorted union as `omitted_context_labels`: if either view has a
+specific omitted-context label, remove `in-domain` from the union to preserve
+its frozen exclusivity. The producer, fresh collector, persisted-shard
+verifier, and offline analyzer must all recompute this relation independently.
+A support-path traversal must continue
 through inactive intermediate detectors until the entire selected-support
 component has been visited; inspecting only edges immediately incident to a
 proposal endpoint is invalid.
@@ -1090,6 +1094,14 @@ The factor `1.5` is frozen headroom for denser tails and shard imbalance. If
 the gate fails, do not launch and do not silently add a veto cap. Optimize the
 implementation or write a separately named budgeted protocol.
 
+The 32 workers own disjoint shard directories. Each worker canonicalizes,
+compresses, fully verifies, atomically installs, and then re-verifies the
+installed namespace for its own shard before it returns only the authenticated
+shard manifest to the parent. Parent-side
+serial installation of all compressed ledgers is forbidden: it is equivalent
+scientifically but destroys the intended 32-way scaling and makes the probe's
+wall projection measure a serialization bottleneck instead of the decoder.
+
 ### 13.4 Storage gate
 
 Let `B_probe` be the total compressed scientific-format bytes produced by the
@@ -1412,7 +1424,7 @@ excluded from scientific digests and documented.
 
 ### 17.5 Freeze and launch
 
-- [x] Run the full test suite (541 tests passed on 2026-08-19).
+- [x] Run the full test suite (546 tests passed on 2026-08-19).
 - [ ] Commit implementation A and push it.
 - [ ] Run 32-shot integration smoke under `$TMPDIR`.
 - [ ] Run disjoint 100-shot, 32-process timing/storage probe.

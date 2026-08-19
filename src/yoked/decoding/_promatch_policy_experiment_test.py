@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+import yoked.decoding._promatch_policy_experiment as policy_experiment
 from yoked.decoding._promatch_experiment import PreparedCell
 from yoked.decoding._promatch_policy_analysis import (
     COLLECTOR_GATE_ATTESTATION_SCHEMA,
@@ -22,7 +23,9 @@ from yoked.decoding._promatch_policy_experiment import (
     SCIENTIFIC_WORKERS,
     WorkerSpec,
     _audit_policy_shot,
+    _validate_context_union_ledger,
     _validate_support_difference_ledger,
+    _worker_task,
     _worker_tail_censor_attestation,
     attest_completed_policy_probe,
     collect_policy_worker_shard,
@@ -151,6 +154,9 @@ def _audit(graph, syndrome, *, tolerance):
                 "support_cancellation_edge_ids": [],
                 "disconnected_support_reconfiguration": False,
                 "exclusive_support_component_context": None,
+                "matched_partner_labels": [],
+                "support_path_labels": [],
+                "omitted_context_labels": [],
                 "degeneracy_diagnostics": [],
                 "cost_compatible": True,
                 "frame_compatible": True,
@@ -682,11 +688,23 @@ def test_atomic_shard_install_verify_and_corruption_rejection(
     shard, payloads = collect_policy_worker_shard(
         _prepared(), config=config, mode="smoke", spec=spec, audit_fn=_audit
     )
+    verification_paths: list[Path] = []
+    real_verify = policy_experiment.verify_worker_shard
+
+    def recording_verify(path: Path, *, config, mode, spec):
+        result = real_verify(path, config=config, mode=mode, spec=spec)
+        verification_paths.append(path.resolve())
+        return result
+
+    monkeypatch.setattr(policy_experiment, "verify_worker_shard", recording_verify)
     out = tmp_path / "out"
     installed = install_worker_shard(
         out, shard=shard, payloads=payloads,
         config=config, mode="smoke", spec=spec,
     )
+    assert len(verification_paths) == 2
+    assert verification_paths[0] != installed.resolve()
+    assert verification_paths[1] == installed.resolve()
     assert verify_worker_shard(
         installed, config=config, mode="smoke", spec=spec
     ) == shard
@@ -765,6 +783,41 @@ def test_fresh_core_rejects_component_detector_witness_tamper() -> None:
         _validate_support_difference_ledger(row, path="test", graph=graph)
 
 
+def test_context_union_normalizes_in_domain_before_reconciliation() -> None:
+    row = {
+        "matched_partner_labels": ["in-domain"],
+        "support_path_labels": ["cross-patch-or-basis", "cross-window", "yoke"],
+        "omitted_context_labels": ["cross-patch-or-basis", "cross-window", "yoke"],
+    }
+    _validate_context_union_ledger(row, path="test")
+    row["omitted_context_labels"] = [
+        "cross-patch-or-basis", "cross-window", "in-domain", "yoke"
+    ]
+    with pytest.raises(ValueError, match="context label group|normalized"):
+        _validate_context_union_ledger(row, path="test")
+
+
+def test_fresh_shard_rejects_tampered_omitted_context_union(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TMPDIR", str(tmp_path))
+    config = _runtime_config()
+    spec = WorkerSpec(0, 0, 1)
+    shard, payloads = collect_policy_worker_shard(
+        _prepared(), config=config, mode="smoke", spec=spec, audit_fn=_audit
+    )
+    _rewrite_first_ledger_row(
+        payloads, "proposals",
+        lambda row: row.__setitem__("omitted_context_labels", ["in-domain"]),
+    )
+    shard = json.loads(payloads["shard.json"])
+    with pytest.raises(ValueError, match="omitted_context_labels"):
+        install_worker_shard(
+            tmp_path / "invalid-context", shard=shard, payloads=payloads,
+            config=config, mode="smoke", spec=spec,
+        )
+
+
 def test_scientific_ledgers_are_bit_exact_while_timing_is_excluded() -> None:
     config = _runtime_config()
     spec = WorkerSpec(0, 0, 2)
@@ -819,6 +872,44 @@ def test_collection_rejects_any_process_count_other_than_32(tmp_path: Path) -> N
             processes=31,
             scientific=False,
         )
+
+
+def test_worker_authenticates_and_installs_its_disjoint_shard_before_return(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prepared = _prepared()
+    config = _runtime_config()
+    spec = WorkerSpec(7, 7, 1)
+    shard = {"worker": spec.to_json()}
+    payloads = {"sentinel": b"compressed"}
+    installed: list[tuple[Path, dict, dict, dict, str, WorkerSpec]] = []
+    monkeypatch.setattr(policy_experiment, "_WORKER_PREPARED", prepared)
+    monkeypatch.setattr(
+        policy_experiment,
+        "collect_policy_worker_shard",
+        lambda actual, *, config, mode, spec: (shard, payloads),
+    )
+    monkeypatch.setattr(
+        policy_experiment,
+        "install_worker_shard",
+        lambda out, *, shard, payloads, config, mode, spec: installed.append(
+            (out, shard, payloads, config, mode, spec)
+        ),
+    )
+    result = _worker_task(
+        {
+            "config": config,
+            "mode": "smoke",
+            "spec": spec.to_json(),
+            "scientific": False,
+            "out": str(tmp_path / "campaign"),
+        }
+    )
+    assert result == (spec.worker_id, shard, result[2], 0)
+    assert result[2] > 0
+    assert installed == [
+        (tmp_path / "campaign", shard, payloads, config, "smoke", spec)
+    ]
 
 
 def test_collection_rejects_nonempty_unrelated_or_symlink_output_root(
