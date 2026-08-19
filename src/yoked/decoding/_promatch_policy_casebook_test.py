@@ -339,6 +339,52 @@ def _mislabel_remote_component_as_context(rows) -> None:
     ]
 
 
+def test_casebook_normalizes_in_domain_across_candidate_relevant_components() -> None:
+    graph = SimpleNamespace(edges=(
+        SimpleNamespace(source=0, target=1),
+        SimpleNamespace(source=2, target=3),
+    ))
+    row = {
+        "support_difference_representation_version": "promatch-support-difference-v2",
+        "P_candidate_support_edge_ids": [0, 1],
+        "X_support_difference_edge_ids": [0, 1],
+        "P_intersection_R_edge_ids": [],
+        "support_cancellation_edge_ids": [],
+        "detector_boundary_ids": [0, 2],
+        "support_difference_component_labels": ["yoke"],
+        "disconnected_support_reconfiguration": False,
+        "support_difference_components": [
+            {
+                "certificate_kind": "real-x-component",
+                "canonical_edge_ids": [0], "support_cancellation_edge_ids": [],
+                "component_detector_ids": [0, 1],
+                "candidate_support_witness_edge_ids": [0],
+                "candidate_boundary_witness_detector_ids": [0],
+                "labels": ["in-domain"], "candidate_relevant": True,
+                "candidate_relevance_reasons": [
+                    "candidate-boundary-detector", "candidate-support-edge"
+                ],
+            },
+            {
+                "certificate_kind": "real-x-component",
+                "canonical_edge_ids": [1], "support_cancellation_edge_ids": [],
+                "component_detector_ids": [2, 3],
+                "candidate_support_witness_edge_ids": [1],
+                "candidate_boundary_witness_detector_ids": [2],
+                "labels": ["yoke"], "candidate_relevant": True,
+                "candidate_relevance_reasons": [
+                    "candidate-boundary-detector", "candidate-support-edge"
+                ],
+            },
+        ],
+    }
+    evidence = casebook._support_evidence(row, graph=graph)
+    assert evidence["context_labels"] == ["yoke"]
+    row["support_difference_component_labels"] = ["in-domain", "yoke"]
+    with pytest.raises(casebook.PolicyCasebookError, match="candidate-relevant component"):
+        casebook._support_evidence(row, graph=graph)
+
+
 @pytest.mark.parametrize(
     ("mutation", "message"),
     [

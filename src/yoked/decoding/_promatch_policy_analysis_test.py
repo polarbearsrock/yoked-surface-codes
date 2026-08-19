@@ -72,6 +72,34 @@ def test_omitted_context_union_normalizes_in_domain_with_specific_path_labels() 
         _context(row)
 
 
+def test_candidate_component_union_normalizes_in_domain_across_components() -> None:
+    row = _proposal(0, "a", stage=1, safe=False, context="yoke", commit_index=0)
+    row["detector_boundary_ids"] = [0, 1, 50]
+    for field in (
+        "candidate_support_edge_ids", "P_candidate_support_edge_ids",
+        "Q_forced_parity_support_edge_ids", "X_support_difference_edge_ids",
+    ):
+        row[field] = [1, 2]
+    row["support_difference_components"].append({
+        "certificate_kind": "real-x-component",
+        "canonical_edge_ids": [2],
+        "support_cancellation_edge_ids": [],
+        "component_detector_ids": [50, 51],
+        "candidate_support_witness_edge_ids": [2],
+        "candidate_boundary_witness_detector_ids": [50],
+        "labels": ["in-domain"],
+        "candidate_relevant": True,
+        "candidate_relevance_reasons": [
+            "candidate-boundary-detector", "candidate-support-edge"
+        ],
+    })
+    context = _context(row)
+    assert context["support_difference_component_labels"] == ("yoke",)
+    row["support_difference_component_labels"] = ["in-domain", "yoke"]
+    with pytest.raises(PolicyAnalysisError, match="component union"):
+        _context(row)
+
+
 def _digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 

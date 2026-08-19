@@ -961,6 +961,8 @@ def _component_labels(row: Mapping[str, Any]) -> tuple[str, ...]:
     )
     if disconnected_flag != saw_disconnected:
         raise PolicyAnalysisError("disconnected support-reconfiguration flag is inconsistent")
+    if labels - {"in-domain"}:
+        labels.discard("in-domain")
     component_labels = tuple(sorted(labels))
     if direct_labels != component_labels:
         raise PolicyAnalysisError(

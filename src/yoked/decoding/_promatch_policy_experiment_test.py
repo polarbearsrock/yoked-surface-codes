@@ -783,6 +783,57 @@ def test_fresh_core_rejects_component_detector_witness_tamper() -> None:
         _validate_support_difference_ledger(row, path="test", graph=graph)
 
 
+def test_candidate_component_union_normalizes_in_domain_across_components() -> None:
+    graph = SimpleNamespace(
+        fingerprint="04" * 32,
+        edges=(
+            SimpleNamespace(source=0, target=1),
+            SimpleNamespace(source=2, target=3),
+        ),
+    )
+    row = _audit(
+        graph, np.zeros(3, dtype=np.uint8), tolerance=OracleTolerance()
+    )["proposals"][0]
+    row.update({
+        "detector_boundary_ids": [0, 2],
+        "base_support_edge_ids": [], "candidate_support_edge_ids": [0, 1],
+        "residual_support_edge_ids": [], "B_base_support_edge_ids": [],
+        "P_candidate_support_edge_ids": [0, 1], "R_residual_support_edge_ids": [],
+        "Q_forced_parity_support_edge_ids": [0, 1],
+        "X_support_difference_edge_ids": [0, 1], "P_intersection_R_edge_ids": [],
+        "support_difference_component_labels": ["yoke"],
+        "exclusive_support_component_context": "yoke",
+        "support_difference_components": [
+            {
+                "certificate_kind": "real-x-component",
+                "canonical_edge_ids": [0], "support_cancellation_edge_ids": [],
+                "component_detector_ids": [0, 1],
+                "candidate_support_witness_edge_ids": [0],
+                "candidate_boundary_witness_detector_ids": [0],
+                "labels": ["in-domain"], "candidate_relevant": True,
+                "candidate_relevance_reasons": [
+                    "candidate-boundary-detector", "candidate-support-edge"
+                ],
+            },
+            {
+                "certificate_kind": "real-x-component",
+                "canonical_edge_ids": [1], "support_cancellation_edge_ids": [],
+                "component_detector_ids": [2, 3],
+                "candidate_support_witness_edge_ids": [1],
+                "candidate_boundary_witness_detector_ids": [2],
+                "labels": ["yoke"], "candidate_relevant": True,
+                "candidate_relevance_reasons": [
+                    "candidate-boundary-detector", "candidate-support-edge"
+                ],
+            },
+        ],
+    })
+    _validate_support_difference_ledger(row, path="test", graph=graph)
+    row["support_difference_component_labels"] = ["in-domain", "yoke"]
+    with pytest.raises(ValueError, match="candidate-context labels"):
+        _validate_support_difference_ledger(row, path="test", graph=graph)
+
+
 def test_context_union_normalizes_in_domain_before_reconciliation() -> None:
     row = {
         "matched_partner_labels": ["in-domain"],

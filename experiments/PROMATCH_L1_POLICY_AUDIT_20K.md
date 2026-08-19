@@ -661,8 +661,11 @@ Assign every real component all applicable graph-role tags:
 `in-domain` is exclusive of the omitted-context tags. The other tags are
 multi-label and may overlap. The ledger stores tags per component. Its
 candidate-context union includes only candidate-relevant real components and
-the independent cancellation certificate; disconnected component roles are
-diagnostic evidence and are never conflated with policy-visible context.
+the independent cancellation certificate, and is normalized after union: if
+any specific context label is present, remove `in-domain`. Disconnected
+component roles are diagnostic evidence and are never conflated with
+policy-visible context. The producer, fresh collector, persisted verifier,
+offline analyzer, and casebook verifier must recompute this normalized union.
 
 Apply the same role vocabulary independently to matched active partners and to
 complete selected-support paths. Store sorted unique
@@ -1424,7 +1427,18 @@ excluded from scientific digests and documented.
 
 ### 17.5 Freeze and launch
 
-- [x] Run the full test suite (546 tests passed on 2026-08-19).
+The first frozen-V1 launch on 2026-08-19 aborted fail-closed after only two
+of 32 worker shards (1,250 of 20,000 shots) had installed. The persisted
+verifier compared a raw union of candidate-relevant component labels even
+though the producer correctly normalized that union by removing `in-domain`
+when a specific context label was present. The partial root
+`$TMPDIR/promatch-l1-policy-audit-20k-v1` has neither a manifest nor
+`COLLECTION_READY`; it is quarantined evidence and must never be resumed,
+promoted, or mixed into a later corpus. The corrected implementation requires
+a fresh smoke, probe, frozen-V2 protocol, experiment ID, seed schedule, and
+20,000-shot output root.
+
+- [x] Run the full test suite (549 tests passed on 2026-08-19).
 - [ ] Commit implementation A and push it.
 - [ ] Run 32-shot integration smoke under `$TMPDIR`.
 - [ ] Run disjoint 100-shot, 32-process timing/storage probe.
@@ -1453,8 +1467,8 @@ unset MAX_ERRORS
 mkdir -p "$MPLCONFIGDIR"
 
 POLICY_DRAFT=docs/PROMATCH_POLICY_AUDIT_20K_DRAFT.json
-SMOKE_ROOT="$TMPDIR/promatch-policy-audit-b1-smoke"
-PROBE_ROOT="$TMPDIR/promatch-policy-audit-b1-probe"
+SMOKE_ROOT="$TMPDIR/promatch-policy-audit-b1-smoke-context-union"
+PROBE_ROOT="$TMPDIR/promatch-policy-audit-b1-probe-context-union"
 
 tools/benchmark_promatch_policy_audit smoke \
   --protocol "$POLICY_DRAFT" --out "$SMOKE_ROOT" --processes 32
@@ -1475,7 +1489,7 @@ commit A, freeze a new protocol; the resulting protocol file is the only
 change allowed in commit B:
 
 ```bash
-FROZEN_PROTOCOL=docs/PROMATCH_POLICY_AUDIT_20K_FROZEN_V1.json
+FROZEN_PROTOCOL=docs/PROMATCH_POLICY_AUDIT_20K_FROZEN_V2.json
 tools/benchmark_promatch_policy_audit freeze \
   --protocol "$POLICY_DRAFT" \
   --probe-root "$PROBE_ROOT" \
@@ -1486,7 +1500,7 @@ Only after commit B, its push, and a final clean-worktree check may the fixed
 20,000-shot corpus start:
 
 ```bash
-SCIENTIFIC_ROOT=out/promatch_l1_policy_audit_20k_v1
+SCIENTIFIC_ROOT="$TMPDIR/promatch-l1-policy-audit-20k-v2"
 tools/benchmark_promatch_policy_audit collect \
   --protocol "$FROZEN_PROTOCOL" \
   --out "$SCIENTIFIC_ROOT" --processes 32

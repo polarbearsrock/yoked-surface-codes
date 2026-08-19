@@ -1622,6 +1622,26 @@ def _require_float_hex_companions(value: Any, *, path: str = "audit") -> None:
             _require_float_hex_companions(item, path=f"{path}[{index}]")
 
 
+def _normalized_context_union(*groups: Any, path: str) -> list[str]:
+    """Returns the frozen context union with ``in-domain`` exclusivity."""
+
+    vocabulary = set(_expected_context_taxonomy()["multi_labels"])
+    labels: set[str] = set()
+    for index, group in enumerate(groups):
+        if (
+            not isinstance(group, list)
+            or any(not isinstance(label, str) for label in group)
+            or group != sorted(set(group))
+            or set(group) - vocabulary
+            or ("in-domain" in group and len(group) != 1)
+        ):
+            raise ValueError(f"{path} context label group {index} is not canonical")
+        labels.update(group)
+    if labels - {"in-domain"}:
+        labels.discard("in-domain")
+    return sorted(labels)
+
+
 def _validate_support_difference_ledger(
     row: Mapping[str, Any], *, path: str, graph: Any | None = None
 ) -> None:
@@ -1655,7 +1675,7 @@ def _validate_support_difference_ledger(
         raise ValueError(f"{path} detector_boundary_ids is not a canonical detector set")
     real: set[int] = set()
     cancellations: set[int] = set()
-    candidate_labels: set[str] = set()
+    candidate_label_groups: list[list[str]] = []
     disconnected = False
     real_components: list[Mapping[str, Any]] = []
     cancellation_components: list[Mapping[str, Any]] = []
@@ -1740,7 +1760,7 @@ def _validate_support_difference_ledger(
         else:
             raise ValueError(f"{path} has an unknown support certificate kind")
         if relevant:
-            candidate_labels.update(labels)
+            candidate_label_groups.append(labels)
     if components != sorted(
         real_components, key=lambda component: component["canonical_edge_ids"]
     ) + cancellation_components:
@@ -1778,7 +1798,10 @@ def _validate_support_difference_ledger(
         raise ValueError(f"{path} cancellation certificates do not reconcile")
     if row.get("support_cancellation_edge_ids") != sorted(cancellations):
         raise ValueError(f"{path} top-level cancellation support does not reconcile")
-    if row.get("support_difference_component_labels") != sorted(candidate_labels):
+    candidate_labels = _normalized_context_union(
+        *candidate_label_groups, path=f"{path}.support_difference_components"
+    )
+    if row.get("support_difference_component_labels") != candidate_labels:
         raise ValueError(f"{path} candidate-context labels do not reconcile")
     if row.get("disconnected_support_reconfiguration") is not disconnected:
         raise ValueError(f"{path} disconnected-support flag does not reconcile")
@@ -1817,26 +1840,6 @@ def _validate_support_difference_ledger(
     ):
         if row.get(flag) is not True:
             raise ValueError(f"{path} {flag} must be true")
-
-
-def _normalized_context_union(*groups: Any, path: str) -> list[str]:
-    """Returns the frozen context union with ``in-domain`` exclusivity."""
-
-    vocabulary = set(_expected_context_taxonomy()["multi_labels"])
-    labels: set[str] = set()
-    for index, group in enumerate(groups):
-        if (
-            not isinstance(group, list)
-            or any(not isinstance(label, str) for label in group)
-            or group != sorted(set(group))
-            or set(group) - vocabulary
-            or ("in-domain" in group and len(group) != 1)
-        ):
-            raise ValueError(f"{path} context label group {index} is not canonical")
-        labels.update(group)
-    if labels - {"in-domain"}:
-        labels.discard("in-domain")
-    return sorted(labels)
 
 
 def _validate_context_union_ledger(row: Mapping[str, Any], *, path: str) -> None:
@@ -2891,7 +2894,14 @@ def run_policy_collection(
         ) as executor:
             future_to_task = {executor.submit(_worker_task, task): task for task in tasks}
             for future in as_completed(future_to_task):
-                worker_id, shard, pid, compile_ns = future.result()
+                scheduled = WorkerSpec(**future_to_task[future]["spec"])
+                try:
+                    worker_id, shard, pid, compile_ns = future.result()
+                except Exception as ex:
+                    raise RuntimeError(
+                        f"B1 worker {scheduled.worker_id} shot range "
+                        f"[{scheduled.shot_start}, {scheduled.shot_stop}) failed: {ex}"
+                    ) from ex
                 worker_pids.add(pid)
                 worker_compile_ns.append(
                     {"worker_id": worker_id, "compile_ns": compile_ns}

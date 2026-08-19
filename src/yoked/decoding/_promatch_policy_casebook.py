@@ -383,6 +383,10 @@ def _support_evidence(row: Mapping[str, Any], *, graph: Any) -> dict[str, Any]:
         raise PolicyCasebookError(
             "disconnected_support_reconfiguration disagrees with component relevance"
         )
+    if derived_context - {"in-domain"}:
+        derived_context.discard("in-domain")
+    if remote_labels - {"in-domain"}:
+        remote_labels.discard("in-domain")
     if sorted(derived_context) != context_labels:
         raise PolicyCasebookError(
             "support_difference_component_labels must contain exactly candidate-relevant "
