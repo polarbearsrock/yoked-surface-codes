@@ -1,7 +1,6 @@
 import collections
 import multiprocessing
 import os
-import queue
 from typing import Any, Optional, List, Dict, Iterable, Callable, Tuple
 
 import sinter
@@ -31,6 +30,14 @@ class _ManagedTaskState:
 
 
 class CollectionManager:
+    """Coordinates Sinter tasks across a fixed pool of gap-decoder workers.
+
+    The manager computes task identities, accounts for already collected shots,
+    distributes the remaining shot budget, and forwards incremental statistics
+    to ``progress_callback``. Callers own the lifecycle: start workers, begin
+    distribution, run until complete, and use ``hard_stop`` during cleanup.
+    """
+
     def __init__(
             self,
             *,
@@ -106,22 +113,19 @@ class CollectionManager:
                 worker_to_task_map[worker_id] = unknown_task_id
                 self.worker_states[worker_id].input_queue.put(('compute_strong_id', self.partial_tasks[unknown_task_id]))
 
-            try:
-                message = self.shared_worker_output_queue.get()
-                message_type, worker_id, message_body = message
-                if message_type == 'computed_strong_id':
-                    assert worker_id in worker_to_task_map
-                    assert isinstance(message_body, str)
-                    self.task_strong_ids[worker_to_task_map.pop(worker_id)] = message_body
-                    idle_worker_ids.append(worker_id)
-                elif message_type == 'stopped_due_to_exception':
-                    cur_task, cur_shots_left, unflushed_work_done, traceback, ex = message_body
-                    raise ValueError(f'Worker failed: traceback={traceback}') from ex
-                else:
-                    raise NotImplementedError(f'{message_type=}')
-                self.progress_callback(None)
-            except queue.Empty:
-                pass
+            message = self.shared_worker_output_queue.get()
+            message_type, worker_id, message_body = message
+            if message_type == 'computed_strong_id':
+                assert worker_id in worker_to_task_map
+                assert isinstance(message_body, str)
+                self.task_strong_ids[worker_to_task_map.pop(worker_id)] = message_body
+                idle_worker_ids.append(worker_id)
+            elif message_type == 'stopped_due_to_exception':
+                cur_task, cur_shots_left, unflushed_work_done, traceback, ex = message_body
+                raise ValueError(f'Worker failed: traceback={traceback}') from ex
+            else:
+                raise NotImplementedError(f'{message_type=}')
+            self.progress_callback(None)
 
         assert len(idle_worker_ids) == self.num_workers
         seen = set()
@@ -189,10 +193,7 @@ class CollectionManager:
         return '\n' + '\n'.join(lines) + '\n'
 
     def process_message(self) -> bool:
-        try:
-            message = self.shared_worker_output_queue.get()
-        except queue.Empty:
-            return False
+        message = self.shared_worker_output_queue.get()
 
         message_type, worker_id, message_body = message
         worker_state = self.worker_states[worker_id]
@@ -252,10 +253,6 @@ class CollectionManager:
         try:
             while self.task_states:
                 self.process_message()
-
-        except KeyboardInterrupt:
-            pass
-
         finally:
             self.hard_stop()
 

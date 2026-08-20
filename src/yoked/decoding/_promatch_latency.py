@@ -26,12 +26,17 @@ import multiprocessing
 import os
 from pathlib import Path
 import platform
-import tempfile
 import time
 from typing import Any, Protocol
 
 import numpy as np
 
+from yoked.decoding._artifact_io import (
+    THREAD_ENVIRONMENT,
+    install_bytes_atomic,
+    load_json_strict,
+    validate_resumable_output_root,
+)
 from yoked.decoding._promatch_experiment import normalize_protocol
 from yoked.decoding._promatch_stats import (
     canonical_json_bytes,
@@ -120,15 +125,6 @@ PRIMARY_CALLS_PER_BLOCK = 100
 PRIMARY_WARMUP_CALLS = 1_000
 PRIMARY_BATCH_SIZE = 1
 
-THREAD_ENVIRONMENT = (
-    "OMP_NUM_THREADS",
-    "OPENBLAS_NUM_THREADS",
-    "MKL_NUM_THREADS",
-    "NUMEXPR_NUM_THREADS",
-    "VECLIB_MAXIMUM_THREADS",
-    "BLIS_NUM_THREADS",
-)
-
 TOTAL_PU_VS_DIRECT = "total_pu_vs_u0_direct"
 TOTAL_PU_VS_WRAP = "total_pu_vs_u0_wrap"
 BACKEND_RESIDUAL_VS_ORIGINAL = "backend_residual_vs_original"
@@ -138,8 +134,29 @@ PAIR_NAMES = (
     BACKEND_RESIDUAL_VS_ORIGINAL,
 )
 
+# Frozen Section 17.3 practical claim gates and the exact timing-scope
+# declaration embedded in every restart ledger.  This collector module is the
+# single home; the integration and analysis modules import both instead of
+# re-declaring them.
+_SCIENTIFIC_GATES = {
+    "backend_geometric_ratio_upper": 0.90,
+    "total_geometric_ratio_upper": 0.95,
+    "total_p99_ratio_upper": 1.05,
+}
+_TIMING_SCOPE = {
+    "total": "direct adapter-entry-to-packed-prediction-return",
+    "backend": "direct matcher-call-only on pregenerated packed corpora",
+    "input_generation_inside_timing": False,
+    "telemetry_retained_inside_total": False,
+    "gc_policy": "disabled_during_warmup_and_timing",
+    "native_threads": 1,
+}
+
 
 def _positive_int(value: int, *, name: str) -> int:
+    # Deliberately accepts np.integer (protocol counts may arrive as NumPy
+    # scalars); _promatch_latency_integration._positive_int deliberately does
+    # not.  Do not align the two -- that would change validation behavior.
     if isinstance(value, bool) or not isinstance(value, (int, np.integer)):
         raise TypeError(f"{name} must be an integer")
     result = int(value)
@@ -178,7 +195,9 @@ class LatencyProtocol:
             raise ValueError("blocks_per_restart must be even for exact AB/BA balance")
         if not isinstance(self.batch_sizes, tuple) or not self.batch_sizes:
             raise TypeError("batch_sizes must be a nonempty tuple")
-        batch_sizes = tuple(_positive_int(v, name="batch_size") for v in self.batch_sizes)
+        batch_sizes = tuple(
+            _positive_int(v, name="batch_size") for v in self.batch_sizes
+        )
         if len(set(batch_sizes)) != len(batch_sizes):
             raise ValueError("batch_sizes must not contain duplicates")
         if isinstance(self.schedule_seed, bool) or not isinstance(
@@ -245,7 +264,16 @@ class LatencyWorkload:
 
 
 class LatencyRestartFactory(Protocol):
-    """Pickle-friendly factory called once inside a fresh restart worker."""
+    """Pickle-friendly factory called once inside a fresh restart worker.
+
+    ``suite_identity`` is read by :func:`_factory_suite_identity` via
+    ``getattr`` -- either a nonempty mapping or a zero-argument callable
+    returning one.  Scientific runs require it; non-claim factories may omit
+    the attribute entirely (``getattr`` then falls back to ``None`` and a
+    synthesized non-claim identity).
+    """
+
+    suite_identity: Mapping[str, Any] | Callable[[], Mapping[str, Any]] | None
 
     def __call__(self, restart_index: int, batch_size: int) -> LatencyWorkload: ...
 
@@ -307,6 +335,9 @@ def _derived_seed(
     batch_size: int,
     purpose: str,
 ) -> int:
+    # Sync note: _promatch_latency_analysis._schedule_seed independently
+    # re-derives this value as a deliberate cross-check; drift between the two
+    # fails loudly against the seeds recorded in every restart ledger.
     payload = (
         _seed_bytes(seed)
         + int(restart_index).to_bytes(8, "little", signed=False)
@@ -347,13 +378,14 @@ def _deterministic_name_order(
     seed: int,
     purpose: str,
 ) -> tuple[str, ...]:
+    # Sync note: _promatch_latency_analysis._name_order independently
+    # re-derives this ordering as a deliberate cross-check; drift fails loudly
+    # against the orders recorded in every restart ledger.
     material = _seed_bytes(seed) + purpose.encode("utf-8")
     return tuple(
         sorted(
             names,
-            key=lambda name: hashlib.sha256(
-                material + name.encode("utf-8")
-            ).digest(),
+            key=lambda name: hashlib.sha256(material + name.encode("utf-8")).digest(),
         )
     )
 
@@ -366,7 +398,9 @@ def _prepare_corpus(
 ) -> tuple[np.ndarray, tuple[np.ndarray, ...]]:
     corpus = np.asarray(value)
     if corpus.ndim < 2:
-        raise ValueError(f"{name} must be a shot-major array with at least 2 dimensions")
+        raise ValueError(
+            f"{name} must be a shot-major array with at least 2 dimensions"
+        )
     if corpus.shape[0] < batch_size:
         raise ValueError(
             f"{name} has {corpus.shape[0]} shots, fewer than batch_size={batch_size}"
@@ -377,8 +411,7 @@ def _prepare_corpus(
     corpus.setflags(write=False)
     full_batches = corpus.shape[0] // batch_size
     batches = tuple(
-        corpus[k * batch_size : (k + 1) * batch_size]
-        for k in range(full_batches)
+        corpus[k * batch_size : (k + 1) * batch_size] for k in range(full_batches)
     )
     return corpus, batches
 
@@ -618,7 +651,13 @@ def _measure_latency_workload(
     suite_id: str | None = None,
 ) -> dict[str, Any]:
     protocol.validate(scientific=scientific)
-    restart_index = _positive_int(restart_index + 1, name="restart_index_plus_one") - 1
+    # Plain nonnegative-integer check.  bool is an int subclass and stays
+    # accepted here, exactly as under the historical shifted-by-one check.
+    if not isinstance(restart_index, (int, np.integer)):
+        raise TypeError("restart_index must be an integer")
+    restart_index = int(restart_index)
+    if restart_index < 0:
+        raise ValueError("restart_index must be nonnegative")
     if restart_index >= protocol.restarts:
         raise ValueError(
             f"restart_index={restart_index} is outside [0, {protocol.restarts})"
@@ -654,7 +693,9 @@ def _measure_latency_workload(
         batch_size=batch_size,
     )
     if original_corpus.shape[0] != residual_corpus.shape[0]:
-        raise ValueError("backend original/residual corpora must contain equal shot counts")
+        raise ValueError(
+            "backend original/residual corpora must contain equal shot counts"
+        )
 
     workload_provenance = dict(workload.provenance)
     # Provenance must be serializable before the first warmup or timer read.
@@ -670,8 +711,7 @@ def _measure_latency_workload(
         missing = required_provenance - set(workload_provenance)
         if missing:
             raise ValueError(
-                "scientific latency workload provenance is missing "
-                f"{sorted(missing)}"
+                f"scientific latency workload provenance is missing {sorted(missing)}"
             )
     if workload_identity is not None:
         expected_identity = dict(workload_identity)
@@ -687,9 +727,7 @@ def _measure_latency_workload(
                     "graph_fingerprint",
                 )
             },
-            "decoder_config_sha256": workload_provenance.get(
-                "decoder_config_sha256"
-            ),
+            "decoder_config_sha256": workload_provenance.get("decoder_config_sha256"),
         }
         for key, actual in actual_identity.items():
             if key in expected_identity and expected_identity[key] != actual:
@@ -834,14 +872,7 @@ def _measure_latency_workload(
             if clock is time.perf_counter_ns
             else "explicit_nonclaim_test_clock"
         ),
-        "timing_scope": {
-            "total": "direct adapter-entry-to-packed-prediction-return",
-            "backend": "direct matcher-call-only on pregenerated packed corpora",
-            "input_generation_inside_timing": False,
-            "telemetry_retained_inside_total": False,
-            "gc_policy": "disabled_during_warmup_and_timing",
-            "native_threads": 1,
-        },
+        "timing_scope": dict(_TIMING_SCOPE),
         "warmup": {
             "calls_per_variant": protocol.warmup_calls_per_variant,
             "variant_order": list(warmup_order),
@@ -917,42 +948,8 @@ def run_latency_restart_worker(task: LatencyRestartTask) -> dict[str, Any]:
     )
 
 
-def _tmpdir() -> Path:
-    raw = os.environ.get("TMPDIR")
-    if not raw:
-        raise RuntimeError("TMPDIR must be set for atomic latency-ledger staging")
-    result = Path(raw)
-    result.mkdir(parents=True, exist_ok=True)
-    return result
-
-
-def _strict_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    result: dict[str, Any] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate JSON object key {key!r}")
-        result[key] = value
-    return result
-
-
-def _reject_json_constant(value: str) -> Any:
-    raise ValueError(f"nonfinite JSON constant {value!r}")
-
-
 def _load_json_strict(path: Path) -> dict[str, Any]:
-    if path.is_symlink() or not path.is_file():
-        raise ValueError(f"latency artifact must be a regular non-symlink file: {path}")
-    try:
-        with path.open(encoding="utf-8") as source:
-            value = json.load(
-                source,
-                object_pairs_hook=_strict_json_object,
-                parse_constant=_reject_json_constant,
-            )
-    except (OSError, UnicodeError, json.JSONDecodeError) as ex:
-        raise ValueError(f"cannot read strict JSON latency artifact {path}") from ex
-    if not isinstance(value, dict):
-        raise ValueError(f"latency artifact must contain one JSON object: {path}")
+    value = load_json_strict(path, description="latency artifact")
     canonical_json_bytes(value)
     return value
 
@@ -963,43 +960,25 @@ def write_restart_ledger_atomic(
     *,
     overwrite: bool = False,
 ) -> None:
-    """Write canonical JSON via ``$TMPDIR`` and atomically replace ``path``."""
+    """Write canonical JSON and atomically install it at ``path``."""
 
     destination = Path(path)
     if destination.exists() and not overwrite:
         raise FileExistsError(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
     payload = canonical_json_bytes(dict(record)) + b"\n"
-    fd, temporary_name = tempfile.mkstemp(
+    install_bytes_atomic(
+        destination,
+        payload,
         prefix="promatch-latency-ledger-",
         suffix=".json",
-        dir=_tmpdir(),
+        overwrite=overwrite,
     )
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(fd, "wb") as output:
-            output.write(payload)
-            output.flush()
-            os.fsync(output.fileno())
-        os.replace(temporary, destination)
-        try:
-            directory_fd = os.open(destination.parent, os.O_RDONLY)
-        except OSError:
-            directory_fd = None
-        if directory_fd is not None:
-            try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
-    except BaseException:
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
-        raise
 
 
 def _restart_filename(*, batch_size: int, restart_index: int) -> str:
+    # Sync note: _promatch_latency_analysis._expected_restart_names
+    # independently re-derives these names as a deliberate cross-check; drift
+    # fails loudly against the ledger names recorded in every suite.
     return f"batch-{batch_size}.restart-{restart_index:02d}.json"
 
 
@@ -1023,12 +1002,19 @@ def _load_existing_restart(
     if record.get("protocol_id") != protocol_id:
         raise ValueError(f"existing latency ledger has wrong protocol_id: {path}")
     if record.get("suite_id") != suite_id or record.get("workload_id") != workload_id:
-        raise ValueError(f"existing latency ledger has wrong workload/suite identity: {path}")
+        raise ValueError(
+            f"existing latency ledger has wrong workload/suite identity: {path}"
+        )
     if record.get("workload_identity") != dict(workload_identity):
-        raise ValueError(f"existing latency ledger has changed workload identity: {path}")
+        raise ValueError(
+            f"existing latency ledger has changed workload identity: {path}"
+        )
     if record.get("claim_bearing") is not bool(scientific):
         raise ValueError(f"existing latency ledger has wrong claim scope: {path}")
-    if record.get("batch_size") != batch_size or record.get("restart_index") != restart_index:
+    if (
+        record.get("batch_size") != batch_size
+        or record.get("restart_index") != restart_index
+    ):
         raise ValueError(f"existing latency ledger has wrong task identity: {path}")
     protocol = record.get("protocol")
     if protocol != dict(protocol_json):
@@ -1036,13 +1022,21 @@ def _load_existing_restart(
     calls = protocol.get("calls_per_block")
     blocks = protocol.get("blocks_per_restart")
     pairs = record.get("pairs")
-    if not isinstance(calls, int) or not isinstance(blocks, int) or not isinstance(pairs, Mapping):
-        raise ValueError(f"existing latency ledger has malformed timing dimensions: {path}")
+    if (
+        not isinstance(calls, int)
+        or not isinstance(blocks, int)
+        or not isinstance(pairs, Mapping)
+    ):
+        raise ValueError(
+            f"existing latency ledger has malformed timing dimensions: {path}"
+        )
     if set(pairs) != set(PAIR_NAMES):
         raise ValueError(f"existing latency ledger has wrong timing pairs: {path}")
     for pair_name, pair in pairs.items():
         if not isinstance(pair, Mapping) or set(pair) != LATENCY_PAIR_FIELDS:
-            raise ValueError(f"existing latency pair {pair_name!r} is malformed: {path}")
+            raise ValueError(
+                f"existing latency pair {pair_name!r} is malformed: {path}"
+            )
         if len(pair.get("order_by_block", [])) != blocks:
             raise ValueError(f"existing latency pair has wrong block count: {path}")
         for field in ("numerator_calls_ns", "denominator_calls_ns"):
@@ -1053,7 +1047,10 @@ def _load_existing_restart(
                 or any(
                     not isinstance(row, list)
                     or len(row) != calls
-                    or any(isinstance(v, bool) or not isinstance(v, int) or v <= 0 for v in row)
+                    or any(
+                        isinstance(v, bool) or not isinstance(v, int) or v <= 0
+                        for v in row
+                    )
                     for row in rows
                 )
             ):
@@ -1087,9 +1084,7 @@ def run_latency_benchmark(
         raise TypeError("restart_factory must be callable")
     protocol_json = protocol.to_json(scientific=scientific)
     protocol_id = hashlib.sha256(canonical_json_bytes(protocol_json)).hexdigest()
-    workload_identity = _factory_suite_identity(
-        restart_factory, scientific=scientific
-    )
+    workload_identity = _factory_suite_identity(restart_factory, scientific=scientific)
     if scientific and (
         processes != 32
         or normalized_manifest.get("processes") != processes
@@ -1101,9 +1096,10 @@ def run_latency_benchmark(
         raise ValueError(
             "scientific latency manifest, process count, and workload identity differ"
         )
-    workload_id = hashlib.sha256(
-        canonical_json_bytes(workload_identity)
-    ).hexdigest()
+    # Sync note: _promatch_latency_analysis._protocol_id/_workload_id/_suite_id
+    # independently re-derive these identities as a deliberate cross-check;
+    # drift fails loudly against the ids recorded in every suite and ledger.
+    workload_id = hashlib.sha256(canonical_json_bytes(workload_identity)).hexdigest()
     suite_id = hashlib.sha256(
         canonical_json_bytes(
             {
@@ -1116,22 +1112,20 @@ def run_latency_benchmark(
             }
         )
     ).hexdigest()
-    output = Path(out_dir).resolve()
     ordered_ledgers = [
         _restart_filename(batch_size=batch_size, restart_index=restart_index)
         for batch_size in protocol.batch_sizes
         for restart_index in range(protocol.restarts)
     ]
     expected_names = {"protocol.json", "suite.json", *ordered_ledgers}
+    output, actual_names = validate_resumable_output_root(
+        out_dir,
+        allowed_entries=expected_names,
+        description="latency output",
+    )
     existing_suite: dict[str, Any] | None = None
     existing_suite_path = output / "suite.json"
-    if output.exists():
-        if not output.is_dir() or output.is_symlink():
-            raise ValueError("latency output must be a regular directory")
-        actual_names = {entry.name for entry in output.iterdir()}
-        extras = sorted(actual_names - expected_names)
-        if extras:
-            raise ValueError(f"latency output contains unexpected artifacts: {extras}")
+    if output.exists() and actual_names:
         protocol_path = output / "protocol.json"
         if "protocol.json" not in actual_names:
             raise ValueError("existing latency output is missing protocol.json")
@@ -1164,9 +1158,12 @@ def run_latency_benchmark(
                     "existing latency output belongs to a different protocol or workload"
                 )
         if not resume and actual_names - {"protocol.json"}:
-            raise FileExistsError("latency output already contains collection artifacts")
+            raise FileExistsError(
+                "latency output already contains collection artifacts"
+            )
     else:
-        output.mkdir(parents=True, exist_ok=False)
+        if not output.exists():
+            output.mkdir(parents=True, exist_ok=False)
         write_restart_ledger_atomic(
             output / "protocol.json",
             normalized_manifest,
@@ -1258,8 +1255,9 @@ def run_latency_benchmark(
         "fresh_process_per_restart": True,
         "restart_ledgers": ordered_ledgers,
         "restart_ledger_sha256": {
-            _restart_filename(batch_size=batch_size, restart_index=restart_index):
-            hashlib.sha256(
+            _restart_filename(
+                batch_size=batch_size, restart_index=restart_index
+            ): hashlib.sha256(
                 canonical_json_bytes(records[(batch_size, restart_index)])
             ).hexdigest()
             for batch_size in protocol.batch_sizes

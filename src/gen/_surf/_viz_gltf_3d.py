@@ -80,6 +80,7 @@ def gltf_model_from_colored_triangle_data(
         *,
         colored_line_data: Sequence[ColoredLineData] = (),
 ) -> pygltflib.GLTF2:
+    """Builds a glTF model whose geometry is embedded in a binary data URI."""
     colored_triangle_data = ColoredTriangleData.fused(colored_triangle_data)
     colored_line_data = ColoredLineData.fused(colored_line_data)
 
@@ -96,7 +97,7 @@ def gltf_model_from_colored_triangle_data(
         material.alphaMode = None
         material.alphaCutoff = None
         material.doubleSided = True
-        material_INDICES[data.rgba] = len(gltf.materials)
+        material_INDICES['tri', data.rgba] = len(gltf.materials)
         gltf.materials.append(material)
     for data in colored_line_data:
         material = pygltflib.Material()
@@ -107,7 +108,7 @@ def gltf_model_from_colored_triangle_data(
         material.emissiveFactor = None
         material.alphaMode = None
         material.alphaCutoff = None
-        material_INDICES[data.rgba] = len(gltf.materials)
+        material_INDICES['line', data.rgba] = len(gltf.materials)
         gltf.materials.append(material)
 
     shared_buffer = pygltflib.Buffer()
@@ -116,7 +117,7 @@ def gltf_model_from_colored_triangle_data(
     coord_data = coords_tri.tobytes() + coords_edg.tobytes()
     buffer_bytes = base64.b64encode(coord_data).decode()
     shared_buffer.uri = f"data:application/octet-stream;base64,{buffer_bytes}"
-    shared_buffer.byteLength = len(buffer_bytes)
+    shared_buffer.byteLength = len(coord_data)
     shared_buffer_INDEX = len(gltf.buffers)
     gltf.buffers.append(shared_buffer)
 
@@ -130,7 +131,7 @@ def gltf_model_from_colored_triangle_data(
         bufferView.byteLength = byte_length
         byte_offset += byte_length
         bufferView.target = pygltflib.ARRAY_BUFFER
-        buffer_view_INDICES[data.rgba] = len(gltf.bufferViews)
+        buffer_view_INDICES['tri', data.rgba] = len(gltf.bufferViews)
         gltf.bufferViews.append(bufferView)
     for data in colored_line_data:
         bufferView = pygltflib.BufferView()
@@ -140,44 +141,44 @@ def gltf_model_from_colored_triangle_data(
         bufferView.byteLength = byte_length
         byte_offset += byte_length
         bufferView.target = pygltflib.ARRAY_BUFFER
-        buffer_view_INDICES[data.rgba] = len(gltf.bufferViews)
+        buffer_view_INDICES['line', data.rgba] = len(gltf.bufferViews)
         gltf.bufferViews.append(bufferView)
 
     accessor_INDICES = {}
     for data in colored_triangle_data:
         accessor = pygltflib.Accessor()
-        accessor.bufferView = buffer_view_INDICES[data.rgba]
+        accessor.bufferView = buffer_view_INDICES['tri', data.rgba]
         accessor.byteOffset = 0
         accessor.componentType = pygltflib.FLOAT
         accessor.count = data.triangle_list.shape[0]
         accessor.type = pygltflib.VEC3
         accessor.max = [float(e) for e in np.max(data.triangle_list, axis=0)]
         accessor.min = [float(e) for e in np.min(data.triangle_list, axis=0)]
-        accessor_INDICES[data.rgba] = len(gltf.accessors)
+        accessor_INDICES['tri', data.rgba] = len(gltf.accessors)
         gltf.accessors.append(accessor)
     for data in colored_line_data:
         accessor = pygltflib.Accessor()
-        accessor.bufferView = buffer_view_INDICES[data.rgba]
+        accessor.bufferView = buffer_view_INDICES['line', data.rgba]
         accessor.byteOffset = 0
         accessor.componentType = pygltflib.FLOAT
         accessor.count = data.edge_list.shape[0]
         accessor.type = pygltflib.VEC3
         accessor.max = [float(e) for e in np.max(data.edge_list, axis=0)]
         accessor.min = [float(e) for e in np.min(data.edge_list, axis=0)]
-        accessor_INDICES[data.rgba] = len(gltf.accessors)
+        accessor_INDICES['line', data.rgba] = len(gltf.accessors)
         gltf.accessors.append(accessor)
 
     mesh0 = pygltflib.Mesh()
     for data in colored_triangle_data:
         primitive = pygltflib.Primitive()
-        primitive.material = material_INDICES[data.rgba]
-        primitive.attributes.POSITION = accessor_INDICES[data.rgba]
+        primitive.material = material_INDICES['tri', data.rgba]
+        primitive.attributes.POSITION = accessor_INDICES['tri', data.rgba]
         primitive.mode = pygltflib.TRIANGLES
         mesh0.primitives.append(primitive)
     for data in colored_line_data:
         primitive = pygltflib.Primitive()
-        primitive.material = material_INDICES[data.rgba]
-        primitive.attributes.POSITION = accessor_INDICES[data.rgba]
+        primitive.material = material_INDICES['line', data.rgba]
+        primitive.attributes.POSITION = accessor_INDICES['line', data.rgba]
         primitive.mode = pygltflib.LINES
         mesh0.primitives.append(primitive)
     mesh0_INDEX = len(gltf.meshes)

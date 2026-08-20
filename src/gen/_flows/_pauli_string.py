@@ -2,7 +2,6 @@ from typing import Dict, Callable
 
 import stim
 
-import gen
 from gen._core._util import sorted_complex
 from gen._core._tile import Tile
 
@@ -10,7 +9,7 @@ from gen._core._tile import Tile
 class PauliString:
     """A qubit-to-pauli mapping."""
     def __init__(self, qubits: Dict[complex, str]):
-        self.qubits = {q: qubits[q] for q in gen.sorted_complex(qubits.keys())}
+        self.qubits = {q: qubits[q] for q in sorted_complex(qubits.keys())}
         self._hash = hash(tuple(self.qubits.items()))
 
     @staticmethod

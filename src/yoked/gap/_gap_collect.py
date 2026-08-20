@@ -18,6 +18,12 @@ def collect_gap_stats(
         print_progress: bool,
         print_header: bool,
 ) -> None:
+    """Collect gap-decoder statistics until every task reaches ``num_shots``.
+
+    Progress rows are written to ``out`` as they arrive. Interruptions and
+    worker failures propagate to the caller after all worker processes have
+    been stopped, so an incomplete collection is never reported as complete.
+    """
     starting = True
     printer = ThrottledProgressPrinter(outs=[out], print_progress=print_progress, min_progress_delay=0.1)
     printer.show_latest_progress(f"Starting {num_workers} workers...")
@@ -52,7 +58,7 @@ def collect_gap_stats(
                 f'workers={w} '
                 f'core_mins_left={dt} '
                 f'shots_left={num_shots - c.shots} '
-                f'errors={c.errors} ' + ",".join(f"{k}={v}" for k, v in m.partial_tasks[k].json_metadata.items()))
+                f'errors={c.errors} ' + ",".join(f"{mk}={mv}" for mk, mv in m.partial_tasks[k].json_metadata.items()))
         msg = f'{tasks_left} tasks left:\n' + '\n'.join(lines)
         printer.show_latest_progress(msg + '\n')
 
@@ -68,18 +74,24 @@ def collect_gap_stats(
 
     m.start_workers()
 
-    printer.show_latest_progress(f"Analyzing {len(tasks)} circuits...")
-    m.start_distributing_work()
-    starting = False
+    try:
+        printer.show_latest_progress(f"Analyzing {len(tasks)} circuits...")
+        m.start_distributing_work()
+        starting = False
 
-    for strong_id in m.task_strong_ids:
-        if strong_id not in total_collected:
-            total_collected[strong_id] = sinter.AnonTaskStats()
-    if print_header:
-        printer.print_out(sinter.CSV_HEADER)
+        for strong_id in m.task_strong_ids:
+            if strong_id not in total_collected:
+                total_collected[strong_id] = sinter.AnonTaskStats()
+        if print_header:
+            printer.print_out(sinter.CSV_HEADER)
 
-    show_progress()
-    m.run_until_done()
+        show_progress()
+        m.run_until_done()
+    finally:
+        # run_until_done stops the workers itself, but a failure before it
+        # (e.g. while distributing work) would otherwise leak live workers
+        # and hang the process at exit. hard_stop is a no-op if already run.
+        m.hard_stop()
 
-    printer.show_latest_progress(f'Done')
+    printer.show_latest_progress('Done')
     printer.flush()

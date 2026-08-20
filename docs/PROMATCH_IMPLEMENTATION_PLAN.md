@@ -1,5 +1,12 @@
 # L1 ProMatch-Style Decoder: Airtight First-Round Implementation and Experiment Plan
 
+> **Status:** living design document for the ProMatch-L1 experiment series.
+> Sections describing frozen protocols are retained verbatim for provenance and
+> are not rewritten after a freeze. For the outcome and current status of each
+> campaign, see `experiments/README.md` (status dashboard) and the frozen
+> protocol manifests indexed in `docs/README.md`.
+> **Last updated:** 2026-08-19.
+
 ## 1. Decision Summary
 
 The first experiment will test a **local L1 predecoder followed by the existing
@@ -752,7 +759,7 @@ single Stim stream is seekable.
 | `src/yoked/decoding/_promatch.py` | Implement exact predicates, stages, path algebra, and transactional attempts. |
 | `src/yoked/decoding/_promatch_decoder.py` | Implement `PU`, `U0-wrap`, and Sinter adapters. |
 | `src/yoked/decoding/_promatch_stats.py` | Implement paired tables, confidence intervals, power checks, and schema validation. |
-| `src/yoked/decoding/_promatch_{layout,graph,core,decoder,experiment,stats,analysis,latency,latency_integration,latency_analysis}_test.py` | Unit, property, algebraic, packing, statistical, latency, and integration tests. |
+| `tests/yoked/decoding/_promatch_{layout,graph,core,decoder,experiment,stats,analysis,latency,latency_integration,latency_analysis}_test.py` | Unit, property, algebraic, packing, statistical, latency, and integration tests. |
 | `tools/benchmark_promatch_l1` | Run paired accuracy/workload and controlled latency experiments. |
 | `tools/analyze_promatch_l1` | Read frozen raw results and produce the preregistered analysis. |
 | `docs/PROMATCH_PILOT_PROTOCOL.json` | Candidate grid, pilot seeds, gates, and selection rule frozen before pilot sampling. |
@@ -1499,16 +1506,16 @@ Focused and complete tests:
 
 ```bash
 python -m pytest \
-    src/yoked/decoding/_promatch_layout_test.py \
-    src/yoked/decoding/_promatch_graph_test.py \
-    src/yoked/decoding/_promatch_core_test.py \
-    src/yoked/decoding/_promatch_decoder_test.py \
-    src/yoked/decoding/_promatch_experiment_test.py \
-    src/yoked/decoding/_promatch_stats_test.py \
-    src/yoked/decoding/_promatch_analysis_test.py \
-    src/yoked/decoding/_promatch_latency_test.py \
-    src/yoked/decoding/_promatch_latency_integration_test.py \
-    src/yoked/decoding/_promatch_latency_analysis_test.py
+    tests/yoked/decoding/_promatch_layout_test.py \
+    tests/yoked/decoding/_promatch_graph_test.py \
+    tests/yoked/decoding/_promatch_core_test.py \
+    tests/yoked/decoding/_promatch_decoder_test.py \
+    tests/yoked/decoding/_promatch_experiment_test.py \
+    tests/yoked/decoding/_promatch_stats_test.py \
+    tests/yoked/decoding/_promatch_analysis_test.py \
+    tests/yoked/decoding/_promatch_latency_test.py \
+    tests/yoked/decoding/_promatch_latency_integration_test.py \
+    tests/yoked/decoding/_promatch_latency_analysis_test.py
 python -m pytest
 ```
 

@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: >-
+  If you use this repository, please cite the published Yoked surface codes
+  article below.
+title: Yoked Surface Codes research code and data
+type: software
+authors:
+  - family-names: Gidney
+    given-names: Craig
+  - family-names: Newman
+    given-names: Michael
+  - family-names: Brooks
+    given-names: Peter
+  - family-names: Jones
+    given-names: Cody
+repository-code: https://github.com/polarbearsrock/yoked-surface-codes
+url: https://doi.org/10.1038/s41467-025-59714-1
+preferred-citation:
+  type: article
+  title: Yoked surface codes
+  authors:
+    - family-names: Gidney
+      given-names: Craig
+    - family-names: Newman
+      given-names: Michael
+    - family-names: Brooks
+      given-names: Peter
+    - family-names: Jones
+      given-names: Cody
+  journal: Nature Communications
+  volume: 16
+  year: 2025
+  month: 5
+  doi: 10.1038/s41467-025-59714-1
+  url: https://doi.org/10.1038/s41467-025-59714-1

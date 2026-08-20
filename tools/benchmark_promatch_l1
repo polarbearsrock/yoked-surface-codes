@@ -3,8 +3,12 @@
 
 from __future__ import annotations
 
+# Native-thread limits intentionally execute before numerical/package imports.
+# ruff: noqa: E402
+
 # Set native-thread limits before importing NumPy/PyMatching through the harness.
 import os
+
 for _name in (
     "OMP_NUM_THREADS",
     "OPENBLAS_NUM_THREADS",
@@ -17,12 +21,16 @@ for _name in (
 
 import argparse
 import json
+import pathlib
 from pathlib import Path
 import sys
 
-_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(_ROOT / "src"))
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
 
+from yoked.decoding._artifact_io import (  # noqa: E402
+    unique_json_object as _unique_object,
+)
 from yoked.decoding._promatch_experiment import (  # noqa: E402
     default_smoke_protocol,
     freeze_protocol,
@@ -41,15 +49,6 @@ from yoked.decoding._promatch_latency_integration import (  # noqa: E402
     YokedPromatchLatencyFactory,
     latency_protocol_from_manifest,
 )
-
-
-def _unique_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate JSON object key {key!r}")
-        result[key] = value
-    return result
 
 
 def _load_json(path: Path):
@@ -138,7 +137,13 @@ def main() -> int:
         if hasattr(args, "processes"):
             validate_process_count(args.processes)
         if args.command == "inspect":
-            print(json.dumps(inspect_protocol(_load_json(args.protocol)), indent=2, sort_keys=True))
+            print(
+                json.dumps(
+                    inspect_protocol(_load_json(args.protocol)),
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
             return 0
         if args.command == "freeze":
             draft = _load_json(args.protocol)
@@ -156,7 +161,9 @@ def main() -> int:
                     pilot_input_directory=args.pilot_input,
                 )
             elif args.pilot_protocol is not None or args.pilot_input is not None:
-                raise ValueError("pilot provenance options are only valid for confirmatory freeze")
+                raise ValueError(
+                    "pilot provenance options are only valid for confirmatory freeze"
+                )
             frozen = freeze_protocol(draft)
             _write_new_json(args.out_protocol, frozen)
             print(f"wrote frozen protocol {args.out_protocol}")

@@ -1,3 +1,12 @@
+"""Circuit construction for one step (time slab) of a surface code patch.
+
+A `StepOutline` is one slab of a 3d spacetime diagram: an optional starting
+transition (floor), a body patch that is measured for `rounds` rounds, and an
+optional ending transition (ceiling). `build_rounds` turns the slab into
+circuit rounds appended onto a `gen.Builder`, using repeat blocks once the
+per-round circuits start repeating.
+"""
+
 import functools
 from typing import Optional, Callable, Any, Iterable, Dict, Set, Tuple, FrozenSet, List
 
@@ -8,6 +17,8 @@ from gen._surf._patch_transition_outline import PatchTransitionOutline
 
 
 class StepOutline:
+    """Describes one timed surface-code patch and its boundary transitions."""
+
     def __init__(
             self,
             *,
@@ -26,23 +37,25 @@ class StepOutline:
         self.rounds = rounds
         assert self.rounds > 0
 
-    def without_start_transition(self):
+    def without_start_transition(self) -> 'StepOutline':
+        """Returns a copy with only the starting transition removed."""
         return StepOutline(
             start=None,
             body=self.body,
             end=self.end,
-            obs_delta_body_start=self.obs_delta_body_end,
-            obs_delta_body_end=self.obs_delta_body_start,
+            obs_delta_body_start=self.obs_delta_body_start,
+            obs_delta_body_end=self.obs_delta_body_end,
             rounds=self.rounds,
         )
 
-    def without_end_transition(self):
+    def without_end_transition(self) -> 'StepOutline':
+        """Returns a copy with only the ending transition removed."""
         return StepOutline(
             start=self.start,
             body=self.body,
             end=None,
-            obs_delta_body_start=self.obs_delta_body_end,
-            obs_delta_body_end=self.obs_delta_body_start,
+            obs_delta_body_start=self.obs_delta_body_start,
+            obs_delta_body_end=self.obs_delta_body_end,
             rounds=self.rounds,
         )
 
@@ -68,6 +81,30 @@ class StepOutline:
             edit_cur_obs: Dict[str, Set[complex]],
             o2i: Dict[str, Optional[int]],
     ) -> None:
+        """Appends this step's rounds onto the given builder's circuit.
+
+        Args:
+            builder: The circuit builder that gates, detectors, and
+                measurement-tracking data are appended into.
+            rel_order_func: Maps a measurement ancilla position to the
+                relative offsets of its data qubits, in interaction order
+                (e.g. `lambda _: Order_Z`).
+            alternate_ordering_with_round_parity: When True, odd-indexed
+                rounds run the CX layers in reversed order (repeat blocks
+                then pair up rounds two at a time).
+            start_round_index: Global index of this step's first round.
+                Controls round parity and the per-round save layer keys.
+            cmp_layer: Tracker layer whose stabilizer measurements the first
+                round is compared against for detectors. None means there is
+                no previous layer to compare against.
+            save_layer: Tracker layer under which the last round's
+                measurements are exposed, for later steps to compare against.
+            edit_cur_obs: Mutable map from observable name to its current
+                data qubit support. Updated in place as transitions and
+                stabilizer deltas move the observables.
+            o2i: Maps each observable name to its OBSERVABLE_INCLUDE index,
+                or to None to indicate the observable should be dropped.
+        """
         assert self.rounds > 0
         empty = PatchTransitionOutline.empty()
         patch = self.body.to_patch(rel_order_func=rel_order_func)

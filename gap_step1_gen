@@ -9,4 +9,5 @@ tools/gen_memory_circuit \
     --gateset cz \
     --patches 1 \
     --yokes 1 \
-    --remove_x_yoke
+    --remove_x_yoke \
+    --out_dir out/gap_circuits

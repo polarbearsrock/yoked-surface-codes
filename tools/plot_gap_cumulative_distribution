@@ -13,9 +13,8 @@ from matplotlib import pyplot as plt
 
 from _plot_util import FieldToMetadataWrapper
 
-src_path = pathlib.Path(__file__).parent.parent / 'src'
-assert src_path.exists()
-sys.path.append(str(src_path))
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / 'src'))
 from yoked._histogram_conversion import \
     curve_rescaled_to_target_area, \
     with_unsigned_gap, \
@@ -32,14 +31,25 @@ def chunk(vs: Iterable[float], chunking: int) -> np.ndarray:
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('inputs', type=str, nargs='+')
-    parser.add_argument('--filter_func', type=str, default="True")
-    parser.add_argument('--ymin', type=float, default=1e-9)
-    parser.add_argument('--max_gap', type=int, default=250)
-    parser.add_argument('--include_forward_cdf', action='store_true')
-    parser.add_argument('--show', action='store_true')
-    parser.add_argument('--out', type=str, default=None)
+    parser = argparse.ArgumentParser(
+        description='Plots reverse cumulative distributions of unsigned decoder '
+                    'gaps, plus cubed-CDF extrapolations to more rounds.')
+    parser.add_argument('inputs', type=str, nargs='+',
+                        help='Sinter stats CSV files with C#/E# gap custom counts.')
+    parser.add_argument('--filter_func', type=str, default="True",
+                        help="Python expression eval'd with keyword arguments stat, "
+                             'decoder, metadata, m, and strong_id (sinter convention); '
+                             'only stats where it is truthy are plotted.')
+    parser.add_argument('--ymin', type=float, default=1e-9,
+                        help='Bottom of the log-scale probability axis (default: 1e-9).')
+    parser.add_argument('--max_gap', type=int, default=250,
+                        help='Right edge of the gap axis, in dB (default: 250).')
+    parser.add_argument('--include_forward_cdf', action='store_true',
+                        help='Also plot the forward (ascending) success CDF.')
+    parser.add_argument('--show', action='store_true',
+                        help='Show the plot in an interactive window.')
+    parser.add_argument('--out', type=str, default=None,
+                        help='Path to write the plot image to.')
 
     args = parser.parse_args()
     include_forward_cdf = args.include_forward_cdf

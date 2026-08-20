@@ -126,10 +126,11 @@ causal attributions because another equal-weight optimum may pair events
 differently. The oracle experiment addresses that limitation by checking
 objective cost and logical class, followed by controlled context ablations.
 
-Primary evidence:
+Primary evidence on the experiment workstation (the `out/` tree is generated
+and ignored by Git):
 
-- [`pilot/summary.json`](../out/promatch_l1_round1_v3_20260817_32p/pilot/summary.json)
-- [`pilot_analysis/analysis.md`](../out/promatch_l1_round1_v3_20260817_32p/pilot_analysis/analysis.md)
+- `out/promatch_l1_round1_v3_20260817_32p/pilot/summary.json`
+- `out/promatch_l1_round1_v3_20260817_32p/pilot_analysis/analysis.md`
 - [`tools/diagnose_promatch_l1`](../tools/diagnose_promatch_l1)
 
 ---
@@ -325,15 +326,14 @@ It is also not an end-to-end workload or latency measurement.
 
 Relevant implementation points:
 
-- complete matcher construction:
-  [`_promatch_graph.py`](../src/yoked/decoding/_promatch_graph.py#L182)
-- complete-width residual matcher call:
-  [`_promatch_decoder.py`](../src/yoked/decoding/_promatch_decoder.py#L200)
-- paired U0 and residual calls:
-  [`U0`](../src/yoked/decoding/_promatch_experiment.py#L1705) and
-  [`residual`](../src/yoked/decoding/_promatch_experiment.py#L1720)
-- event-ratio analysis:
-  [`_promatch_analysis.py`](../src/yoked/decoding/_promatch_analysis.py#L294)
+- complete matcher construction: `compile_matching_graph` in
+  [`_promatch_graph.py`](../src/yoked/decoding/_promatch_graph.py)
+- complete-width residual matcher call: `CompiledPromatchDecoder.decode_shots_bit_packed`
+  in [`_promatch_decoder.py`](../src/yoked/decoding/_promatch_decoder.py)
+- paired U0 and residual calls: `collect_prepared_batch` in
+  [`_promatch_experiment.py`](../src/yoked/decoding/_promatch_experiment.py)
+- event-ratio analysis: `analyze_cell` in
+  [`_promatch_analysis.py`](../src/yoked/decoding/_promatch_analysis.py)
 
 ---
 
@@ -1668,12 +1668,15 @@ implemented and tested before any proposed CLI is advertised as runnable.
 
 ### 15.3 Retained-replay diagnostic interface
 
-The Phase-A retained replay is implemented as:
+The completed Phase-A retained replay artifact is
+`out/promatch_l1_global_context_oracle_v1/replay/`. To regenerate it from the
+implementation/config commit authenticated by the frozen manifest, choose a
+new empty output directory, for example:
 
 ```bash
 tools/diagnose_promatch_l1 oracle-replay \
     --config docs/PROMATCH_ORACLE_REPLAY_FROZEN_V1.json \
-    --out out/promatch_l1_global_context_oracle_v1/replay
+    --out "$TMPDIR/promatch-oracle-replay-regeneration"
 ```
 
 The frozen config authenticates the immutable V3 input hashes, selected cells

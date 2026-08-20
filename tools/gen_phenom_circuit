@@ -7,24 +7,41 @@ import pathlib
 
 import sys
 
-src_path = pathlib.Path(__file__).parent.parent / 'src'
-assert src_path.exists()
-sys.path.append(str(src_path))
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / 'src'))
 
 import gen
 from yoked._squareberg_circuits import squareberg_phenomenological_circuit
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--rounds', nargs='+', type=str, required=True)
-    parser.add_argument('--noise_strength', nargs='+', type=float, required=True)
-    parser.add_argument('--filter_func', type=str, default='True')
-    parser.add_argument('--patches', nargs='+', type=str, required=True)
-    parser.add_argument('--yokes', nargs='+', type=int, required=True)
-    parser.add_argument('--extra', type=str, default="{}")
-    parser.add_argument('--out_dir', type=str, default='out/circuits')
-    parser.add_argument('--debug', action='store_true')
+    parser = argparse.ArgumentParser(
+        description='Generates phenomenological-noise squareberg memory stim '
+                    'circuits, one file per parameter combination, named by their '
+                    'metadata.')
+    parser.add_argument('--rounds', nargs='+', type=str, required=True,
+                        help="Python expressions eval'd with variable yokes, giving "
+                             'the number of rounds.')
+    parser.add_argument('--noise_strength', nargs='+', type=float, required=True,
+                        help='Noise strengths (p) to generate circuits for.')
+    parser.add_argument('--filter_func', type=str, default='True',
+                        help="Python expression eval'd with keyword arguments rounds, "
+                             'noise_strength, patches, and yokes; parameter '
+                             'combinations where it is falsy are skipped.')
+    parser.add_argument('--patches', nargs='+', type=str, required=True,
+                        help="Python expressions eval'd with variable yokes, giving "
+                             'the number of patches (must be a square, e.g. 256).')
+    parser.add_argument('--yokes', nargs='+', type=int, required=True,
+                        help='Numbers of yokes; must equal 4*sqrt(patches) (only '
+                             'squareberg layouts are supported).')
+    parser.add_argument('--extra', type=str, default="{}",
+                        help="Python dict expression eval'd to extra metadata entries "
+                             'merged into each circuit filename.')
+    parser.add_argument('--out_dir', type=str, default='out/circuits',
+                        help='Directory the .stim circuit files are written into.')
+    parser.add_argument('--debug', action='store_true',
+                        help='Also write debug_noisy.html, debug_ideal.html, and '
+                             'debug_detslice.svg viewers for the last circuit.')
     args = parser.parse_args()
     out_dir = pathlib.Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -84,7 +101,7 @@ def main():
         print(f'wrote {circuit_path}')
         if args.debug:
             gen.write_file(out_dir / "debug_noisy.html", gen.stim_circuit_html_viewer(circuit))
-            gen.write_file(out_dir / "debug_ideal.html", gen.stim_circuit_html_viewer(circuit))
+            gen.write_file(out_dir / "debug_ideal.html", gen.stim_circuit_html_viewer(circuit.without_noise()))
             gen.write_file(out_dir / "debug_detslice.svg", circuit.without_noise().diagram("time+detector-slice-svg"))
 
 

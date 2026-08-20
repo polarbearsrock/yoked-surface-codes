@@ -7,6 +7,9 @@ from gen._core._util import sorted_complex
 from gen._flows._chunk import Chunk, ChunkLoop
 from gen._flows._flow import PauliString, Flow
 
+# Detector coordinate appended to mark a detector as postselected (also hardcoded in gen._util).
+POSTSELECTION_MARKER_COORD = 999
+
 
 def magic_init_for_chunk(
         chunk: Chunk,
@@ -47,6 +50,11 @@ def magic_measure_for_chunk(
 def magic_measure_for_flows(
         flows: List[Flow],
 ) -> Chunk:
+    """Returns a magic chunk that measures the given flows' end stabilizers.
+
+    Each flow with a non-empty end is terminated by directly measuring its end
+    Pauli product with an MPP, ignoring connectivity and hardware limitations.
+    """
     all_qubits = sorted_complex({
         q
         for flow in flows
@@ -279,7 +287,7 @@ def _compile_chunk_into_circuit_atomic(
                 if flow.additional_coords:
                     coords += flow.additional_coords
                 if flow.postselect:
-                    coords += (999,)
+                    coords += (POSTSELECTION_MARKER_COORD,)
                 out_circuit.append("DETECTOR", targets, coords)
                 any_detectors = True
             else:
@@ -330,6 +338,26 @@ def compile_chunks_into_circuit(
         include_detectors: bool = True,
         ignore_errors: bool = False,
 ) -> stim.Circuit:
+    """Compiles a sequence of chunks into a single stim circuit.
+
+    Chunks are appended in order, with their qubit indices remapped to a
+    shared global indexing. Flows ending in one chunk are stitched to flows
+    starting in the next chunk.
+
+    Args:
+        chunks: The chunks (or looped chunk sequences) to compile, in order.
+        include_detectors: When True, matched-up flow measurements are
+            annotated into DETECTOR instructions (and OBSERVABLE_INCLUDE for
+            flows with an obs_index). When False, no flow matching is done and
+            no detector/observable annotations are emitted.
+        ignore_errors: When True, flow mismatches between adjacent chunks
+            (missing predecessors, leftover flows, unterminated flows at the
+            end) are silently ignored instead of raising a ValueError.
+
+    Returns:
+        The compiled circuit, starting with QUBIT_COORDS annotations for the
+        union of all chunk qubits.
+    """
     all_qubits = set()
 
     def _process(sub_chunk: Union[Chunk, ChunkLoop]):

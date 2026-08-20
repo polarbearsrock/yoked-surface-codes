@@ -1,5 +1,5 @@
 import dataclasses
-from typing import List, TypeVar, Type, Optional, cast, Set
+from typing import List, Optional, Set
 
 import stim
 

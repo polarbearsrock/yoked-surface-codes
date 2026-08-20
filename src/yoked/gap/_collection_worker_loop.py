@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import Optional, TYPE_CHECKING
 
 from yoked.gap._collection_work_handler import CollectionWorkHandler
@@ -15,10 +14,16 @@ def collection_worker_loop(flush_period: float,
                            inp: 'multiprocessing.Queue',
                            out: 'multiprocessing.Queue',
                            core_affinity: Optional[int]) -> None:
+    """Runs one queue-driven collection worker until it receives a stop message.
+
+    CPU affinity is a best-effort optimization; failure to set it does not
+    change the worker's sampling or accounting behavior.
+    """
+
     try:
         if core_affinity is not None and hasattr(os, 'sched_setaffinity'):
             os.sched_setaffinity(0, {core_affinity})
-    except:
+    except Exception:
         # If setting the core affinity fails, we keep going regardless.
         pass
 

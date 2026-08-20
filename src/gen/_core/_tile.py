@@ -37,7 +37,9 @@ class Tile:
             bases *= len(self.ordered_data_qubits)
         self.bases: str = bases
         if len(self.bases) != len(self.ordered_data_qubits):
-            raise ValueError('len(self.bases_2) != len(self.data_qubits_order)')
+            raise ValueError(
+                f'len(bases)={len(self.bases)} != '
+                f'len(ordered_data_qubits)={len(self.ordered_data_qubits)}')
 
     def to_data_pauli_string(self) -> 'gen.PauliString':
         from gen._flows._pauli_string import PauliString

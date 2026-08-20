@@ -95,7 +95,7 @@ tools/sinter_plot_print \
 tools/plot_gap_distribution \
     assets/stats.csv \
     --out assets/gap_distribution.png \
-    --emulate_unyoked \
+    --emulate_unyoked_decoding \
     --filter_func "m.p == 0.001 and m.yokes == 1 and m.collect == 'gap'" \
     --bucket_width 10 &
 

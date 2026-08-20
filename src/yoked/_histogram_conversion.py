@@ -1,16 +1,23 @@
 import collections
 import math
-from typing import Dict, Mapping, Tuple, Iterable, Sequence, List
+from typing import Mapping, Tuple, Iterable, Sequence, List
 
 import numpy as np
 import sinter
-from matplotlib import pyplot as plt
 
 
 def min_sample_extrapolate(
         hits: Mapping[float, int],
         n: float,
 ):
+    """Extrapolates a histogram to the histogram of the min of n iid draws.
+
+    Treats `hits` as an empirical distribution and returns the expected
+    histogram (same bin locations, same total count) of min(X_1, ..., X_n)
+    for n independent draws from it, via S_min(x) = S(x)**n on the survival
+    function. Used e.g. to predict the worst gap among n patches from
+    single-patch gap data. n may be fractional.
+    """
     n_hits = sum(hits.values())
     xs = np.array(sorted({k: v for k, v in hits.items()}))
     hs = np.array([hits[x] for x in xs])
@@ -33,6 +40,12 @@ def histogram_cumulative_meet_in_the_middle(
         total_hits: int,
         hits: Mapping[float, int],
 ) -> Tuple[Iterable[float], Iterable[float]]:
+    """Returns the two-sided cumulative distribution of a histogram.
+
+    At each support point x the returned value is the smaller of P(X <= x)
+    and P(X >= x) (both relative to total_hits), so both tails of the
+    distribution show up when plotted on a log axis.
+    """
     hits = {k: v for k, v in hits.items() if v}
     xs = np.array(sorted(hits.keys()))
     hs = np.array([hits[x] for x in xs])
@@ -45,6 +58,15 @@ def histogram_bucket_holds(
         hits: Mapping[float, int],
         bucket_width: float,
 ) -> Tuple[Sequence[float], Sequence[float]]:
+    """Turns a histogram into a sliding-window ('bucket hold') count curve.
+
+    For each support point x, emits the number of hits inside a window of
+    size bucket_width starting at x, twice: once including a hit exactly at
+    x and once just after it, producing the vertical steps where the window
+    boundary crosses a data point. Zero-count support points are added one
+    bucket_width before each hit so the curve drops back between clusters,
+    and the returned x coordinates are shifted to the window centers.
+    """
     hits = {k: v for k, v in hits.items() if v}
     for k in list(hits.keys()):
         hits.setdefault(k - bucket_width, 0)
@@ -78,6 +100,12 @@ def histogram_cosine_convolve(
         hits: Mapping[int, int],
         bucket_width: int,
 ) -> Tuple[Sequence[float], Sequence[float]]:
+    """Smooths an integer-keyed histogram with a raised-cosine kernel.
+
+    The support is resampled at 1/8 steps (mass stays at the integer
+    positions) and convolved with a cos+1 kernel roughly 1.25*bucket_width
+    wide, then trimmed back to the resampled support.
+    """
     assert all(k == int(k) for k in hits.keys())
     min_hit = int(min(hits.keys(), default=0))
     max_hit = int(max(hits.keys(), default=-1))
@@ -101,6 +129,7 @@ def curve_to_curve_between_midpoints(
         xs: Sequence[float],
         ys: Sequence[float],
 ) -> Tuple[Sequence[float], Sequence[float]]:
+    """Resamples a curve at the midpoints between its points (ends kept)."""
     if len(xs) == 0:
         return xs, ys
     out_xs = []
@@ -121,6 +150,7 @@ def curve_rescaled_to_target_area(
         xs: Sequence[float],
         ys: Sequence[float],
 ) -> Tuple[Sequence[float], Sequence[float]]:
+    """Rescales a curve so its trapezoidal area equals expected_total."""
     return xs, np.array(ys) * expected_total / area_under_curve(xs, ys)
 
 
@@ -129,6 +159,13 @@ def histogram_slope_holds(
         total_hits: int,
         hits: Mapping[float, int],
 ) -> Tuple[Iterable[float], Iterable[float]]:
+    """Estimates a density curve from a histogram via CDF slopes.
+
+    The slope of the empirical CDF between each pair of adjacent support
+    points is emitted as a horizontal 'hold' segment spanning that pair, and
+    the result is rescaled so its area equals the histogram's total
+    probability mass (relative to total_hits).
+    """
     hits = {k: v for k, v in hits.items() if v}
     xs = np.array(sorted(hits.keys()))
     hs = np.array([hits[x] for x in xs])
@@ -158,6 +195,7 @@ def histogram_slope_holds(
 
 
 def area_under_curve(xs: Sequence[float], ys: Sequence[float]) -> float:
+    """Trapezoid-rule area; returns 1e-10 instead of 0 so callers can divide."""
     total = 0
     for k in range(len(xs) - 1):
         x0 = xs[k]
@@ -176,6 +214,9 @@ def histogram_slope_centers(
         total_hits: int,
         hits: Mapping[float, int],
 ) -> Tuple[Iterable[float], Iterable[float]]:
+    """Like `histogram_slope_holds`, but smoother: the CDF slope is taken
+    across a 5-point span and plotted at the span's center.
+    """
     hits = {k: v for k, v in hits.items()}
     xs = np.array(sorted(hits.keys()))
     hs = np.array([hits[x] for x in xs])
@@ -208,6 +249,30 @@ def with_unsigned_gap(
         invert_success_if_negative: bool,
         write_success_into_sign: bool,
 ) -> sinter.TaskStats:
+    """Re-encodes a stat's signed-gap custom_counts histogram.
+
+    The input keys look like 'C<gap>' or 'E<gap>': shots decoded correctly or
+    incorrectly, binned by complementary gap (see `yoked.gap`). A negative
+    gap means the decoder preferred the decode with the comparison detector
+    flipped.
+
+    Args:
+        stat: The stats whose custom_counts should be re-encoded.
+        invert_success_if_negative: Applies the comparison (yoke) check to
+            the success classification: a 'C' shot with a negative gap
+            becomes an error, because acting on the comparison decode's
+            preferred value would flip an otherwise-correct result. An
+            'E-#' shot stays an error. The gap magnitude is kept either way.
+        write_success_into_sign: Re-signs the gap magnitude to encode success
+            instead: errors get a negative gap and are then relabeled 'C',
+            so every shot lands in a single 'C<signed gap>' key namespace.
+            A zero-gap error is stored as -0.01, a sentinel just below zero,
+            so the failure survives when the sign is the only bit carrying it.
+
+    Zero-gap successes are split as evenly as integer counts permit between
+    'C0.0' and 'E0.0', since a zero gap means the two decodes tied and the
+    decoder effectively guessed. Any odd remainder is assigned to success.
+    """
     new_custom_counts = collections.Counter()
     for k, v in stat.custom_counts.items():
         success = k[0] == 'C'
@@ -221,8 +286,9 @@ def with_unsigned_gap(
                 g = -0.01
             success = True
         if g == 0 and success:  # Split 'C0' evenly into successes and failures.
-            new_custom_counts[f'C{g}'] += v//2
-            new_custom_counts[f'E{g}'] += v//2
+            successes = (v + 1) // 2
+            new_custom_counts[f'C{g}'] += successes
+            new_custom_counts[f'E{g}'] += v - successes
             continue
         new_custom_counts[f'{"EC"[success]}{g}'] += v
     return sinter.TaskStats(

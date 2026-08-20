@@ -3,7 +3,7 @@ from typing import List, Optional, Set
 
 import stim
 
-from gen._layers._layer import Layer
+from gen._layers._layer import Layer, append_sorted_pair_gate
 
 
 @dataclasses.dataclass
@@ -18,14 +18,7 @@ class ISwapLayer(Layer):
         return set(self.targets1 + self.targets2)
 
     def append_into_stim_circuit(self, out: stim.Circuit) -> None:
-        pairs = []
-        for k in range(len(self.targets1)):
-            t1 = self.targets1[k]
-            t2 = self.targets2[k]
-            t1, t2 = sorted([t1, t2])
-            pairs.append((t1, t2))
-        for pair in sorted(pairs):
-            out.append("ISWAP", pair)
+        append_sorted_pair_gate(out, "ISWAP", self.targets1, self.targets2)
 
     def locally_optimized(self, next_layer: Optional['Layer']) -> List[Optional['Layer']]:
         return [self, next_layer]

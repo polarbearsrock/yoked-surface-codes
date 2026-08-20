@@ -39,6 +39,12 @@ def layer_loop(
         repetitions: int,
         mark_as_post_selected: Callable[[AtLayer], bool] = lambda _: False,
 ) -> None:
+    """Appends repeated stabilizer-measurement rounds to ``builder``.
+
+    Detectors compare each measurement with the previous round, and tracker
+    state is advanced to refer to the final repetition without unrolling the
+    repeated circuit body.
+    """
     if repetitions == 0:
         for plaq in patch.tiles:
             m = plaq.measurement_qubit
@@ -86,6 +92,7 @@ def layer_single_shot(
         data_basis: Union[str, Callable[[complex], str]],
         data_obs_qubit_sets: Optional[Dict[int, AbstractSet[complex]]] = None,
 ) -> None:
+    """Measures a patch in one shot using a specified data-qubit basis."""
     if isinstance(data_basis, str):
         fixed_data_basis = data_basis
         data_basis = lambda _: fixed_data_basis
@@ -115,11 +122,12 @@ def layer_single_shot(
                 AtLayer(q, 'single')
                 for q in plaq.used_set
             ], pos=plaq.measurement_qubit, t=0.5)
-    for index, obs_qubits in data_obs_qubit_sets.items():
-        builder.obs_include([
-            AtLayer(q, 'single')
-            for q in obs_qubits
-        ], obs_index=index)
+    if data_obs_qubit_sets:
+        for index, obs_qubits in data_obs_qubit_sets.items():
+            builder.obs_include([
+                AtLayer(q, 'single')
+                for q in obs_qubits
+            ], obs_index=index)
 
 
 def layer_begin(
@@ -132,6 +140,7 @@ def layer_begin(
         reset_basis: Union[str, Callable[[complex], str]],
         mark_as_post_selected: Callable[[AtLayer], bool] = lambda _: False,
 ) -> None:
+    """Initializes a patch and records its first stabilizer-measurement layer."""
     layer_transition(
         builder=builder,
         style=style,
@@ -160,6 +169,7 @@ def layer_end(
         data_obs_qubit_sets: Optional[Dict[int, AbstractSet[complex]]] = None,
         mark_as_post_selected: Callable[[AtLayer], bool] = lambda _: False,
 ) -> None:
+    """Terminates a patch by measuring its data qubits in the given basis."""
     layer_transition(
         builder=builder,
         style=style,
@@ -193,6 +203,12 @@ def layer_transition(
         future_layer_gain_data_reset_basis: Union[None, str, Callable[[complex], str]],
         mark_as_post_selected: Callable[[AtLayer], bool] = lambda _: False,
 ) -> None:
+    """Appends a deformation layer between past and future surface-code patches.
+
+    Data qubits outside ``kept_data_qubits`` are measured out of the past
+    patch or reset into the future patch. The function emits detectors and
+    observable updates implied by those temporal boundaries.
+    """
     assert future_patch is not None or past_patch is not None
     assert (future_save_layer is None) == (future_patch is None) == (future_layer_gain_data_reset_basis is None)
     assert (past_save_layer is None) == (past_patch is None) == (past_compare_layer is None) == (past_layer_lost_data_measure_basis is None)

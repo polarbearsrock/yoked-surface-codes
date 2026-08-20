@@ -125,6 +125,10 @@ def stim_circuit_with_transformed_moments(
 
 
 def estimate_qubit_count_during_postselection(circuit: stim.Circuit) -> int:
+    """Counts qubits used before the circuit's final postselection detector."""
+    # Deferred import to avoid a module-level cycle with gen._flows.
+    from gen._flows._flow_util import POSTSELECTION_MARKER_COORD
+
     circuit = circuit.without_noise()
     start = 0
     end = 0
@@ -134,7 +138,7 @@ def estimate_qubit_count_during_postselection(circuit: stim.Circuit) -> int:
                 start = k + 1
             elif instruction.name == 'DETECTOR':
                 args = instruction.gate_args_copy()
-                if len(args) >= 4 and args[3] == 999:
+                if len(args) >= 4 and args[3] == POSTSELECTION_MARKER_COORD:
                     end = k + 1
     used_qubits = set()
     def process(sub_circuit: stim.Circuit):
@@ -150,9 +154,10 @@ def estimate_qubit_count_during_postselection(circuit: stim.Circuit) -> int:
 
 
 def write_file(path: Union[pathlib.Path, str], content: Any):
+    """Writes text or bytes to ``path`` and reports its absolute location."""
     if isinstance(content, bytes):
         with open(path, 'wb') as f:
-            print(content, file=f)
+            f.write(content)
     else:
         with open(path, 'w') as f:
             print(content, file=f)

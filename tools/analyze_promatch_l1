@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+# Native-thread limits intentionally execute before numerical/package imports.
+# ruff: noqa: E402
+
 import os
 
 for _name in (
@@ -17,13 +20,17 @@ for _name in (
 
 import argparse
 import json
+import pathlib
 from pathlib import Path
 import sys
-import tempfile
 
-_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(_ROOT / "src"))
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
 
+from yoked.decoding._artifact_io import (  # noqa: E402
+    install_bytes_atomic,
+    unique_json_object as _unique_object,
+)
 from yoked.decoding._promatch_analysis import (  # noqa: E402
     analyze_summary,
     load_verified_summary,
@@ -41,15 +48,6 @@ from yoked.decoding._promatch_latency_integration import (  # noqa: E402
 )
 
 
-def _unique_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate JSON object key {key!r}")
-        result[key] = value
-    return result
-
-
 def _load_json(path: Path):
     with path.open(encoding="utf-8") as f:
         return json.load(f, object_pairs_hook=_unique_object)
@@ -58,20 +56,14 @@ def _load_json(path: Path):
 def _atomic_write(path: Path, data: bytes, *, overwrite: bool) -> None:
     if path.exists() and not overwrite:
         raise FileExistsError(f"refusing to overwrite {path}; pass --overwrite")
-    scratch = os.environ.get("TMPDIR")
-    if not scratch:
+    if not os.environ.get("TMPDIR"):
         raise RuntimeError("TMPDIR must be set for atomic analysis writes")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix="promatch-analysis-", dir=scratch)
-    try:
-        with os.fdopen(fd, "wb") as f:
-            f.write(data)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    install_bytes_atomic(
+        path,
+        data,
+        prefix="promatch-analysis-",
+        overwrite=overwrite,
+    )
 
 
 def main() -> int:
@@ -104,7 +96,9 @@ def main() -> int:
                 "accuracy and latency analyses require separate invocations/output directories"
             )
         if (args.latency_input is None) != (args.latency_cell is None):
-            raise ValueError("--latency-input and --latency-cell must be provided together")
+            raise ValueError(
+                "--latency-input and --latency-cell must be provided together"
+            )
         normalized = normalize_protocol(manifest)
         if args.allow_non_scientific:
             if (
@@ -115,15 +109,22 @@ def main() -> int:
                     "--allow-non-scientific is restricted to non-claim-bearing smoke protocols"
                 )
         output = args.out.resolve()
-        collection_inputs = [
-            value.resolve()
-            for value in (args.input, args.latency_input)
-            if value is not None
-        ]
+        collection_inputs = []
+        if args.input is not None:
+            collection_inputs.append(args.input.resolve())
+        if args.latency_input is not None:
+            latency_input = args.latency_input.resolve()
+            # analyze_latency_suite accepts either the collection directory or
+            # its suite.json.  Containment checks must use the directory in
+            # both cases, otherwise collection/suite.json and
+            # collection/analysis incorrectly appear unrelated.
+            collection_inputs.append(
+                latency_input.parent
+                if latency_input.name == "suite.json"
+                else latency_input
+            )
         if any(
-            source == output
-            or source in output.parents
-            or output in source.parents
+            source == output or source in output.parents or output in source.parents
             for source in collection_inputs
         ):
             raise ValueError(
@@ -163,8 +164,7 @@ def main() -> int:
             analysis = analyze_summary(summary, manifest=manifest)
             validate_generated_analysis_artifact(analysis)
             json_data = (
-                json.dumps(analysis, sort_keys=True, indent=2, allow_nan=False)
-                + "\n"
+                json.dumps(analysis, sort_keys=True, indent=2, allow_nan=False) + "\n"
             ).encode("utf-8")
             _atomic_write(output / "analysis.json", json_data, overwrite=args.overwrite)
             _atomic_write(

@@ -24,7 +24,7 @@ def patch_svg_viewer(
         show_data_qubits: bool = False,
         available_qubits: Iterable[complex] = (),
         extra_used_coords: Iterable[complex] = ()) -> str:
-    """Returns a picture of the stabilizers measured by various plan.
+    """Returns an SVG picture of the stabilizers measured by the given patches.
     """
     available_qubits = frozenset(available_qubits)
     extra_used_coords = frozenset(extra_used_coords)

@@ -1,5 +1,5 @@
 import collections
-from typing import Union, Literal, Tuple, List, FrozenSet, Set, Counter, Optional
+from typing import Tuple, List, FrozenSet, Set, Counter, Optional
 
 import stim
 
@@ -17,10 +17,27 @@ def _commune_with_the_observables(
     obs_z: Optional[List[PauliString]],
     suggested_ancilla_qubits: Optional[List[complex]],
 ) -> Tuple[List[PauliString], FrozenSet[complex]]:
+    """Validates the given observables and decides which ones the circuit will track.
+
+    Validation checks that paired X/Z observables anticommute, and that all
+    other pairs of observables commute.
+
+    If only one of obs_x/obs_z is given, that list is returned unchanged with
+    no extra qubits. If both are given, the observables can't all be tracked
+    directly (paired ones anticommute), so this method silently switches to an
+    EPR-style construction: each pair is combined with an out-of-patch ancilla
+    qubit (one X-paired and one Z-paired combined observable per pair), and
+    the ancillas are returned so callers can keep them noise-free.
+
+    Returns:
+        A (observables, immune_qubits) tuple, where observables are the
+        observables the circuit should track and immune_qubits are the EPR
+        ancilla qubits that must be excluded from noise.
+    """
     if obs_z is None and obs_x is None:
         raise ValueError('No observables specified')
     if obs_x is not None and obs_z is not None:
-        assert len(obs_x) == len(obs_z)
+        assert len(obs_x) == len(obs_z), 'obs_x and obs_z must pair up one-to-one'
     n = len(obs_x) if obs_x is not None else len(obs_z)
     for i in range(n):
         if obs_x is not None:
@@ -28,15 +45,15 @@ def _commune_with_the_observables(
         if obs_z is not None:
             assert isinstance(obs_z[i], PauliString)
         if obs_x is not None and obs_z is not None:
-            assert not obs_x[i].commutes(obs_z[i])
+            assert not obs_x[i].commutes(obs_z[i]), f'paired observables {i} must anticommute'
         for j in range(i + 1, n):
             if obs_x is not None:
-                assert obs_x[i].commutes(obs_x[j])
+                assert obs_x[i].commutes(obs_x[j]), f'X observables {i} and {j} must commute'
             if obs_z is not None:
-                assert obs_z[i].commutes(obs_z[j])
+                assert obs_z[i].commutes(obs_z[j]), f'Z observables {i} and {j} must commute'
             if obs_x is not None and obs_z is not None:
-                assert obs_x[i].commutes(obs_z[j])
-                assert obs_z[i].commutes(obs_x[j])
+                assert obs_x[i].commutes(obs_z[j]), f'X observable {i} must commute with Z observable {j}'
+                assert obs_z[i].commutes(obs_x[j]), f'Z observable {i} must commute with X observable {j}'
 
     if obs_z is None:
         return obs_x, frozenset()
@@ -66,6 +83,12 @@ def make_phenomenological_circuit_for_stabilizer_code(
         suggested_ancilla_qubits: Optional[List[complex]] = None,
         rounds: int,
 ) -> stim.Circuit:
+    """Builds a phenomenological-noise memory circuit for a stabilizer patch.
+
+    Each round measures the patch stabilizers and applies the supplied noise
+    rule between rounds. Logical observables are measured at both temporal
+    boundaries and linked with ``OBSERVABLE_INCLUDE`` instructions.
+    """
     observables, immune = _commune_with_the_observables(
         patch=patch,
         obs_x=observables_x,
@@ -115,6 +138,12 @@ def make_code_capacity_circuit_for_stabilizer_code(
         observables_z: Optional[List[PauliString]] = None,
         suggested_ancilla_qubits: Optional[List[complex]] = None,
 ) -> stim.Circuit:
+    """Builds a code-capacity circuit with one noisy data-qubit interval.
+
+    The patch stabilizers and requested logical observables are measured
+    before and after the supplied Pauli noise channels. Measurement-result
+    flips are not supported by this circuit model.
+    """
     assert noise.flip_result == 0
     observables, immune = _commune_with_the_observables(
         patch=patch,
@@ -142,6 +171,51 @@ def make_code_capacity_circuit_for_stabilizer_code(
     return builder.circuit
 
 
+def _disambiguated_gate_names(instruction: stim.CircuitInstruction) -> List[str]:
+    """Expands an MPP or controlled-Pauli instruction into disambiguated gate names.
+
+    CX/CY/CZ/XCZ/YCZ target pairs classify as 'feedback' (measurement record
+    control), 'sweep' (sweep bit control), or the plain gate name; one entry is
+    returned per pair. MPP instructions expand into one entry per measured
+    product, named by the measured bases (e.g. "MXX" for X1*X2), with all-Z
+    products named "M".
+    """
+    out: List[str] = []
+    if instruction.name in ['CX', 'CY', 'CZ', 'XCZ', 'YCZ']:
+        targets = instruction.targets_copy()
+        for k in range(0, len(targets), 2):
+            if targets[k].is_measurement_record_target or targets[k + 1].is_measurement_record_target:
+                out.append('feedback')
+            elif targets[k].is_sweep_bit_target or targets[k + 1].is_sweep_bit_target:
+                out.append('sweep')
+            else:
+                out.append(instruction.name)
+    elif instruction.name == 'MPP':
+        op = 'M'
+        targets = instruction.targets_copy()
+        is_continuing = True
+        for t in targets:
+            if t.is_combiner:
+                is_continuing = True
+                continue
+            p = 'X' if t.is_x_target else 'Y' if t.is_y_target else 'Z' if t.is_z_target else '?'
+            if is_continuing:
+                op += p
+                is_continuing = False
+            else:
+                if op == 'MZ':
+                    op = 'M'
+                out.append(op)
+                op = 'M' + p
+        if op:
+            if op == 'MZ':
+                op = 'M'
+            out.append(op)
+    else:
+        raise NotImplementedError(f'{instruction.name=}')
+    return out
+
+
 def gate_counts_for_circuit(circuit: stim.Circuit) -> Counter[str]:
     """Determines gates used by a circuit, disambiguating MPP/feedback cases.
 
@@ -158,37 +232,9 @@ def gate_counts_for_circuit(circuit: stim.Circuit) -> Counter[str]:
             for k, v in gate_counts_for_circuit(instruction.body_copy()).items():
                 out[k] += v * instruction.repeat_count
 
-        elif instruction.name in ['CX', 'CY', 'CZ', 'XCZ', 'YCZ']:
-            targets = instruction.targets_copy()
-            for k in range(0, len(targets), 2):
-                if targets[k].is_measurement_record_target or targets[k + 1].is_measurement_record_target:
-                    out['feedback'] += 1
-                elif targets[k].is_sweep_bit_target or targets[k + 1].is_sweep_bit_target:
-                    out['sweep'] += 1
-                else:
-                    out[instruction.name] += 1
-
-        elif instruction.name == 'MPP':
-            op = 'M'
-            targets = instruction.targets_copy()
-            is_continuing = True
-            for t in targets:
-                if t.is_combiner:
-                    is_continuing = True
-                    continue
-                p = 'X' if t.is_x_target else 'Y' if t.is_y_target else 'Z' if t.is_z_target else '?'
-                if is_continuing:
-                    op += p
-                    is_continuing = False
-                else:
-                    if op == 'MZ':
-                        op = 'M'
-                    out[op] += 1
-                    op = 'M' + p
-            if op:
-                if op == 'MZ':
-                    op = 'M'
-                out[op] += 1
+        elif instruction.name in ['CX', 'CY', 'CZ', 'XCZ', 'YCZ', 'MPP']:
+            for name in _disambiguated_gate_names(instruction):
+                out[name] += 1
 
         elif OP_TYPES[instruction.name] == CLIFFORD_2Q or instruction.name in ['PAULI_CHANNEL_2', 'DEPOLARIZE2']:
             out[instruction.name] += len(instruction.targets_copy()) // 2
@@ -215,37 +261,8 @@ def gates_used_by_circuit(circuit: stim.Circuit) -> Set[str]:
         if isinstance(instruction, stim.CircuitRepeatBlock):
             out |= gates_used_by_circuit(instruction.body_copy())
 
-        elif instruction.name in ['CX', 'CY', 'CZ', 'XCZ', 'YCZ']:
-            targets = instruction.targets_copy()
-            for k in range(0, len(targets), 2):
-                if targets[k].is_measurement_record_target or targets[k + 1].is_measurement_record_target:
-                    out.add('feedback')
-                elif targets[k].is_sweep_bit_target or targets[k + 1].is_sweep_bit_target:
-                    out.add('sweep')
-                else:
-                    out.add(instruction.name)
-
-        elif instruction.name == 'MPP':
-            op = 'M'
-            targets = instruction.targets_copy()
-            is_continuing = True
-            for t in targets:
-                if t.is_combiner:
-                    is_continuing = True
-                    continue
-                p = 'X' if t.is_x_target else 'Y' if t.is_y_target else 'Z' if t.is_z_target else '?'
-                if is_continuing:
-                    op += p
-                    is_continuing = False
-                else:
-                    if op == 'MZ':
-                        op = 'M'
-                    out.add(op)
-                    op = 'M' + p
-            if op:
-                if op == 'MZ':
-                    op = 'M'
-                out.add(op)
+        elif instruction.name in ['CX', 'CY', 'CZ', 'XCZ', 'YCZ', 'MPP']:
+            out.update(_disambiguated_gate_names(instruction))
 
         else:
             out.add(instruction.name)

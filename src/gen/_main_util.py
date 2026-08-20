@@ -15,6 +15,11 @@ from gen._viz_circuit_html import stim_circuit_html_viewer
 from gen._viz_patch_svg import patch_svg_viewer
 
 
+def _eval_circuit_param_expression(expression: str, *, d: int) -> Any:
+    """Evaluates a CLI expression with builtins disabled; only 'd' (diameter) is available."""
+    return eval(expression, {'__builtins__': {}}, {'d': d})
+
+
 @dataclasses.dataclass(frozen=True)
 class CircuitBuildParams:
     style: str
@@ -35,18 +40,26 @@ def main_generate_circuits(
         constructions: Dict[str, Union[CircuitFactory, Callable[[CircuitBuildParams], Union[stim.Circuit, List[Union[Chunk, ChunkLoop]]]]]],
         extras: Optional[Dict[str, type]] = None,
 ) -> None:
+    """Runs the command-line circuit generator for registered constructions.
+
+    The generated parameter grid is written as ``.stim`` files. Construction
+    callbacks may return either a complete noisy circuit or ideal chunks that
+    this helper compiles, optionally transpiles to CZ interactions, and noises.
+    """
     if extras is None:
         extras = {}
     parser = argparse.ArgumentParser()
     parser.add_argument("--out_dir", type=str, required=True)
     parser.add_argument("--diameter", nargs='+', required=True, type=int)
-    parser.add_argument("--rounds", nargs='+', required=True, type=str)
+    parser.add_argument("--rounds", nargs='+', required=True, type=str,
+                        help="Python expression for the round count; may use 'd' for the diameter.")
     parser.add_argument("--noise_strength", nargs='+', default=(None,), type=float)
     parser.add_argument("--noise_model", nargs='+', required=True, choices=['si1000', 'uniform', 'None'])
     parser.add_argument("--style", nargs='+', required=True, choices=constructions.keys())
     parser.add_argument("--convert_to_cz", nargs='+', default=('auto',), choices=['auto', '1', '0'])
     parser.add_argument("--debug_out_dir", default=None, type=str)
-    parser.add_argument("--custom", default=None)
+    parser.add_argument("--custom", default=None,
+                        help="Python expression for a dict of custom values; may use 'd' for the diameter.")
     for extra in extras:
         parser.add_argument("--" + extra, nargs='+', type=extras[extra], default=None)
     args = parser.parse_args()
@@ -121,7 +134,7 @@ def _generate_circuits(
         else:
             raise NotImplementedError(f'{noise_model_name=}')
 
-        rounds = eval(rounds_func, {'d': diameter})
+        rounds = _eval_circuit_param_expression(rounds_func, d=diameter)
         if convert_to_cz_arg == 'auto':
             convert_to_cz = auto_cz
         else:
@@ -130,7 +143,7 @@ def _generate_circuits(
         extras_dict['noise_model_obj'] = noise_model
         extras_dict['noise_model_obj_name'] = noise_model_name
         if customs is not None:
-            custom_dict = eval(customs, {'d': diameter}, {})
+            custom_dict = _eval_circuit_param_expression(customs, d=diameter)
             assert isinstance(custom_dict, dict)
         else:
             custom_dict = {}
@@ -201,6 +214,12 @@ def generate_noisy_circuit_from_chunks(
         convert_to_cz: bool,
         debug_out_dir: Union[None, str, pathlib.Path] = None,
 ) -> stim.Circuit:
+    """Compiles ideal chunks and optionally transpiles, noises, and debugs them.
+
+    Magic boundary chunks are kept outside the noisy circuit body. When a
+    debug directory is supplied, the ideal/noisy circuits and patch diagrams
+    used to inspect the compilation are written there.
+    """
     if isinstance(chunks, stim.Circuit):
         chunks = [Chunk(
             circuit=chunks,

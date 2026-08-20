@@ -64,6 +64,7 @@ def half_int_points_inside_int_polygon(corners: Sequence[complex], *, include_bo
 
 
 def int_points_inside_polygon(corners: Sequence[complex], *, include_boundary: bool) -> Set[complex]:
+    """Returns integer grid points inside one polygonal boundary."""
     return int_points_inside_polygon_set([corners], include_boundary=include_boundary)
 
 
@@ -73,6 +74,18 @@ def int_points_inside_polygon_set(
         include_boundary: bool,
         match_mask: Optional[int] = None,
 ) -> Set[complex]:
+    """Returns the integer points inside a set of polygon boundary curves.
+
+    Scanline with a half-step crossing-parity trick: each integer column r is
+    flanked by two scan columns at r-0.5 and r+0.5, walked in half-integer
+    steps of the imaginary part. Crossing a boundary point (computed on the
+    coordinate-doubled curves, so it lands on the half-integer grid) toggles
+    an inside bit and XORs a per-curve bitmask. The half-step offsets ensure
+    the scan columns never pass exactly through a vertex or run along an
+    edge, which would make the crossing parity ambiguous. An integer point is
+    inside when both flanking columns agree they're inside with the same
+    curve mask (any nonzero mask, or exactly match_mask when given).
+    """
     curves = tuple(curves)
     min_c, max_c = min_max_complex((pt for curve in curves for pt in curve), default=0)
 
@@ -117,6 +130,16 @@ def int_point_disjoint_regions_inside_polygon_set(
         curves: Iterable[Sequence[complex]],
         *,
         include_boundary: bool) -> Dict[int, Set[complex]]:
+    """Groups the integer interior points by which curves they are inside of.
+
+    Uses the same half-step scanline crossing-parity trick as
+    `int_points_inside_polygon_set`: the two scan columns at r-0.5 and r+0.5
+    toggle inside bits and XOR per-curve bitmasks when crossing boundary
+    points of the coordinate-doubled curves, so crossings can't coincide with
+    vertices or scan-parallel edges. Returns a dict mapping each nonzero
+    curve bitmask (bit k set = inside curves[k]) to the integer points whose
+    flanking columns agree on exactly that mask.
+    """
     curves = tuple(curves)
     min_real = int(min(pt.real for curve in curves for pt in curve))
     min_imag = int(min(pt.imag for curve in curves for pt in curve))

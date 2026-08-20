@@ -1,6 +1,6 @@
 from typing import Iterable, List, Set, Tuple, Literal, Union, Optional
 
-from gen._surf._geo import int_points_on_line, int_points_inside_polygon_set
+from gen._surf._geo import int_points_on_line
 
 
 class OpenCurve:
@@ -48,7 +48,11 @@ class OpenCurve:
         return out
 
     def __len__(self):
-        """Returns the number of line segments making up the curve."""
+        """Returns the number of points making up the curve.
+
+        Note that this is one more than the number of line segments, so the
+        valid segment indices for `__getitem__` are `0` to `len(curve) - 2`.
+        """
         return len(self.points)
 
     def __getitem__(self, item: int) -> Tuple[str, complex, complex]:

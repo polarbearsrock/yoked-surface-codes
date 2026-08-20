@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Iterable, Dict, Any, Optional, List, TYPE_CHECKING
+from typing import Iterable, Dict, Any, Optional, List
 
 import stim
 
@@ -19,7 +19,7 @@ class MeasurementTracker:
 
     def copy(self) -> 'MeasurementTracker':
         result = MeasurementTracker()
-        result.recorded = {k: list(v) for k, v in self.recorded.items()}
+        result.recorded = {k: None if v is None else list(v) for k, v in self.recorded.items()}
         result.next_measurement_index = self.next_measurement_index
         return result
 
@@ -43,9 +43,10 @@ class MeasurementTracker:
         for key in keys:
             if key not in self.recorded:
                 raise ValueError(f"No such measurement: {key=}")
-            for v in self.recorded[key]:
-                if v is None:
-                    raise ValueError(f"Obstacle at {key=}")
+            group = self.recorded[key]
+            if group is None:
+                raise ValueError(f"Obstacle at {key=}")
+            for v in group:
                 if v in result:
                     result.remove(v)
                 else:

@@ -13,7 +13,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 import hashlib
-import json
 import math
 import os
 from pathlib import Path
@@ -21,12 +20,15 @@ from typing import Any
 
 import numpy as np
 
+from yoked.decoding._artifact_io import load_json_strict
 from yoked.decoding._promatch_experiment import (
     PROTOCOL_SCHEMA,
     normalize_protocol,
     validate_experiment_protocol,
 )
 from yoked.decoding._promatch_latency import (
+    _SCIENTIFIC_GATES,
+    _TIMING_SCOPE,
     BACKEND_RESIDUAL_VS_ORIGINAL,
     LATENCY_PAIR_FIELDS,
     LATENCY_RESTART_FIELDS,
@@ -77,19 +79,10 @@ _WARMUP_VARIANTS = (
     "backend_original",
     "backend_residual",
 )
-_SCIENTIFIC_GATES = {
-    "backend_geometric_ratio_upper": 0.90,
-    "total_geometric_ratio_upper": 0.95,
-    "total_p99_ratio_upper": 1.05,
-}
-_TIMING_SCOPE = {
-    "total": "direct adapter-entry-to-packed-prediction-return",
-    "backend": "direct matcher-call-only on pregenerated packed corpora",
-    "input_generation_inside_timing": False,
-    "telemetry_retained_inside_total": False,
-    "gc_policy": "disabled_during_warmup_and_timing",
-    "native_threads": 1,
-}
+# Mirrors the fixed d=11 target geometry frozen in the first-round confirm
+# protocol (docs/PROMATCH_FIRST_ROUND_PROTOCOL.json, generator_contract.
+# target_cell_metadata) and independently pinned by
+# _promatch_experiment.validate_experiment_protocol's target-phase check.
 _TARGET_CELL = {
     "cell_id": "target-d11-n6-y2-r44-p0.001",
     "d": 11,
@@ -130,33 +123,8 @@ class TinyLatencyAnalysisConfig:
             raise ValueError("smoke alpha_one_sided must lie strictly between 0 and 1")
 
 
-def _strict_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    result: dict[str, Any] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate JSON object key {key!r}")
-        result[key] = value
-    return result
-
-
-def _reject_json_constant(value: str) -> Any:
-    raise ValueError(f"nonfinite JSON constant {value!r}")
-
-
 def _load_json(path: Path) -> dict[str, Any]:
-    if path.is_symlink() or not path.is_file():
-        raise ValueError(f"latency input must be a regular non-symlink file: {path}")
-    try:
-        with path.open(encoding="utf-8") as source:
-            value = json.load(
-                source,
-                object_pairs_hook=_strict_object,
-                parse_constant=_reject_json_constant,
-            )
-    except (OSError, UnicodeError, json.JSONDecodeError) as ex:
-        raise ValueError(f"cannot read strict JSON latency input {path}") from ex
-    if not isinstance(value, dict):
-        raise ValueError(f"latency input must contain one JSON object: {path}")
+    value = load_json_strict(path, description="latency input")
     canonical_json_bytes(value)
     return value
 
@@ -169,6 +137,12 @@ def _sha256_hex(value: Any, *, name: str) -> str:
     except ValueError as ex:
         raise ValueError(f"{name} must be hexadecimal") from ex
     return value.lower()
+
+
+# Sync note: _protocol_id/_workload_id/_suite_id below deliberately re-derive
+# the identities computed by _promatch_latency.run_latency_benchmark as an
+# independent cross-check; drift between the two implementations fails loudly
+# against the ids recorded in every suite and restart ledger.
 
 
 def _protocol_id(protocol_json: Mapping[str, Any]) -> str:
@@ -207,6 +181,9 @@ def _schedule_seed(
     batch_size: int,
     purpose: str,
 ) -> int:
+    # Sync note: deliberate independent re-derivation of
+    # _promatch_latency._derived_seed; drift fails loudly against the
+    # restart/pair seeds recorded in every ledger.
     payload = (
         int(seed).to_bytes(32, "little", signed=False)
         + restart_index.to_bytes(8, "little", signed=False)
@@ -217,13 +194,14 @@ def _schedule_seed(
 
 
 def _name_order(names: tuple[str, ...], *, seed: int, purpose: str) -> tuple[str, ...]:
+    # Sync note: deliberate independent re-derivation of
+    # _promatch_latency._deterministic_name_order; drift fails loudly against
+    # the warmup/pair orders recorded in every ledger.
     material = int(seed).to_bytes(32, "little") + purpose.encode("utf-8")
     return tuple(
         sorted(
             names,
-            key=lambda name: hashlib.sha256(
-                material + name.encode("utf-8")
-            ).digest(),
+            key=lambda name: hashlib.sha256(material + name.encode("utf-8")).digest(),
         )
     )
 
@@ -244,7 +222,9 @@ def _manifest_cells(
     groups: list[list[Mapping[str, Any]]] = []
     for field in ("cells", "performance_cells"):
         raw = manifest.get(field, [])
-        if not isinstance(raw, list) or any(not isinstance(cell, Mapping) for cell in raw):
+        if not isinstance(raw, list) or any(
+            not isinstance(cell, Mapping) for cell in raw
+        ):
             raise ValueError(f"normalized manifest {field} must be an array of objects")
         groups.append(raw)
     accuracy, target = groups
@@ -280,11 +260,17 @@ def _validate_fixed_schedule(
             isinstance(value, bool) or not isinstance(value, int)
             for value in (batch_id, shot_start, count)
         ):
-            raise ValueError("scientific latency batch schedule values must be integers")
+            raise ValueError(
+                "scientific latency batch schedule values must be integers"
+            )
         if batch_id < 0 or shot_start != cursor or count <= 0 or count > 10_000:
-            raise ValueError("scientific latency batch schedule is not a fixed partition")
+            raise ValueError(
+                "scientific latency batch schedule is not a fixed partition"
+            )
         if index + 1 < len(rows) and count != 10_000:
-            raise ValueError("only the final scientific batch may contain fewer than 10000 shots")
+            raise ValueError(
+                "only the final scientific batch may contain fewer than 10000 shots"
+            )
         cursor += count
         batch_ids.append(batch_id)
     if cursor != shots:
@@ -312,7 +298,9 @@ def _scientific_cell_role(manifest: Mapping[str, Any], *, cell_id: str) -> str:
 
     accuracy, targets = _manifest_cells(manifest)
     if len(accuracy) != 1:
-        raise ValueError("scientific confirm manifest must contain one selected accuracy cell")
+        raise ValueError(
+            "scientific confirm manifest must contain one selected accuracy cell"
+        )
     analysis = manifest.get("analysis_config")
     if not isinstance(analysis, Mapping):
         raise ValueError("scientific confirm manifest is missing analysis_config")
@@ -322,10 +310,12 @@ def _scientific_cell_role(manifest: Mapping[str, Any], *, cell_id: str) -> str:
     if selection.get("selected_cell_id") != accuracy[0].get("cell_id"):
         raise ValueError("frozen selected_cell_id does not identify the accuracy cell")
     selected_cell = selection.get("selected_cell")
-    if not isinstance(selected_cell, Mapping) or selected_cell.get("cell_id") != accuracy[0].get(
+    if not isinstance(selected_cell, Mapping) or selected_cell.get(
         "cell_id"
-    ):
-        raise ValueError("frozen selection.selected_cell does not identify the accuracy cell")
+    ) != accuracy[0].get("cell_id"):
+        raise ValueError(
+            "frozen selection.selected_cell does not identify the accuracy cell"
+        )
     n_confirm = selection.get("n_confirm")
     if (
         isinstance(n_confirm, bool)
@@ -333,12 +323,16 @@ def _scientific_cell_role(manifest: Mapping[str, Any], *, cell_id: str) -> str:
         or n_confirm <= 0
         or n_confirm % 10_000
     ):
-        raise ValueError("scientific confirm manifest requires fixed n_confirm in 10000-shot units")
+        raise ValueError(
+            "scientific confirm manifest requires fixed n_confirm in 10000-shot units"
+        )
 
     if len(targets) != 1 or any(
         targets[0].get(key) != expected for key, expected in _TARGET_CELL.items()
     ):
-        raise ValueError("scientific manifest is missing the exact fixed d=11 target cell")
+        raise ValueError(
+            "scientific manifest is missing the exact fixed d=11 target cell"
+        )
     required_hashes = {
         "circuit_sha256",
         "dem_sha256",
@@ -400,24 +394,42 @@ def _bootstrap_configuration(
         if smoke is not None:
             raise ValueError("scientific latency analysis cannot use smoke settings")
         analysis = manifest.get("analysis_config")
-        timing = analysis.get("timing_protocol") if isinstance(analysis, Mapping) else None
+        timing = (
+            analysis.get("timing_protocol") if isinstance(analysis, Mapping) else None
+        )
         if not isinstance(timing, Mapping):
             raise ValueError("scientific manifest is missing timing_protocol")
         replicates = timing.get("bootstrap_replicates")
         percentile = timing.get("upper_confidence_percentile")
         if replicates != 10_000:
-            raise ValueError("scientific timing bootstrap requires exactly 10000 replicates")
+            raise ValueError(
+                "scientific timing bootstrap requires exactly 10000 replicates"
+            )
         if percentile != 97.5:
-            raise ValueError("scientific timing upper confidence percentile must be 97.5")
+            raise ValueError(
+                "scientific timing upper confidence percentile must be 97.5"
+            )
+        # The frozen first-round confirm protocol names the thresholds
+        # "claim_gates"; the earlier frozen pilot protocols used the legacy
+        # key "gates".  Both stay accepted so frozen artifacts remain
+        # readable.
         gates_key = "claim_gates" if "claim_gates" in timing else "gates"
         gates = timing.get(gates_key)
         if gates != _SCIENTIFIC_GATES:
-            raise ValueError("scientific timing claim gates differ from the frozen values")
+            raise ValueError(
+                "scientific timing claim gates differ from the frozen values"
+            )
         roots = manifest.get("sampler_seed_roots")
         root = roots.get("timing_bootstrap") if isinstance(roots, Mapping) else None
         _sha256_hex(root, name="sampler_seed_roots.timing_bootstrap")
         alpha = (100.0 - float(percentile)) / 100.0
-        return replicates, alpha, bytes.fromhex(root), "manifest.timing_bootstrap", gates
+        return (
+            replicates,
+            alpha,
+            bytes.fromhex(root),
+            "manifest.timing_bootstrap",
+            gates,
+        )
 
     if smoke is None:
         raise ValueError(
@@ -454,6 +466,9 @@ def _bootstrap_seed(
 
 
 def _expected_restart_names(protocol: LatencyProtocol) -> list[str]:
+    # Sync note: deliberate independent re-derivation of
+    # _promatch_latency._restart_filename; drift fails loudly against the
+    # ledger names declared in every suite.
     return [
         f"batch-{batch_size}.restart-{restart_index:02d}.json"
         for batch_size in protocol.batch_sizes
@@ -497,7 +512,9 @@ def _validate_suite(
     }
     for field, value in expected.items():
         if suite.get(field) != value:
-            raise ValueError(f"suite.json {field} does not match manifest/factory state")
+            raise ValueError(
+                f"suite.json {field} does not match manifest/factory state"
+            )
     processes = validate_process_count(suite.get("processes"))
     if processes != manifest.get("processes"):
         raise ValueError("suite process count differs from the normalized manifest")
@@ -552,7 +569,9 @@ def _timing_array(
     return array, normalized
 
 
-def _validate_digest(value: Any, *, name: str, expected_shots: int) -> Mapping[str, Any]:
+def _validate_digest(
+    value: Any, *, name: str, expected_shots: int
+) -> Mapping[str, Any]:
     if not isinstance(value, Mapping) or set(value) != {"sha256", "shape", "dtype"}:
         raise ValueError(f"{name} has an invalid corpus digest object")
     _sha256_hex(value.get("sha256"), name=f"{name}.sha256")
@@ -569,11 +588,15 @@ def _validate_digest(value: Any, *, name: str, expected_shots: int) -> Mapping[s
     return value
 
 
-def _runtime_invariants(runtime: Mapping[str, Any], *, scientific: bool) -> dict[str, Any]:
+def _runtime_invariants(
+    runtime: Mapping[str, Any], *, scientific: bool
+) -> dict[str, Any]:
     if not isinstance(runtime, Mapping):
         raise ValueError("restart runtime provenance must be an object")
     environment = runtime.get("native_thread_environment")
-    if not isinstance(environment, Mapping) or set(environment) != set(THREAD_ENVIRONMENT):
+    if not isinstance(environment, Mapping) or set(environment) != set(
+        THREAD_ENVIRONMENT
+    ):
         raise ValueError("restart native-thread environment is incomplete")
     if any(environment[name] != "1" for name in THREAD_ENVIRONMENT):
         raise ValueError("every latency restart must use one native thread")
@@ -646,9 +669,7 @@ def _validate_workload_provenance(
         ),
         "corpus_batch_id": corpus_batch_id,
         "stim_seed": expected_seed,
-        "timing_corpus_seed_root_sha256": identity[
-            "timing_corpus_seed_root_sha256"
-        ],
+        "timing_corpus_seed_root_sha256": identity["timing_corpus_seed_root_sha256"],
         "u0_backend": "pymatching-uncorrelated",
         "residual_backend": "pymatching-uncorrelated",
         "correlated_matching": False,
@@ -696,7 +717,9 @@ def _validate_restart(
     }
     for field, value in expected_header.items():
         if record.get(field) != value:
-            raise ValueError(f"restart ledger {field} differs from suite/manifest state")
+            raise ValueError(
+                f"restart ledger {field} differs from suite/manifest state"
+            )
     expected_clock = "time.perf_counter_ns" if scientific else record.get("clock")
     if record.get("clock") != expected_clock or expected_clock not in {
         "time.perf_counter_ns",
@@ -718,7 +741,9 @@ def _validate_restart(
         purpose="pair-execution-order",
     )
     if record.get("pair_execution_order") != list(expected_pair_execution):
-        raise ValueError("restart pair execution order is not the deterministic schedule")
+        raise ValueError(
+            "restart pair execution order is not the deterministic schedule"
+        )
     expected_warmup_order = _name_order(
         _WARMUP_VARIANTS,
         seed=restart_seed,
@@ -769,10 +794,15 @@ def _validate_restart(
         expected_shots=expected_shots,
     )
     if total_digest != original_digest:
-        raise ValueError("total and original-backend corpora must be the identical input")
+        raise ValueError(
+            "total and original-backend corpora must be the identical input"
+        )
 
     provenance = record.get("provenance")
-    if not isinstance(provenance, Mapping) or set(provenance) != {"runtime", "workload"}:
+    if not isinstance(provenance, Mapping) or set(provenance) != {
+        "runtime",
+        "workload",
+    }:
         raise ValueError("restart provenance has incorrect fields")
     runtime_invariants = _runtime_invariants(
         provenance["runtime"], scientific=scientific
@@ -939,11 +969,15 @@ def analyze_latency_suite(
     if actual != declared:
         missing = sorted(declared - actual)
         extra = sorted(actual - declared)
-        raise ValueError(f"latency restart set mismatch: missing={missing}, extra={extra}")
+        raise ValueError(
+            f"latency restart set mismatch: missing={missing}, extra={extra}"
+        )
 
     roots = normalized.get("sampler_seed_roots")
     if scientific:
-        timing_corpus_root = roots.get("timing_corpus") if isinstance(roots, Mapping) else None
+        timing_corpus_root = (
+            roots.get("timing_corpus") if isinstance(roots, Mapping) else None
+        )
     else:
         timing_corpus_root = smoke.collection.timing_corpus_seed_root
     _sha256_hex(timing_corpus_root, name="timing_corpus_seed_root")
@@ -1041,8 +1075,7 @@ def analyze_latency_suite(
         < gates["backend_geometric_ratio_upper"]
     )
     total_geometric_passed = (
-        direct["geometric_ratio_upper_one_sided"]
-        < gates["total_geometric_ratio_upper"]
+        direct["geometric_ratio_upper_one_sided"] < gates["total_geometric_ratio_upper"]
     )
     total_p99_passed = (
         direct["p99_ratio_upper_one_sided"] < gates["total_p99_ratio_upper"]
@@ -1107,7 +1140,10 @@ def analyze_latency_suite(
 def render_latency_markdown(analysis: Mapping[str, Any]) -> str:
     """Render a compact report while preserving the software-only scope."""
 
-    if not isinstance(analysis, Mapping) or analysis.get("schema") != LATENCY_ANALYSIS_SCHEMA:
+    if (
+        not isinstance(analysis, Mapping)
+        or analysis.get("schema") != LATENCY_ANALYSIS_SCHEMA
+    ):
         raise ValueError("analysis is not a ProMatch latency analysis v1 object")
     scope = analysis.get("claim_scope")
     batches = analysis.get("batch_results")

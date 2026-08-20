@@ -7,9 +7,8 @@ import pathlib
 
 import sys
 
-src_path = pathlib.Path(__file__).parent.parent / 'src'
-assert src_path.exists()
-sys.path.append(str(src_path))
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / 'src'))
 
 import gen
 from yoked._yoked_memory_circuits import yoked_magic_memory_circuit
@@ -17,18 +16,40 @@ from yoked._squareberg_circuits import squareberg_magic_memory_circuit
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--patch_diameter', nargs='+', type=int, required=True)
-    parser.add_argument('--rounds', nargs='+', type=str, required=True)
-    parser.add_argument('--noise_strength', nargs='+', type=float, required=True)
-    parser.add_argument('--filter_func', type=str, default='True')
-    parser.add_argument('--patches', nargs='+', type=str, required=True)
-    parser.add_argument('--yokes', nargs='+', type=int, required=True)
-    parser.add_argument('--gateset', choices=['cz', 'css'], default=['cz'], nargs='+')
-    parser.add_argument('--extra', type=str, default="{}")
-    parser.add_argument('--out_dir', type=str, default='out/circuits')
-    parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--remove_x_yoke', action='store_true', default=False)
+    parser = argparse.ArgumentParser(
+        description='Generates noisy yoked-memory stim circuits, one file per '
+                    'parameter combination, named by their metadata.')
+    parser.add_argument('--patch_diameter', nargs='+', type=int, required=True,
+                        help='Patch diameters (d) to generate circuits for.')
+    parser.add_argument('--rounds', nargs='+', type=str, required=True,
+                        help="Python expressions eval'd with variables d and yokes, "
+                             "giving the number of rounds (e.g. '10*d').")
+    parser.add_argument('--noise_strength', nargs='+', type=float, required=True,
+                        help='Noise strengths (p) to generate circuits for.')
+    parser.add_argument('--filter_func', type=str, default='True',
+                        help="Python expression eval'd with keyword arguments rounds, "
+                             'patch_diameter, noise_strength, patches, yokes, and '
+                             'gateset; parameter combinations where it is falsy '
+                             'are skipped.')
+    parser.add_argument('--patches', nargs='+', type=str, required=True,
+                        help="Python expressions eval'd with variable yokes, giving "
+                             "the number of patches (e.g. '4 + yokes').")
+    parser.add_argument('--yokes', nargs='+', type=int, required=True,
+                        help='Numbers of yokes: 0-2 for linear yoking, or 4*sqrt(patches) '
+                             'for a squareberg layout.')
+    parser.add_argument('--gateset', choices=['cz', 'css'], default=['cz'], nargs='+',
+                        help='Gatesets to use: cz applies SI1000 noise, css applies '
+                             'uniform depolarizing noise.')
+    parser.add_argument('--extra', type=str, default="{}",
+                        help="Python dict expression eval'd to extra metadata entries "
+                             'merged into each circuit filename.')
+    parser.add_argument('--out_dir', type=str, default='out/circuits',
+                        help='Directory the .stim circuit files are written into.')
+    parser.add_argument('--debug', action='store_true',
+                        help='Also write debug_noisy.html, debug_ideal.html, and '
+                             'debug_detslice.svg viewers for the last circuit.')
+    parser.add_argument('--remove_x_yoke', action='store_true', default=False,
+                        help='Only yoke the Z observables (drop the X yoke).')
     args = parser.parse_args()
     out_dir = pathlib.Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -111,7 +132,7 @@ def main():
         print(f'wrote {circuit_path}')
         if args.debug:
             gen.write_file(out_dir / "debug_noisy.html", gen.stim_circuit_html_viewer(circuit))
-            gen.write_file(out_dir / "debug_ideal.html", gen.stim_circuit_html_viewer(circuit))
+            gen.write_file(out_dir / "debug_ideal.html", gen.stim_circuit_html_viewer(circuit.without_noise()))
             gen.write_file(out_dir / "debug_detslice.svg", circuit.without_noise().diagram("time+detector-slice-svg"))
 
 

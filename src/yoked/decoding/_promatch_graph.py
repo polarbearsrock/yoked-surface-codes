@@ -24,6 +24,12 @@ from yoked.decoding._promatch_layout import (
 
 @dataclasses.dataclass(frozen=True)
 class Edge:
+    """Canonical matching edge shared by the global and domain-local graphs.
+
+    Edge IDs are dense tuple indices. ``target=None`` denotes the true matching
+    boundary, and ``observable_mask`` is packed little-endian by observable ID.
+    """
+
     edge_id: int
     source: int
     target: int | None
@@ -33,15 +39,27 @@ class Edge:
     target_role: DetectorRole | None
 
     def other_endpoint(self, detector_id: int) -> int | None:
+        """Returns the opposite detector, or ``None`` for a boundary edge."""
+
         if detector_id == self.source:
             return self.target
         if detector_id == self.target:
             return self.source
-        raise ValueError(f"detector {detector_id} is not incident to edge {self.edge_id}")
+        raise ValueError(
+            f"detector {detector_id} is not incident to edge {self.edge_id}"
+        )
 
 
 @dataclasses.dataclass(frozen=True)
 class DomainGraph:
+    """Deterministically ordered domain-local projection of the full graph.
+
+    Only eligible local edges appear in ``edges``. The adjacency mappings are
+    precomputed views over those same canonical :class:`Edge` instances.
+    ``adjacency``, ``neighbors``, and ``boundary_adjacency`` are plain dicts
+    for pickling; they are treated as immutable after construction.
+    """
+
     domain: L1DomainKey
     detector_ids: tuple[int, ...]
     edges: tuple[Edge, ...]
@@ -51,6 +69,8 @@ class DomainGraph:
     boundary_adjacency: dict[int, tuple[Edge, ...]]
 
     def incident_edges(self, detector_id: int) -> tuple[Edge, ...]:
+        """Returns the domain-local edges incident to ``detector_id``."""
+
         try:
             return self.adjacency[detector_id]
         except KeyError as ex:
@@ -60,11 +80,22 @@ class DomainGraph:
 
     @staticmethod
     def other_endpoint(edge: Edge, detector_id: int) -> int | None:
+        """Delegates canonical endpoint handling to :class:`Edge`."""
+
         return edge.other_endpoint(detector_id)
 
 
 @dataclasses.dataclass(frozen=True)
 class CompiledPromatchGraph:
+    """Full residual matcher plus deterministic L1 domain projections.
+
+    ``edges[edge_id]`` is an invariant used by correction algebra, replay, and
+    provenance hashing. ``matcher`` always represents the complete DEM graph;
+    domain graphs restrict only the predecoder's candidate visibility.
+    ``domain_graphs`` is a plain dict for pickling; it is treated as
+    immutable after construction.
+    """
+
     layout: PromatchLayout
     matcher: pymatching.Matching
     edges: tuple[Edge, ...]
@@ -76,9 +107,13 @@ class CompiledPromatchGraph:
 
     @property
     def edge_by_id(self) -> tuple[Edge, ...]:
+        """Returns the dense canonical edge table indexed by edge ID."""
+
         return self.edges
 
     def domain_graph(self, domain: L1DomainKey) -> DomainGraph:
+        """Returns the compiled local graph for ``domain``."""
+
         return self.domain_graphs[domain]
 
 
@@ -98,9 +133,7 @@ def _observable_mask(fault_ids: Iterable[int], *, num_observables: int) -> bytes
             raise ValueError(f"non-integral observable ID {raw_fault_id!r}")
         fault_id = int(raw_fault_id)
         if fault_id < 0 or fault_id >= num_observables:
-            raise ValueError(
-                f"observable ID {fault_id} outside [0, {num_observables})"
-            )
+            raise ValueError(f"observable ID {fault_id} outside [0, {num_observables})")
         normalized.add(fault_id)
     for fault_id in sorted(normalized):
         result[fault_id // 8] |= 1 << (fault_id % 8)
@@ -198,10 +231,13 @@ def compile_matching_graph(
             f"layout has {layout.num_detectors} detectors but DEM has {num_detectors}"
         )
     detector_coordinates = dem.get_detector_coordinates()
-    if tuple(
-        tuple(float(v) for v in detector_coordinates[k])
-        for k in range(num_detectors)
-    ) != layout.coordinates:
+    if (
+        tuple(
+            tuple(float(v) for v in detector_coordinates[k])
+            for k in range(num_detectors)
+        )
+        != layout.coordinates
+    ):
         raise ValueError("layout coordinates do not match the supplied DEM")
 
     matcher = pymatching.Matching.from_detector_error_model(dem)
@@ -224,14 +260,18 @@ def compile_matching_graph(
             if target < 0 or target >= num_detectors:
                 raise ValueError(f"matching detector ID {target} is out of range")
             if source == target:
-                raise ValueError(f"matching graph contains self-loop at detector {source}")
+                raise ValueError(
+                    f"matching graph contains self-loop at detector {source}"
+                )
             if target < source:
                 source, target = target, source
 
         try:
             weight = float(edge_data["weight"])
         except (KeyError, TypeError, ValueError) as ex:
-            raise ValueError(f"matching edge {(source, target)} has invalid weight") from ex
+            raise ValueError(
+                f"matching edge {(source, target)} has invalid weight"
+            ) from ex
         if not math.isfinite(weight):
             raise ValueError(
                 f"matching edge {(source, target)} has nonfinite weight {weight!r}"
@@ -271,7 +311,9 @@ def compile_matching_graph(
             continue
         source_role = edge.source_role
         target_role = edge.target_role
-        if isinstance(source_role, YokeDetector) or isinstance(target_role, YokeDetector):
+        if isinstance(source_role, YokeDetector) or isinstance(
+            target_role, YokeDetector
+        ):
             continue
         source_inner = isinstance(source_role, (L1BodyDetector, L1TerminalDetector))
         target_inner = isinstance(target_role, (L1BodyDetector, L1TerminalDetector))
@@ -313,9 +355,7 @@ def compile_matching_graph(
         boundary_edges: list[Edge] = []
         adjacency_lists: dict[int, list[Edge]] = {k: [] for k in detector_ids}
         neighbor_sets: dict[int, set[int]] = {k: set() for k in detector_ids}
-        boundary_adjacency_lists: dict[int, list[Edge]] = {
-            k: [] for k in detector_ids
-        }
+        boundary_adjacency_lists: dict[int, list[Edge]] = {k: [] for k in detector_ids}
         for edge in edges:
             if edge.target is None:
                 if edge.source not in detector_set:
@@ -336,7 +376,9 @@ def compile_matching_graph(
             # Membership in the same detector set is the strongest possible
             # domain-local check, including mode-specific window assignment.
             if require_zero_frame and not _is_zero_mask(edge.observable_mask):
-                raise AssertionError("nonzero domain edge escaped zero-frame validation")
+                raise AssertionError(
+                    "nonzero domain edge escaped zero-frame validation"
+                )
             domain_edges.append(edge)
             adjacency_lists[edge.source].append(edge)
             adjacency_lists[edge.target].append(edge)

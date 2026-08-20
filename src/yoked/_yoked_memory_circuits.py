@@ -61,7 +61,7 @@ def yoked_magic_memory_circuit(
     patches = []
     for k in range(num_patches):
         epr_ancilla_qubits.append(-2j + k * pitch)
-        trans = lambda q: q + k * pitch
+        trans = lambda q, k=k: q + k * pitch
         x_observables.append(base_obs_x.with_transformed_coords(trans))
         z_observables.append(base_obs_z.with_transformed_coords(trans))
         patches.append(base_patch.after_coordinate_transform(trans))

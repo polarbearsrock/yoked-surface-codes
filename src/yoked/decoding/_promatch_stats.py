@@ -65,6 +65,9 @@ def _require_nonnegative_int(value: int, *, name: str) -> int:
     return value
 
 
+# Paired accuracy design and inference.
+
+
 @dataclass(frozen=True)
 class PairedContingency:
     """A complete paired correctness table.
@@ -168,6 +171,8 @@ def clopper_pearson_lower(*, successes: int, trials: int, alpha: float = 0.05) -
 
 @dataclass(frozen=True)
 class SampleSizeDesign:
+    """Frozen confirmatory shot-count calculation and resource-cap decision."""
+
     discordance_upper: float
     raw_shots: int
     rounded_shots: int
@@ -185,7 +190,8 @@ def confirmatory_sample_size(
     z_alpha: float = Z_ONE_SIDED_97_5,
     z_power: float = Z_POWER_90,
 ) -> SampleSizeDesign:
-    """Apply the frozen normal-approximation sample-size rule from Section 15."""
+    """Apply the frozen normal-approximation sample-size rule from
+    ``docs/PROMATCH_IMPLEMENTATION_PLAN.md`` Section 15."""
 
     batch_size = _require_nonnegative_int(batch_size, name="batch_size")
     max_shots = _require_nonnegative_int(max_shots, name="max_shots")
@@ -282,6 +288,8 @@ def tango_paired_risk_difference_upper(
 
 @dataclass(frozen=True)
 class SimulatedPower:
+    """Monte Carlo pass count with a conservative binomial lower bound."""
+
     trials: int
     passes: int
     estimate: float
@@ -304,7 +312,9 @@ def simulate_tango_noninferiority_power(
     replicates = _require_nonnegative_int(replicates, name="replicates")
     if shots == 0 or replicates == 0:
         raise ValueError("shots and replicates must be positive")
-    if not 0 <= discordance_probability <= 1 or not math.isfinite(discordance_probability):
+    if not 0 <= discordance_probability <= 1 or not math.isfinite(
+        discordance_probability
+    ):
         raise ValueError("discordance_probability must be finite and in [0, 1]")
     if not math.isfinite(delta_noninferiority):
         raise ValueError("delta_noninferiority must be finite")
@@ -312,7 +322,11 @@ def simulate_tango_noninferiority_power(
     rng = np.random.default_rng(seed)
     draws = rng.multinomial(
         shots,
-        [discordance_probability / 2, discordance_probability / 2, 1 - discordance_probability],
+        [
+            discordance_probability / 2,
+            discordance_probability / 2,
+            1 - discordance_probability,
+        ],
         size=replicates,
     )
     pairs, multiplicities = np.unique(draws[:, :2], axis=0, return_counts=True)
@@ -324,7 +338,10 @@ def simulate_tango_noninferiority_power(
             recoveries=int(c),
             both_wrong=0,
         )
-        if tango_paired_risk_difference_upper(table, alpha=decision_alpha) < delta_noninferiority:
+        if (
+            tango_paired_risk_difference_upper(table, alpha=decision_alpha)
+            < delta_noninferiority
+        ):
             passes += int(multiplicity)
     return SimulatedPower(
         trials=replicates,
@@ -338,7 +355,9 @@ def simulate_tango_noninferiority_power(
     )
 
 
-def validate_process_count(processes: int, *, cap: int = ROUND_ONE_MAX_PROCESSES) -> int:
+def validate_process_count(
+    processes: int, *, cap: int = ROUND_ONE_MAX_PROCESSES
+) -> int:
     """Reject accidental oversubscription; round one permits at most 32 processes."""
 
     processes = _require_nonnegative_int(processes, name="processes")
@@ -353,6 +372,9 @@ def validate_process_count(processes: int, *, cap: int = ROUND_ONE_MAX_PROCESSES
     if processes > cap:
         raise ValueError(f"processes={processes} exceeds the frozen cap of {cap}")
     return processes
+
+
+# Deterministic schedules, seeds, and artifact identities.
 
 
 def _seed_root_bytes(seed_root: str | bytes) -> bytes:
@@ -373,7 +395,8 @@ def _seed_root_bytes(seed_root: str | bytes) -> bytes:
 
 
 def derive_stim_batch_seed(*, seed_root: str | bytes, batch_id: int) -> int:
-    """Derive the Section 12.1 uint64 Stim seed for one immutable batch."""
+    """Derive the ``docs/PROMATCH_IMPLEMENTATION_PLAN.md`` Section 12.1
+    uint64 Stim seed for one immutable batch."""
 
     batch_id = _require_nonnegative_int(batch_id, name="batch_id")
     if batch_id >= 2**64:
@@ -386,6 +409,8 @@ def derive_stim_batch_seed(*, seed_root: str | bytes, batch_id: int) -> int:
 
 @dataclass(frozen=True)
 class ArrayDigest:
+    """Digest of logical C-order bytes together with shape and dtype identity."""
+
     sha256: str
     shape: tuple[int, ...]
     dtype: str
@@ -407,13 +432,17 @@ def digest_array(array: np.ndarray) -> ArrayDigest:
 
 @dataclass(frozen=True)
 class BatchSpec:
+    """Immutable half-open shot range owned by one deterministic batch ID."""
+
     batch_id: int
     shot_start: int
     shots: int
 
     def __post_init__(self) -> None:
         for name in ("batch_id", "shot_start", "shots"):
-            object.__setattr__(self, name, _require_nonnegative_int(getattr(self, name), name=name))
+            object.__setattr__(
+                self, name, _require_nonnegative_int(getattr(self, name), name=name)
+            )
         if self.shots == 0:
             raise ValueError("a batch must contain at least one shot")
 
@@ -442,7 +471,9 @@ def validate_batch_schedule(
     batch_size = _require_nonnegative_int(batch_size, name="batch_size")
     if batch_size == 0:
         raise ValueError("batch_size must be positive")
-    parsed = tuple(e if isinstance(e, BatchSpec) else BatchSpec.from_json(e) for e in batches)
+    parsed = tuple(
+        e if isinstance(e, BatchSpec) else BatchSpec.from_json(e) for e in batches
+    )
     if not parsed:
         raise ValueError("batch schedule must not be empty")
     if len({e.batch_id for e in parsed}) != len(parsed):
@@ -461,7 +492,9 @@ def validate_batch_schedule(
     if expected_shots is not None:
         expected_shots = _require_nonnegative_int(expected_shots, name="expected_shots")
         if cursor != expected_shots:
-            raise ValueError(f"batch schedule covers {cursor} shots, expected {expected_shots}")
+            raise ValueError(
+                f"batch schedule covers {cursor} shots, expected {expected_shots}"
+            )
     return ordered
 
 
@@ -488,7 +521,14 @@ def _validate_json_tree(value: Any, *, path: str = "$") -> None:
 
 
 def canonical_json_bytes(value: Mapping[str, Any]) -> bytes:
-    """Serialize the experiment's documented canonical JSON representation."""
+    """Serialize the experiment's documented canonical JSON representation.
+
+    Sync note: oracle/policy_analysis/_contract.py defines a same-named twin
+    that accepts any JSON value and skips this validation (its isolation
+    contract forbids importing this module). Both emit identical bytes for
+    valid mappings; keep the serialization arguments aligned if either
+    changes.
+    """
 
     if not isinstance(value, Mapping):
         raise TypeError("manifest must be a mapping")
@@ -525,7 +565,10 @@ def validate_protocol_manifest(
         raise ValueError(f"manifest is missing required fields: {sorted(missing)}")
     if "clean_worktree" in manifest and manifest["clean_worktree"] is not True:
         raise ValueError("scientific protocols require clean_worktree=true")
-    if "sample_batch_size" in manifest and manifest["sample_batch_size"] != ROUND_ONE_BATCH_SIZE:
+    if (
+        "sample_batch_size" in manifest
+        and manifest["sample_batch_size"] != ROUND_ONE_BATCH_SIZE
+    ):
         raise ValueError(f"round one sample_batch_size must be {ROUND_ONE_BATCH_SIZE}")
     if "processes" in manifest:
         validate_process_count(manifest["processes"])
@@ -550,28 +593,39 @@ def validate_protocol_manifest(
         for split, entries in schedules.items():
             validate_batch_schedule(
                 entries,
-                expected_shots=expected_by_split.get(split) if expected_by_split else None,
+                expected_shots=expected_by_split.get(split)
+                if expected_by_split
+                else None,
                 batch_size=manifest.get("sample_batch_size", ROUND_ONE_BATCH_SIZE),
             )
     actual_id = manifest_experiment_id(manifest)
     embedded_id = manifest.get("experiment_id")
     if embedded_id is not None and embedded_id != actual_id:
-        raise ValueError("embedded experiment_id does not match canonical manifest hash")
+        raise ValueError(
+            "embedded experiment_id does not match canonical manifest hash"
+        )
     if expected_experiment_id is not None and expected_experiment_id != actual_id:
         raise ValueError("manifest hash does not match the expected experiment ID")
     return actual_id
 
 
 def paired_workload_ratio(
-    *, original_events: Sequence[int] | np.ndarray, residual_events: Sequence[int] | np.ndarray
+    *,
+    original_events: Sequence[int] | np.ndarray,
+    residual_events: Sequence[int] | np.ndarray,
 ) -> float:
     """Ratio of unconditional paired mean residual/original detector events."""
 
     original, residual = _paired_nonnegative_arrays(original_events, residual_events)
     denominator = float(np.sum(original, dtype=np.float64))
     if denominator == 0:
-        raise ValueError("workload ratio is undefined when original mean workload is zero")
+        raise ValueError(
+            "workload ratio is undefined when original mean workload is zero"
+        )
     return float(np.sum(residual, dtype=np.float64) / denominator)
+
+
+# Paired workload and hierarchical latency bootstraps.
 
 
 def _paired_nonnegative_arrays(
@@ -580,7 +634,9 @@ def _paired_nonnegative_arrays(
     a = np.asarray(first)
     b = np.asarray(second)
     if a.ndim != 1 or b.ndim != 1 or a.shape != b.shape or a.size == 0:
-        raise ValueError("paired arrays must be nonempty, one-dimensional, and equally sized")
+        raise ValueError(
+            "paired arrays must be nonempty, one-dimensional, and equally sized"
+        )
     if not np.issubdtype(a.dtype, np.number) or not np.issubdtype(b.dtype, np.number):
         raise TypeError("paired arrays must be numeric")
     if np.any(~np.isfinite(a)) or np.any(~np.isfinite(b)):
@@ -590,12 +646,16 @@ def _paired_nonnegative_arrays(
     return a, b
 
 
-def empirical_type7_quantile(values: Sequence[float] | np.ndarray, probability: float) -> float:
+def empirical_type7_quantile(
+    values: Sequence[float] | np.ndarray, probability: float
+) -> float:
     """R/NumPy type-7 empirical quantile, made explicit for frozen protocols."""
 
     data = np.asarray(values, dtype=np.float64)
     if data.ndim != 1 or data.size == 0 or np.any(np.isnan(data)):
-        raise ValueError("quantile input must be a nonempty one-dimensional array without NaN")
+        raise ValueError(
+            "quantile input must be a nonempty one-dimensional array without NaN"
+        )
     if not 0 <= probability <= 1:
         raise ValueError("probability must be in [0, 1]")
     ordered = np.sort(data)
@@ -613,6 +673,8 @@ def empirical_type7_quantile(values: Sequence[float] | np.ndarray, probability: 
 
 @dataclass(frozen=True)
 class BootstrapRatio:
+    """Ratio estimate and one-sided upper bootstrap bound."""
+
     estimate: float
     upper_bound: float
     replicates: int
@@ -699,7 +761,9 @@ def paired_workload_histogram_bootstrap(
     shots = int(np.sum(counts, dtype=np.int64))
     original_total = float(counts @ original_values)
     if original_total == 0:
-        raise ValueError("workload ratio is undefined when original mean workload is zero")
+        raise ValueError(
+            "workload ratio is undefined when original mean workload is zero"
+        )
     estimate = float((counts @ residual_values) / original_total)
 
     probabilities = counts.astype(np.float64) / shots
@@ -725,7 +789,9 @@ def paired_workload_histogram_bootstrap(
     )
 
 
-def paired_geometric_mean_ratio(numerator: np.ndarray, denominator: np.ndarray) -> float:
+def paired_geometric_mean_ratio(
+    numerator: np.ndarray, denominator: np.ndarray
+) -> float:
     """Geometric mean of positive paired block-duration ratios."""
 
     a, b = _paired_nonnegative_arrays(numerator, denominator)
@@ -736,6 +802,8 @@ def paired_geometric_mean_ratio(numerator: np.ndarray, denominator: np.ndarray) 
 
 @dataclass(frozen=True)
 class HierarchicalTimingBootstrap:
+    """Restart/block bootstrap results for mean and tail latency ratios."""
+
     geometric_ratio: float
     geometric_ratio_upper: float
     p99_ratio: float
@@ -751,7 +819,8 @@ def hierarchical_timing_bootstrap(
     seed: int,
     alpha: float = 0.025,
 ) -> HierarchicalTimingBootstrap:
-    """Restart/block cluster bootstrap from Section 17.
+    """Restart/block cluster bootstrap from
+    ``docs/PROMATCH_IMPLEMENTATION_PLAN.md`` Section 17.
 
     Inputs have shape ``(restarts, blocks, calls_per_block)``.  Restart indices
     and then paired block indices are resampled; all calls in a block stay
@@ -762,7 +831,12 @@ def hierarchical_timing_bootstrap(
     b = np.asarray(denominator_calls, dtype=np.float64)
     if a.ndim != 3 or a.shape != b.shape or 0 in a.shape:
         raise ValueError("timing arrays must have identical nonempty 3D shapes")
-    if np.any(~np.isfinite(a)) or np.any(~np.isfinite(b)) or np.any(a <= 0) or np.any(b <= 0):
+    if (
+        np.any(~np.isfinite(a))
+        or np.any(~np.isfinite(b))
+        or np.any(a <= 0)
+        or np.any(b <= 0)
+    ):
         raise ValueError("timing calls must be finite and strictly positive")
     replicates = _require_nonnegative_int(replicates, name="replicates")
     seed = _require_nonnegative_int(seed, name="seed")

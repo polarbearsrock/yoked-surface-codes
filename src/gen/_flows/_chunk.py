@@ -44,8 +44,8 @@ class Chunk:
         self.magic = magic
         self.circuit = circuit
         self.flows = tuple(flows)
-        self.discarded_inputs = discarded_inputs
-        self.discarded_outputs = discarded_outputs
+        self.discarded_inputs = tuple(discarded_inputs)
+        self.discarded_outputs = tuple(discarded_outputs)
 
     def __eq__(self, other):
         if not isinstance(other, Chunk):
@@ -77,7 +77,7 @@ class Chunk:
         """Checks that this chunk's circuit actually implements its flows."""
         for key, group in sinter.group_by(self.flows, key=lambda flow: (flow.start, flow.obs_index)).items():
             if key[0] and len(group) > 1:
-                raise ValueError(f"Multiple flows with same non-empty end: {group}")
+                raise ValueError(f"Multiple flows with same non-empty start: {group}")
         for key, group in sinter.group_by(self.flows, key=lambda flow: (flow.end, flow.obs_index)).items():
             if key[0] and len(group) > 1:
                 raise ValueError(f"Multiple flows with same non-empty end: {group}")
@@ -86,7 +86,12 @@ class Chunk:
         FlowStabilizerVerifier.verify(self)
 
     def inverted(self) -> 'Chunk':
-        """Checks that this chunk's circuit actually implements its flows."""
+        """Returns a time-reversed version of this chunk.
+
+        The inverted chunk's circuit runs the original operations in reverse
+        order (resets become measurements and vice versa where possible), and
+        each flow is reversed (its start and end are exchanged).
+        """
         from gen._flows._flow_verifier import FlowStabilizerVerifier
         return FlowStabilizerVerifier.invert(self)
 
@@ -154,6 +159,12 @@ class Chunk:
 
 
 class ChunkLoop:
+    """A sequence of chunks (or nested loops) repeated a number of times.
+
+    The flows leaving each repetition must match the flows entering the next
+    one, so that compilation can stitch the iterations together (and emit an
+    actual REPEAT block when the loop body's detectors stabilize).
+    """
     def __init__(self, chunks: Iterable[Union[Chunk, 'ChunkLoop']], repetitions: int):
         self.chunks = tuple(chunks)
         self.repetitions = repetitions

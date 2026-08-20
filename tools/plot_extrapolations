@@ -40,11 +40,24 @@ def extrapolated_error_rate_per_patch_round(
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('inputs', type=str, nargs='+')
-    parser.add_argument('--filter_func', type=str, default="True")
-    parser.add_argument('--show', action='store_true')
-    parser.add_argument('--out', type=str, default=None)
+    parser = argparse.ArgumentParser(
+        description='Compares sampled logical error rates against extrapolated '
+                    'error rate formulas. Stats are always restricted to rows '
+                    "whose json_metadata 'collect' field is unset and whose "
+                    'decoder matches --decoder.')
+    parser.add_argument('inputs', type=str, nargs='+',
+                        help='Sinter stats CSV files to read.')
+    parser.add_argument('--filter_func', type=str, default="True",
+                        help="Python expression eval'd with keyword arguments stat, "
+                             'decoder, metadata, m, and strong_id (sinter convention); '
+                             'only stats where it is truthy are plotted.')
+    parser.add_argument('--decoder', type=str, default='sparse_blossom_correlated',
+                        help='Only plot stats collected with this sinter decoder '
+                             '(default: sparse_blossom_correlated).')
+    parser.add_argument('--show', action='store_true',
+                        help='Show the plot in an interactive window.')
+    parser.add_argument('--out', type=str, default=None,
+                        help='Path to write the plot image to.')
     args = parser.parse_args()
     args.filter_func = eval(compile(
         f'lambda *, stat, decoder, metadata, m, strong_id: {args.filter_func}',
@@ -62,7 +75,7 @@ def main():
         for stat in stats
         if filter_func(stat)
         if stat.json_metadata.get('collect') is None
-        if stat.decoder == 'sparse_blossom_correlated'
+        if stat.decoder == args.decoder
     ]
     stats = sorted(stats, key=lambda stat: (stat.json_metadata['patches'], stat.json_metadata['r'] / stat.json_metadata['d'], stat.json_metadata['d']))
     @dataclasses.dataclass

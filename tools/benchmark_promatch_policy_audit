@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+# Native-thread limits intentionally execute before numerical/package imports.
+# ruff: noqa: E402
+
 import os
 
 for _name in (
@@ -17,18 +20,24 @@ for _name in (
 
 import argparse
 import json
+import pathlib
 from pathlib import Path
 import sys
 
-_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(_ROOT / "src"))
+if os.environ.get("TMPDIR"):
+    _mpl_config = Path(os.environ["TMPDIR"]) / "yoked-surface-codes-matplotlib"
+    _mpl_config.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("MPLCONFIGDIR", str(_mpl_config))
 
-from yoked.decoding._promatch_policy_casebook import (  # noqa: E402
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+
+from yoked.decoding.oracle.policy_casebook import (  # noqa: E402
     expand_authenticated_policy_casebook,
     finalize_policy_audit,
     verify_policy_casebook_expansion,
 )
-from yoked.decoding._promatch_policy_experiment import (  # noqa: E402
+from yoked.decoding.oracle.policy_experiment import (  # noqa: E402
     freeze_policy_protocol,
     inspect_policy_protocol,
     materialize_policy_draft,
@@ -37,15 +46,9 @@ from yoked.decoding._promatch_policy_experiment import (  # noqa: E402
     validate_policy_protocol,
     verify_worker_shard,
 )
-
-
-def _unique_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate JSON object key {key!r}")
-        result[key] = value
-    return result
+from yoked.decoding._artifact_io import (  # noqa: E402
+    unique_json_object as _unique_object,
+)
 
 
 def _load(path: Path):
@@ -65,18 +68,34 @@ def _write_new(path: Path, value) -> None:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Fixed 32-worker B1 human-interpretable policy audit"
+        description="Fixed 32-worker B1 human-interpretable policy audit",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Workflow: smoke -> probe -> freeze -> collect -> verify -> analyze "
+            "-> expand-casebook -> verify-casebook -> finalize.\n"
+            "Scientific collection requires a clean worktree, exactly 32 workers, "
+            "and a newly versioned frozen protocol."
+        ),
     )
     commands = parser.add_subparsers(dest="command", required=True)
 
     inspect = commands.add_parser("inspect", help="inspect draft graph provenance")
-    inspect.add_argument("--protocol", type=Path, required=True)
+    inspect.add_argument(
+        "--protocol", type=Path, required=True, help="draft protocol JSON to inspect"
+    )
 
     freeze = commands.add_parser(
         "freeze", help="freeze a clean implementation commit into a new config"
     )
-    freeze.add_argument("--protocol", type=Path, required=True)
-    freeze.add_argument("--out-protocol", type=Path, required=True)
+    freeze.add_argument(
+        "--protocol", type=Path, required=True, help="materialized draft protocol JSON"
+    )
+    freeze.add_argument(
+        "--out-protocol",
+        type=Path,
+        required=True,
+        help="new versioned JSON path inside the repository; must not exist",
+    )
     freeze.add_argument(
         "--probe-root",
         type=Path,
@@ -87,40 +106,78 @@ def _parser() -> argparse.ArgumentParser:
     for name, help_text in (
         ("smoke", "run the disjoint 32-shot scratch integration smoke"),
         ("probe", "run the disjoint 100-shot timing/storage probe"),
-        ("collect", "run or verify the frozen 20,000-shot scientific corpus"),
+        ("collect", "collect the frozen 20,000-shot scientific corpus"),
     ):
-        command = commands.add_parser(name, help=help_text)
-        command.add_argument("--protocol", type=Path, required=True)
-        command.add_argument("--out", type=Path, required=True)
-        command.add_argument("--processes", type=int, default=32)
+        command = commands.add_parser(name, help=help_text, description=help_text)
+        command.add_argument(
+            "--protocol",
+            type=Path,
+            required=True,
+            help="draft protocol for scratch runs; frozen protocol for collect",
+        )
+        command.add_argument(
+            "--out",
+            type=Path,
+            required=True,
+            help="fresh or resumable output root (never an existing audit corpus)",
+        )
+        command.add_argument(
+            "--processes",
+            type=int,
+            default=32,
+            help="worker processes (default and scientific requirement: 32; maximum: 32)",
+        )
 
     verify = commands.add_parser("verify", help="verify every immutable worker shard")
-    verify.add_argument("--protocol", type=Path, required=True)
-    verify.add_argument("--out", type=Path, required=True)
     verify.add_argument(
-        "--mode", choices=("scientific", "smoke", "probe"), required=True
+        "--protocol", type=Path, required=True, help="protocol used by the collection"
+    )
+    verify.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="collection root containing worker shards",
+    )
+    verify.add_argument(
+        "--mode",
+        choices=("scientific", "smoke", "probe"),
+        required=True,
+        help="schedule and provenance contract to verify",
     )
 
     expand = commands.add_parser(
         "expand-casebook",
         help="authenticate and replay the installed post-selection casebook",
     )
-    expand.add_argument("--protocol", type=Path, required=True)
-    expand.add_argument("--collection", type=Path, required=True)
+    expand.add_argument("--protocol", type=Path, required=True, help="frozen protocol")
+    expand.add_argument(
+        "--collection", type=Path, required=True, help="verified collection root"
+    )
 
     verify_casebook = commands.add_parser(
         "verify-casebook",
         help="recompute and authenticate an installed exhaustive casebook",
     )
-    verify_casebook.add_argument("--protocol", type=Path, required=True)
-    verify_casebook.add_argument("--collection", type=Path, required=True)
+    verify_casebook.add_argument(
+        "--protocol", type=Path, required=True, help="frozen protocol"
+    )
+    verify_casebook.add_argument(
+        "--collection",
+        type=Path,
+        required=True,
+        help="collection with installed casebook",
+    )
 
     finalize = commands.add_parser(
         "finalize",
         help="verify every evidence layer and write COMPLETE last",
     )
-    finalize.add_argument("--protocol", type=Path, required=True)
-    finalize.add_argument("--collection", type=Path, required=True)
+    finalize.add_argument(
+        "--protocol", type=Path, required=True, help="frozen protocol"
+    )
+    finalize.add_argument(
+        "--collection", type=Path, required=True, help="fully verified collection root"
+    )
     return parser
 
 
@@ -133,14 +190,18 @@ def main() -> int:
             return 0
         if args.command == "freeze":
             try:
-                relative = args.out_protocol.resolve().relative_to(_ROOT.resolve()).as_posix()
+                relative = (
+                    args.out_protocol.resolve().relative_to(_REPO_ROOT.resolve()).as_posix()
+                )
             except ValueError as ex:
-                raise ValueError("frozen protocol output must be inside the repository") from ex
+                raise ValueError(
+                    "frozen protocol output must be inside the repository"
+                ) from ex
             frozen = freeze_policy_protocol(
                 config,
                 protocol_relative_path=relative,
                 probe_root=args.probe_root,
-                root=_ROOT,
+                root=_REPO_ROOT,
             )
             _write_new(args.out_protocol, frozen)
             print(f"wrote frozen B1 protocol {args.out_protocol}")

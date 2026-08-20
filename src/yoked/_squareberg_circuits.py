@@ -1,14 +1,69 @@
-import math
-from typing import Literal, Optional, Tuple, Union, Sequence
+"""Circuits for the "squareberg" construction: a grid of yoked surface codes.
 
-import sinter
+A squareberg code arranges w*w surface code patches in a w-by-w grid and
+yokes their logical qubits together with the checks of an outer
+[[w**2, w**2 - 4*w + 2, 4]] code. Treating each patch's logical qubit as a
+physical qubit of the outer code, indexed by k = column + row * w, the outer
+checks come in four families. Supported widths are powers of two with w >= 4
+(see `make_squareberg_stabilizers`, which groups qubit indices by bit masks):
+
+- X checks over each column of the grid.
+- X checks over each row of the grid.
+- Z checks over each pair of adjacent columns.
+- Z checks over each pair of adjacent rows (split by column parity).
+
+That's 4*w checks with two redundancies (the product of all X-column checks
+equals the product of all X-row checks, and similarly for Z), so the outer
+code encodes w**2 - (4*w - 2) logical qubits; `make_observables` builds an
+anticommuting X/Z logical pair for each of them and asserts that count. For
+w = 8 this is the [[64, 34, 4]] squareberg code.
+
+`squareberg_magic_memory_circuit` produces a memory experiment over the patch
+grid with magic time boundaries: each patch's logical observables are tied to
+a noiseless per-patch EPR ancilla so X and Z can be tracked simultaneously,
+and each outer check appears as a detector comparing the initial and final
+magical measurements of the per-patch observables it covers.
+`squareberg_phenomenological_circuit` is the phenomenological-noise version
+where each patch is reduced to a single qubit.
+"""
+
+import math
+from typing import List, Literal, Optional, Sequence, Tuple, Union
 
 import gen
-
-
-from typing import List
-
+import sinter
 import stim
+
+
+def _squareberg_grid_width(num_patches: int) -> int:
+    """Returns the side length w of the w-by-w patch grid, validating num_patches.
+
+    The bit-mask construction requires a power-of-two width of at least four,
+    so supported patch counts are 16, 64, 256, and so on.
+    """
+    if (
+        not isinstance(num_patches, int)
+        or isinstance(num_patches, bool)
+        or num_patches < 16
+    ):
+        raise ValueError(
+            "num_patches must be the square of a power-of-two grid width "
+            f"at least 4; got {num_patches!r}"
+        )
+    w = math.isqrt(num_patches)
+    if w * w != num_patches or w & (w - 1):
+        raise ValueError(
+            "num_patches must be the square of a power-of-two grid width "
+            f"at least 4; got {num_patches!r}"
+        )
+    return w
+
+
+def _validate_squareberg_grid_width(w: int) -> int:
+    """Returns w after validating it as a supported squareberg grid width."""
+    if not isinstance(w, int) or isinstance(w, bool) or w < 4 or w & (w - 1):
+        raise ValueError(f"squareberg grid width must be a power of two at least 4; got {w!r}")
+    return w
 
 
 def stabilizers_from_bit_group_mask(*, b: str, n: int, bit_group_mask: int, sign: int) -> List[stim.PauliString]:
@@ -26,9 +81,13 @@ def stabilizers_from_bit_group_mask(*, b: str, n: int, bit_group_mask: int, sign
 def make_squareberg_stabilizers(w: int) -> List[stim.PauliString]:
     """Returns stabilizers of the squareberg code.
 
-    The sign of the stabilizer is used to hint at how to group them
-    when measuring using lattice surgery.
+    The sign of each stabilizer hints at how to group it when measuring using
+    lattice surgery.
+
+    Args:
+        w: Power-of-two grid width, at least four.
     """
+    w = _validate_squareberg_grid_width(w)
     m = w - 1
     h = m.bit_length()
     stabilizers = [
@@ -155,10 +214,18 @@ def squareberg_magic_memory_circuit(
         style: Literal['cz', 'css'],
         num_patches: int,
 ) -> stim.Circuit:
+    """Builds a squareberg surface-code memory circuit with magic boundaries.
+
+    Args:
+        patch_diameter: Width and height of each surface-code patch.
+        rounds: Number of noisy syndrome-extraction rounds; must be at least 2.
+        noise: Noise model applied to the circuit body, or None for no noise.
+        style: Syndrome-extraction gate style.
+        num_patches: Patch count. Must be the square of a power-of-two grid
+            width of at least four (for example, 16 or 64).
+    """
     assert rounds >= 2
-    w = round(math.sqrt(num_patches)) // 2 * 2
-    if w * w != num_patches:
-        raise ValueError("num_patches must be square and a multiple of 16")
+    w = _squareberg_grid_width(num_patches)
     g = patch_diameter - 1
     rel_order_func = lambda q: gen.Order_Z if gen.checkerboard_basis(q) == 'X' else gen.Order_ᴎ
     base_patch = gen.ClosedCurve.from_cycle(
@@ -181,7 +248,7 @@ def squareberg_magic_memory_circuit(
     patches = []
     for kx in range(w):
         for ky in range(w):
-            trans = lambda q: q + kx * pitch + ky*pitch*1j
+            trans = lambda q, kx=kx, ky=ky: q + kx * pitch + ky*pitch*1j
             k = len(epr_ancilla_qubits)
             e = trans(-0.25j - 0.25)
             epr_ancilla_qubits.append(e)
@@ -240,10 +307,16 @@ def squareberg_phenomenological_circuit(
         noise: gen.NoiseRule,
         num_patches: int,
 ) -> stim.Circuit:
+    """Builds the phenomenological-noise squareberg memory circuit.
+
+    Args:
+        rounds: Number of phenomenological rounds; must be at least 2.
+        noise: Noise applied after each round and to measurement results.
+        num_patches: Patch count. Must be the square of a power-of-two grid
+            width of at least four (for example, 16 or 64).
+    """
     assert rounds >= 2
-    w = round(math.sqrt(num_patches)) // 2 * 2
-    if w * w != num_patches:
-        raise ValueError("num_patches must be square and a multiple of 16")
+    w = _squareberg_grid_width(num_patches)
 
     s2q = [
         x + 1j*y

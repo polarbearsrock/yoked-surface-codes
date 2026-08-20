@@ -4,8 +4,7 @@ from typing import Iterable, FrozenSet, Callable, Union, Literal, \
     Optional, Any, Dict, List, AbstractSet
 
 from gen._core._builder import Builder, AtLayer
-from gen._core._util import sorted_complex, min_max_complex, complex_key
-from gen._interaction_planner import DESIRED_Z_TO_ORIENTATION
+from gen._core._util import sorted_complex, min_max_complex, complex_key, DESIRED_Z_TO_ORIENTATION
 from gen._core._tile import Tile
 from gen._util import write_file
 
@@ -329,7 +328,7 @@ class Patch:
         skipped_comparisons_set = frozenset(skipped_comparisons)
         singleton_detectors_set = frozenset(singleton_detectors)
         for e in sorted_complex(self.tiles, key=lambda e2: e2.measurement_qubit):
-            if all(e is None for e in e.ordered_data_qubits):
+            if all(d is None for d in e.ordered_data_qubits):
                 continue
             failed = False
             for q, b in zip(e.ordered_data_qubits, e.bases):

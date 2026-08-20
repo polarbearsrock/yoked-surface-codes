@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import pathlib
 from pathlib import Path
 import sys
 
@@ -19,14 +20,14 @@ for _name in (
 ):
     os.environ[_name] = "1"
 if os.environ.get("TMPDIR"):
-    os.environ.setdefault(
-        "MPLCONFIGDIR", str(Path(os.environ["TMPDIR"]) / "yoked-surface-codes-matplotlib")
-    )
+    _mpl_config = Path(os.environ["TMPDIR"]) / "yoked-surface-codes-matplotlib"
+    _mpl_config.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("MPLCONFIGDIR", str(_mpl_config))
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
 
-from yoked.decoding._promatch_policy_analysis import (  # noqa: E402
+from yoked.decoding.oracle.policy_analysis import (  # noqa: E402
     analyze_policy_audit,
     load_policy_audit,
     verify_existing_policy_analysis,

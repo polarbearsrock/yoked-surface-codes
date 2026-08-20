@@ -4,7 +4,7 @@ import argparse
 import math
 import pathlib
 import sys
-from typing import Iterable, List
+from typing import Iterable, List, Mapping
 
 import numpy as np
 import sinter
@@ -12,12 +12,10 @@ from matplotlib import pyplot as plt
 
 from _plot_util import FieldToMetadataWrapper
 
-src_path = pathlib.Path(__file__).parent.parent / 'src'
-assert src_path.exists()
-sys.path.append(str(src_path))
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / 'src'))
 from yoked._histogram_conversion import \
     curve_rescaled_to_target_area, \
-    with_unsigned_gap, \
     histogram_cosine_convolve
 
 
@@ -30,19 +28,52 @@ def chunk(vs: Iterable[float], chunking: int) -> np.ndarray:
     return new_vs / chunking
 
 
+def split_gap_counts(
+        custom_counts: Mapping[str, int],
+        *,
+        emulate_unyoked_decoding: bool,
+) -> tuple[dict[float, int], dict[float, int]]:
+    """Separate success/error gap bins, optionally folding errors into success."""
+    c_hits = {float(k[1:]): v for k, v in custom_counts.items() if k.startswith('C')}
+    e_hits = {float(k[1:]): v for k, v in custom_counts.items() if k.startswith('E')}
+    if emulate_unyoked_decoding:
+        for key, count in list(e_hits.items()):
+            c_hits[key] = c_hits.get(key, 0) + count
+            e_hits[key] = 0
+    return c_hits, e_hits
+
+
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('inputs', type=str, nargs='+')
-    parser.add_argument('--bucket_width', type=int, default=1)
-    parser.add_argument('--filter_func', type=str, default="True")
-    parser.add_argument('--min_gap', type=int, default=-100)
-    parser.add_argument('--ymin', type=float, default=1e-9)
-    parser.add_argument('--max_gap', type=int, default=250)
-    parser.add_argument('--show', action='store_true')
-    parser.add_argument('--unsigned', action='store_true')
-    parser.add_argument('--emulate_unyoked_decoding', action='store_true')
-    parser.add_argument('--write_success_into_sign', action='store_true')
-    parser.add_argument('--out', type=str, default=None)
+    parser = argparse.ArgumentParser(
+        description='Plots smoothed histograms of sampled decoder gaps, one '
+                    'success curve and one error curve per patch diameter.')
+    parser.add_argument('inputs', type=str, nargs='+',
+                        help='Sinter stats CSV files with C#/E# gap custom counts.')
+    parser.add_argument('--bucket_width', type=int, default=1,
+                        help='Width in dB of the smoothing buckets (default: 1).')
+    parser.add_argument('--filter_func', type=str, default="True",
+                        help="Python expression eval'd with keyword arguments stat, "
+                             'decoder, metadata, m, and strong_id (sinter convention); '
+                             'only stats where it is truthy are plotted.')
+    parser.add_argument('--min_gap', type=int, default=-100,
+                        help='Left edge of the gap axis, in dB (default: -100).')
+    parser.add_argument('--ymin', type=float, default=1e-9,
+                        help='Bottom of the log-scale probability axis (default: 1e-9).')
+    parser.add_argument('--max_gap', type=int, default=250,
+                        help='Right edge of the gap axis, in dB (default: 250).')
+    parser.add_argument('--show', action='store_true',
+                        help='Show the plot in an interactive window.')
+    parser.add_argument('--unsigned', action='store_true',
+                        help="Label the x axis as a plain signed gap instead of the "
+                             'yoke-agreement-signed gap.')
+    parser.add_argument('--emulate_unyoked_decoding', action='store_true',
+                        help='Fold error counts into the success curve, plotting the '
+                             'signed gap distribution an unyoked decoder would see.')
+    parser.add_argument('--write_success_into_sign', action='store_true',
+                        help='Split the success curve at gap zero, treating negative '
+                             'gaps as the error curve.')
+    parser.add_argument('--out', type=str, default=None,
+                        help='Path to write the plot image to.')
 
     args = parser.parse_args()
     args.filter_func = eval(compile(
@@ -67,69 +98,13 @@ def main():
     max_gap = args.max_gap
     bucket_width = args.bucket_width
     write_success_into_sign = args.write_success_into_sign
-    # if args.unsigned or args.emulate_unyoked_decoding or write_success_into_sign:
-    #     stats = [
-    #         with_unsigned_gap(
-    #             stat,
-    #             invert_success_if_negative=args.emulate_unyoked_decoding,
-    #             write_success_into_sign=write_success_into_sign,
-    #         )
-    #         for stat in stats
-    #     ]
-    # if all(float(k[1:]) >= 0 for stat in stats for k in stat.custom_counts):
-    #     min_gap = max(min_gap, 0)
-
-    # ax.plot(
-    #     [],
-    #     [],
-    #     label=f'''successes''',
-    #     color=f'black',
-    #     marker='.',
-    #     linewidth=0,
-    # )
-    # ax.plot(
-    #     [],
-    #     [],
-    #     label=f'''errors''',
-    #     color=f'black',
-    #     marker='x',
-    #     linewidth=0,
-    # )
-    # ax.plot(
-    #     [],
-    #     [],
-    #     label=fr'''successes (smoothed)''',
-    #     color=f'black',
-    #     marker='',
-    # )
-    # ax.plot(
-    #     [],
-    #     [],
-    #     label=fr'''errors (smoothed)''',
-    #     color=f'black',
-    #     marker='',
-    #     linestyle='--',
-    #     linewidth=0.8,
-    # )
-    # ax.plot(
-    #     [],
-    #     [],
-    #     label=f'''$\;$''',
-    #     linewidth=0,
-    #     marker='',
-    # )
 
     stats = sorted(stats, key=lambda stat: (stat.json_metadata['d'], -stat.json_metadata['r']))
     for stat in stats:
-        c_hits = {float(k[1:]): v for k, v in stat.custom_counts.items() if k[0] == 'C'}
-        e_hits = {float(k[1:]): v for k, v in stat.custom_counts.items() if k[0] == 'E'}
-        if args.emulate_unyoked_decoding:
-            for k, v in stat.custom_counts.items():  # Convert everything to c_hits for unyoked gaps.
-                if k[0] == 'E':
-                    c_hits[float(k[1:])] += v
-                    e_hits[float(k[1:])] -= v
-        # xs1, ys1 = histogram_bucket_holds(hits=c_hits, bucket_width=bucket_width)
-        # xs1, ys1 = curve_to_curve_between_midpoints(xs=xs1, ys=ys1)
+        c_hits, e_hits = split_gap_counts(
+            stat.custom_counts,
+            emulate_unyoked_decoding=args.emulate_unyoked_decoding,
+        )
         xs1, ys1 = histogram_cosine_convolve(hits=c_hits, bucket_width=bucket_width)
         xs1, ys1 = curve_rescaled_to_target_area(xs=xs1, ys=ys1, expected_total=sum(c_hits.values()) / stat.shots)
         if write_success_into_sign:
@@ -180,15 +155,6 @@ def main():
 
     ax.legend()
 
-    # auto_subtitle = ', '.join(f'{k}={v}' for k, v in sorted(_common_json_properties(stats).items()))
-    # auto_subtitle = auto_subtitle.replace('b=magic', 'basis=both (magic time boundaries)')
-    # auto_subtitle = auto_subtitle.replace('c=', 'circuit=')
-    # if args.emulate_unyoked_decoding:
-    #     auto_subtitle = auto_subtitle.replace('yokes=1', 'yokes=0 (emulated from 1)')
-    # auto_subtitle = auto_subtitle.replace(' p=', ' noise_strength=')
-    # auto_subtitle = '\ngateset'.join(auto_subtitle.split(', gateset'))
-    #
-    # ax.set_title(f"Sampled Distribution of Unyoked Gaps\n" + auto_subtitle)
     ax.set_ylabel(f"Probability", fontsize=14)
     if write_success_into_sign:
         ax.set_xlabel("Gap * (-1 if error else +1)")

@@ -10,10 +10,19 @@ from gen._core._patch import Patch
 
 
 class StabilizerCode:
+    """Bundles a stabilizer patch with paired logical X and Z observables."""
+
     def __init__(self, patch: Patch, obs_x: PauliString, obs_z: PauliString):
         self.patch = patch
         self.obs_x = obs_x
         self.obs_z = obs_z
+
+    def _observable_kwargs_for_basis(self, basis: str) -> dict:
+        if basis == 'X':
+            return {'observables_x': [self.obs_x]}
+        if basis == 'Z':
+            return {'observables_z': [self.obs_z]}
+        raise ValueError(f"basis must be 'X' or 'Z' but got {basis=}")
 
     def make_code_capacity_circuit(
             self,
@@ -25,9 +34,7 @@ class StabilizerCode:
         return make_code_capacity_circuit_for_stabilizer_code(
             patch=self.patch,
             noise=noise,
-            basis=basis,
-            obs_x=self.obs_x,
-            obs_z=self.obs_z,
+            **self._observable_kwargs_for_basis(basis),
         )
 
     def make_phenomenological_circuit(
@@ -41,7 +48,5 @@ class StabilizerCode:
             patch=self.patch,
             noise=noise,
             rounds=rounds,
-            basis=basis,
-            obs_x=self.obs_x,
-            obs_z=self.obs_z,
+            **self._observable_kwargs_for_basis(basis),
         )

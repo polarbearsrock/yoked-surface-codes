@@ -1,5 +1,5 @@
 import functools
-from typing import Iterable, Set, Tuple, FrozenSet, List, Sequence, Optional
+from typing import Iterable, Set, Tuple, FrozenSet, Sequence, Optional
 
 import gen
 from gen._surf._geo import int_points_on_line
@@ -72,4 +72,4 @@ class PathOutline:
         return not (self == other)
 
     def __repr__(self):
-        return f'SegmentSet({self.segments!r})'
+        return f'PathOutline({self.segments!r})'

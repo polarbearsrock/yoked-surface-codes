@@ -1,0 +1,47 @@
+# Lint and prospective-format configuration for Ruff 0.16.3.
+#
+# src/gen is vendored from the upstream "Yoked Surface Codes" paper release and
+# is deliberately excluded: real defects there are fixed individually, but the
+# vendored code is not held to this repo's style rules.
+target-version = "py312"
+extend-exclude = ["src/gen", "out"]
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+# E731: short lambda assignments (coordinate transforms, filters) are idiomatic
+# in the circuit-builder code and its tests.
+ignore = ["E731"]
+
+[lint.per-file-ignores]
+# Package __init__ modules re-export their public API.
+"**/__init__.py" = ["F401"]
+
+[format]
+# Formatting is prospective. These are the existing vendored, legacy, or
+# experiment-source-hashed files that predate the formatter. Keep their bytes
+# stable and do not expand this baseline when adding new code.
+exclude = [
+    "docs/PROMATCH_IMPLEMENTATION_PLAN.md",
+    "src/yoked/_histogram_conversion.py",
+    "src/yoked/_patch_rotation.py",
+    "src/yoked/_squareberg_circuits.py",
+    "src/yoked/_yoked_memory_circuits.py",
+    "src/yoked/decoding/_artifact_io.py",
+    "src/yoked/decoding/_promatch_experiment.py",
+    "src/yoked/decoding/oracle/policy_audit.py",
+    "src/yoked/decoding/oracle/policy_experiment/_shards.py",
+    "src/yoked/gap/**",
+    "tests/gen/**",
+    "tests/tools/gen_memory_circuit_test.py",
+    "tests/tools/plot_gap_distribution_test.py",
+    "tests/tools/plot_extrapolations_test.py",
+    "tests/tools/reproduce_fig8_1d_test.py",
+    "tests/tools/sinter_plot_print_test.py",
+    "tests/yoked/_histogram_conversion_test.py",
+    "tests/yoked/_patch_rotation_test.py",
+    "tests/yoked/_squareberg_circuits_test.py",
+    "tests/yoked/_yoked_memory_circuits_test.py",
+    "tests/yoked/decoding/_artifact_io_test.py",
+    "tests/yoked/decoding/_promatch_experiment_test.py",
+    "tests/yoked/gap/**",
+]

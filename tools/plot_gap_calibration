@@ -13,13 +13,24 @@ MARKERS: str = "ov*sp^<>8PhH+xXDd|" * 100
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('inputs', type=str, nargs='+')
-    parser.add_argument('--chunking', type=int, default=1)
-    parser.add_argument('--filter_func', type=str, default="True")
-    parser.add_argument('--unyoked', action='store_true')
-    parser.add_argument('--show', action='store_true')
-    parser.add_argument('--out', type=str, default=None)
+    parser = argparse.ArgumentParser(
+        description='Plots sampled P(logical error | gap) against the perfect '
+                    'calibration curve 1/(1 + 10^(gap/10)).')
+    parser.add_argument('inputs', type=str, nargs='+',
+                        help='Sinter stats CSV files with C#/E# gap custom counts.')
+    parser.add_argument('--chunking', type=int, default=1,
+                        help='Unused; kept for command line compatibility.')
+    parser.add_argument('--filter_func', type=str, default="True",
+                        help="Python expression eval'd with keyword arguments stat, "
+                             'decoder, metadata, m, and strong_id (sinter convention); '
+                             'only stats where it is truthy are plotted.')
+    parser.add_argument('--unyoked', action='store_true',
+                        help='Emulate unyoked decoding from yoked gap data: negative '
+                             'gaps flip the prediction and gaps are rescaled by 0.9x.')
+    parser.add_argument('--show', action='store_true',
+                        help='Show the plot in an interactive window.')
+    parser.add_argument('--out', type=str, default=None,
+                        help='Path to write the plot image to.')
     args = parser.parse_args()
     args.filter_func = eval(compile(
         f'lambda *, stat, decoder, metadata, m, strong_id: {args.filter_func}',

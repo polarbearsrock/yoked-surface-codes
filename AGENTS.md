@@ -10,13 +10,15 @@ imports this file; keep the two in sync by editing only this one.
   `assets/`, legacy `step*`/`gap_step*` scripts, `make_paper_figures`).
 - This fork's Figure 8 1D-yoked reproduction workflow: `reproduce_fig8_1d`
   and `REPRODUCING_FIG8_1D.md`.
-- The L1 ProMatch-style predecoder experiment: `src/yoked/decoding/`,
+- The L1 ProMatch-style predecoder experiment: `src/yoked/decoding/`, with
+  full-graph oracle and policy-audit code in `src/yoked/decoding/oracle/`,
   `tools/benchmark_promatch_l1`, `tools/analyze_promatch_l1`,
   `docs/PROMATCH_IMPLEMENTATION_PLAN.md`, and the frozen protocols
   `docs/PROMATCH_*.json`. Sinter decoder names are registered by
   `yoked.decoding:custom_decoders`.
-- Python packages live under `src/`; scripts either add `src` to
-  `sys.path` themselves or (for `reproduce_fig8_1d`) export `PYTHONPATH`.
+- Python packages live under `src/`, and tests mirror them under `tests/`.
+  Scripts either add `src` to `sys.path` themselves or (for
+  `reproduce_fig8_1d`) export `PYTHONPATH`.
 - Generated outputs go to `out/` (git-ignored). Existing pilot corpora under
   `out/promatch_l1_round1*` are immutable audit artifacts: never edit,
   resume, or "promote" them.
@@ -28,7 +30,7 @@ imports this file; keep the two in sync by editing only this one.
    output must live under `/data2/s2chitni`:
    - repository: `/data2/s2chitni/yoked-surface-codes`
    - virtual environment: `/data2/s2chitni/yoked-surface-codes/.venv`
-   - uv cache: `/data2/s2chitni/.cache/uv` (pinned by the repo `uv.toml`)
+   - uv cache: `/data2/s2chitni/.cache/uv` (set with `UV_CACHE_DIR`)
    - uv-managed Pythons: `/data2/s2chitni/.local/share/uv/python`
    - scratch: `TMPDIR=/data2/s2chitni/.tmp` (never `~` or `/tmp`)
    - Matplotlib cache: `MPLCONFIGDIR="$TMPDIR/yoked-surface-codes-matplotlib"`
@@ -63,15 +65,15 @@ imports this file; keep the two in sync by editing only this one.
 
 ## 3. Dependency management: `uv` + pinned `requirements.txt`
 
-There is no `pyproject.toml`, Poetry, or Conda environment. Dependencies are
-the exact pins in `requirements.txt` (Python >= 3.12; validated and frozen
+There is no `pyproject.toml`, Poetry, or Conda environment. Direct dependencies
+use exact pins in `requirements.txt` (Python >= 3.12; validated and frozen
 with CPython 3.14.5, `stim==1.16.0`, `pymatching==2.4.0`, `sinter==1.16.0`,
 `numpy==2.5.1`, `scipy==1.18.0`, `matplotlib==3.11.1`, `pytest==9.1.1`,
-`pygltflib==1.16.5`). Install them with **uv** (>= 0.11 is on `PATH`) into the
-repo `.venv`. Repo files that make this reproducible:
+`pygltflib==1.16.5`). Transitive dependencies are resolved by uv rather than
+locked in this file. Install with **uv** (>= 0.11 is on `PATH`) into the repo
+`.venv`. Repo files that constrain the environment are:
 
-- `uv.toml` — pins `cache-dir = "/data2/s2chitni/.cache/uv"`.
-- `.python-version` — `3.14`, so `uv venv` selects CPython 3.14.
+- `.python-version` — `3.14.5`, so `uv venv` selects the validated CPython release.
 - `requirements.txt` — the pinned package set. Do not change pins casually:
   the frozen ProMatch protocols record these versions and a mismatch is a
   different experiment.
@@ -85,7 +87,7 @@ export UV_PYTHON_INSTALL_DIR=/data2/s2chitni/.local/share/uv/python
 mkdir -p "$TMPDIR" "$UV_CACHE_DIR" "$UV_PYTHON_INSTALL_DIR"
 
 cd /data2/s2chitni/yoked-surface-codes
-uv python install 3.14                     # managed CPython under /data2 (idempotent)
+uv python install 3.14.5                   # managed CPython under /data2 (idempotent)
 uv venv .venv                              # honours .python-version + UV_PYTHON_INSTALL_DIR
 uv pip install --python .venv/bin/python -r requirements.txt
 
@@ -127,8 +129,8 @@ uses if present; it is intentionally not pinned.
 ## 4. Verifying the environment
 
 ```bash
-python -m pytest -q                                   # full suite (~30 s; 394 tests)
-python -m pytest -q src/yoked/decoding                # ProMatch tests only
+python -m pytest -q                                   # full suite (~35 s)
+python -m pytest -q tests/yoked/decoding              # ProMatch tests only
 ```
 
 Integration smoke for the predecoder (non-claim-bearing; writes only under
@@ -153,7 +155,7 @@ MAX_SHOTS=10000 PROCESSES=32 THREADS_PER_PROCESS=1 \
 | ProMatch pilot/confirm/target/latency | see `REPRODUCING_FIG8_1D.md` §"Paired ProMatch experiment workflow"; always `--processes 32`, `MAX_ERRORS` unset |
 | Legacy gap collection | `tools/collect_gap ... --processes 32` (never `auto`; legacy `step*`/`gap_step*` scripts also need GNU `parallel`, which is not installed here) |
 | Diagnose PU-vs-U0 disagreements | `tools/diagnose_promatch_l1 replay --input <collection dir> [--cell ID]` (bit-exact replay of retained regressions) and `tools/diagnose_promatch_l1 probe --protocol P.json --cell ID --shots N --seed S` or `probe --d D --patches N --rounds R --p P ...` (single process; read-only) |
-| Phase-A global-context oracle replay | `tools/diagnose_promatch_l1 oracle-replay --config docs/PROMATCH_ORACLE_REPLAY_FROZEN_V1.json --out out/promatch_l1_global_context_oracle_v1/replay` (single process, one native thread, retained shots only; no fresh sampling) |
+| Phase-A global-context oracle replay | The completed artifact is `out/promatch_l1_global_context_oracle_v1/replay/`. For regeneration from the implementation/config commit authenticated by the frozen manifest, pass a new empty directory under `$TMPDIR` to `tools/diagnose_promatch_l1 oracle-replay --config docs/PROMATCH_ORACLE_REPLAY_FROZEN_V1.json --out NEW_EMPTY_DIR` (single process, one native thread, retained shots only; no fresh sampling). |
 
 `OUT_DIR` defaults to `out/fig8_1d`; anything scientific should be written to
 a fresh directory under `$TMPDIR` or a new `out/<name>` so existing corpora

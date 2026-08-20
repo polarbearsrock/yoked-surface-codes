@@ -1,5 +1,4 @@
 import queue
-import sys
 import time
 from typing import Optional, TYPE_CHECKING
 
@@ -36,6 +35,8 @@ def _fill_in_task(task: sinter.Task) -> sinter.Task:
 
 
 class CollectionWorkerState:
+    """Owns one worker's current task, shot budget, and unflushed statistics."""
+
     def __init__(
             self,
             *,

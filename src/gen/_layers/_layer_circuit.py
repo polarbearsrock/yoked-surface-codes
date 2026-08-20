@@ -99,25 +99,21 @@ class LayerCircuit:
             layer.targets1.append(targets[k].value)
             layer.targets2.append(targets[k + 1].value)
 
-    def _feed_cxswap(self, targets: List[stim.GateTarget]):
+    def _feed_interact_swap(self, basis1: str, basis2: str, targets: List[stim.GateTarget]):
         layer = self._feed(InteractSwapLayer)
         for k in range(0, len(targets), 2):
             layer.i_layer.targets1.append(targets[k].value)
             layer.i_layer.targets2.append(targets[k + 1].value)
-            layer.i_layer.bases1.append('Z')
-            layer.i_layer.bases2.append('X')
+            layer.i_layer.bases1.append(basis1)
+            layer.i_layer.bases2.append(basis2)
             layer.swap_layer.targets1.append(targets[k].value)
             layer.swap_layer.targets2.append(targets[k + 1].value)
 
+    def _feed_cxswap(self, targets: List[stim.GateTarget]):
+        self._feed_interact_swap('Z', 'X', targets)
+
     def _feed_swapcx(self, targets: List[stim.GateTarget]):
-        layer = self._feed(InteractSwapLayer)
-        for k in range(0, len(targets), 2):
-            layer.i_layer.targets1.append(targets[k].value)
-            layer.i_layer.targets2.append(targets[k + 1].value)
-            layer.i_layer.bases1.append('X')
-            layer.i_layer.bases2.append('Z')
-            layer.swap_layer.targets1.append(targets[k].value)
-            layer.swap_layer.targets2.append(targets[k + 1].value)
+        self._feed_interact_swap('X', 'Z', targets)
 
     def _feed_iswap(self, targets: List[stim.GateTarget]):
         layer = self._feed(ISwapLayer)
@@ -321,10 +317,7 @@ class LayerCircuit:
         sets = [layer.touched() for layer in self.layers]
         sets.append(all_touched)
         resets = [self._resets_at_layer(k, end_resets=all_touched) for k in range(len(self.layers))]
-        if loop_boundary_resets is None:
-            resets.append(all_touched)
-        else:
-            resets.append(loop_boundary_resets & (set() if len(resets) == 0 else resets[0]))
+        resets.append(loop_boundary_resets & (set() if len(resets) == 0 else resets[0]))
         new_layers = [layer.copy() for layer in self.layers]
 
         for k, layer in enumerate(new_layers):

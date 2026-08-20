@@ -1,13 +1,15 @@
 # ProMatch L1 20,000-Shot Human-Interpretable Policy Audit
 
-- **Status:** infrastructure implemented; smoke, probe, freeze, and collection
-  not yet started
+- **Status:** frozen-V2 collection, analysis, casebook expansion, and
+  finalization completed on the experiment workstation
 - **Date:** 2026-08-19
 - **Claim-bearing:** no; exploratory policy-discovery corpus
 - **Scientific scope:** one fresh `d=7, p=0.002` joint-yoked cell
 - **Sampling:** exactly 20,000 fixed, shot-paired samples
 - **Execution:** exactly 32 worker processes, 625 shots per worker, and one
   native numerical thread per worker
+- **Finalized corpus:** `$TMPDIR/promatch-l1-policy-audit-20k-v2/` (local
+  artifact; not checked into Git)
 
 This document specifies a narrow follow-up to the completed retained-shot
 global-context oracle replay. Its purpose is to let a human understand why the
@@ -29,12 +31,13 @@ it does not include native per-patch projection, complementary gaps, the
 `p=0.001` headroom factorial, a learned or manually tuned guard, a holdout, or
 latency claims.
 
-The checked-in implementation now covers the decoder audit, immutable
-collection, offline analysis, deterministic casebook selection, detector-only
-casebook replay, and authenticated finalization described below. This document
-also remains the preregistration for work that has **not** happened: no B1
-shots, probe measurements, frozen protocol, or scientific conclusions exist
-yet.
+The checked-in implementation covers the decoder audit, immutable collection,
+offline analysis, deterministic casebook selection, detector-only casebook
+replay, and authenticated finalization described below. The frozen-V2 run used
+implementation commit `a953584e4c579aabf987aa39244bfbe558b4bd62` and
+config-only commit `08de15ed1118509e654a37b5e484e6062ffec612`. Its finalized
+20,000-shot corpus is exploratory and non-claim-bearing; the protocol language
+below remains the historical experiment contract.
 
 ## Contents
 
@@ -1287,10 +1290,10 @@ versioned function.
 
 ### 16.3 Output layout
 
-Use a fresh root such as:
+The finalized V2 corpus uses the following workstation-local root and layout:
 
 ```text
-out/promatch_l1_policy_audit_20k_v1/
+$TMPDIR/promatch-l1-policy-audit-20k-v2/
 ├── experiment.json
 ├── manifest.json
 ├── config.json
@@ -1438,24 +1441,27 @@ promoted, or mixed into a later corpus. The corrected implementation requires
 a fresh smoke, probe, frozen-V2 protocol, experiment ID, seed schedule, and
 20,000-shot output root.
 
-- [x] Run the full test suite (549 tests passed on 2026-08-19).
-- [ ] Commit implementation A and push it.
-- [ ] Run 32-shot integration smoke under `$TMPDIR`.
-- [ ] Run disjoint 100-shot, 32-process timing/storage probe.
-- [ ] Verify the two-hour/20-GiB/free-space gates.
-- [ ] Create and validate config-only commit B and push it.
-- [ ] Reconfirm clean worktree, 32×625 schedule, one-thread environment, and
+- [x] Run the full test suite (549 tests passed at the frozen implementation
+      commit on 2026-08-19).
+- [x] Commit implementation A and push it.
+- [x] Run 32-shot integration smoke under `$TMPDIR`.
+- [x] Run disjoint 100-shot, 32-process timing/storage probe.
+- [x] Verify the two-hour/20-GiB/free-space gates.
+- [x] Create and validate config-only commit B and push it.
+- [x] Reconfirm clean worktree, 32×625 schedule, one-thread environment, and
       `MAX_ERRORS` unset.
-- [ ] Start the 20,000-shot campaign in a fresh output root.
+- [x] Collect and verify all 20,000 shots in a fresh output root.
+- [x] Analyze the corpus, expand and verify the outcome-blind casebook, and
+      write the final `COMPLETE` marker.
 
-### 17.6 Executable workflow (not yet run)
+### 17.6 Executed frozen-V2 workflow
 
-Run from the repository root with the pinned `.venv`. Every collection command
-below rejects any process count other than 32. Before running the smoke or
-probe, commit and push all implementation, analysis, documentation, and test
-files as implementation commit A and require a clean worktree. The probe
-records the current HEAD, so running it before A would make its attestation
-invalid at freeze time.
+The following commands record the completed historical workflow. They were run
+from the authenticated implementation/config commits with the pinned `.venv`;
+the finalized output must not be resumed or overwritten. A new collection must
+use a new implementation commit, protocol version, experiment ID, seed
+schedule, and output root. Every collection command rejects any process count
+other than 32.
 
 ```bash
 source .venv/bin/activate

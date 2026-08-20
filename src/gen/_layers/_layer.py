@@ -27,3 +27,14 @@ class Layer:
 
     def implies_eventual_tick_after(self) -> bool:
         return True
+
+
+def append_sorted_pair_gate(out: stim.Circuit, gate: str, targets1: List[int], targets2: List[int]) -> None:
+    pairs = []
+    for k in range(len(targets1)):
+        t1 = targets1[k]
+        t2 = targets2[k]
+        t1, t2 = sorted([t1, t2])
+        pairs.append((t1, t2))
+    for pair in sorted(pairs):
+        out.append(gate, pair)

@@ -1,7 +1,7 @@
 import collections
 import math
 import time
-from typing import Optional, cast
+from typing import Optional
 
 import numpy as np
 import pymatching
@@ -12,6 +12,16 @@ from yoked.gap._collection_work_handler import CollectionWorkHandler
 
 
 class GapWorkHandler(CollectionWorkHandler):
+    """Samples shots and tallies them by logical error and complementary gap.
+
+    Each shot is decoded twice: once on the syndrome as sampled, and once
+    with the comparison detector (by convention the last detector in the
+    circuit) flipped. The difference in matching weight, converted to
+    decibels, is the shot's complementary gap (see `yoked.gap`). Shots are
+    counted under custom_counts keys 'C<gap>' or 'E<gap>' depending on
+    whether the unflipped decode predicted the actual observables.
+    """
+
     def __init__(self):
         self.loaded_key = None
         self.matcher: Optional[pymatching.Matching] = None
@@ -48,11 +58,17 @@ class GapWorkHandler(CollectionWorkHandler):
         self.sampler = task.circuit.compile_detector_sampler()
         self.num_safe_work = 1
 
+        # Matching weights are proportional to log likelihood ratios, so any
+        # single edge's (weight, probability) pair calibrates the conversion
+        # from pymatching weight units into decibels.
         edge = next(iter(self.matcher.to_networkx().edges.values()))
         edge_w = edge['weight']
         edge_p = edge['error_probability']
         self.decibels_per_w = -math.log10(edge_p / (1 - edge_p)) * 10 / edge_w
 
+        # The comparison detector is by convention the LAST detector in the
+        # circuit. In bit-packed detection event data it lands in the final
+        # byte of each shot's row, at this bit position.
         self.check_mask_for_last_byte = 1 << ((task.circuit.num_detectors - 1) % 8)
 
     def _sample_loaded_task(self, *, num_shots: int) -> sinter.AnonTaskStats:
@@ -72,6 +88,9 @@ class GapWorkHandler(CollectionWorkHandler):
             bit_packed_predictions=True,
         )
 
+        # Flip the comparison (last) detector in every shot and decode again;
+        # the weight difference between the two decodes is the shot's
+        # complementary gap.
         dets[:, -1] ^= self.check_mask_for_last_byte
         predicted_obs_with_inverted_check, weights_with_inverted_check = self.matcher.decode_batch(
             dets,

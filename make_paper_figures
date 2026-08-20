@@ -5,7 +5,7 @@ set -e
 ./tools/plot_gap_distribution \
     assets/stats_gap_distribution.csv \
     --out assets/gap_distribution.png \
-    --emulate_unyoked \
+    --emulate_unyoked_decoding \
     --filter_func "m.collect == 'gap'" \
     --bucket_width 10 \
     --max_gap 200 &
@@ -60,3 +60,11 @@ set -e
     --max_storage 250 \
     --min_patches_per_group 4 \
     --max_patches_per_group 200 &
+
+# Wait for every backgrounded plot job, propagating any failure ('set -e'
+# cannot see background job exit codes on its own).
+exit_code=0
+for pid in $(jobs -p); do
+    wait "$pid" || exit_code=1
+done
+exit "$exit_code"

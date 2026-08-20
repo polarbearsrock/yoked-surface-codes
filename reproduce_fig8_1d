@@ -38,9 +38,9 @@ Actions:
 
 Collection environment variables:
   MAX_SHOTS             Per-circuit shot limit (smoke: 100000; grid: 1000000)
-  MAX_ERRORS            Per-circuit logical-error limit (default: 100)
+  MAX_ERRORS            Optional logical-error limit (unset means fixed-shot)
   PROCESSES             Sinter worker processes, 1..32 (default: 32)
-  THREADS_PER_PROCESS   Native numerical threads per worker (default: 1)
+  THREADS_PER_PROCESS   Native numerical threads per worker; must be 1
   DECODER               Sinter decoder (default: pymatching-correlated)
 
 Examples:
@@ -83,13 +83,18 @@ configure_runtime() {
     # oversubscription.
     worker_processes=${PROCESSES:-32}
     threads_per_process=${THREADS_PER_PROCESS:-1}
-    max_errors=${MAX_ERRORS:-100}
+    max_errors=${MAX_ERRORS:-}
     decoder=${DECODER:-pymatching-correlated}
 
     require_positive_integer PROCESSES "$worker_processes"
     require_at_most PROCESSES "$worker_processes" "$MAX_WORKER_PROCESSES"
     require_positive_integer THREADS_PER_PROCESS "$threads_per_process"
-    require_positive_integer MAX_ERRORS "$max_errors"
+    if (( threads_per_process != 1 )); then
+        die "THREADS_PER_PROCESS must be exactly 1; got '$threads_per_process'"
+    fi
+    if [[ -n "$max_errors" ]]; then
+        require_positive_integer MAX_ERRORS "$max_errors"
+    fi
 
     export OMP_NUM_THREADS=$threads_per_process
     export OPENBLAS_NUM_THREADS=$threads_per_process
@@ -181,14 +186,18 @@ collect_circuits() {
 
     # --save_resume_filepath both appends new batches and counts existing rows
     # toward the stopping limits, allowing safe interruption and continuation.
+    local -a stopping_options=(--max_shots "$max_shots")
+    if [[ -n "$max_errors" ]]; then
+        stopping_options+=(--max_errors "$max_errors")
+    fi
+
     sinter collect \
         --circuits "${circuit_files[@]}" \
         --save_resume_filepath "$statistics_path" \
         --metadata_func auto \
         --decoders "$decoder" \
         --custom_decoders_module_function yoked.decoding:custom_decoders \
-        --max_shots "$max_shots" \
-        --max_errors "$max_errors" \
+        "${stopping_options[@]}" \
         --processes "$worker_processes"
 }
 
@@ -233,6 +242,10 @@ plot_validation_grid() {
 
 
 main() {
+    if (( $# == 1 )) && [[ $1 == -h || $1 == --help ]]; then
+        print_usage
+        return 0
+    fi
     if (( $# < 1 || $# > 2 )); then
         print_usage >&2
         return 2

@@ -231,15 +231,26 @@ def _make_best_rectangular_layout(
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--min_storage', type=int, default=1)
-    parser.add_argument('--max_storage', type=int)
-    parser.add_argument('--include_squareberg', action='store_true')
-    parser.add_argument('--min_patches_per_group', type=int)
-    parser.add_argument('--max_patches_per_group', type=int)
-    parser.add_argument('--storage', choices=['hot', 'cold'], nargs='+')
-    parser.add_argument('--show', action='store_true')
-    parser.add_argument('--out', type=str, default=None)
+    parser = argparse.ArgumentParser(
+        description='Plots the projected physical-qubit footprint per logical '
+                    'qubit of yoked storage, from extrapolated error rate formulas '
+                    '(no stats files are read).')
+    parser.add_argument('--min_storage', type=int, default=1,
+                        help='Minimum number of stored logical qubits (default: 1).')
+    parser.add_argument('--max_storage', type=int,
+                        help='Maximum number of stored logical qubits.')
+    parser.add_argument('--include_squareberg', action='store_true',
+                        help='Also plot the 2D squareberg layout (cold storage only).')
+    parser.add_argument('--min_patches_per_group', type=int,
+                        help='Minimum number of patches per yoked group to consider.')
+    parser.add_argument('--max_patches_per_group', type=int,
+                        help='Maximum number of patches per yoked group to consider.')
+    parser.add_argument('--storage', choices=['hot', 'cold'], nargs='+',
+                        help='Storage layouts to plot curves for.')
+    parser.add_argument('--show', action='store_true',
+                        help='Show the plot in an interactive window.')
+    parser.add_argument('--out', type=str, default=None,
+                        help='Path to write the plot image to.')
     args = parser.parse_args()
 
     fig: plt.Figure

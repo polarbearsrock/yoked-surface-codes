@@ -95,10 +95,9 @@ def patch_outline_svg_viewer(
 
     # Draw interior.
     for outline_index, outline in enumerate(outlines):
-        pieces = []
         if isinstance(outline, PatchOutline):
             for curve in outline.region_curves:
-                pieces.append('M')
+                pieces = ['M']
                 for k in range(len(curve)):
                     a = transform_pt(outline_index, curve.points[k])
                     pieces.append(f'{a.real},{a.imag}')
@@ -107,7 +106,7 @@ def patch_outline_svg_viewer(
                 lines.append(f'<path d="{path}" fill="#ddd" stroke="none"/>')
         elif isinstance(outline, PatchTransitionOutline):
             for curve in outline.data_boundary_planes:
-                pieces.append('M')
+                pieces = ['M']
                 for k in range(len(curve)):
                     a = transform_pt(outline_index, curve.points[k])
                     pieces.append(f'{a.real},{a.imag}')

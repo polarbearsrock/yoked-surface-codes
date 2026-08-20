@@ -57,6 +57,16 @@ REV_DICT = {
 
 
 class FlowStabilizerVerifier:
+    """Checks that a chunk's circuit actually implements its stated flows.
+
+    The verifier works backwards: it seeds one Pauli tracker per flow with the
+    flow's end stabilizer, then applies each circuit instruction in reverse
+    (`rev_apply`), conjugating the tracked Paulis and toggling them at the
+    measurements each flow claims to use. After the whole circuit has been
+    rewound, `finish` checks that each tracker equals the flow's start
+    stabilizer, raising ValueError otherwise (or earlier, if a tracked Pauli
+    anticommutes with a reset or measurement it crosses).
+    """
     def __init__(self, next_measurement: int, q2i: Dict[complex, int], flows: Iterable[Flow]):
         self.flows: Tuple[Flow, ...] = tuple(flows)
         self.q2i = q2i

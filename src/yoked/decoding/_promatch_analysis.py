@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections import Counter
 import copy
 import dataclasses
 import hashlib
@@ -12,15 +11,16 @@ from typing import Any, Mapping
 
 from scipy.stats import binomtest
 
+from yoked.decoding._artifact_io import is_lowercase_hex, load_json_strict
 from yoked.decoding._promatch_experiment import (
     ANALYSIS_CELL_FIELDS,
     ANALYSIS_COMMON_TOP_LEVEL_FIELDS,
+    NONINFERIORITY_MARGIN_FRACTION,
     PILOT_SELECTION_ROW_FIELDS,
     PILOT_SELECTION_TOP_LEVEL_FIELDS,
     PROTOCOL_SCHEMA,
     SUMMARY_SCHEMA,
     _ledger_path,
-    _load_json_artifact,
     _phase_cells,
     _phase_schedules,
     _protocol_split,
@@ -43,6 +43,18 @@ from yoked.decoding._promatch_stats import (
 
 ANALYSIS_SCHEMA = "promatch-l1-analysis-v1"
 PILOT_SELECTION_SCHEMA = "promatch-l1-pilot-selection-v1"
+
+# Smoke is non-claim-bearing and uses these explicit conservative defaults
+# only for implementation diagnostics, never for a scientific conclusion.
+_SMOKE_ANALYSIS_CONFIG = {
+    "alpha_one_sided": 0.025,
+    "workload_bootstrap_replicates": 100,
+    "workload_alpha_one_sided": 0.025,
+    "workload_ratio_upper_threshold": 0.9,
+}
+
+
+# Artifact authentication and normalized inputs.
 
 
 @dataclasses.dataclass(frozen=True)
@@ -74,8 +86,7 @@ def _validate_pilot_selection_artifact(value: Any) -> None:
         raise ValueError("generated pilot selection has incorrect top-level fields")
     rows = value.get("cells")
     if not isinstance(rows, list) or any(
-        not isinstance(row, Mapping)
-        or set(row) != set(PILOT_SELECTION_ROW_FIELDS)
+        not isinstance(row, Mapping) or set(row) != set(PILOT_SELECTION_ROW_FIELDS)
         for row in rows
     ):
         raise ValueError("generated pilot selection rows have incorrect fields")
@@ -105,9 +116,13 @@ def validate_generated_analysis_artifact(value: Any) -> None:
     if set(value) != expected_top:
         raise ValueError("generated analysis has incorrect top-level fields")
     cells = value.get("cells")
-    if not isinstance(cells, list) or not cells or any(
-        not isinstance(cell, Mapping) or set(cell) != set(ANALYSIS_CELL_FIELDS)
-        for cell in cells
+    if (
+        not isinstance(cells, list)
+        or not cells
+        or any(
+            not isinstance(cell, Mapping) or set(cell) != set(ANALYSIS_CELL_FIELDS)
+            for cell in cells
+        )
     ):
         raise ValueError("generated analysis cells have incorrect fields")
     if phase == "pilot":
@@ -163,7 +178,9 @@ def _table(value: Mapping[str, Any], *, shots: int) -> PairedContingency:
     return table
 
 
-def _joint_workload_histogram(telemetry: Mapping[str, Any]) -> dict[tuple[int, int], int]:
+def _joint_workload_histogram(
+    telemetry: Mapping[str, Any],
+) -> dict[tuple[int, int], int]:
     raw = telemetry.get("original_residual_hw_joint_histogram")
     if not isinstance(raw, Mapping) or not raw:
         raise ValueError(
@@ -181,8 +198,15 @@ def _joint_workload_histogram(telemetry: Mapping[str, Any]) -> dict[tuple[int, i
             pair = int(pieces[0]), int(pieces[1])
         except ValueError as ex:
             raise ValueError(f"invalid joint workload key {key!r}") from ex
-        if min(pair) < 0 or isinstance(count, bool) or not isinstance(count, int) or count <= 0:
-            raise ValueError("joint workload cells must be nonnegative with positive counts")
+        if (
+            min(pair) < 0
+            or isinstance(count, bool)
+            or not isinstance(count, int)
+            or count <= 0
+        ):
+            raise ValueError(
+                "joint workload cells must be nonnegative with positive counts"
+            )
         if pair in result:
             raise ValueError(f"duplicate normalized joint workload key {pair}")
         result[pair] = count
@@ -190,7 +214,9 @@ def _joint_workload_histogram(telemetry: Mapping[str, Any]) -> dict[tuple[int, i
 
 
 def _bootstrap_seed(manifest: Mapping[str, Any], *, cell_id: str) -> int:
-    roots = _require_mapping(manifest.get("sampler_seed_roots"), name="sampler_seed_roots")
+    roots = _require_mapping(
+        manifest.get("sampler_seed_roots"), name="sampler_seed_roots"
+    )
     root = (
         roots.get("workload_bootstrap")
         or roots.get("timing_bootstrap")
@@ -203,7 +229,9 @@ def _bootstrap_seed(manifest: Mapping[str, Any], *, cell_id: str) -> int:
         root_bytes = bytes.fromhex(root)
     except ValueError as ex:
         raise ValueError("bootstrap seed root must be hexadecimal") from ex
-    digest = hashlib.sha256(root_bytes + b"workload-bootstrap" + cell_id.encode()).digest()
+    digest = hashlib.sha256(
+        root_bytes + b"workload-bootstrap" + cell_id.encode()
+    ).digest()
     return int.from_bytes(digest[:8], "little")
 
 
@@ -211,12 +239,7 @@ def _analysis_config(manifest: Mapping[str, Any]) -> Mapping[str, Any]:
     raw = manifest.get("analysis_config")
     if not isinstance(raw, Mapping):
         if manifest.get("phase") == "smoke":
-            return {
-                "alpha_one_sided": 0.025,
-                "workload_bootstrap_replicates": 100,
-                "workload_alpha_one_sided": 0.025,
-                "workload_ratio_upper_threshold": 0.9,
-            }
+            return dict(_SMOKE_ANALYSIS_CONFIG)
         raise ValueError("frozen protocol is missing analysis_config")
     workload = _require_mapping(raw.get("workload_protocol"), name="workload_protocol")
     if workload.get("quantile_method") != "empirical_type_7":
@@ -228,25 +251,35 @@ def _analysis_config(manifest: Mapping[str, Any]) -> Mapping[str, Any]:
         raise ValueError("workload protocol has an unsupported bootstrap unit")
     phase = manifest.get("phase")
     if phase == "pilot":
-        design = _require_mapping(raw.get("statistical_design"), name="statistical_design")
+        design = _require_mapping(
+            raw.get("statistical_design"), name="statistical_design"
+        )
         selection = _require_mapping(raw.get("selection_gates"), name="selection_gates")
-        power = _require_mapping(design.get("power_verification"), name="power_verification")
+        power = _require_mapping(
+            design.get("power_verification"), name="power_verification"
+        )
         pilot_cells = manifest.get("cells")
         if not isinstance(pilot_cells, list):
             raise ValueError("pilot manifest cells must be an array")
         return {
             "alpha_one_sided": design.get("noninferiority_alpha_one_sided"),
-            "workload_bootstrap_replicates": workload.get("paired_bootstrap_replicates"),
+            "workload_bootstrap_replicates": workload.get(
+                "paired_bootstrap_replicates"
+            ),
             "workload_alpha_one_sided": workload.get("bootstrap_alpha_one_sided"),
-            "workload_ratio_upper_threshold": workload.get("workload_ratio_upper_threshold"),
+            "workload_ratio_upper_threshold": workload.get(
+                "workload_ratio_upper_threshold"
+            ),
             "pilot_selection_gates": {
-                "minimum_activation_fraction": selection.get("minimum_activation_fraction"),
+                "minimum_activation_fraction": selection.get(
+                    "minimum_activation_fraction"
+                ),
                 "minimum_u0_failures": selection.get("minimum_u0_direct_failures"),
                 "minimum_discordant_pairs": selection.get("minimum_discordant_pairs"),
                 "require_integrity_checks": selection.get("require_integrity_checks"),
             },
             "ordered_pilot_cell_ids": [cell.get("cell_id") for cell in pilot_cells],
-            "noninferiority_margin_fraction": 0.05,
+            "noninferiority_margin_fraction": NONINFERIORITY_MARGIN_FRACTION,
             "maximum_confirmatory_shots": selection.get(
                 "maximum_confirmatory_paired_shots"
             ),
@@ -256,23 +289,25 @@ def _analysis_config(manifest: Mapping[str, Any]) -> Mapping[str, Any]:
             "minimum_power_lower_bound": power.get("accept_if_lower_bound_at_least"),
         }
     if phase == "confirm":
-        accuracy = _require_mapping(raw.get("accuracy_protocol"), name="accuracy_protocol")
+        accuracy = _require_mapping(
+            raw.get("accuracy_protocol"), name="accuracy_protocol"
+        )
         selection = _require_mapping(raw.get("selection"), name="selection")
         return {
             "alpha_one_sided": accuracy.get("alpha_one_sided"),
             "delta_noninferiority": selection.get("delta_noninferiority"),
-            "workload_bootstrap_replicates": workload.get("paired_bootstrap_replicates"),
+            "workload_bootstrap_replicates": workload.get(
+                "paired_bootstrap_replicates"
+            ),
             "workload_alpha_one_sided": workload.get("bootstrap_alpha_one_sided"),
-            "workload_ratio_upper_threshold": workload.get("workload_ratio_upper_threshold"),
+            "workload_ratio_upper_threshold": workload.get(
+                "workload_ratio_upper_threshold"
+            ),
         }
-    # Smoke is non-claim-bearing and uses explicit conservative defaults only
-    # for implementation diagnostics, never for a scientific conclusion.
-    return {
-        "alpha_one_sided": 0.025,
-        "workload_bootstrap_replicates": 100,
-        "workload_alpha_one_sided": 0.025,
-        "workload_ratio_upper_threshold": 0.9,
-    }
+    return dict(_SMOKE_ANALYSIS_CONFIG)
+
+
+# Per-cell endpoints and frozen pilot selection.
 
 
 def analyze_cell(
@@ -281,6 +316,12 @@ def analyze_cell(
     manifest: Mapping[str, Any],
     delta_noninferiority: float | None,
 ) -> dict[str, Any]:
+    """Computes paired accuracy and workload endpoints for one summary cell.
+
+    Denominators and telemetry are reconciled before any statistic is emitted.
+    ``delta_noninferiority=None`` marks non-confirmatory phases explicitly.
+    """
+
     shots = cell.get("shots")
     if isinstance(shots, bool) or not isinstance(shots, int) or shots <= 0:
         raise ValueError("cell summary has invalid shots")
@@ -339,14 +380,8 @@ def analyze_cell(
         for value in (activated, rollback)
     ):
         raise ValueError("activation/rollback telemetry does not reconcile")
-    ni_passed = (
-        None
-        if delta_noninferiority is None
-        else upper < delta_noninferiority
-    )
-    superiority_passed = (
-        None if ni_passed is None else bool(ni_passed and upper < 0)
-    )
+    ni_passed = None if delta_noninferiority is None else upper < delta_noninferiority
+    superiority_passed = None if ni_passed is None else bool(ni_passed and upper < 0)
     workload_threshold = float(analysis_config["workload_ratio_upper_threshold"])
     return {
         "cell_id": cell["cell_id"],
@@ -411,7 +446,9 @@ def _power_verified_size(
         if power.lower_bound >= float(config["minimum_power_lower_bound"]):
             return dataclasses.replace(design, rounded_shots=shots), power
         shots += 10_000
-    return dataclasses.replace(design, rounded_shots=shots, fits_resource_cap=False), power
+    return dataclasses.replace(
+        design, rounded_shots=shots, fits_resource_cap=False
+    ), power
 
 
 def select_pilot_cell(
@@ -437,7 +474,9 @@ def select_pilot_cell(
         )
 
     config = _analysis_config(manifest)
-    gates = _require_mapping(config.get("pilot_selection_gates"), name="pilot_selection_gates")
+    gates = _require_mapping(
+        config.get("pilot_selection_gates"), name="pilot_selection_gates"
+    )
     cells = summary.get("cells")
     if not isinstance(cells, list):
         raise ValueError("summary cells must be an array")
@@ -475,15 +514,19 @@ def select_pilot_cell(
             )
         else:
             design = power = None
+        # Truth table, identical to the previous conditional expression:
+        #   require_integrity is True  -> integrity_checks_passed
+        #   require_integrity is False -> True
+        #   anything else (missing, None, 1, "yes", ...) -> False (fail closed)
+        require_integrity = gates.get("require_integrity_checks")
+        integrity_gate_ok = require_integrity is False or (
+            require_integrity is True and integrity_checks_passed
+        )
         passed = (
             activation_fraction >= float(gates["minimum_activation_fraction"])
             and baseline_failures >= int(gates["minimum_u0_failures"])
             and discordant_pairs >= int(gates["minimum_discordant_pairs"])
-            and (
-                integrity_checks_passed
-                if gates.get("require_integrity_checks") is True
-                else gates.get("require_integrity_checks") is False
-            )
+            and integrity_gate_ok
             and design is not None
             and design.fits_resource_cap
             and power is not None
@@ -516,7 +559,9 @@ def select_pilot_cell(
         "selected": selected,
         "status": "selected" if selected is not None else "confirmation-infeasible",
     }
-    result["selection_sha256"] = hashlib.sha256(canonical_json_bytes(result)).hexdigest()
+    result["selection_sha256"] = hashlib.sha256(
+        canonical_json_bytes(result)
+    ).hexdigest()
     _validate_pilot_selection_artifact(result)
     return result
 
@@ -575,11 +620,7 @@ def construct_confirmatory_draft_from_pilot(
     if not isinstance(result_roots, dict) or not isinstance(pilot_roots, Mapping):
         raise ValueError("pilot and confirmatory sampler_seed_roots must be objects")
     pilot_seed_root = pilot_roots.get("pilot")
-    if (
-        not isinstance(pilot_seed_root, str)
-        or len(pilot_seed_root) != 64
-        or any(ch not in "0123456789abcdef" for ch in pilot_seed_root)
-    ):
+    if not is_lowercase_hex(pilot_seed_root, length=64):
         raise ValueError("frozen pilot has an invalid pilot seed root")
     result_roots["pilot"] = pilot_seed_root
     nested_cell = {
@@ -646,6 +687,12 @@ def construct_confirmatory_draft_from_pilot(
 def analyze_summary(
     summary: Mapping[str, Any], *, manifest: Mapping[str, Any]
 ) -> dict[str, Any]:
+    """Builds and authenticates the deterministic analysis artifact.
+
+    Pilot analysis additionally runs the frozen blinded selector; confirmatory
+    thresholds are read only from the normalized protocol.
+    """
+
     manifest = normalize_protocol(manifest)
     if summary.get("schema") != SUMMARY_SCHEMA:
         raise ValueError("unsupported paired summary schema")
@@ -674,7 +721,9 @@ def analyze_summary(
         "accuracy_claim_scope": (
             "descriptive-only-not-powered"
             if phase == "target"
-            else "paired-confirmatory" if phase == "confirm" else "non-confirmatory"
+            else "paired-confirmatory"
+            if phase == "confirm"
+            else "non-confirmatory"
         ),
         "cells": [
             analyze_cell(cell, manifest=manifest, delta_noninferiority=delta_ni)
@@ -688,17 +737,41 @@ def analyze_summary(
     return result
 
 
+# Whole-corpus authentication and human-readable output.
+
+
 def load_verified_summary(
     *, manifest: Mapping[str, Any], input_directory: Path, scientific: bool = True
 ) -> dict[str, Any]:
     """Authenticate a complete collection and regenerate it without writes."""
 
     manifest = normalize_protocol(manifest)
-    input_directory = input_directory.resolve()
+    input_candidate = Path(input_directory).absolute()
+    if input_candidate.is_symlink() or not input_candidate.is_dir():
+        raise ValueError("collection input must be a regular non-symlink directory")
+    input_directory = input_candidate.resolve()
     identity_path = input_directory / "experiment.json"
-    if not identity_path.is_file():
-        raise ValueError("missing experiment.json")
-    identity = _load_json_artifact(identity_path)
+    protocol_path = input_directory / "protocol.json"
+    summary_path = input_directory / "summary.json"
+    batch_root = input_directory / "batches"
+    expected_top_level = {
+        identity_path,
+        protocol_path,
+        summary_path,
+        batch_root,
+    }
+    actual_top_level = set(input_directory.iterdir())
+    if actual_top_level != expected_top_level:
+        missing = sorted(expected_top_level - actual_top_level)
+        extras = sorted(actual_top_level - expected_top_level)
+        raise ValueError(
+            "collection artifact set differs from the exact output contract: "
+            f"missing={missing[:8]}, unexpected={extras[:8]}"
+        )
+    if batch_root.is_symlink() or not batch_root.is_dir():
+        raise ValueError("collection batches must be a regular non-symlink directory")
+
+    identity = load_json_strict(identity_path, description="collection experiment.json")
     if not isinstance(identity, Mapping) or set(identity) != {
         "schema",
         "experiment_id",
@@ -708,15 +781,12 @@ def load_verified_summary(
     phase = str(identity.get("phase"))
     if phase not in {"pilot", "confirm", "target", "smoke"}:
         raise ValueError("experiment.json has an invalid phase")
-    protocol_path = input_directory / "protocol.json"
-    if not protocol_path.is_file():
-        raise ValueError("missing protocol.json")
-    if _load_json_artifact(protocol_path) != manifest:
+    if (
+        load_json_strict(protocol_path, description="collection protocol.json")
+        != manifest
+    ):
         raise ValueError("result protocol.json differs from the supplied manifest")
-    summary_path = input_directory / "summary.json"
-    if not summary_path.is_file():
-        raise ValueError("missing summary.json")
-    recorded = _load_json_artifact(summary_path)
+    recorded = load_json_strict(summary_path, description="collection summary.json")
 
     experiment_id = validate_experiment_protocol(
         manifest,
@@ -745,27 +815,36 @@ def load_verified_summary(
         for cell in cells
         for batch in schedules[cell["cell_id"]]
     }
-    actual_paths = set((input_directory / "batches").glob("*/*.json"))
+    expected_cell_directories = {path.parent for path in expected_paths}
+    actual_cell_directories: set[Path] = set()
+    actual_paths: set[Path] = set()
+    for cell_directory in batch_root.iterdir():
+        if cell_directory.is_symlink() or not cell_directory.is_dir():
+            raise ValueError(
+                "collection batches contain an unsafe non-directory entry: "
+                f"{cell_directory}"
+            )
+        actual_cell_directories.add(cell_directory)
+        for artifact in cell_directory.iterdir():
+            if artifact.is_symlink() or not artifact.is_file():
+                raise ValueError(
+                    "collection batches contain an unsafe non-regular artifact: "
+                    f"{artifact}"
+                )
+            actual_paths.add(artifact)
+    if actual_cell_directories != expected_cell_directories:
+        missing = sorted(expected_cell_directories - actual_cell_directories)
+        extras = sorted(actual_cell_directories - expected_cell_directories)
+        raise ValueError(
+            "batch cell directory set differs from the frozen schedule: "
+            f"missing={missing[:8]}, unexpected={extras[:8]}"
+        )
     missing = sorted(expected_paths - actual_paths)
     extras = sorted(actual_paths - expected_paths)
     if missing or extras:
         raise ValueError(
             "batch ledger set differs from the frozen schedule: "
             f"missing={missing[:8]}, unexpected={extras[:8]}"
-        )
-    expected_files = {
-        identity_path,
-        protocol_path,
-        summary_path,
-        *expected_paths,
-    }
-    actual_files = {path for path in input_directory.rglob("*") if path.is_file()}
-    if actual_files != expected_files:
-        missing_files = sorted(expected_files - actual_files)
-        extra_files = sorted(actual_files - expected_files)
-        raise ValueError(
-            "collection artifact set differs from the exact output contract: "
-            f"missing={missing_files[:8]}, unexpected={extra_files[:8]}"
         )
 
     rows: list[Mapping[str, Any]] = []
@@ -782,7 +861,7 @@ def load_verified_summary(
                 cell_id=cell["cell_id"],
                 batch_id=batch.batch_id,
             )
-            row = _load_json_artifact(path)
+            row = load_json_strict(path, description="paired batch ledger")
             _validate_ledger_row(
                 row,
                 experiment_id=experiment_id,
@@ -815,17 +894,15 @@ def load_verified_summary(
             experiment_id=experiment_id,
             phase=phase,
             deterministic_regeneration_passed=scientific,
-            summary_sha256=hashlib.sha256(
-                canonical_json_bytes(recomputed)
-            ).hexdigest(),
-            manifest_sha256=hashlib.sha256(
-                canonical_json_bytes(manifest)
-            ).hexdigest(),
+            summary_sha256=hashlib.sha256(canonical_json_bytes(recomputed)).hexdigest(),
+            manifest_sha256=hashlib.sha256(canonical_json_bytes(manifest)).hexdigest(),
         ),
     )
 
 
 def render_markdown(analysis: Mapping[str, Any]) -> str:
+    """Renders a compact deterministic human summary of an analysis artifact."""
+
     lines = [
         "# ProMatch L1 analysis",
         "",
@@ -876,6 +953,7 @@ __all__ = [
     "PILOT_SELECTION_SCHEMA",
     "analyze_cell",
     "analyze_summary",
+    "construct_confirmatory_draft_from_pilot",
     "load_verified_summary",
     "render_markdown",
     "select_pilot_cell",

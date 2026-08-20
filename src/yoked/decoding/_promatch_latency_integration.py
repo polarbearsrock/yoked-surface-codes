@@ -34,7 +34,11 @@ from yoked.decoding._promatch_experiment import (
     _dem_options,
     prepare_cell,
 )
-from yoked.decoding._promatch_latency import LatencyProtocol, LatencyWorkload
+from yoked.decoding._promatch_latency import (
+    _SCIENTIFIC_GATES,
+    LatencyProtocol,
+    LatencyWorkload,
+)
 from yoked.decoding._promatch_stats import (
     canonical_json_bytes,
     derive_stim_batch_seed,
@@ -55,11 +59,6 @@ _SCIENTIFIC_COUNTS = {
     "paired_blocks_per_restart": 100,
     "calls_per_decoder_per_block": 100,
 }
-_SCIENTIFIC_GATES = {
-    "backend_geometric_ratio_upper": 0.9,
-    "total_geometric_ratio_upper": 0.95,
-    "total_p99_ratio_upper": 1.05,
-}
 _SCIENTIFIC_PRIMARY_BATCH = 1
 _SCIENTIFIC_SECONDARY_BATCHES = (64, 1024)
 _SCIENTIFIC_CORPUS_SHOTS_PER_RESTART = 10_000
@@ -76,6 +75,10 @@ _TIMING_SCHEDULE_ROOT = "timing_bootstrap"
 
 
 def _positive_int(value: Any, *, name: str) -> int:
+    # Deliberately rejects np.integer (factory fields must be plain
+    # pickle-stable Python ints); _promatch_latency._positive_int deliberately
+    # accepts it.  Do not align the two -- that would change validation
+    # behavior.
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(f"{name} must be an integer")
     if value <= 0:
@@ -134,9 +137,7 @@ class TinyLatencySmokeConfig:
 
     def validate(self) -> None:
         _positive_int(self.restarts, name="smoke.restarts")
-        blocks = _positive_int(
-            self.blocks_per_restart, name="smoke.blocks_per_restart"
-        )
+        blocks = _positive_int(self.blocks_per_restart, name="smoke.blocks_per_restart")
         if blocks % 2:
             raise ValueError("smoke.blocks_per_restart must be even")
         _positive_int(self.calls_per_block, name="smoke.calls_per_block")
@@ -203,9 +204,7 @@ def latency_protocol_from_manifest(
     timing = _timing_protocol(manifest)
     for field, expected in _SCIENTIFIC_COUNTS.items():
         if timing.get(field) != expected:
-            raise ValueError(
-                f"scientific timing_protocol requires {field}={expected}"
-            )
+            raise ValueError(f"scientific timing_protocol requires {field}={expected}")
     if timing.get("primary_mode_batch_size") != _SCIENTIFIC_PRIMARY_BATCH:
         raise ValueError("scientific timing_protocol requires primary batch size 1")
     secondary = timing.get("secondary_batch_sizes")
@@ -242,6 +241,9 @@ def latency_protocol_from_manifest(
     if timing.get("restart_concurrency") != 1:
         raise ValueError("scientific timing restarts must be serialized")
 
+    # The frozen first-round confirm protocol names the thresholds
+    # "claim_gates"; the earlier frozen pilot protocols used the legacy key
+    # "gates".  Both stay accepted so frozen artifacts remain readable.
     gate_key = "claim_gates" if "claim_gates" in timing else "gates"
     gates = timing.get(gate_key)
     if gates != _SCIENTIFIC_GATES:
@@ -377,7 +379,9 @@ class YokedPromatchLatencyFactory:
             if manifest.get("status") != "FROZEN" or manifest.get("frozen") is not True:
                 raise ValueError("scientific latency requires a frozen manifest")
             if _decoder_config(manifest) != _SCIENTIFIC_DECODER:
-                raise ValueError("scientific latency requires the primary PU-window decoder")
+                raise ValueError(
+                    "scientific latency requires the primary PU-window decoder"
+                )
             required_hashes = {
                 "circuit_sha256",
                 "dem_sha256",
@@ -388,13 +392,17 @@ class YokedPromatchLatencyFactory:
                 raise ValueError("scientific latency cell is missing frozen hashes")
             embedded_id = manifest.get("experiment_id")
             if embedded_id != manifest_experiment_id(manifest):
-                raise ValueError("scientific latency manifest has a stale experiment_id")
+                raise ValueError(
+                    "scientific latency manifest has a stale experiment_id"
+                )
             corpus_root, _ = _timing_roots(manifest)
             corpus_batches = 1
             corpus_shots_per_restart = _SCIENTIFIC_CORPUS_SHOTS_PER_RESTART
         else:
             if smoke is None:
-                raise ValueError("non-scientific latency requires explicit smoke config")
+                raise ValueError(
+                    "non-scientific latency requires explicit smoke config"
+                )
             smoke.validate()
             corpus_root = _seed_root(
                 smoke.timing_corpus_seed_root,
@@ -457,7 +465,9 @@ class YokedPromatchLatencyFactory:
             )
         }
         if self.verify_hashes and any(value is None for value in hashes.values()):
-            raise ValueError("scientific latency suite identity is missing frozen hashes")
+            raise ValueError(
+                "scientific latency suite identity is missing frozen hashes"
+            )
         result = {
             "experiment_id": manifest.get("experiment_id"),
             "cell_id": self.cell_id,
@@ -499,7 +509,9 @@ class YokedPromatchLatencyFactory:
         )
         compiled_pu = prepared.compiled_pu
         if not isinstance(compiled_pu, CompiledPromatchDecoder):
-            raise TypeError("prepare_cell did not compile the production ProMatch adapter")
+            raise TypeError(
+                "prepare_cell did not compile the production ProMatch adapter"
+            )
 
         # The counter is injective for the declared (restart, batch-size)
         # pairs, so every timing corpus has a distinct deterministic Stim seed.

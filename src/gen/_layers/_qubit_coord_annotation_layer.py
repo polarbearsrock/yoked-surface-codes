@@ -18,7 +18,7 @@ class QubitCoordAnnotationLayer(Layer):
                         qubit_coords[index] += offset
 
     def copy(self) -> 'Layer':
-        return QubitCoordAnnotationLayer(coords=dict(self.coords))
+        return QubitCoordAnnotationLayer(coords={q: list(v) for q, v in self.coords.items()})
 
     def touched(self) -> Set[int]:
         return set()

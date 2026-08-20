@@ -1,3 +1,15 @@
+"""Tools for defining surface code patches by their boundary outlines.
+
+Coordinate convention: positions are complex numbers whose real part is the
+x coordinate and whose imaginary part is the y coordinate. Data qubits sit
+at integer coordinates (both parts integers) while measurement ancillae sit
+at half-integer coordinates (both parts offset by 0.5, at plaquette
+centers); `checkerboard_basis` classifies each plaquette center as X or Z
+type. The line segments making up boundary curves must be horizontal,
+vertical, or 45-degree diagonal (`int_points_on_line` rejects anything
+else).
+"""
+
 from gen._surf._closed_curve import (
     ClosedCurve,
 )
@@ -35,7 +47,4 @@ from gen._surf._surface_code import (
     layer_end,
     layer_single_shot,
     surface_code_patch,
-)
-from gen._surf._trans import (
-    build_patch_to_patch_surface_code_transition_rounds,
 )

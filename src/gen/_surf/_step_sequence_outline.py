@@ -1,43 +1,17 @@
 import pathlib
-from typing import Union, Optional, Callable, Any, Iterable, Dict, Set, Tuple
-
-import stim
+from typing import Union, Callable, Iterable
 
 import gen
-from gen._core import Builder, AtLayer
-from gen._surf._closed_curve import ClosedCurve
 from gen._surf._order import Order_Z
-from gen._surf._patch_outline import PatchOutline
-from gen._surf._patch_transition_outline import PatchTransitionOutline
 from gen._surf._step_outline import StepOutline
 from gen._util import write_file
 
 
 class StepSequenceOutline:
+    """An ordered surface-code deformation sequence with export helpers."""
+
     def __init__(self, steps: Iterable[StepOutline]):
         self.steps = list(steps)
-
-    def to_circuit(self, *, rel_order_func: Callable[[complex], Iterable[complex]]) -> stim.Circuit:
-        builder = Builder.for_qubits(...)
-
-        round_index = 0
-        cmp_layer = None
-        save_layer = 0
-        for step in self.steps:
-            step.build_rounds(
-                builder=builder,
-                rel_order_func=rel_order_func,
-                alternate_ordering_with_round_parity=True,
-                start_round_index=round_index,
-                edit_cur_obs=None,
-                o2i=None,
-                cmp_layer=cmp_layer,
-                save_layer=('step_to_circuit', save_layer),
-            )
-            cmp_layer = save_layer
-            round_index += step.rounds
-
-        return builder.circuit
 
     def write_outlines_svg(self, path: Union[str, pathlib.Path]) -> None:
         from gen._surf._viz_patch_outline_svg import patch_outline_svg_viewer
@@ -79,8 +53,8 @@ class StepSequenceOutline:
 
     def write_gltf(self, path: Union[str, pathlib.Path]) -> None:
         from gen._surf._viz_sequence_3d import patch_sequence_to_model
-        print(f'wrote file://{pathlib.Path(path).absolute()}')
         patch_sequence_to_model(self).save_json(str(path))
+        print(f'wrote file://{pathlib.Path(path).absolute()}')
 
     def write_3d_viewer_html(self, path: Union[str, pathlib.Path]) -> None:
         from gen._surf._viz_gltf_3d import viz_3d_gltf_model_html

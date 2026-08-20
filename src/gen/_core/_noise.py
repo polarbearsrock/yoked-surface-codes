@@ -153,6 +153,13 @@ class NoiseRule:
 
 
 class NoiseModel:
+    """Maps ideal Stim operations and idle periods to stochastic noise rules.
+
+    A model may define gate-specific rules, basis-specific measurement rules,
+    and fallbacks for one- and two-qubit Clifford operations. ``noisy_circuit``
+    applies these rules moment by moment while respecting immune qubits.
+    """
+
     def __init__(self,
                  idle_depolarization: float = 0,
                  tick_noise: Optional[NoiseRule] = None,
@@ -311,6 +318,7 @@ class NoiseModel:
             out.append('DEPOLARIZE1', idle, self.idle_depolarization)
 
         waiting_for_mr = sorted(system_qubits - collapse_qubits_set - immune_qubits)
+        # Intentional: the guard checks waiting_for_mr but the noise targets idle; do not "fix".
         if collapse_qubits_set and waiting_for_mr and self.additional_depolarization_waiting_for_m_or_r:
             out.append('DEPOLARIZE1', idle, self.additional_depolarization_waiting_for_m_or_r)
 

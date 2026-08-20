@@ -34,6 +34,12 @@ _BOUNDARY = -1
 
 @dataclasses.dataclass(frozen=True)
 class PrematchedPath:
+    """One durable domain-local correction emitted by the predecoder.
+
+    ``edge_ids`` index the canonical graph edge table. ``observable_mask`` is
+    the little-endian packed frame contributed by the XOR of that support.
+    """
+
     domain: L1DomainKey
     stage: int
     endpoints: tuple[int, int | None]
@@ -106,6 +112,8 @@ def apply_detector_boundary(
 
 
 class FallbackReason(enum.Enum):
+    """Reason a domain attempt could not produce a durable correction."""
+
     NO_CANDIDATE = "no-candidate"
     DISCONNECTED = "disconnected"
     BOUNDARY_UNAVAILABLE = "boundary-unavailable"
@@ -113,6 +121,12 @@ class FallbackReason(enum.Enum):
 
 @dataclasses.dataclass(frozen=True)
 class DomainPrematchStats:
+    """Attempted and durable accounting for one independently decoded domain.
+
+    Attempted counts include provisional work later removed by a transactional
+    rollback; committed counts and ``final_residual_hw`` describe durable state.
+    """
+
     initial_hw: int
     attempted_residual_hw: int
     final_residual_hw: int
@@ -156,6 +170,13 @@ class DomainStepOutcome:
 
 @dataclasses.dataclass(frozen=True)
 class PrematchResult:
+    """Complete durable output of one-shot ProMatch preprocessing.
+
+    Applying ``observable_frame`` to the residual matcher's prediction gives
+    the prediction for the original syndrome. ``decision_weight`` sums emitted
+    path weights, while ``xor_support_weight`` prices the final GF(2) support.
+    """
+
     residual_syndrome: np.ndarray
     observable_frame: np.ndarray
     paths: tuple[PrematchedPath, ...]
@@ -184,6 +205,14 @@ class _DomainAttempt:
     @property
     def success(self) -> bool:
         return self.fallback_reason is None
+
+
+def _require_int(value: object, *, name: str, type_message: str | None = None) -> int:
+    """Reject bools and non-integers, then coerce NumPy integers to int."""
+
+    if isinstance(value, bool) or not isinstance(value, (int, np.integer)):
+        raise TypeError(type_message or f"{name} must be an integer")
+    return int(value)
 
 
 def _is_zero_mask(mask: bytes) -> bool:
@@ -248,6 +277,18 @@ def _public_endpoints(endpoints: tuple[int, int]) -> tuple[int, int | None]:
 
 
 class _DomainEngine:
+    """Deterministic four-stage candidate engine for one predecode domain.
+
+    Implements the exact V3 stage taxonomy of
+    ``docs/PROMATCH_IMPLEMENTATION_PLAN.md`` section 8: stage 1 matches an
+    isolated adjacent pair, stage 2 a safe adjacent pair (creates no new
+    singleton), stage 3 routes an existing singleton along the lowest-weight
+    eligible simple path, and stage 4 accepts a risky adjacent pair that does
+    create new singletons.  Each committed candidate removes its endpoints
+    from the active set and selection restarts at stage 1 until the residual
+    Hamming weight reaches ``hw_limit`` or no candidate remains.
+    """
+
     def __init__(
         self,
         graph: DomainGraph,
@@ -271,9 +312,7 @@ class _DomainEngine:
 
         self.edges = tuple(graph.edges)
         self.edge_by_id: dict[int, Edge] = {}
-        self.detector_adjacency: dict[int, list[Edge]] = {
-            v: [] for v in self.vertices
-        }
+        self.detector_adjacency: dict[int, list[Edge]] = {v: [] for v in self.vertices}
         self.boundary_edges: list[Edge] = []
         for edge in self.edges:
             self._validate_edge(edge)
@@ -289,6 +328,11 @@ class _DomainEngine:
         for incident in self.detector_adjacency.values():
             incident.sort(key=lambda e: (e.weight, e.edge_id))
         self.boundary_edges.sort(key=lambda e: (e.weight, e.source, e.edge_id))
+        # Lazily built by _traversal_adjacency; the inputs (edges and
+        # observable policy) are immutable after construction.
+        self._traversal_adjacency_cache: (
+            dict[int, tuple[tuple[int, Edge], ...]] | None
+        ) = None
 
     def _validate_edge(self, edge: Edge) -> None:
         if edge.source not in self.vertices:
@@ -392,6 +436,13 @@ class _DomainEngine:
         boundary_active: bool,
         neighbors: dict[int, frozenset[int]],
     ) -> _Candidate | None:
+        """Stage 1 of the section-8 taxonomy: the cheapest isolated pair.
+
+        Selects adjacent active ``u, v`` whose only active neighbors are each
+        other (``N_A(u) == {v}`` and ``N_A(v) == {u}``); see
+        ``docs/PROMATCH_IMPLEMENTATION_PLAN.md`` section 8.
+        """
+
         candidates: list[_Candidate] = []
         for endpoints, edge in self._direct_candidates(
             active, boundary_active=boundary_active
@@ -411,6 +462,14 @@ class _DomainEngine:
         neighbors: dict[int, frozenset[int]],
         safe: bool,
     ) -> _Candidate | None:
+        """Stages 2 and 4 of the section-8 taxonomy: direct adjacent pairs.
+
+        With ``safe=True`` this is stage 2 (the pair creates no new
+        singleton); with ``safe=False`` it is stage 4 (a risky pair that
+        does).  Both prefer a degree-one endpoint via the substage key; see
+        ``docs/PROMATCH_IMPLEMENTATION_PLAN.md`` section 8.
+        """
+
         stage = 2 if safe else 4
         candidates: list[_Candidate] = []
         for endpoints, edge in self._direct_candidates(
@@ -431,9 +490,13 @@ class _DomainEngine:
         return min(candidates, key=lambda c: c.key, default=None)
 
     def _traversal_adjacency(self) -> dict[int, tuple[tuple[int, Edge], ...]]:
-        adjacency: dict[int, list[tuple[int, Edge]]] = {
-            v: [] for v in self.vertices
-        }
+        # Behavior-identical memoization: the structure depends only on the
+        # immutable edge table and observable policy, so build it once
+        # instead of on every _shortest_path call.
+        cached = self._traversal_adjacency_cache
+        if cached is not None:
+            return cached
+        adjacency: dict[int, list[tuple[int, Edge]]] = {v: [] for v in self.vertices}
         for edge in self.edges:
             if edge.target is None or not self._edge_allowed_in_path(edge):
                 continue
@@ -441,7 +504,9 @@ class _DomainEngine:
             adjacency[edge.target].append((edge.source, edge))
         for items in adjacency.values():
             items.sort(key=lambda item: (item[1].weight, item[0], item[1].edge_id))
-        return {v: tuple(items) for v, items in adjacency.items()}
+        result = {v: tuple(items) for v, items in adjacency.items()}
+        self._traversal_adjacency_cache = result
+        return result
 
     def _shortest_path(self, source: int, target: int) -> tuple[Edge, ...] | None:
         """Returns the deterministic shortest eligible simple path."""
@@ -453,9 +518,9 @@ class _DomainEngine:
         # visited set in the label is necessary: pruning solely by (node, mask)
         # can discard the only prefix that can still complete a simple path.
         if self.observable_policy == "path-zero":
-            heap: list[tuple[float, int, tuple[int, ...], int, bytes, tuple[int, ...]]] = [
-                (0.0, 0, (), source, zero_mask, (source,))
-            ]
+            heap: list[
+                tuple[float, int, tuple[int, ...], int, bytes, tuple[int, ...]]
+            ] = [(0.0, 0, (), source, zero_mask, (source,))]
             while heap:
                 weight, count, edge_ids, node, mask, vertices = heapq.heappop(heap)
                 if node == target and mask == zero_mask:
@@ -510,6 +575,14 @@ class _DomainEngine:
         *,
         neighbors: dict[int, frozenset[int]],
     ) -> tuple[_Candidate | None, bool]:
+        """Stage 3 of the section-8 taxonomy: route an existing singleton.
+
+        Matches one active singleton to a distinct active detector along the
+        lowest-weight eligible simple path whose endpoint removal creates no
+        new singleton; see ``docs/PROMATCH_IMPLEMENTATION_PLAN.md`` section 8.
+        Returns the best candidate plus whether any route was unreachable.
+        """
+
         # The parity boundary is deliberately excluded from stage 3.
         singletons = sorted(v for v in active if not neighbors[v])
         candidates: list[_Candidate] = []
@@ -525,19 +598,27 @@ class _DomainEngine:
                     saw_unreachable = True
                     continue
                 mask = _path_mask(path, mask_bytes=self.mask_bytes)
-                if self.observable_policy in {"edge-zero", "path-zero"} and not _is_zero_mask(mask):
+                if self.observable_policy in {
+                    "edge-zero",
+                    "path-zero",
+                } and not _is_zero_mask(mask):
                     continue
                 edge_ids = tuple(edge.edge_id for edge in path)
                 weight = math.fsum(edge.weight for edge in path)
                 key = (weight, singleton, other, len(path), edge_ids)
-                candidates.append(
-                    _Candidate(3, (singleton, other), path, key)
-                )
+                candidates.append(_Candidate(3, (singleton, other), path, key))
         return min(candidates, key=lambda c: c.key, default=None), saw_unreachable
 
     def _candidate(
         self, active: set[int], *, boundary_active: bool
     ) -> tuple[_Candidate | None, bool]:
+        # Sync note: :meth:`_ordered_candidate_stages` deliberately duplicates
+        # the stage logic of this method and its helpers (frozen-path
+        # authenticity for the legacy engine); do not merge them.  Keep both
+        # in lockstep -- alignment is enforced by
+        # tests/yoked/decoding/_promatch_stepper_test.py::
+        # test_all_accept_stepper_matches_legacy_path_order_and_residual and
+        # ::test_all_accept_preserves_legacy_accumulated_disconnected_reason.
         neighbors = self._active_neighbors(active, boundary_active=boundary_active)
         candidate = self._stage1(
             active, boundary_active=boundary_active, neighbors=neighbors
@@ -573,6 +654,13 @@ class _DomainEngine:
         stage, in the same ``_Candidate.key`` order, before advancing to the
         next stage.  This deliberately mirrors (rather than replaces) the
         legacy methods so :meth:`run` remains on its established code path.
+
+        Sync note: keep in lockstep with :meth:`_candidate` and the
+        ``_stage1``/``_adjacent_stage``/``_stage3`` helpers it mirrors;
+        alignment is enforced by
+        tests/yoked/decoding/_promatch_stepper_test.py::
+        test_all_accept_stepper_matches_legacy_path_order_and_residual and
+        ::test_all_accept_preserves_legacy_accumulated_disconnected_reason.
         """
 
         neighbors = self._active_neighbors(active, boundary_active=boundary_active)
@@ -764,20 +852,16 @@ class DomainProposalStepper:
         observable_policy: ObservablePolicy = "edge-zero",
         veto_budget: int | None = None,
     ) -> None:
-        if isinstance(residual_hw_limit, bool) or not isinstance(
-            residual_hw_limit, (int, np.integer)
-        ):
-            raise TypeError("residual_hw_limit must be an integer")
-        residual_hw_limit = int(residual_hw_limit)
+        residual_hw_limit = _require_int(residual_hw_limit, name="residual_hw_limit")
         if residual_hw_limit < 0:
             raise ValueError("residual_hw_limit must be nonnegative")
 
         if veto_budget is not None:
-            if isinstance(veto_budget, bool) or not isinstance(
-                veto_budget, (int, np.integer)
-            ):
-                raise TypeError("veto_budget must be a positive integer or None")
-            veto_budget = int(veto_budget)
+            veto_budget = _require_int(
+                veto_budget,
+                name="veto_budget",
+                type_message="veto_budget must be a positive integer or None",
+            )
             if veto_budget <= 0:
                 raise ValueError("veto_budget must be a positive integer or None")
 
@@ -816,9 +900,9 @@ class DomainProposalStepper:
         self._boundary_was_used = False
 
         self._paths: list[PrematchedPath] = []
-        self._blacklisted: dict[
-            tuple[int, ...], set[_CandidateSignature]
-        ] = defaultdict(set)
+        self._blacklisted: dict[tuple[int, ...], set[_CandidateSignature]] = (
+            defaultdict(set)
+        )
         self._vetoes_in_state = 0
         self._pending: tuple[CommitProposal, _Candidate] | None = None
 
@@ -927,8 +1011,10 @@ class DomainProposalStepper:
             return None
 
         enumeration_start_ns = time.perf_counter_ns()
-        stages, saw_unreachable, stage3_enumeration_ns = self._engine._ordered_candidate_stages(
-            self._active, boundary_active=self._boundary_active
+        stages, saw_unreachable, stage3_enumeration_ns = (
+            self._engine._ordered_candidate_stages(
+                self._active, boundary_active=self._boundary_active
+            )
         )
         candidate_enumeration_ns = time.perf_counter_ns() - enumeration_start_ns
         self._last_candidate_enumeration_ns = candidate_enumeration_ns
@@ -957,9 +1043,7 @@ class DomainProposalStepper:
 
         self._finished = True
         self._saw_unreachable |= saw_unreachable
-        self._fallback_reason = self._fallback(
-            saw_unreachable=self._saw_unreachable
-        )
+        self._fallback_reason = self._fallback(saw_unreachable=self._saw_unreachable)
         self._exhaustion_kind = "proposal"
         return None
 
@@ -1018,10 +1102,7 @@ class DomainProposalStepper:
         self._vetoed_proposals += 1
         self._vetoed_stage_counts[candidate.stage - 1] += 1
 
-        if (
-            self._veto_budget is not None
-            and self._vetoes_in_state == self._veto_budget
-        ):
+        if self._veto_budget is not None and self._vetoes_in_state == self._veto_budget:
             # The Bth veto is recorded, then this state stops immediately.
             # Candidate B+1 is never enumerated or presented.
             self._finished = True
@@ -1056,9 +1137,7 @@ class DomainProposalStepper:
             durable_active = provisional_active
 
         accepted_counts = tuple(self._accepted_stage_counts)
-        durable_counts = (
-            accepted_counts if status != "rollback" else (0, 0, 0, 0)
-        )
+        durable_counts = accepted_counts if status != "rollback" else (0, 0, 0, 0)
         return DomainStepOutcome(
             transaction_policy=transaction_policy,
             status=status,
@@ -1088,9 +1167,7 @@ class DomainProposalStepper:
         )
 
 
-def _validate_syndrome(
-    syndrome: np.ndarray, *, num_detectors: int
-) -> np.ndarray:
+def _validate_syndrome(syndrome: np.ndarray, *, num_detectors: int) -> np.ndarray:
     array = np.asarray(syndrome)
     if array.ndim != 1 or array.shape != (num_detectors,):
         raise ValueError(
@@ -1123,7 +1200,9 @@ def _assert_domain_algebra(
     changed = original ^ residual
     domain_indices = np.asarray(sorted(detector_ids), dtype=np.int64)
     if not np.array_equal(changed[domain_indices], boundary[domain_indices]):
-        raise AssertionError("prematch paths violate the domain syndrome-boundary invariant")
+        raise AssertionError(
+            "prematch paths violate the domain syndrome-boundary invariant"
+        )
     outside = np.ones(original.shape[0], dtype=np.bool_)
     outside[domain_indices] = False
     if np.any(boundary[outside]):
@@ -1140,18 +1219,12 @@ def predecode(
 ) -> PrematchResult:
     """Predecodes one unpacked detector shot transactionally by L1 domain."""
 
-    if isinstance(residual_hw_limit, bool) or not isinstance(
-        residual_hw_limit, (int, np.integer)
-    ):
-        raise TypeError("residual_hw_limit must be an integer")
-    residual_hw_limit = int(residual_hw_limit)
+    residual_hw_limit = _require_int(residual_hw_limit, name="residual_hw_limit")
     if residual_hw_limit < 0:
         raise ValueError("residual_hw_limit must be nonnegative")
 
     policy = _normalized_observable_policy(observable_policy)
-    original = _validate_syndrome(
-        syndrome, num_detectors=compiled_graph.num_detectors
-    )
+    original = _validate_syndrome(syndrome, num_detectors=compiled_graph.num_detectors)
     residual = original.copy()
     mask_bytes = (compiled_graph.num_observables + 7) // 8
     frame = bytes(mask_bytes)
@@ -1168,7 +1241,9 @@ def predecode(
         detector_ids = frozenset(int(v) for v in domain_graph.detector_ids)
         overlap = assigned.intersection(detector_ids)
         if overlap:
-            raise ValueError(f"detectors belong to multiple predecode domains: {sorted(overlap)}")
+            raise ValueError(
+                f"detectors belong to multiple predecode domains: {sorted(overlap)}"
+            )
         assigned.update(detector_ids)
         initial_active = {v for v in detector_ids if original[v]}
         initial_hw = len(initial_active)
@@ -1258,9 +1333,7 @@ def predecode(
         for edge_id in path.edge_ids:
             edge_parity[edge_id] ^= 1
     xor_support_weight = math.fsum(
-        edge_by_id[edge_id].weight
-        for edge_id, parity in edge_parity.items()
-        if parity
+        edge_by_id[edge_id].weight for edge_id, parity in edge_parity.items() if parity
     )
 
     observable_frame = np.unpackbits(

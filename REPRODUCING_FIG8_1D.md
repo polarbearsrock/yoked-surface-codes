@@ -44,18 +44,13 @@ p_L ~= r^2*n^2*8^(-d)/500.
 
 ## Environment
 
-Use Python 3.14 with the upgraded dependencies. From the repository root:
-
-```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-The dependency versions are pinned in `requirements.txt`. The plotting and gap
-collection code use repository-owned compatibility helpers instead of private
-Sinter modules, which were removed after Sinter 1.12.
+Use the pinned CPython 3.14.5 environment described in [`README.md`](README.md).
+On the experiment workstation, follow [`AGENTS.md`](AGENTS.md) exactly: its
+`uv` cache, managed interpreter, and temporary-directory settings prevent
+writes to the quota-limited home directory. Direct dependency versions are
+pinned in `requirements.txt`; uv resolves their transitive dependencies. The
+plotting and gap collection code use repository-owned compatibility helpers
+instead of private Sinter modules, which were removed after Sinter 1.12.
 
 GNU `parallel` is not needed by the focused workflow below.
 
@@ -92,9 +87,9 @@ correlated decoder. It checks that circuit generation, SI1000 noise insertion,
 detector-error-model conversion, sampling, decoding, and resumable CSV output
 all work.
 
-Collection controls can be overridden. Simulation commands default to 32
-worker processes and refuse values above 32. Native numerical libraries use
-one thread per worker by default:
+Shot and process controls can be overridden. Simulation commands default to 32
+worker processes and refuse values above 32. Native numerical libraries must
+use exactly one thread per worker:
 
 ```bash
 env -u MAX_ERRORS \
@@ -130,8 +125,9 @@ ordinary matching baseline instead, set `DECODER=pymatching`; this writes to
 larger-distance paper points required tens or hundreds of millions of shots,
 and some checked-in runs used one billion shots per circuit.
 
-The runner defaults to 32 worker processes and one native numerical thread per
-worker. `PROCESSES` must be in `1..32`; a larger value fails before collection.
+The runner defaults to 32 worker processes and requires exactly one native
+numerical thread per worker. `PROCESSES` must be in `1..32`; a larger value
+fails before collection.
 All project simulation-collection commands use 32 processes. Smaller counts are
 reserved for explicitly non-claim local smoke/debug work. A bounded resumable
 debug collection that follows the project CPU setting is:
@@ -145,10 +141,10 @@ PROCESSES=32 THREADS_PER_PROCESS=1 MAX_SHOTS=1000000 \
 ```
 
 `PROCESSES` controls Sinter's worker-process count and is hard-capped at 32.
-`THREADS_PER_PROCESS` caps
-OpenMP, OpenBLAS, MKL, NumExpr, Accelerate, and BLIS threads inside each worker,
-preventing nested thread oversubscription. Rerunning the command continues from
-the existing CSV instead of discarding completed samples.
+`THREADS_PER_PROCESS` must equal `1`; it configures OpenMP, OpenBLAS, MKL,
+NumExpr, Accelerate, and BLIS inside each worker, preventing nested thread
+oversubscription. Rerunning the command continues from the existing CSV instead
+of discarding completed samples.
 
 Plot the newly collected points and the paper's fitted scaling law with:
 

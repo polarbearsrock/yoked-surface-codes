@@ -5,8 +5,8 @@ import os
 import pathlib
 import sys
 
-# Simulations on this workstation run at most 32 worker processes with one
-# native numerical thread each (see AGENTS.md). Pin the thread pools before
+# Simulations run at most 32 worker processes with exactly one native
+# numerical thread each (see AGENTS.md). Override inherited settings before
 # NumPy/PyMatching are imported so every Sinter worker inherits the limit.
 MAX_WORKER_PROCESSES = 32
 for _name in (
@@ -17,11 +17,10 @@ for _name in (
     'VECLIB_MAXIMUM_THREADS',
     'BLIS_NUM_THREADS',
 ):
-    os.environ.setdefault(_name, '1')
+    os.environ[_name] = '1'
 
-src_path = pathlib.Path(__file__).parent.parent / 'src'
-assert src_path.exists()
-sys.path.append(str(src_path))
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / 'src'))
 
 from yoked.gap._gap_collect_paths import collect_circuit_paths
 

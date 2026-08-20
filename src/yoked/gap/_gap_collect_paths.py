@@ -17,6 +17,13 @@ def collect_circuit_paths(
         processes: int,
         flush_period: float,
 ):
+    """Collects gap statistics for circuit files with optional CSV resume.
+
+    ``save_resume_filepath`` appends to and accounts for an existing Sinter CSV;
+    ``out_path`` instead creates a new output. Existing read-only CSVs supplied
+    through ``existing_data`` contribute to stopping limits in either mode.
+    """
+
     with contextlib.ExitStack() as ctx:
         existing_data_dict = None
         print_header = True

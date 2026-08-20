@@ -1,4 +1,24 @@
-import dataclasses
+"""Builds circuits that rotate a surface code patch.
+
+The rotation is a four-step dance that moves the patch one patch-pitch to the
+right while turning its boundary types by 90 degrees, so every logical
+observable ends on a different side than it started on:
+
+1. Idle on the starting patch (`step0_in`, `pad_rounds` rounds).
+2. Grow the patch rightward into a two-patch-wide rectangle, re-routing the Z
+   observables through the new region (`step1_lz`, `step_rounds` rounds).
+3. Swap the rectangle's boundary types, re-route the X observables, then
+   measure out the left half to shrink onto the destination patch
+   (`step2_lx`, `step_rounds` rounds).
+4. Idle on the destination patch (`step3_out`, `pad_rounds` rounds).
+
+The circuit can start/end with real transversal X or Z time boundaries, or
+with "magic" time boundaries: noiseless rounds that directly measure the
+stabilizers and observables, using a noiseless ancilla qubit inside every
+observable so that an anticommuting X/Z observable pair can be tracked
+simultaneously.
+"""
+
 from typing import Literal, Iterable, Optional
 
 import stim
@@ -7,6 +27,9 @@ import gen
 
 
 class MagicableCircuit:
+    """A circuit split into a noisy body and optional noiseless magic start/end
+    sections (plus qubits that must stay noiseless), assembled by `with_noise`.
+    """
     def __init__(
             self,
             *,
@@ -49,6 +72,32 @@ def patch_rotation_circuit(
         time_boundaries: Literal['X', 'Z', 'magic'],
         test_opposite_sides: bool = False,
 ) -> MagicableCircuit:
+    """Builds a circuit rotating a surface code patch (see module docstring).
+
+    Observable names record their routing: e.g. 'ObsX:top->right' is the X
+    observable that starts on the top edge of the initial patch and ends on
+    the right edge of the final patch.
+
+    Args:
+        patch_diameter: Width and height of the square patch.
+        pad_rounds: Rounds spent idling before and after the rotation steps.
+        step_rounds: Rounds spent in each of the two intermediate steps.
+        time_boundaries: 'X' or 'Z' start and end the circuit with transversal
+            initialization/measurement in that basis, so only that basis's
+            observables exist end-to-end and one of them is tracked as
+            observable index 0. 'magic' wraps the noisy body in noiseless
+            rounds that directly measure the stabilizers and observables,
+            attaching a noiseless ancilla to every observable so that an
+            anticommuting X/Z pair can be tracked simultaneously (X as
+            observable index 0, Z as index 1).
+        test_opposite_sides: Each basis has two observable routes (X via
+            top->right or bottom->left; Z via right->bottom or left->top).
+            By default the 'bottom->left'/'left->top' routes are tracked;
+            setting this tracks the opposite routes instead.
+
+    Returns:
+        A MagicableCircuit whose noisy body implements the rotation.
+    """
     g = patch_diameter - 1
     left_tl = 0
     left_tr = g
@@ -232,6 +281,8 @@ def patch_rotation_circuit(
         'ObsX:bottom->left': set(),
         'ObsZ:left->top': set(),
     }
+    # Maps each observable route to the stim observable index it is recorded
+    # under, or None if that route isn't tracked in this configuration.
     o2i = {
         'ObsX:top->right': {'X': 0, 'Z': None, 'magic': 0}[time_boundaries] if test_opposite_sides else None,
         'ObsX:bottom->left': {'X': 0, 'Z': None, 'magic': 0}[time_boundaries] if not test_opposite_sides else None,

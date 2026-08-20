@@ -1,8 +1,10 @@
 import collections
 from typing import Dict, Optional, List, Tuple, DefaultDict, TYPE_CHECKING, Iterable
 
+from gen._core._util import DESIRED_Z_TO_ORIENTATION
+
 if TYPE_CHECKING:
-    import gen
+    from gen._core._builder import Builder
 
 # These rotations form a group.
 # This is the multiplication table of the group.
@@ -53,11 +55,6 @@ def _compute_xy_base_transition_map() -> Dict[str, str]:
 
 
 XZ_BASE_TRANSITION_MAP: Dict[str, str] = _compute_xy_base_transition_map()
-DESIRED_Z_TO_ORIENTATION: Dict[str, str] = {
-    'X': 'ZX',
-    'Y': 'ZY',
-    'Z': 'XZ',
-}
 
 
 class SingleQubitGatesPlanner():
@@ -148,9 +145,11 @@ class InteractionPlanner:
                          pre_tick_if_any: bool,
                          post_tick_if_any: bool) -> Dict[complex, str]:
         groups: DefaultDict[str, List[complex]] = collections.defaultdict(list)
-        for q, old_b in partial_new_orientations.items():
-            new_b = old_orientations.get(q, 'XZ')
-            transition = XZ_BASE_TRANSITION_MAP[f'{old_b} -> {new_b}']
+        for q, new_b in partial_new_orientations.items():
+            old_b = old_orientations.get(q, 'XZ')
+            # Note: the transition map is keyed 'desired -> current'; this
+            # direction is load-bearing (see tests of cz-style measurement).
+            transition = XZ_BASE_TRANSITION_MAP[f'{new_b} -> {old_b}']
             groups[transition].append(q)
         if 'I' in groups:
             del groups['I']

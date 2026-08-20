@@ -50,12 +50,8 @@ def _patch_transition_to_floor(*,
 def _patch_boundary_to_walls(*, boundary: PatchOutline, t: float, dt: float, out_triangles: List[ColoredTriangleData], out_lines: List[ColoredLineData]):
     for curve in boundary.region_curves:
         for basis, p1, p2 in curve:
-            out_triangles.append(ColoredTriangleData.square(
-                rgba=_X_COLOR if basis == 'X' else _Z_COLOR,
-                origin=_coords(p1, t),
-                d1=_coords(p2 - p1, 0),
-                d2=_coords(0, dt),
-            ))
+            # One quad per segment; the material is double sided, so no
+            # reversed-winding back-face copy is needed.
             out_triangles.append(ColoredTriangleData.square(
                 rgba=_X_COLOR if basis == 'X' else _Z_COLOR,
                 origin=_coords(p1, t),

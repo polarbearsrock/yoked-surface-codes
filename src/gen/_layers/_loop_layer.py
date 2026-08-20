@@ -6,7 +6,7 @@ import stim
 from gen._layers._layer import Layer
 
 if TYPE_CHECKING:
-    from gen._layers._layer_translate import LayerCircuit
+    from gen._layers._layer_circuit import LayerCircuit
 
 
 @dataclasses.dataclass

@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
+    env:
+      # The simulation code pins native BLAS/OpenMP threading to 1 for
+      # reproducibility; tests assume the same environment.
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      VECLIB_MAXIMUM_THREADS: "1"
+      BLIS_NUM_THREADS: "1"
+      TMPDIR: ${{ runner.temp }}
+      MPLCONFIGDIR: ${{ runner.temp }}/matplotlib
+      UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+      UV_PYTHON_INSTALL_DIR: ${{ runner.temp }}/uv-python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install Python and pinned dependencies
+        run: |
+          uv python install "${{ matrix.python-version }}"
+          uv venv --python "${{ matrix.python-version }}" .venv
+          uv pip install --python .venv/bin/python -r requirements.txt
+      - name: Run tests
+        run: .venv/bin/python -m pytest -q
+
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Ruff lint and prospective format
+        run: |
+          uvx ruff==0.16.3 check .
+          uvx ruff==0.16.3 format --check .

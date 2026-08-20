@@ -1,8 +1,8 @@
 import base64
 import collections
 import dataclasses
+import hashlib
 import math
-import random
 import sys
 from typing import Tuple, Dict, List, Set, Optional, Union, Iterable
 
@@ -16,11 +16,13 @@ RAD = DIAM / 2
 NOISY_GATES = {"X_ERROR", "Y_ERROR", "Z_ERROR", "E", "ELSE_CORRELATED_ERROR", "DEPOLARIZE1", "DEPOLARIZE2"}
 
 
-def rand_color() -> str:
-    color = '#'
-    for _ in range(6):
-        color += "0123456789abcdef"[random.randint(0, 15)]
-    return color
+def _color_for_mpp_product(targets: Iterable[stim.GateTarget]) -> str:
+    """Returns a stable color for a mixed-basis MPP product."""
+    key = ",".join(
+        f"{'X' if target.is_x_target else 'Y' if target.is_y_target else 'Z'}{target.value}"
+        for target in targets
+    )
+    return f"#{hashlib.sha256(key.encode()).hexdigest()[:6]}"
 
 
 MEASUREMENT_NAMES = {"M", "MX", "MY", "MR", "MRX", "MRY"}
@@ -376,7 +378,7 @@ def _draw_mpp(instruction: stim.CircuitInstruction, *, out: _SvgState) -> None:
             ty += y
         tx /= len(chunk)
         ty /= len(chunk)
-        color = rand_color()
+        color = _color_for_mpp_product(chunk)
         no_text = False
         if all(t.is_x_target for t in chunk):
             color = 'red'
@@ -486,6 +488,26 @@ def stim_circuit_html_viewer(circuit: stim.Circuit,
                              width: int = 500,
                              height: int = 500,
                              known_error: Optional[Iterable[stim.ExplainedError]] = None) -> str:
+    """Returns a self-contained HTML page for stepping through a circuit tick by tick.
+
+    Each tick of the circuit is rendered as a base64-embedded SVG layer, with
+    previous/next buttons (hotkeys a/d) to step between layers, plus a link
+    opening the circuit in Crumble.
+
+    Args:
+        circuit: The stim circuit to visualize.
+        patch: Optional stabilizer patch(es) to draw behind the circuit. A
+            single Patch is drawn at tick 0; a dict maps tick indices to the
+            patch to draw starting at that tick.
+        width: Pixel width of each rendered SVG layer.
+        height: Pixel height of each rendered SVG layer.
+        known_error: Errors to highlight in the visualization. If not
+            specified, defaults to the circuit's shortest graphlike error (if
+            one can be computed).
+
+    Returns:
+        The standalone HTML of the viewer, as a string.
+    """
     q2i = {v[0] + 1j * v[1]: k
            for k, v in circuit.get_final_qubit_coordinates().items()}
 

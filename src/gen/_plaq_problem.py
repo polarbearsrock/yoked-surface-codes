@@ -131,6 +131,6 @@ class PlaqProblem:
             path = out_dir / "circuit_viewer.html"
             cirq_web.Circuit3D(cirq_circuit).generate_html_file(file_name=str(path))
             _print_wrote(path)
-        except NotImplementedError as ex:
+        except (ImportError, NotImplementedError) as ex:
             print(ex, file=sys.stderr)
             print("Failed to write 3d viewer. Ignoring exception and continuing.", file=sys.stderr)

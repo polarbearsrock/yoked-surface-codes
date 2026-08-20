@@ -1,3 +1,13 @@
+"""Sinter adapters for ProMatch preprocessing and its identity control.
+
+Configuration objects compile a detector error model once into a canonical
+graph. Compiled decoders then accept Sinter's little-endian bit-packed shots,
+run deterministic per-shot preprocessing, decode the complete residual graph,
+and XOR the predecoder's observable frame into the residual prediction. The
+identity wrapper exercises the same packing and domain-traversal overhead while
+committing no correction, providing the latency experiment's U0 control.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,14 +17,20 @@ import numpy as np
 import sinter
 import stim
 
-from yoked.decoding._promatch import PrematchResult, predecode
+from yoked.decoding._promatch import PrematchResult, _require_int, predecode
 from yoked.decoding._promatch_graph import CompiledPromatchGraph, compile_matching_graph
 from yoked.decoding._promatch_layout import compile_layout
 
 
 BoundaryPolicy = Literal["disabled", "odd-parity"]
-ObservablePolicy = Literal["zero-frame", "path-zero", "any"]
+# Deliberately narrower than _promatch.ObservablePolicy: the Sinter-facing
+# configuration accepts "zero-frame" but not its internal normalized alias
+# "edge-zero" (the normalization stays in _promatch._normalized_observable_policy).
+DecoderObservablePolicy = Literal["zero-frame", "path-zero", "any"]
 DomainMode = Literal["windowd", "fullhistory"]
+
+
+# User-facing Sinter decoder configurations.
 
 
 @dataclass(frozen=True)
@@ -24,13 +40,10 @@ class PromatchDecoder(sinter.Decoder):
     residual_hw_limit: int = 10
     domain_mode: DomainMode = "windowd"
     boundary_policy: BoundaryPolicy = "disabled"
-    observable_policy: ObservablePolicy = "zero-frame"
+    observable_policy: DecoderObservablePolicy = "zero-frame"
 
     def __post_init__(self) -> None:
-        if isinstance(self.residual_hw_limit, bool) or not isinstance(
-            self.residual_hw_limit, (int, np.integer)
-        ):
-            raise TypeError("residual_hw_limit must be an integer")
+        _require_int(self.residual_hw_limit, name="residual_hw_limit")
         if self.residual_hw_limit < 0:
             raise ValueError(
                 f"residual_hw_limit must be non-negative, got {self.residual_hw_limit}"
@@ -40,7 +53,9 @@ class PromatchDecoder(sinter.Decoder):
         if self.boundary_policy not in {"disabled", "odd-parity"}:
             raise ValueError(f"unsupported boundary_policy={self.boundary_policy!r}")
         if self.observable_policy not in {"zero-frame", "path-zero", "any"}:
-            raise ValueError(f"unsupported observable_policy={self.observable_policy!r}")
+            raise ValueError(
+                f"unsupported observable_policy={self.observable_policy!r}"
+            )
 
     def compile_decoder_for_dem(
         self,
@@ -95,7 +110,9 @@ def _validate_packed_input(
     result = np.asarray(data)
     expected_width = (num_detectors + 7) // 8
     if result.dtype != np.uint8:
-        raise ValueError(f"packed detector data must have dtype uint8, got {result.dtype}")
+        raise ValueError(
+            f"packed detector data must have dtype uint8, got {result.dtype}"
+        )
     if result.ndim != 2:
         raise ValueError(f"packed detector data must be 2-D, got shape {result.shape}")
     if result.shape[1] != expected_width:
@@ -120,19 +137,31 @@ def _pack_observable_frames(
     return packed
 
 
+# Compiled bit-packed execution paths.
+
+
 @dataclass
 class CompiledPromatchDecoder(sinter.CompiledDecoder):
+    """Compiled PU path: local predecode followed by full-graph PyMatching.
+
+    ``predecode_shots`` exposes bounded caller-owned telemetry. Sinter's batch
+    API deliberately discards per-shot records so production collection does
+    not retain memory proportional to the number of shots.
+    """
+
     graph: CompiledPromatchGraph
     num_detectors: int
     num_observables: int
     residual_hw_limit: int
     boundary_policy: BoundaryPolicy
-    observable_policy: ObservablePolicy
+    observable_policy: DecoderObservablePolicy
 
     def predecode_shots(
         self,
         unpacked_detection_events: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray, tuple[PrematchResult, ...]]:
+        """Predecodes unpacked shots and retains one result record per shot."""
+
         return self._predecode_shots(
             unpacked_detection_events,
             retain_results=True,
@@ -214,6 +243,8 @@ class CompiledPromatchDecoder(sinter.CompiledDecoder):
 
 @dataclass
 class CompiledIdentityWrappedPyMatchingDecoder(sinter.CompiledDecoder):
+    """Compiled U0 control preserving PU's packing and traversal overhead."""
+
     graph: CompiledPromatchGraph
     num_detectors: int
     num_observables: int

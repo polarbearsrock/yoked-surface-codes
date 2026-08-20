@@ -18,7 +18,7 @@ class ShiftCoordAnnotationLayer(Layer):
                 self.shift[k] += arg
 
     def copy(self) -> 'ShiftCoordAnnotationLayer':
-        return ShiftCoordAnnotationLayer(shift=self.shift)
+        return ShiftCoordAnnotationLayer(shift=list(self.shift))
 
     def touched(self) -> Set[int]:
         return set()
