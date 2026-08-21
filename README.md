@@ -49,8 +49,9 @@ python -m pytest -q
 ```
 
 For a fresh Google Cloud VM, [`gcp/README.md`](gcp/README.md) provides a
-one-command environment bootstrap and a sourceable activation helper. It keeps
-cloud scratch data and experiment outputs outside the Git checkout.
+one-command environment bootstrap, a sourceable activation helper, and the
+parameterized paired Figure-8b launcher. It keeps cloud scratch data and
+experiment outputs outside the Git checkout.
 
 The `PYTHONPATH` export makes the non-packaged `gen` and `yoked` source trees
 importable in an interactive Python session. Tests add `src/` through

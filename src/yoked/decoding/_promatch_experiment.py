@@ -1849,6 +1849,10 @@ def _worker_collect(task: dict[str, Any]) -> dict[str, Any]:
     cell_id = cell["cell_id"]
     prepared = _WORKER_CACHE.get(cell_id)
     if prepared is None:
+        # Large Figure-8 sweep cells can each retain substantial compiled graph
+        # state.  Workers reuse their current cell across adjacent batches but
+        # never accumulate PreparedCells for the full multi-cell grid.
+        _WORKER_CACHE.clear()
         prepared = prepare_cell(
             cell,
             decoder_config=task["decoder"],

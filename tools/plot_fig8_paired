@@ -1,0 +1,506 @@
+#!/usr/bin/env python3
+"""Plot a completed paired Figure 8b-style ProMatch campaign."""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import json
+import math
+import pathlib
+import sys
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from typing import Any
+
+import matplotlib
+
+matplotlib.use("Agg")
+
+import numpy as np
+import sinter
+from matplotlib import pyplot as plt
+
+
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+
+from yoked.decoding._fig8_paired_sweep import (  # noqa: E402
+    load_campaign,
+    load_validated_collection,
+    validate_analysis_runtime,
+)
+
+
+@dataclass(frozen=True)
+class DeclaredCell:
+    cell_id: str
+    d: int
+    patches: int
+    rounds: int
+    yokes: int
+    p: float
+    shots: int
+
+
+@dataclass(frozen=True)
+class PairedResult:
+    cell: DeclaredCell
+    both_correct: int
+    recoveries: int
+    regressions: int
+    both_wrong: int
+    u0_fit: sinter.Fit
+    pu_fit: sinter.Fit
+
+    @property
+    def u0_failures(self) -> int:
+        return self.both_wrong + self.recoveries
+
+    @property
+    def pu_failures(self) -> int:
+        return self.both_wrong + self.regressions
+
+
+def _positive_int(value: Any, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return value
+
+
+def _declared_cells(campaign: Mapping[str, Any]) -> list[DeclaredCell]:
+    raw_cells = campaign.get("cells")
+    if not isinstance(raw_cells, Sequence) or isinstance(raw_cells, (str, bytes)):
+        raise ValueError("campaign.json cells must be an array")
+    if not raw_cells:
+        raise ValueError("campaign.json must declare at least one cell")
+
+    raw_expected = campaign.get("expected_shots_by_cell")
+    if raw_expected is not None and not isinstance(raw_expected, Mapping):
+        raise ValueError("campaign.json expected_shots_by_cell must be an object")
+    default_shots = campaign.get("shots_per_cell")
+
+    cells: list[DeclaredCell] = []
+    seen_ids: set[str] = set()
+    for index, raw in enumerate(raw_cells):
+        name = f"campaign.json cells[{index}]"
+        if not isinstance(raw, Mapping):
+            raise ValueError(f"{name} must be an object")
+        cell_id = raw.get("cell_id")
+        if not isinstance(cell_id, str) or not cell_id:
+            raise ValueError(f"{name}.cell_id must be a nonempty string")
+        if cell_id in seen_ids:
+            raise ValueError(f"campaign.json contains duplicate cell_id {cell_id!r}")
+        seen_ids.add(cell_id)
+
+        if raw_expected is not None:
+            if cell_id not in raw_expected:
+                raise ValueError(
+                    f"expected_shots_by_cell is missing declared cell {cell_id!r}"
+                )
+            shots_value = raw_expected[cell_id]
+            if "shots" in raw and raw["shots"] != shots_value:
+                raise ValueError(f"declared shots disagree for cell {cell_id!r}")
+        elif "shots" in raw:
+            shots_value = raw["shots"]
+        elif default_shots is not None:
+            shots_value = default_shots
+        else:
+            raise ValueError(
+                f"campaign.json does not declare expected shots for cell {cell_id!r}"
+            )
+
+        try:
+            p = float(raw["p"])
+        except (KeyError, TypeError, ValueError) as ex:
+            raise ValueError(f"{name}.p must be a number") from ex
+        if not math.isfinite(p) or not 0 < p < 1:
+            raise ValueError(f"{name}.p must be finite and lie in (0, 1)")
+
+        cell = DeclaredCell(
+            cell_id=cell_id,
+            d=_positive_int(raw.get("d"), name=f"{name}.d"),
+            patches=_positive_int(raw.get("patches"), name=f"{name}.patches"),
+            rounds=_positive_int(raw.get("r"), name=f"{name}.r"),
+            yokes=_positive_int(raw.get("yokes"), name=f"{name}.yokes"),
+            p=p,
+            shots=_positive_int(shots_value, name=f"expected shots for {cell_id!r}"),
+        )
+        if cell.rounds % cell.d:
+            raise ValueError(f"cell {cell_id!r} has r not divisible by d")
+        if cell.patches <= cell.yokes:
+            raise ValueError(f"cell {cell_id!r} must have patches greater than yokes")
+        cells.append(cell)
+
+    if raw_expected is not None and set(raw_expected) != seen_ids:
+        extras = sorted(set(raw_expected) - seen_ids)
+        raise ValueError(
+            "expected_shots_by_cell declares cells absent from cells: "
+            + ", ".join(repr(value) for value in extras)
+        )
+    return cells
+
+
+def _validate_campaign_identity(campaign: Mapping[str, Any]) -> str:
+    required_constants = {
+        "schema": "yoked.fig8-paired-sweep-campaign-v1",
+        "kind": "yoked-fig8b-paired-fixed-shot-sweep",
+        "status": "FROZEN",
+        "frozen": True,
+        "claim_bearing": False,
+        "phase": "fig8-sweep",
+        "processes": 32,
+        "threads_per_process": 1,
+        "sample_batch_size": 1000,
+    }
+    for field, expected in required_constants.items():
+        if campaign.get(field) != expected:
+            raise ValueError(
+                f"campaign.json {field} must be {expected!r}; "
+                f"found {campaign.get(field)!r}"
+            )
+    if campaign.get("clean_worktree") is not True:
+        raise ValueError("campaign.json clean_worktree must be true")
+
+    embedded = campaign.get("experiment_id")
+    if not isinstance(embedded, str) or not embedded:
+        raise ValueError("campaign.json experiment_id must be a nonempty string")
+    semantic = dict(campaign)
+    del semantic["experiment_id"]
+    try:
+        encoded = json.dumps(
+            semantic,
+            sort_keys=True,
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    except (TypeError, ValueError) as ex:
+        raise ValueError("campaign.json is not canonical JSON data") from ex
+    computed = hashlib.sha256(encoded).hexdigest()
+    if embedded != computed:
+        raise ValueError("campaign.json experiment_id does not match its contents")
+    return embedded
+
+
+def _piece_fit(*, shots: int, failures: int, cell: DeclaredCell) -> sinter.Fit:
+    shot_fit = sinter.fit_binomial(
+        num_shots=shots,
+        num_hits=failures,
+        max_likelihood_factor=1000,
+    )
+    return sinter.shot_error_rate_to_piece_error_rate(
+        shot_fit,
+        pieces=cell.rounds * cell.patches,
+        values=(cell.patches - cell.yokes) * 2,
+    )
+
+
+def _load_results(
+    campaign: Mapping[str, Any], ledgers: Sequence[Mapping[str, Any]]
+) -> tuple[str, list[PairedResult]]:
+    campaign_id = _validate_campaign_identity(campaign)
+    cells = _declared_cells(campaign)
+    try:
+        campaign_p = float(campaign["p"])
+    except (KeyError, TypeError, ValueError) as ex:
+        raise ValueError("campaign.json p must be a number") from ex
+    if not math.isfinite(campaign_p) or not 0 < campaign_p < 1:
+        raise ValueError("campaign.json p must be finite and lie in (0, 1)")
+    cell_ps = {cell.p for cell in cells}
+    if cell_ps != {campaign_p}:
+        raise ValueError(
+            "campaign must contain exactly its declared physical error probability; "
+            f"campaign p={campaign_p}, cell p values={sorted(cell_ps)}"
+        )
+    aggregates = {
+        cell.cell_id: {
+            "shots": 0,
+            "both_correct": 0,
+            "recoveries": 0,
+            "regressions": 0,
+            "both_wrong": 0,
+        }
+        for cell in cells
+    }
+    for ledger in ledgers:
+        cell_id = ledger["cell_id"]
+        if cell_id not in aggregates:
+            raise ValueError(f"validated ledger has undeclared cell_id {cell_id!r}")
+        aggregate = aggregates[cell_id]
+        aggregate["shots"] += ledger["batch"]["shots"]
+        for key in ("both_correct", "recoveries", "regressions", "both_wrong"):
+            aggregate[key] += ledger["paired_contingency"][key]
+
+    results: list[PairedResult] = []
+    for cell in cells:
+        aggregate = aggregates[cell.cell_id]
+        shots = aggregate["shots"]
+        if shots != cell.shots:
+            raise ValueError(
+                f"incomplete cell {cell.cell_id!r}: expected {cell.shots} shots, "
+                f"found {shots}"
+            )
+        u0_failures = aggregate["both_wrong"] + aggregate["recoveries"]
+        pu_failures = aggregate["both_wrong"] + aggregate["regressions"]
+        results.append(
+            PairedResult(
+                cell=cell,
+                both_correct=aggregate["both_correct"],
+                recoveries=aggregate["recoveries"],
+                regressions=aggregate["regressions"],
+                both_wrong=aggregate["both_wrong"],
+                u0_fit=_piece_fit(shots=shots, failures=u0_failures, cell=cell),
+                pu_fit=_piece_fit(shots=shots, failures=pu_failures, cell=cell),
+            )
+        )
+    return campaign_id, results
+
+
+def _write_csv(
+    path: pathlib.Path, *, experiment_id: str, results: Sequence[PairedResult]
+) -> None:
+    fieldnames = [
+        "experiment_id",
+        "cell_id",
+        "d",
+        "patches",
+        "r",
+        "rounds_per_d",
+        "yokes",
+        "p",
+        "shots",
+        "both_correct",
+        "recoveries",
+        "regressions",
+        "both_wrong",
+        "u0_failures",
+        "pu_failures",
+        "u0_ler_per_patch_round_low",
+        "u0_ler_per_patch_round_best",
+        "u0_ler_per_patch_round_high",
+        "pu_ler_per_patch_round_low",
+        "pu_ler_per_patch_round_best",
+        "pu_ler_per_patch_round_high",
+    ]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        for result in sorted(
+            results,
+            key=lambda item: (
+                item.cell.patches,
+                item.cell.rounds // item.cell.d,
+                item.cell.d,
+                item.cell.cell_id,
+            ),
+        ):
+            cell = result.cell
+            writer.writerow(
+                {
+                    "experiment_id": experiment_id,
+                    "cell_id": cell.cell_id,
+                    "d": cell.d,
+                    "patches": cell.patches,
+                    "r": cell.rounds,
+                    "rounds_per_d": cell.rounds // cell.d,
+                    "yokes": cell.yokes,
+                    "p": format(cell.p, ".17g"),
+                    "shots": cell.shots,
+                    "both_correct": result.both_correct,
+                    "recoveries": result.recoveries,
+                    "regressions": result.regressions,
+                    "both_wrong": result.both_wrong,
+                    "u0_failures": result.u0_failures,
+                    "pu_failures": result.pu_failures,
+                    "u0_ler_per_patch_round_low": repr(result.u0_fit.low),
+                    "u0_ler_per_patch_round_best": repr(result.u0_fit.best),
+                    "u0_ler_per_patch_round_high": repr(result.u0_fit.high),
+                    "pu_ler_per_patch_round_low": repr(result.pu_fit.low),
+                    "pu_ler_per_patch_round_best": repr(result.pu_fit.best),
+                    "pu_ler_per_patch_round_high": repr(result.pu_fit.high),
+                }
+            )
+
+
+def _plot_fit(
+    ax: plt.Axes,
+    *,
+    d: int,
+    fit: sinter.Fit,
+    failures: int,
+    shots: int,
+    color: str,
+    marker: str,
+    label: str | None,
+    annotation_offset: tuple[int, int],
+) -> None:
+    if fit.best > 0:
+        ax.errorbar(
+            [d],
+            [fit.best],
+            yerr=[[fit.best - fit.low], [fit.high - fit.best]],
+            color=color,
+            marker=marker,
+            capsize=3,
+            linewidth=0,
+            elinewidth=1,
+            label=label,
+        )
+        annotation_y = fit.best
+    else:
+        ax.scatter(
+            [d],
+            [fit.high],
+            color=color,
+            facecolors="none",
+            marker="v",
+            label=label,
+        )
+        annotation_y = fit.high
+    ax.annotate(
+        f"{failures}/{shots:,}",
+        (d, annotation_y),
+        xytext=annotation_offset,
+        textcoords="offset points",
+        ha="right" if annotation_offset[0] < 0 else "left",
+        fontsize=7,
+    )
+
+
+def _include_paper_fit(p: float) -> bool:
+    """The released Figure 8b scaling fit is calibrated only at p=0.001."""
+
+    return p == 0.001
+
+
+def _write_plot(
+    path: pathlib.Path, *, p: float, results: Sequence[PairedResult]
+) -> None:
+    curves: dict[tuple[int, int], list[PairedResult]] = {}
+    for result in results:
+        key = (result.cell.patches, result.cell.rounds // result.cell.d)
+        curves.setdefault(key, []).append(result)
+
+    fig, axes = plt.subplots(
+        1, 2, figsize=(16, 7), dpi=100, sharex=True, sharey=True
+    )
+    markers = ["o", "s", "^", "D"]
+    colors = ["C0", "C1", "C2", "C3"]
+    annotation_offsets = [(-5, -14), (-5, 8), (5, -14), (5, 8)]
+    arms = [
+        (
+            axes[0],
+            "U0: ordinary uncorrelated PyMatching",
+            lambda result: result.u0_fit,
+            lambda result: result.u0_failures,
+        ),
+        (
+            axes[1],
+            "PU-window: ProMatch-style predecode + flat global residual MWPM",
+            lambda result: result.pu_fit,
+            lambda result: result.pu_failures,
+        ),
+    ]
+    for ax, title, fit_of, failures_of in arms:
+        for curve_index, ((patches, rounds_per_d), points) in enumerate(
+            sorted(curves.items())
+        ):
+            points = sorted(points, key=lambda item: item.cell.d)
+            color = colors[curve_index % len(colors)]
+            marker = markers[curve_index % len(markers)]
+            for point_index, result in enumerate(points):
+                _plot_fit(
+                    ax,
+                    d=result.cell.d,
+                    fit=fit_of(result),
+                    failures=failures_of(result),
+                    shots=result.cell.shots,
+                    color=color,
+                    marker=marker,
+                    label=(
+                        f"n={patches}, r={rounds_per_d}d samples"
+                        if point_index == 0
+                        else None
+                    ),
+                    annotation_offset=annotation_offsets[
+                        curve_index % len(annotation_offsets)
+                    ],
+                )
+            if _include_paper_fit(p):
+                ds = np.asarray([result.cell.d for result in points], dtype=float)
+                model = rounds_per_d * ds * patches * 8.0 ** (-ds) / 500
+                ax.plot(
+                    ds,
+                    model,
+                    color=color,
+                    linestyle="--",
+                    alpha=0.7,
+                    label=(
+                        f"n={patches}, r={rounds_per_d}d "
+                        "paper fit (p=0.001 only)"
+                    ),
+                )
+        ax.set_title(title)
+        ax.set_yscale("log")
+        ax.set_xticks(sorted({result.cell.d for result in results}))
+        ax.set_xlabel("Inner surface-code distance d")
+        ax.grid(which="major", alpha=0.5)
+        ax.grid(which="minor", alpha=0.2)
+        ax.legend(fontsize=8, ncols=2)
+
+    axes[0].set_ylabel("Logical errors per patch round")
+    fig.suptitle(
+        "Paired 1D yoked full-circuit simulation at "
+        f"p={format(p, '.12g')} — non-exact paper reproduction"
+    )
+    fig.tight_layout()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path)
+    plt.close(fig)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Validate and plot a completed paired Figure 8b-style campaign. "
+            "This writes only the campaign's plots directory; it never samples "
+            "or modifies campaign.json or collection artifacts."
+        )
+    )
+    parser.add_argument("--campaign", required=True, type=pathlib.Path)
+    args = parser.parse_args()
+
+    try:
+        campaign_directory = args.campaign.resolve()
+        campaign = load_campaign(campaign_directory)
+        validate_analysis_runtime(campaign)
+        campaign, ledgers = load_validated_collection(
+            campaign_directory, require_complete=True
+        )
+        experiment_id, results = _load_results(campaign, ledgers)
+        physical_ps = {result.cell.p for result in results}
+        if len(physical_ps) != 1:
+            raise ValueError(
+                "campaign must contain exactly one physical error probability p; "
+                f"found {sorted(physical_ps)}"
+            )
+        p = next(iter(physical_ps))
+
+        plots_directory = campaign_directory / "plots"
+        csv_path = plots_directory / "fig8b_paired_results.csv"
+        png_path = plots_directory / f"fig8b_paired_ler_p{format(p, '.12g')}.png"
+        _write_csv(csv_path, experiment_id=experiment_id, results=results)
+        _write_plot(png_path, p=p, results=results)
+        print(f"wrote {csv_path}")
+        print(f"wrote {png_path}")
+        return 0
+    except (ValueError, TypeError, OSError) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -49,6 +49,51 @@ def test_batch_schedule_is_fixed_and_processes_are_capped() -> None:
         validate_process_count(33)
 
 
+def test_worker_cache_retains_only_the_current_prepared_cell(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    prepared_ids: list[str] = []
+    collected_ids: list[str] = []
+    monkeypatch.setattr(promatch_experiment, "_WORKER_CACHE", {})
+    monkeypatch.setattr(
+        promatch_experiment, "configure_single_thread_runtime", lambda: None
+    )
+
+    def prepare(cell, **_):
+        prepared_ids.append(cell["cell_id"])
+        return SimpleNamespace(cell=cell)
+
+    def collect(prepared, **_):
+        collected_ids.append(prepared.cell["cell_id"])
+        return {"cell_id": prepared.cell["cell_id"]}
+
+    monkeypatch.setattr(promatch_experiment, "prepare_cell", prepare)
+    monkeypatch.setattr(promatch_experiment, "collect_prepared_batch", collect)
+
+    def task(cell_id: str, batch_id: int) -> dict:
+        return {
+            "cell": {"cell_id": cell_id},
+            "decoder": {},
+            "dem_options": {},
+            "verify_hashes": True,
+            "batch": {"batch_id": batch_id, "shot_start": batch_id, "shots": 1},
+            "seed_root": "seed",
+            "experiment_id": "experiment",
+            "phase": "phase",
+            "replay_policy": {},
+        }
+
+    promatch_experiment._worker_collect(task("cell-a", 0))
+    promatch_experiment._worker_collect(task("cell-a", 1))
+    assert prepared_ids == ["cell-a"]
+    assert set(promatch_experiment._WORKER_CACHE) == {"cell-a"}
+
+    promatch_experiment._worker_collect(task("cell-b", 2))
+    assert prepared_ids == ["cell-a", "cell-b"]
+    assert collected_ids == ["cell-a", "cell-a", "cell-b"]
+    assert set(promatch_experiment._WORKER_CACHE) == {"cell-b"}
+
+
 @pytest.mark.parametrize("cell_id", [".", ".."])
 def test_cell_id_rejects_dot_path_components(cell_id: str) -> None:
     cell = copy.deepcopy(default_smoke_protocol(processes=1, shots=1)["cells"][0])
