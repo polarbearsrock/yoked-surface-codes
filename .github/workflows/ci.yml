@@ -24,11 +24,18 @@ jobs:
       NUMEXPR_NUM_THREADS: "1"
       VECLIB_MAXIMUM_THREADS: "1"
       BLIS_NUM_THREADS: "1"
-      TMPDIR: ${{ runner.temp }}
-      MPLCONFIGDIR: ${{ runner.temp }}/matplotlib
-      UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
-      UV_PYTHON_INSTALL_DIR: ${{ runner.temp }}/uv-python
     steps:
+      - name: Configure runner-local paths
+        shell: bash
+        run: |
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "MPLCONFIGDIR=$RUNNER_TEMP/matplotlib" >> "$GITHUB_ENV"
+          echo "UV_CACHE_DIR=$RUNNER_TEMP/uv-cache" >> "$GITHUB_ENV"
+          echo "UV_PYTHON_INSTALL_DIR=$RUNNER_TEMP/uv-python" >> "$GITHUB_ENV"
+          mkdir -p \
+            "$RUNNER_TEMP/matplotlib" \
+            "$RUNNER_TEMP/uv-cache" \
+            "$RUNNER_TEMP/uv-python"
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - name: Install Python and pinned dependencies
@@ -41,9 +48,12 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
-    env:
-      UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
     steps:
+      - name: Configure runner-local paths
+        shell: bash
+        run: |
+          echo "UV_CACHE_DIR=$RUNNER_TEMP/uv-cache" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/uv-cache"
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - name: Ruff lint and prospective format
