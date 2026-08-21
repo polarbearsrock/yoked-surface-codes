@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+
+# Activate the repository environment and apply the GCP experiment controls.
+# This file must be sourced so its exports affect the calling shell.
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    echo "error: source this file instead of executing it:" >&2
+    echo "  source gcp/activate_environment" >&2
+    exit 2
+fi
+
+
+_ysc_gcp_activate_environment() {
+    local repository_root
+    local runtime_record
+    local runtime_root
+    local venv_directory
+
+    repository_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)" || \
+        return 2
+    venv_directory="$repository_root/.venv"
+    runtime_record="$venv_directory/gcp-runtime-root"
+
+    if [[ ! -f "$runtime_record" ]]; then
+        echo "error: GCP environment is not configured; run ./gcp/setup_environment first" >&2
+        return 2
+    fi
+
+    IFS= read -r runtime_root < "$runtime_record"
+    if [[ -z "$runtime_root" || ! -d "$runtime_root" ]]; then
+        echo "error: recorded GCP runtime root is missing: $runtime_root" >&2
+        return 2
+    fi
+    if [[ ! -f "$venv_directory/bin/activate" || \
+          ! -x "$venv_directory/bin/python" ]]; then
+        echo "error: virtual environment is incomplete: $venv_directory" >&2
+        return 2
+    fi
+    if [[ ! -x "$runtime_root/bin/uv" ]]; then
+        echo "error: pinned uv is missing: $runtime_root/bin/uv" >&2
+        return 2
+    fi
+
+    export YSC_GCP_RUNTIME_ROOT="$runtime_root"
+    export YSC_GCP_RUNS_ROOT="$YSC_GCP_RUNTIME_ROOT/runs"
+    export TMPDIR="$YSC_GCP_RUNTIME_ROOT/tmp"
+    export UV_CACHE_DIR="$YSC_GCP_RUNTIME_ROOT/uv-cache"
+    export UV_PYTHON_INSTALL_DIR="$YSC_GCP_RUNTIME_ROOT/uv-python"
+    export UV_PYTHON_BIN_DIR="$YSC_GCP_RUNTIME_ROOT/bin"
+    export UV_MANAGED_PYTHON=1
+    export MPLCONFIGDIR="$TMPDIR/yoked-surface-codes-matplotlib"
+    export MPLBACKEND=Agg
+
+    export OMP_NUM_THREADS=1
+    export OPENBLAS_NUM_THREADS=1
+    export MKL_NUM_THREADS=1
+    export NUMEXPR_NUM_THREADS=1
+    export VECLIB_MAXIMUM_THREADS=1
+    export BLIS_NUM_THREADS=1
+    export PROCESSES=32
+    export THREADS_PER_PROCESS=1
+    unset MAX_ERRORS
+
+    mkdir -p -- "$TMPDIR" "$MPLCONFIGDIR" "$YSC_GCP_RUNS_ROOT" || return 2
+
+    case ":${PATH:-}:" in
+        *":$YSC_GCP_RUNTIME_ROOT/bin:"*) ;;
+        *) export PATH="$YSC_GCP_RUNTIME_ROOT/bin${PATH:+:$PATH}" ;;
+    esac
+    case ":${PYTHONPATH:-}:" in
+        *":$repository_root/src:"*) ;;
+        *) export PYTHONPATH="$repository_root/src${PYTHONPATH:+:$PYTHONPATH}" ;;
+    esac
+
+    # shellcheck disable=SC1091
+    source "$venv_directory/bin/activate" || return 2
+
+    echo "Activated yoked-surface-codes GCP environment"
+    echo "  runtime root: $YSC_GCP_RUNTIME_ROOT"
+    echo "  runs root:    $YSC_GCP_RUNS_ROOT"
+    echo "  workers:      $PROCESSES processes x $THREADS_PER_PROCESS native thread"
+}
+
+
+if _ysc_gcp_activate_environment; then
+    unset -f _ysc_gcp_activate_environment
+else
+    unset -f _ysc_gcp_activate_environment
+    return 2
+fi

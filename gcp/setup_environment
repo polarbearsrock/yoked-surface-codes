@@ -1,0 +1,257 @@
+#!/usr/bin/env bash
+
+# Create the pinned Python environment used by the GCP experiment workflows.
+#
+# This script is safe to rerun. It deliberately keeps uv downloads, managed
+# Python installations, Matplotlib state, and experiment scratch/output data
+# outside the Git checkout. The repository-local .venv is ignored by Git.
+
+set -euo pipefail
+
+readonly REPOSITORY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+readonly VENV_DIRECTORY="$REPOSITORY_ROOT/.venv"
+readonly RUNTIME_RECORD="$VENV_DIRECTORY/gcp-runtime-root"
+readonly UV_BOOTSTRAP_VERSION="0.11.17"
+
+
+print_usage() {
+    cat <<'EOF'
+Usage: ./gcp/setup_environment [OPTIONS]
+
+Create or refresh the pinned yoked-surface-codes Python environment.
+
+Options:
+  --runtime-root PATH  Persistent root for uv, scratch, and experiment data.
+                       Default: ../yoked-surface-codes-runtime next to the clone.
+  --run-tests          Run the complete pytest suite after installation.
+  -h, --help           Show this help text.
+
+After setup, activate the environment in the current shell with:
+
+  source gcp/activate_environment
+
+The runtime root is recorded inside the ignored repository-local .venv, so it
+does not need to be supplied again during activation.
+EOF
+}
+
+
+die() {
+    echo "error: $*" >&2
+    exit 1
+}
+
+
+warn() {
+    echo "warning: $*" >&2
+}
+
+
+require_command() {
+    local command_name=$1
+    command -v "$command_name" >/dev/null 2>&1 || \
+        die "required command '$command_name' was not found"
+}
+
+
+runtime_root="${YSC_GCP_RUNTIME_ROOT:-$REPOSITORY_ROOT/../yoked-surface-codes-runtime}"
+run_tests=0
+
+while (($#)); do
+    case "$1" in
+        --runtime-root)
+            (($# >= 2)) || die "--runtime-root requires a path"
+            runtime_root=$2
+            shift 2
+            ;;
+        --run-tests)
+            run_tests=1
+            shift
+            ;;
+        -h|--help)
+            print_usage
+            exit 0
+            ;;
+        *)
+            die "unknown argument '$1'; use --help for usage"
+            ;;
+    esac
+done
+
+[[ "$(uname -s)" == "Linux" ]] || die "the GCP setup supports Linux only"
+[[ "$(uname -m)" == "x86_64" ]] || \
+    die "the validated GCP environment requires x86_64; found $(uname -m)"
+[[ -f "$REPOSITORY_ROOT/.python-version" ]] || \
+    die "missing $REPOSITORY_ROOT/.python-version"
+[[ -f "$REPOSITORY_ROOT/requirements.txt" ]] || \
+    die "missing $REPOSITORY_ROOT/requirements.txt"
+require_command git
+git -C "$REPOSITORY_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 || \
+    die "$REPOSITORY_ROOT is not a Git checkout"
+repository_commit="$(git -C "$REPOSITORY_ROOT" rev-parse HEAD)"
+repository_status="$(
+    git -C "$REPOSITORY_ROOT" status --porcelain --untracked-files=all
+)"
+if [[ -n "$repository_status" ]]; then
+    warn "Git worktree is not clean; setup may continue, but scientific launch will reject it"
+fi
+
+python_version="$(tr -d '[:space:]' < "$REPOSITORY_ROOT/.python-version")"
+[[ "$python_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || \
+    die ".python-version must contain an exact X.Y.Z version"
+
+[[ "$runtime_root" == /* ]] || \
+    die "runtime root must be an absolute path; got '$runtime_root'"
+require_command realpath
+runtime_root="$(realpath -m -- "$runtime_root")"
+[[ "$runtime_root" != "/" ]] || die "runtime root may not be /"
+if [[ "$runtime_root" == "$REPOSITORY_ROOT" || \
+      "$runtime_root" == "$REPOSITORY_ROOT/"* ]]; then
+    die "runtime root must be outside the Git checkout"
+fi
+mkdir -p -- "$runtime_root"
+runtime_root="$(cd -- "$runtime_root" && pwd -P)"
+
+export YSC_GCP_RUNTIME_ROOT="$runtime_root"
+export TMPDIR="$runtime_root/tmp"
+export UV_CACHE_DIR="$runtime_root/uv-cache"
+export UV_PYTHON_INSTALL_DIR="$runtime_root/uv-python"
+export UV_PYTHON_BIN_DIR="$runtime_root/bin"
+export UV_MANAGED_PYTHON=1
+export MPLCONFIGDIR="$TMPDIR/yoked-surface-codes-matplotlib"
+export MPLBACKEND=Agg
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export BLIS_NUM_THREADS=1
+export PYTHONPATH="$REPOSITORY_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+unset MAX_ERRORS
+
+mkdir -p -- \
+    "$runtime_root/bin" \
+    "$TMPDIR" \
+    "$UV_CACHE_DIR" \
+    "$UV_PYTHON_INSTALL_DIR" \
+    "$MPLCONFIGDIR" \
+    "$runtime_root/runs"
+
+uv_binary="$runtime_root/bin/uv"
+observed_uv_banner=""
+if [[ -x "$uv_binary" ]]; then
+    observed_uv_banner="$("$uv_binary" --version 2>/dev/null || true)"
+fi
+observed_uv_version="$(awk '$1 == "uv" {print $2; exit}' <<< "$observed_uv_banner")"
+if [[ "$observed_uv_version" != "$UV_BOOTSTRAP_VERSION" ]]; then
+    require_command curl
+    echo "Installing uv $UV_BOOTSTRAP_VERSION into $runtime_root/bin"
+    curl --proto '=https' --tlsv1.2 -LsSf \
+        "https://astral.sh/uv/$UV_BOOTSTRAP_VERSION/install.sh" |
+        env UV_UNMANAGED_INSTALL="$runtime_root/bin" sh
+    observed_uv_banner="$("$uv_binary" --version)"
+    observed_uv_version="$(awk '$1 == "uv" {print $2; exit}' <<< "$observed_uv_banner")"
+fi
+[[ "$observed_uv_version" == "$UV_BOOTSTRAP_VERSION" ]] || \
+    die "expected uv $UV_BOOTSTRAP_VERSION but found '$observed_uv_banner'"
+
+echo "Installing managed CPython $python_version"
+"$uv_binary" python install --no-bin "$python_version"
+
+venv_python="$VENV_DIRECTORY/bin/python"
+if [[ ! -x "$venv_python" ]]; then
+    echo "Creating $VENV_DIRECTORY"
+    "$uv_binary" venv --python "$python_version" "$VENV_DIRECTORY"
+fi
+
+observed_python_version="$(
+    "$venv_python" -c 'import platform; print(platform.python_version())'
+)"
+[[ "$observed_python_version" == "$python_version" ]] || \
+    die "$VENV_DIRECTORY uses Python $observed_python_version, expected $python_version; remove the venv explicitly before recreating"
+
+venv_base_prefix="$("$venv_python" -c 'import sys; print(sys.base_prefix)')"
+case "$venv_base_prefix/" in
+    "$UV_PYTHON_INSTALL_DIR/"*) ;;
+    *)
+        die "$VENV_DIRECTORY uses Python from $venv_base_prefix, outside the managed Python root $UV_PYTHON_INSTALL_DIR; remove the venv explicitly before recreating"
+        ;;
+esac
+
+echo "Installing pinned dependencies from requirements.txt"
+"$uv_binary" pip install \
+    --python "$venv_python" \
+    -r "$REPOSITORY_ROOT/requirements.txt"
+
+"$venv_python" - "$REPOSITORY_ROOT/requirements.txt" <<'PY'
+import importlib.metadata
+import pathlib
+import re
+import sys
+
+requirements_path = pathlib.Path(sys.argv[1])
+expected = {}
+for raw_line in requirements_path.read_text(encoding="utf-8").splitlines():
+    line = raw_line.partition("#")[0].strip()
+    if not line:
+        continue
+    match = re.fullmatch(r"([A-Za-z0-9_.-]+)\s*==\s*([^\s]+)", line)
+    if match is None:
+        raise SystemExit(f"unsupported non-exact requirement: {raw_line!r}")
+    expected[match.group(1)] = match.group(2)
+
+mismatches = []
+for distribution, expected_version in expected.items():
+    observed_version = importlib.metadata.version(distribution)
+    if observed_version != expected_version:
+        mismatches.append(
+            f"{distribution}: expected {expected_version}, found {observed_version}"
+        )
+if mismatches:
+    raise SystemExit("dependency version mismatch:\n" + "\n".join(mismatches))
+
+print("validated pinned dependencies:")
+for distribution in sorted(expected):
+    print(f"  {distribution}=={expected[distribution]}")
+PY
+
+"$venv_python" -c \
+    'import matplotlib, numpy, pygltflib, pymatching, pytest, scipy, sinter, stim; print("validated scientific imports")'
+
+runtime_record_tmp="$RUNTIME_RECORD.tmp.$$"
+trap 'rm -f -- "$runtime_record_tmp"' EXIT
+printf '%s\n' "$runtime_root" > "$runtime_record_tmp"
+mv -- "$runtime_record_tmp" "$RUNTIME_RECORD"
+trap - EXIT
+
+if ((run_tests)); then
+    echo "Running the complete test suite"
+    (cd -- "$REPOSITORY_ROOT" && "$venv_python" -m pytest -q)
+fi
+
+available_kib="$(df -Pk -- "$runtime_root" | awk 'NR == 2 {print $4}')"
+if [[ "$available_kib" =~ ^[0-9]+$ ]] && ((available_kib < 40 * 1024 * 1024)); then
+    warn "runtime filesystem has less than 40 GiB free; the B1 collection gate will reject it"
+fi
+
+available_cpus="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 0)"
+if [[ "$available_cpus" =~ ^[0-9]+$ ]] && ((available_cpus < 32)); then
+    warn "only $available_cpus CPUs are online; scientific collection requires 32 worker processes"
+fi
+
+available_memory_kib="$(awk '/^MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
+if [[ "$available_memory_kib" =~ ^[0-9]+$ ]] && \
+   ((available_memory_kib < 192 * 1024 * 1024)); then
+    warn "less than 192 GiB RAM is visible; the 32-worker B1 audit may exhaust memory"
+fi
+
+echo
+echo "GCP environment setup complete."
+echo "  repository:   $REPOSITORY_ROOT"
+echo "  commit:       $repository_commit"
+echo "  runtime root: $runtime_root"
+echo "  Python:       $python_version"
+echo "  uv:           $UV_BOOTSTRAP_VERSION"
+echo
+echo "Activate it in this shell with:"
+printf '  source %q\n' "$REPOSITORY_ROOT/gcp/activate_environment"
