@@ -154,6 +154,51 @@ and issue the same `run` command. The collector authenticates existing ledgers
 and schedules only missing batches. A replacement with a different frozen
 environment is rejected instead of silently mixing results.
 
+## Continue a Spot campaign on an On-Demand host
+
+Do not edit `campaign.json`, retag ledger experiment IDs, or relax the original
+Spot validator. Those operations would invalidate the seed derivation and make
+the operational provenance ambiguous. The dedicated continuation path instead
+keeps the original campaign and ledgers byte-for-byte unchanged and writes a
+separate sibling record:
+
+```text
+$YSC_AWS_RUNS_ROOT/fig8-paired-aws192/.RUN_ID.ondemand-continuation-v1.json
+```
+
+The On-Demand host must be the same `c8a.48xlarge` shape, region, availability
+zone, 2x96 CPU partition, software environment, kernel, CPU model, microcode,
+and source state. Reported total/per-node usable memory may differ, but the
+original 350/175 GiB safety minima remain mandatory. The record freezes the
+new instance and AMI IDs, both host descriptions, the continuation commit, and
+the hash of every ledger that existed at the transition.
+
+After copying the repository and runtime to the same canonical paths, pull the
+continuation commit and freeze the boundary once:
+
+```bash
+cd ~/yoked-surface-codes
+source aws/activate_environment
+./aws/run_fig8_paired_ondemand prepare --run-id p001-1m-aws-v1
+./aws/run_fig8_paired_ondemand status --run-id p001-1m-aws-v1
+```
+
+`prepare` performs validation and writes provenance but samples no shots. Run
+the continuation in `tmux`:
+
+```bash
+tmux new-session -s ysc-fig8-ondemand
+cd ~/yoked-surface-codes
+source aws/activate_environment
+./aws/run_fig8_paired_ondemand run --run-id p001-1m-aws-v1
+```
+
+The wrapper holds the same machine-wide 192-worker lock as the Spot launcher.
+The collector uses the original experiment ID, seed root, schedules, decoder,
+and atomic ledger installer, and therefore schedules only missing original
+batches. A changed baseline ledger, campaign manifest, host, continuation
+checkout, or source hash fails closed.
+
 ## Progress, memory, and completion
 
 The coordinator process can show low CPU while its 192 children are busy. Use
@@ -186,9 +231,10 @@ written under the campaign's `plots/` directory.
 
 ## Scope of the 192-worker exception
 
-This AWS launcher is the only workflow authorized to exceed 32 processes. It
-is fixed to the exact `c8a.48xlarge` host check and exactly two 96-worker
-pools. `gcp/run_fig8_paired`, `reproduce_fig8_1d`, the legacy gap collector,
-and the general ProMatch tools keep their existing 32-process ceiling. The
-AWS launcher is a parameterized characterization sweep, not permission to run
-other repository workloads with 192 workers.
+The AWS Spot launcher and its audited On-Demand continuation are the only
+workflows authorized to exceed 32 processes. They are fixed to the exact
+`c8a.48xlarge` host shape and exactly two 96-worker pools.
+`gcp/run_fig8_paired`, `reproduce_fig8_1d`, the legacy gap collector, and the
+general ProMatch tools keep their existing 32-process ceiling. These AWS paths
+are a parameterized characterization sweep, not permission to run other
+repository workloads with 192 workers.

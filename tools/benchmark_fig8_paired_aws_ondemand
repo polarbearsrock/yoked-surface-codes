@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""Prepare, resume, or inspect an AWS On-Demand Figure-8 continuation."""
+
+from __future__ import annotations
+
+# Set native thread limits before importing NumPy/PyMatching through the
+# scientific harness.
+import os
+
+for _name in (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+):
+    os.environ[_name] = "1"
+
+import argparse
+import json
+from pathlib import Path
+import sys
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+
+from yoked.decoding._fig8_paired_aws_ondemand_continuation import (  # noqa: E402
+    continuation_record_path,
+    continuation_status,
+    prepare_continuation,
+    run_continuation,
+)
+from yoked.decoding._fig8_paired_aws_sweep import REQUIRED_PROCESSES  # noqa: E402
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Audited On-Demand continuation of a frozen AWS Spot Figure-8 sweep"
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    prepare = commands.add_parser(
+        "prepare", help="freeze the Spot-to-On-Demand continuation boundary"
+    )
+    prepare.add_argument("--campaign", type=Path, required=True)
+
+    run = commands.add_parser(
+        "run", help="validate and collect only missing original campaign batches"
+    )
+    run.add_argument("--campaign", type=Path, required=True)
+    run.add_argument("--processes", type=int, required=True)
+
+    status = commands.add_parser(
+        "status", help="validate continuation provenance and report progress"
+    )
+    status.add_argument("--campaign", type=Path, required=True)
+    return parser
+
+
+def _compact(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        if args.command == "prepare":
+            record = prepare_continuation(args.campaign)
+            print(
+                _compact(
+                    {
+                        "campaign": str(args.campaign.absolute()),
+                        "record": str(continuation_record_path(args.campaign)),
+                        "continuation_id": record["continuation_id"],
+                        "experiment_id": record["campaign_experiment_id"],
+                        "baseline_completed_batches": record[
+                            "baseline_completed_batches"
+                        ],
+                        "baseline_completed_shots": record[
+                            "baseline_completed_shots"
+                        ],
+                        "missing_batches": record["missing_batches_at_prepare"],
+                        "ondemand_instance_id": record["ondemand_instance_id"],
+                    }
+                )
+            )
+            return 0
+        if args.command == "run":
+            if args.processes != REQUIRED_PROCESSES:
+                raise ValueError(
+                    "AWS On-Demand continuation requires exactly "
+                    f"{REQUIRED_PROCESSES} processes"
+                )
+            print(
+                _compact(
+                    run_continuation(
+                        args.campaign,
+                        processes=args.processes,
+                    )
+                )
+            )
+            return 0
+        print(_compact(continuation_status(args.campaign)))
+        return 0
+    except (ValueError, TypeError, RuntimeError, OSError) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

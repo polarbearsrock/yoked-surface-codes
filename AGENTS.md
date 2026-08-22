@@ -53,11 +53,15 @@ imports this file; keep the two in sync by editing only this one.
      to more than 32.
    - **AWS-only exception:** `aws/run_fig8_paired` may use exactly 192 worker
      processes only on a Spot `c8a.48xlarge` in `us-east-1` that passes
-     `tools/benchmark_fig8_paired_aws host-check`. Its fixed layout is two
-     96-worker pools, one per NUMA node, with one native numerical thread per
-     worker. Do not use 192 processes for any other command, do not alter the
-     2x96 layout, do not add an outer `numactl`, and do not run another
-     simulation concurrently. The GCP launcher remains exactly 32 workers.
+     `tools/benchmark_fig8_paired_aws host-check`. The separately audited
+     `aws/run_fig8_paired_ondemand` may use the same 192-worker layout only to
+     continue an existing frozen Spot campaign after it creates and validates
+     the immutable Spot-to-On-Demand continuation record; it cannot create a
+     campaign. Both paths use two 96-worker pools, one per NUMA node, with one
+     native numerical thread per worker. Do not use 192 processes for any
+     other command, do not alter the 2x96 layout, do not add an outer
+     `numactl`, and do not run another simulation concurrently. The GCP
+     launcher remains exactly 32 workers.
    Always export, before importing NumPy/PyMatching or launching workers:
    ```bash
    export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
@@ -69,9 +73,10 @@ imports this file; keep the two in sync by editing only this one.
    design) and must start from a clean worktree at a commit whose only change
    over the implementation HEAD is the frozen protocol JSON. Generic ProMatch
    runs use `--processes 32`; only the separately authenticated AWS paired
-   Figure-8b workflow uses the exact 192-process exception above. Untracked
-   files (including new notes) make the worktree dirty; commit or stash them
-   before a claim-bearing collection.
+   Figure-8b workflow, including its immutable On-Demand continuation path,
+   uses the exact 192-process exception above. Untracked files (including new
+   notes) make the worktree dirty; commit or stash them before a claim-bearing
+   collection.
 
 ## 3. Dependency management: `uv` + pinned `requirements.txt`
 
@@ -164,6 +169,7 @@ MAX_SHOTS=10000 PROCESSES=32 THREADS_PER_PROCESS=1 \
 | ProMatch paired smoke | `tools/benchmark_promatch_l1 smoke --out "$TMPDIR/promatch-smoke" --processes 32` |
 | ProMatch pilot/confirm/target/latency | see `REPRODUCING_FIG8_1D.md` §"Paired ProMatch experiment workflow"; always `--processes 32`, `MAX_ERRORS` unset |
 | AWS paired Figure-8b sweep | On the exact validated Spot `c8a.48xlarge` only: see `aws/README.md`; `aws/run_fig8_paired` owns the fixed 2x96 worker layout and keeps `MAX_ERRORS` unset. |
+| AWS On-Demand continuation | On an exact On-Demand `c8a.48xlarge`, use `aws/run_fig8_paired_ondemand prepare` once and then `run`; it preserves the original Spot campaign ID, schedules, seeds, and ledgers while freezing the lifecycle boundary separately. |
 | Legacy gap collection | `tools/collect_gap ... --processes 32` (never `auto`; legacy `step*`/`gap_step*` scripts also need GNU `parallel`, which is not installed here) |
 | Diagnose PU-vs-U0 disagreements | `tools/diagnose_promatch_l1 replay --input <collection dir> [--cell ID]` (bit-exact replay of retained regressions) and `tools/diagnose_promatch_l1 probe --protocol P.json --cell ID --shots N --seed S` or `probe --d D --patches N --rounds R --p P ...` (single process; read-only) |
 | Phase-A global-context oracle replay | The completed artifact is `out/promatch_l1_global_context_oracle_v1/replay/`. For regeneration from the implementation/config commit authenticated by the frozen manifest, pass a new empty directory under `$TMPDIR` to `tools/diagnose_promatch_l1 oracle-replay --config docs/PROMATCH_ORACLE_REPLAY_FROZEN_V1.json --out NEW_EMPTY_DIR` (single process, one native thread, retained shots only; no fresh sampling). |
