@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""Validate, create, run, or inspect an AWS 192-worker Figure-8 sweep."""
+
+from __future__ import annotations
+
+# These must be set before importing NumPy/PyMatching through the harness.
+# ruff: noqa: E402
+import os
+
+for _name in (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+):
+    os.environ[_name] = "1"
+
+import argparse
+import json
+from pathlib import Path
+import sys
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+
+from yoked.decoding._fig8_paired_aws_sweep import (
+    REQUIRED_PROCESSES,
+    campaign_status,
+    create_campaign,
+    run_campaign,
+    validate_aws_host,
+)
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="AWS c8a.48xlarge paired U0-versus-PU Figure-8b sweep"
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("host-check", help="fail unless this is the supported Spot host")
+
+    create = commands.add_parser("create", help="freeze a new 16-cell AWS campaign")
+    create.add_argument("--out", type=Path, required=True)
+    create.add_argument("--p", type=float, required=True)
+    create.add_argument("--shots-per-cell", type=int, required=True)
+
+    run = commands.add_parser("run", help="collect or resume with two 96-worker pools")
+    run.add_argument("--campaign", type=Path, required=True)
+    run.add_argument("--processes", type=int, required=True)
+
+    status = commands.add_parser("status", help="validate and report campaign progress")
+    status.add_argument("--campaign", type=Path, required=True)
+    return parser
+
+
+def _compact(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        if args.command == "host-check":
+            print(_compact(validate_aws_host()))
+            return 0
+        if args.command == "create":
+            campaign = create_campaign(
+                args.out, p=args.p, shots_per_cell=args.shots_per_cell
+            )
+            print(
+                _compact(
+                    {
+                        "campaign": str(args.out.absolute()),
+                        "experiment_id": campaign["experiment_id"],
+                        "cells": len(campaign["cells"]),
+                        "shots_per_cell": campaign["shots_per_cell"],
+                        "processes": campaign["processes"],
+                        "worker_layout": campaign["worker_layout"],
+                    }
+                )
+            )
+            return 0
+        if args.command == "run":
+            if args.processes != REQUIRED_PROCESSES:
+                raise ValueError(
+                    f"AWS Figure-8 campaign requires exactly {REQUIRED_PROCESSES} processes"
+                )
+            print(_compact(run_campaign(args.campaign, processes=args.processes)))
+            return 0
+        print(_compact(campaign_status(args.campaign)))
+        return 0
+    except (ValueError, TypeError, RuntimeError, OSError) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

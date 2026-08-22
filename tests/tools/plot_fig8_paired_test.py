@@ -12,6 +12,7 @@ import pathlib
 import runpy
 import subprocess
 import sys
+import types
 
 import pytest
 import sinter
@@ -204,6 +205,7 @@ def _run(
     tmp_path: pathlib.Path,
     *,
     runtime_validator=None,
+    profile_resolver=None,
 ) -> subprocess.CompletedProcess:
     os.environ["MPLBACKEND"] = "Agg"
     os.environ["MPLCONFIGDIR"] = str(tmp_path / "mplconfig")
@@ -211,6 +213,8 @@ def _run(
     namespace["main"].__globals__["validate_analysis_runtime"] = runtime_validator or (
         lambda _: None
     )
+    if profile_resolver is not None:
+        namespace["main"].__globals__["_campaign_profile"] = profile_resolver
     stdout = io.StringIO()
     stderr = io.StringIO()
     previous_argv = sys.argv
@@ -226,6 +230,21 @@ def _run(
         stdout=stdout.getvalue(),
         stderr=stderr.getvalue(),
     )
+
+
+def _rewrite_campaign_identity(
+    campaign_dir: pathlib.Path, *, schema: str, kind: str, processes: int
+) -> dict:
+    campaign_path = campaign_dir / "campaign.json"
+    campaign = json.loads(campaign_path.read_text())
+    campaign.update(schema=schema, kind=kind, processes=processes)
+    campaign["experiment_id"] = _experiment_id(campaign)
+    campaign_path.write_text(json.dumps(campaign, sort_keys=True, indent=2) + "\n")
+    for ledger_path in (campaign_dir / "collection" / "batches").glob("*/*.json"):
+        ledger = json.loads(ledger_path.read_text())
+        ledger["experiment_id"] = campaign["experiment_id"]
+        ledger_path.write_text(json.dumps(ledger, sort_keys=True, indent=2) + "\n")
+    return campaign
 
 
 def test_writes_plot_and_paired_ler_table(tmp_path: pathlib.Path) -> None:
@@ -267,6 +286,92 @@ def test_writes_plot_and_paired_ler_table(tmp_path: pathlib.Path) -> None:
     assert float(row["u0_ler_per_patch_round_low"]) == expected.low
     assert float(row["u0_ler_per_patch_round_best"]) == expected.best
     assert float(row["u0_ler_per_patch_round_high"]) == expected.high
+
+
+def test_aws_profile_api_is_selected_lazily(monkeypatch: pytest.MonkeyPatch) -> None:
+    namespace = runpy.run_path(str(SCRIPT))
+    validator = lambda _campaign: None
+    loader = lambda _directory, require_complete: ({}, ())
+    fake_module = types.SimpleNamespace(
+        CAMPAIGN_SCHEMA="synthetic.aws-campaign-v1",
+        CAMPAIGN_KIND="synthetic-aws-paired-sweep",
+        REQUIRED_PROCESSES=192,
+        validate_analysis_environment=validator,
+        load_validated_collection=loader,
+    )
+    importlib_module = namespace["_aws_campaign_profile"].__globals__["importlib"]
+    monkeypatch.setattr(
+        importlib_module,
+        "import_module",
+        lambda name: fake_module
+        if name == "yoked.decoding._fig8_paired_aws_sweep"
+        else pytest.fail(f"unexpected import {name}"),
+    )
+
+    profile = namespace["_campaign_profile"](
+        {"schema": "synthetic.aws-campaign-v1"}
+    )
+
+    assert profile.schema == "synthetic.aws-campaign-v1"
+    assert profile.kind == "synthetic-aws-paired-sweep"
+    assert profile.processes == 192
+    assert profile.validate_analysis_runtime is validator
+    assert profile.load_validated_collection is loader
+
+
+def test_real_aws_campaign_module_exposes_plotting_profile() -> None:
+    from yoked.decoding import _fig8_paired_aws_sweep as aws_sweep
+
+    namespace = runpy.run_path(str(SCRIPT))
+    profile = namespace["_campaign_profile"](
+        {"schema": aws_sweep.CAMPAIGN_SCHEMA}
+    )
+
+    assert profile.schema == aws_sweep.CAMPAIGN_SCHEMA
+    assert profile.kind == aws_sweep.CAMPAIGN_KIND
+    assert profile.processes == aws_sweep.REQUIRED_PROCESSES == 192
+    assert profile.validate_analysis_runtime is aws_sweep.validate_analysis_runtime
+    assert profile.load_validated_collection is aws_sweep.load_validated_collection
+
+
+def test_aws_profile_can_write_the_same_paired_plot(tmp_path: pathlib.Path) -> None:
+    campaign_dir = _write_campaign(tmp_path)
+    schema = "synthetic.aws-campaign-v1"
+    kind = "synthetic-aws-paired-sweep"
+    campaign = _rewrite_campaign_identity(
+        campaign_dir, schema=schema, kind=kind, processes=192
+    )
+    ledgers = tuple(
+        json.loads(path.read_text())
+        for path in sorted(
+            (campaign_dir / "collection" / "batches").glob("*/*.json")
+        )
+    )
+    validated: list[str] = []
+    namespace = runpy.run_path(str(SCRIPT))
+    profile = namespace["CampaignProfile"](
+        schema=schema,
+        kind=kind,
+        processes=192,
+        validate_analysis_runtime=lambda value: validated.append(
+            value["experiment_id"]
+        ),
+        load_validated_collection=lambda _directory, require_complete: (
+            campaign,
+            ledgers,
+        ),
+    )
+
+    proc = _run(
+        campaign_dir,
+        tmp_path,
+        profile_resolver=lambda _campaign: profile,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert validated == [campaign["experiment_id"]]
+    assert (campaign_dir / "plots" / "fig8b_paired_results.csv").is_file()
+    assert (campaign_dir / "plots" / "fig8b_paired_ler_p0.001.png").is_file()
 
 
 def test_non_paper_probability_omits_paper_fit_and_writes_plot(

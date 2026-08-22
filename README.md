@@ -18,6 +18,7 @@ frozen protocol.
 | Workflow | Current role | Entry point |
 | --- | --- | --- |
 | Published Figure 8 | Replot released data or run fresh 1D-yoked validation samples. | [`REPRODUCING_FIG8_1D.md`](REPRODUCING_FIG8_1D.md) |
+| Paired Figure-8b cloud sweep | Run the same U0/PU paired shots on Google Cloud at 32 workers or on the exact AWS c8a.48xlarge 2x96 layout. | [`gcp/README.md`](gcp/README.md) / [`aws/README.md`](aws/README.md) |
 | L1 ProMatch V3 pilot | Completed diagnostic comparison. The unsigned selector chose `d=7, p=0.002`, but the unblinded window-local predecoder was less accurate in every pilot cell, so no confirmatory run followed. | [`docs/PROMATCH_IMPLEMENTATION_PLAN.md`](docs/PROMATCH_IMPLEMENTATION_PLAN.md) |
 | Global-context oracle replay | Completed Phase-A diagnosis over retained V3 shots; it preserved the input corpus and performed no new sampling. | [`experiments/PROMATCH_L1_GLOBAL_CONTEXT_ORACLE.md`](experiments/PROMATCH_L1_GLOBAL_CONTEXT_ORACLE.md) |
 | B1 policy audit | The non-claim-bearing 20,000-shot V2 corpus was collected, analyzed, expanded, and finalized on the experiment workstation. | [`experiments/PROMATCH_L1_POLICY_AUDIT_20K.md`](experiments/PROMATCH_L1_POLICY_AUDIT_20K.md) |
@@ -52,6 +53,11 @@ For a fresh Google Cloud VM, [`gcp/README.md`](gcp/README.md) provides a
 one-command environment bootstrap, a sourceable activation helper, and the
 parameterized paired Figure-8b launcher. It keeps cloud scratch data and
 experiment outputs outside the Git checkout.
+
+For the dedicated 192-core Spot experiment, [`aws/README.md`](aws/README.md)
+provides the fail-closed `c8a.48xlarge` setup, two-pool NUMA launcher, resume
+procedure, and EBS durability checks. That path is the only exception to the
+repository's normal 32-process ceiling; it does not change the GCP workflow.
 
 The `PYTHONPATH` export makes the non-packaged `gen` and `yoked` source trees
 importable in an interactive Python session. Tests add `src/` through

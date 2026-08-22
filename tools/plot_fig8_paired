@@ -6,13 +6,14 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import importlib
 import json
 import math
 import pathlib
 import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 import matplotlib
 
@@ -26,11 +27,92 @@ from matplotlib import pyplot as plt
 _REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
 
+from yoked.decoding._artifact_io import load_json_strict  # noqa: E402
 from yoked.decoding._fig8_paired_sweep import (  # noqa: E402
-    load_campaign,
-    load_validated_collection,
-    validate_analysis_runtime,
+    CAMPAIGN_KIND as LOCAL_CAMPAIGN_KIND,
+    CAMPAIGN_SCHEMA as LOCAL_CAMPAIGN_SCHEMA,
+    REQUIRED_PROCESSES as LOCAL_REQUIRED_PROCESSES,
+    load_validated_collection as load_local_validated_collection,
+    validate_analysis_runtime as validate_local_analysis_runtime,
 )
+
+
+_AWS_SWEEP_MODULE = "yoked.decoding._fig8_paired_aws_sweep"
+
+# Backwards-compatible names retained for callers/tests that inject a local
+# analysis validator.  Profile construction reads these globals at call time.
+validate_analysis_runtime = validate_local_analysis_runtime
+load_validated_collection = load_local_validated_collection
+
+
+@dataclass(frozen=True)
+class CampaignProfile:
+    """Schema-specific validation hooks for one paired-sweep execution path."""
+
+    schema: str
+    kind: str
+    processes: int
+    validate_analysis_runtime: Callable[[Mapping[str, Any]], None]
+    load_validated_collection: Callable[
+        ..., tuple[dict[str, Any], tuple[dict[str, Any], ...]]
+    ]
+
+
+def _local_campaign_profile() -> CampaignProfile:
+    return CampaignProfile(
+        schema=LOCAL_CAMPAIGN_SCHEMA,
+        kind=LOCAL_CAMPAIGN_KIND,
+        processes=LOCAL_REQUIRED_PROCESSES,
+        validate_analysis_runtime=validate_analysis_runtime,
+        load_validated_collection=load_validated_collection,
+    )
+
+
+def _aws_campaign_profile() -> CampaignProfile:
+    """Load the AWS-only profile lazily so the legacy workflow stays standalone."""
+
+    try:
+        module = importlib.import_module(_AWS_SWEEP_MODULE)
+    except ImportError as ex:
+        raise ValueError(
+            "this checkout cannot analyze AWS paired campaigns because its "
+            "AWS sweep module is unavailable"
+        ) from ex
+    validator = getattr(module, "validate_analysis_runtime", None)
+    if validator is None:
+        validator = getattr(module, "validate_analysis_environment", None)
+    required = {
+        "CAMPAIGN_SCHEMA": getattr(module, "CAMPAIGN_SCHEMA", None),
+        "CAMPAIGN_KIND": getattr(module, "CAMPAIGN_KIND", None),
+        "REQUIRED_PROCESSES": getattr(module, "REQUIRED_PROCESSES", None),
+        "load_validated_collection": getattr(
+            module, "load_validated_collection", None
+        ),
+        "analysis validator": validator,
+    }
+    missing = sorted(name for name, value in required.items() if value is None)
+    if missing:
+        raise ValueError(
+            "AWS paired sweep module is missing plotting API: " + ", ".join(missing)
+        )
+    return CampaignProfile(
+        schema=required["CAMPAIGN_SCHEMA"],
+        kind=required["CAMPAIGN_KIND"],
+        processes=required["REQUIRED_PROCESSES"],
+        validate_analysis_runtime=required["analysis validator"],
+        load_validated_collection=required["load_validated_collection"],
+    )
+
+
+def _campaign_profile(campaign: Mapping[str, Any]) -> CampaignProfile:
+    schema = campaign.get("schema")
+    local = _local_campaign_profile()
+    if schema == local.schema:
+        return local
+    aws = _aws_campaign_profile()
+    if schema == aws.schema:
+        return aws
+    raise ValueError(f"unsupported paired Figure-8 campaign schema {schema!r}")
 
 
 @dataclass(frozen=True)
@@ -142,15 +224,18 @@ def _declared_cells(campaign: Mapping[str, Any]) -> list[DeclaredCell]:
     return cells
 
 
-def _validate_campaign_identity(campaign: Mapping[str, Any]) -> str:
+def _validate_campaign_identity(
+    campaign: Mapping[str, Any], *, profile: CampaignProfile | None = None
+) -> str:
+    profile = _campaign_profile(campaign) if profile is None else profile
     required_constants = {
-        "schema": "yoked.fig8-paired-sweep-campaign-v1",
-        "kind": "yoked-fig8b-paired-fixed-shot-sweep",
+        "schema": profile.schema,
+        "kind": profile.kind,
         "status": "FROZEN",
         "frozen": True,
         "claim_bearing": False,
         "phase": "fig8-sweep",
-        "processes": 32,
+        "processes": profile.processes,
         "threads_per_process": 1,
         "sample_batch_size": 1000,
     }
@@ -198,9 +283,12 @@ def _piece_fit(*, shots: int, failures: int, cell: DeclaredCell) -> sinter.Fit:
 
 
 def _load_results(
-    campaign: Mapping[str, Any], ledgers: Sequence[Mapping[str, Any]]
+    campaign: Mapping[str, Any],
+    ledgers: Sequence[Mapping[str, Any]],
+    *,
+    profile: CampaignProfile | None = None,
 ) -> tuple[str, list[PairedResult]]:
-    campaign_id = _validate_campaign_identity(campaign)
+    campaign_id = _validate_campaign_identity(campaign, profile=profile)
     cells = _declared_cells(campaign)
     try:
         campaign_p = float(campaign["p"])
@@ -475,12 +563,18 @@ def main() -> int:
 
     try:
         campaign_directory = args.campaign.resolve()
-        campaign = load_campaign(campaign_directory)
-        validate_analysis_runtime(campaign)
-        campaign, ledgers = load_validated_collection(
+        campaign_path = campaign_directory / "campaign.json"
+        unvalidated_campaign = load_json_strict(
+            campaign_path, description="paired Figure-8 campaign"
+        )
+        profile = _campaign_profile(unvalidated_campaign)
+        profile.validate_analysis_runtime(unvalidated_campaign)
+        campaign, ledgers = profile.load_validated_collection(
             campaign_directory, require_complete=True
         )
-        experiment_id, results = _load_results(campaign, ledgers)
+        experiment_id, results = _load_results(
+            campaign, ledgers, profile=profile
+        )
         physical_ps = {result.cell.p for result in results}
         if len(physical_ps) != 1:
             raise ValueError(
