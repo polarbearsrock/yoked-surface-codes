@@ -5,8 +5,8 @@ used by the paper
 [**“Yoked surface codes”**](https://doi.org/10.1038/s41467-025-59714-1). It
 extends the
 [original paper repository](https://github.com/Strilanc/yoked-surface-codes)
-with a reproducible Figure 8 workflow and a sequence of L1 ProMatch-style
-predecoder experiments.
+with a reproducible Figure 8 workflow, a sequence of L1 ProMatch-style
+predecoder experiments, and versioned Pinball-style decoder integrations.
 
 The experiment code is deliberately conservative: sampled data, decoder
 decisions, analysis, and provenance are kept separate, and claim-bearing runs
@@ -20,6 +20,8 @@ frozen protocol.
 | Published Figure 8 | Replot released data or run fresh 1D-yoked validation samples. | [`REPRODUCING_FIG8_1D.md`](REPRODUCING_FIG8_1D.md) |
 | Paired Figure-8b cloud sweep | Run the same U0/PU paired shots on Google Cloud at 32 workers or on the exact AWS c8a.48xlarge 2x96 layout. | [`gcp/README.md`](gcp/README.md) / [`aws/README.md`](aws/README.md) |
 | L1 ProMatch V3 pilot | Completed diagnostic comparison. The unsigned selector chose `d=7, p=0.002`, but the unblinded window-local predecoder was less accurate in every pilot cell, so no confirmatory run followed. | [`docs/PROMATCH_IMPLEMENTATION_PLAN.md`](docs/PROMATCH_IMPLEMENTATION_PLAN.md) |
+| Pinball-style decoder | Frozen exploratory V1 plus a stricter V2 with a pinned physical reference kernel, mapped Pauli corrections, signed CZ geometry, both yoke/true `E` boundaries, and domain-atomic rollback. Both remain non-claim-bearing. | [`docs/PINBALL_INTEGRATION_PLAN.md`](docs/PINBALL_INTEGRATION_PLAN.md) |
+| Native Pinball/ProMatch cloud32 sweep | Same-shot U0, native ProMatch, and native Pinball V2 comparison over the 16-cell Figure-8 grid at fixed `p=0.002`; supported GCP and AWS launchers are capped at 32 workers. | [`experiments/PINBALL_PROMATCH_FIG8_PAIRED_32.md`](experiments/PINBALL_PROMATCH_FIG8_PAIRED_32.md) |
 | Global-context oracle replay | Completed Phase-A diagnosis over retained V3 shots; it preserved the input corpus and performed no new sampling. | [`experiments/PROMATCH_L1_GLOBAL_CONTEXT_ORACLE.md`](experiments/PROMATCH_L1_GLOBAL_CONTEXT_ORACLE.md) |
 | B1 policy audit | The non-claim-bearing 20,000-shot V2 corpus was collected, analyzed, expanded, and finalized on the experiment workstation. | [`experiments/PROMATCH_L1_POLICY_AUDIT_20K.md`](experiments/PROMATCH_L1_POLICY_AUDIT_20K.md) |
 
@@ -50,9 +52,9 @@ python -m pytest -q
 ```
 
 For a fresh Google Cloud VM, [`gcp/README.md`](gcp/README.md) provides a
-one-command environment bootstrap, a sourceable activation helper, and the
-parameterized paired Figure-8b launcher. It keeps cloud scratch data and
-experiment outputs outside the Git checkout.
+one-command environment bootstrap, a sourceable activation helper, and both
+the two-arm and native Pinball/ProMatch paired Figure-8b launchers. It keeps
+cloud scratch data and experiment outputs outside the Git checkout.
 
 For the dedicated 192-core Spot experiment, [`aws/README.md`](aws/README.md)
 provides the fail-closed `c8a.48xlarge` setup, two-pool NUMA launcher, resume
@@ -71,8 +73,10 @@ paths, the 32-process ceiling, and the one-native-thread-per-process policy.
 
 - `src/gen/` — reusable circuit, geometry, flow, and visualization utilities.
 - `src/yoked/` — yoked-memory circuit construction and gap-collection support.
-- `src/yoked/decoding/` — ProMatch layout, graph, predecoder, adapters, paired
-  experiment harness, statistics, and latency analysis.
+- `src/yoked/decoding/` — shared layout/graph infrastructure, ProMatch and
+  versioned Pinball-style predecoders/adapters, the exact pinned Pinball
+  reference kernel, the paired ProMatch experiment harness, statistics, and
+  latency analysis.
 - `src/yoked/decoding/oracle/` — full-graph oracle, retained-shot replay, and
   the B1 policy-audit pipeline.
 - `tests/` — the test tree, mirroring the source packages.

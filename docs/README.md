@@ -11,6 +11,9 @@ The files in this directory serve two different purposes:
 - [`CODEBASE_GUIDE.md`](CODEBASE_GUIDE.md) — module map and execution flows.
 - [`PROMATCH_IMPLEMENTATION_PLAN.md`](PROMATCH_IMPLEMENTATION_PLAN.md) — L1
   ProMatch algorithm, experiment design, acceptance gates, and verification.
+- [`PINBALL_INTEGRATION_PLAN.md`](PINBALL_INTEGRATION_PLAN.md) — pinned Pinball
+  reference kernel, frozen V1, stricter domain-atomic YSC V2, adaptation
+  semantics, threats, and validation gates.
 - [`../REPRODUCING_FIG8_1D.md`](../REPRODUCING_FIG8_1D.md) — commands for Figure
   8 and the paired ProMatch workflow.
 - [`../experiments/README.md`](../experiments/README.md) — current experiment

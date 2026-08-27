@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Create, collect, or inspect the paired Pinball/ProMatch Figure-8 sweep."""
+
+from __future__ import annotations
+
+# These limits must be applied before NumPy and PyMatching are imported by the
+# campaign module.
+import os
+
+for _name in (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+):
+    os.environ[_name] = "1"
+
+import argparse  # noqa: E402
+import json  # noqa: E402
+from pathlib import Path  # noqa: E402
+import sys  # noqa: E402
+
+_REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPOSITORY_ROOT / "src"))
+
+from yoked.decoding._pinball_promatch_fig8_sweep import (  # noqa: E402
+    FIXED_P,
+    REQUIRED_PROCESSES,
+    campaign_status,
+    create_campaign,
+    run_campaign,
+)
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description=(
+            "fixed-p=0.002, three-arm paired U0/ProMatch/Pinball Figure-8 sweep"
+        )
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    create = commands.add_parser(
+        "create", help="freeze a fresh 16-cell campaign without sampling"
+    )
+    create.add_argument("--out", type=Path, required=True)
+    create.add_argument("--shots-per-cell", type=int, required=True)
+
+    run = commands.add_parser(
+        "run", help="validate and collect only missing immutable batches"
+    )
+    run.add_argument("--campaign", type=Path, required=True)
+    run.add_argument("--processes", type=int, required=True)
+
+    status = commands.add_parser(
+        "status", help="validate the campaign and report collection progress"
+    )
+    status.add_argument("--campaign", type=Path, required=True)
+    return parser
+
+
+def _compact(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        if args.command == "create":
+            campaign = create_campaign(
+                args.out,
+                shots_per_cell=args.shots_per_cell,
+            )
+            print(
+                _compact(
+                    {
+                        "campaign": str(args.out.absolute()),
+                        "experiment_id": campaign["experiment_id"],
+                        "p": campaign["p"],
+                        "cells": len(campaign["cells"]),
+                        "shots_per_cell": campaign["shots_per_cell"],
+                        "processes": campaign["processes"],
+                    }
+                )
+            )
+            return 0
+        if args.command == "run":
+            if args.processes != REQUIRED_PROCESSES:
+                raise ValueError(
+                    "paired Pinball/ProMatch collection requires exactly "
+                    f"{REQUIRED_PROCESSES} processes"
+                )
+            print(_compact(run_campaign(args.campaign, processes=args.processes)))
+            return 0
+        status = campaign_status(args.campaign)
+        if status.get("p") not in (None, FIXED_P):
+            raise ValueError("status returned a campaign with the wrong fixed p")
+        print(_compact(status))
+        return 0
+    except (ValueError, TypeError, RuntimeError, OSError) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

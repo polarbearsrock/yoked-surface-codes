@@ -1,0 +1,235 @@
+#!/usr/bin/env bash
+
+# Create, collect, inspect, or plot the fixed-p paired Pinball/ProMatch
+# Figure-8 campaign on the portable 32-worker GCP runtime.
+
+set -euo pipefail
+
+readonly REPOSITORY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+readonly ACTIVATION_SCRIPT="$REPOSITORY_ROOT/gcp/activate_environment"
+readonly BENCHMARK_TOOL="$REPOSITORY_ROOT/tools/benchmark_pinball_promatch_fig8"
+readonly PLOT_TOOL="$REPOSITORY_ROOT/tools/plot_pinball_promatch_fig8"
+readonly WORKER_PROCESSES=32
+
+
+print_usage() {
+    cat <<'EOF'
+Usage:
+  ./gcp/run_pinball_promatch_fig8 create --run-id ID --shots-per-cell N
+  ./gcp/run_pinball_promatch_fig8 run    --run-id ID
+  ./gcp/run_pinball_promatch_fig8 status --run-id ID
+  ./gcp/run_pinball_promatch_fig8 plot   --run-id ID [--overwrite]
+
+The campaign is fixed at p=0.002. Its directory is always:
+  $YSC_GCP_RUNS_ROOT/pinball-promatch-fig8-gcp32/ID
+
+`create` requires a fresh ID and samples no shots. `run` is resumable and
+holds the runtime-wide 32-worker collection lock. `status` and `plot` do not
+acquire that lock.
+EOF
+}
+
+
+die() {
+    echo "error: $*" >&2
+    exit 2
+}
+
+
+require_value() {
+    local option=$1
+    local remaining=$2
+    (( remaining >= 2 )) || die "$option requires a value"
+}
+
+
+require_canonical_directory() {
+    local name=$1
+    local path=$2
+    local physical
+
+    [[ "$path" == /* ]] || die "$name must be an absolute path"
+    [[ -d "$path" ]] || die "$name is not a directory: $path"
+    [[ ! -L "$path" ]] || die "$name may not be a symbolic link: $path"
+    physical="$(cd -- "$path" && pwd -P)"
+    [[ "$physical" == "$path" ]] || \
+        die "$name must not traverse symbolic links: $path"
+}
+
+
+validate_run_id() {
+    local value=$1
+    [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$ ]] || \
+        die "run ID must match [A-Za-z0-9][A-Za-z0-9_-]{0,63}"
+}
+
+
+validate_campaign_parent() {
+    local parent=$1
+    local physical
+
+    [[ -d "$parent" ]] || die "campaign parent does not exist: $parent"
+    [[ ! -L "$parent" ]] || die "campaign parent may not be a symbolic link: $parent"
+    physical="$(cd -- "$parent" && pwd -P)"
+    [[ "$physical" == "$parent" ]] || \
+        die "campaign parent must not traverse symbolic links: $parent"
+}
+
+
+validate_existing_campaign() {
+    local campaign=$1
+
+    [[ ! -L "$campaign" ]] || die "campaign may not be a symbolic link"
+    [[ -d "$campaign" ]] || die "campaign does not exist: $campaign"
+    [[ "$(cd -- "$campaign" && pwd -P)" == "$campaign" ]] || \
+        die "campaign must not traverse symbolic links: $campaign"
+}
+
+
+if (( $# == 1 )) && [[ $1 == -h || $1 == --help ]]; then
+    print_usage
+    exit 0
+fi
+(( $# >= 1 )) || {
+    print_usage >&2
+    exit 2
+}
+
+action=$1
+shift
+case "$action" in
+    create|run|status|plot) ;;
+    *)
+        print_usage >&2
+        die "unknown action '$action'"
+        ;;
+esac
+
+run_id=""
+shots_per_cell=""
+seen_run_id=0
+seen_shots=0
+overwrite=0
+while (($#)); do
+    case "$1" in
+        --run-id)
+            require_value "$1" "$#"
+            (( seen_run_id == 0 )) || die "--run-id may be specified only once"
+            run_id=$2
+            seen_run_id=1
+            shift 2
+            ;;
+        --shots-per-cell)
+            require_value "$1" "$#"
+            (( seen_shots == 0 )) || \
+                die "--shots-per-cell may be specified only once"
+            shots_per_cell=$2
+            seen_shots=1
+            shift 2
+            ;;
+        --overwrite)
+            (( overwrite == 0 )) || die "--overwrite may be specified only once"
+            overwrite=1
+            shift
+            ;;
+        -h|--help)
+            print_usage
+            exit 0
+            ;;
+        *)
+            die "unknown argument '$1'; use --help for usage"
+            ;;
+    esac
+done
+
+(( seen_run_id == 1 )) || die "$action requires --run-id"
+validate_run_id "$run_id"
+if [[ "$action" == create ]]; then
+    (( seen_shots == 1 )) || die "create requires --shots-per-cell"
+    (( overwrite == 0 )) || die "create does not accept --overwrite"
+else
+    (( seen_shots == 0 )) || die "$action accepts only --run-id"
+    if [[ "$action" != plot ]]; then
+        (( overwrite == 0 )) || die "$action does not accept --overwrite"
+    fi
+fi
+
+[[ -f "$ACTIVATION_SCRIPT" ]] || die "missing activation script: $ACTIVATION_SCRIPT"
+# shellcheck disable=SC1090
+source "$ACTIVATION_SCRIPT"
+
+[[ ! -v MAX_ERRORS ]] || die "MAX_ERRORS must be unset for paired collection"
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export BLIS_NUM_THREADS=1
+export PROCESSES=$WORKER_PROCESSES
+export THREADS_PER_PROCESS=1
+unset MAX_ERRORS
+
+[[ -n ${YSC_GCP_RUNTIME_ROOT:-} ]] || \
+    die "activation did not set YSC_GCP_RUNTIME_ROOT"
+[[ -n ${YSC_GCP_RUNS_ROOT:-} ]] || \
+    die "activation did not set YSC_GCP_RUNS_ROOT"
+require_canonical_directory YSC_GCP_RUNTIME_ROOT "$YSC_GCP_RUNTIME_ROOT"
+require_canonical_directory YSC_GCP_RUNS_ROOT "$YSC_GCP_RUNS_ROOT"
+
+campaign_parent="$YSC_GCP_RUNS_ROOT/pinball-promatch-fig8-gcp32"
+campaign="$campaign_parent/$run_id"
+
+if [[ "$action" == create ]]; then
+    [[ -x "$BENCHMARK_TOOL" ]] || die "missing executable: $BENCHMARK_TOOL"
+    if [[ -e "$campaign_parent" || -L "$campaign_parent" ]]; then
+        validate_campaign_parent "$campaign_parent"
+    else
+        mkdir -- "$campaign_parent"
+        validate_campaign_parent "$campaign_parent"
+    fi
+    [[ ! -e "$campaign" && ! -L "$campaign" ]] || \
+        die "create requires a fresh run ID; campaign already exists: $campaign"
+    "$BENCHMARK_TOOL" create \
+        --out "$campaign" \
+        --shots-per-cell "$shots_per_cell"
+    exit $?
+fi
+
+validate_campaign_parent "$campaign_parent"
+validate_existing_campaign "$campaign"
+
+case "$action" in
+    run)
+        [[ -x "$BENCHMARK_TOOL" ]] || die "missing executable: $BENCHMARK_TOOL"
+        command -v flock >/dev/null 2>&1 || die "required command 'flock' was not found"
+
+        lock_directory="$YSC_GCP_RUNTIME_ROOT/locks"
+        if [[ -e "$lock_directory" || -L "$lock_directory" ]]; then
+            require_canonical_directory lock_directory "$lock_directory"
+        else
+            mkdir -- "$lock_directory"
+            require_canonical_directory lock_directory "$lock_directory"
+        fi
+        lock_path="$lock_directory/collection-32.lock"
+        [[ ! -L "$lock_path" ]] || die "collection lock may not be a symbolic link"
+        exec {lock_fd}>"$lock_path"
+        flock -n "$lock_fd" || \
+            die "another 32-worker collection is already running"
+
+        "$BENCHMARK_TOOL" run \
+            --campaign "$campaign" \
+            --processes "$WORKER_PROCESSES"
+        ;;
+    status)
+        [[ -x "$BENCHMARK_TOOL" ]] || die "missing executable: $BENCHMARK_TOOL"
+        "$BENCHMARK_TOOL" status --campaign "$campaign"
+        ;;
+    plot)
+        [[ -x "$PLOT_TOOL" ]] || die "missing executable: $PLOT_TOOL"
+        plot_args=(--campaign "$campaign")
+        if (( overwrite == 1 )); then
+            plot_args+=(--overwrite)
+        fi
+        "$PLOT_TOOL" "${plot_args[@]}"
+        ;;
+esac

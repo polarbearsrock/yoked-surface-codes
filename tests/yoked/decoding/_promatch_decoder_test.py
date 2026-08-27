@@ -280,16 +280,25 @@ def test_identity_wrapper_empty_batch_shape() -> None:
     assert result.shape == (0, (dem.num_observables + 7) // 8)
 
 
-def test_custom_decoder_names_are_frozen() -> None:
+def test_custom_decoder_names_keep_frozen_promatch_entries() -> None:
     assert set(custom_decoders()) == {
         "promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching",
         "promatch-l1-v1-windowd-hw10-stages1234-parityboundary-zeroframe-pymatching",
         "promatch-l1-v1-fullhistory-hw10-stages1234-noboundary-zeroframe-pymatching",
         "pymatching-u0-wrap-v1-windowd",
+        "pinball-style-v1-fullhistory-nine-stage-wholeshotrollback-pymatching",
+        "pinball-ysc-v2-cz-fullhistory-nine-stage-domainatomic-yokeedge-pymatching",
     }
 
 
-def test_decoder_factories_pickle_and_primary_factory_decodes_under_spawn() -> None:
+@pytest.mark.parametrize(
+    "name",
+    [
+        "promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching",
+        "pinball-ysc-v2-cz-fullhistory-nine-stage-domainatomic-yokeedge-pymatching",
+    ],
+)
+def test_decoder_factories_pickle_and_decode_under_spawn(name) -> None:
     factories = custom_decoders()
     round_tripped = pickle.loads(pickle.dumps(factories))
     assert set(round_tripped) == set(factories)
@@ -304,7 +313,6 @@ def test_decoder_factories_pickle_and_primary_factory_decodes_under_spawn() -> N
         bit_packed=True,
         separate_observables=True,
     )
-    name = "promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching"
     decoder = round_tripped[name]
     expected = decoder.compile_decoder_for_dem(dem=dem).decode_shots_bit_packed(
         bit_packed_detection_event_data=dets

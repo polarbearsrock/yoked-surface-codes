@@ -49,6 +49,10 @@ imports this file; keep the two in sync by editing only this one.
      means `min(cpu_count, 32)`. Never pass more than 32.
    - Direct `sinter collect`: pass `--processes 32` and export the thread
      variables below first.
+   - Native Pinball/ProMatch cloud sweep: both
+     `gcp/run_pinball_promatch_fig8` and `aws/run_pinball_promatch_fig8` use
+     exactly 32 workers and one native thread per worker. The GCP launcher
+     shares `collection-32.lock` with the older GCP collector.
    - Do not run two collection campaigns at once if their process counts sum
      to more than 32.
    - **AWS-only exception:** `aws/run_fig8_paired` may use exactly 192 worker
@@ -168,6 +172,7 @@ MAX_SHOTS=10000 PROCESSES=32 THREADS_PER_PROCESS=1 \
 | Collect grid with predecoder | add `DECODER=promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching` |
 | ProMatch paired smoke | `tools/benchmark_promatch_l1 smoke --out "$TMPDIR/promatch-smoke" --processes 32` |
 | ProMatch pilot/confirm/target/latency | see `REPRODUCING_FIG8_1D.md` §"Paired ProMatch experiment workflow"; always `--processes 32`, `MAX_ERRORS` unset |
+| GCP Pinball/ProMatch paired sweep | `gcp/run_pinball_promatch_fig8 create --run-id ID --shots-per-cell N`, then `run`; fixed `p=0.002`, exactly 32 workers, and `MAX_ERRORS` unset. Run the documented 1k functional and 32k saturated shakeouts before a fresh production campaign. |
 | AWS paired Figure-8b sweep | On the exact validated Spot `c8a.48xlarge` only: see `aws/README.md`; `aws/run_fig8_paired` owns the fixed 2x96 worker layout and keeps `MAX_ERRORS` unset. |
 | AWS On-Demand continuation | On an exact On-Demand `c8a.48xlarge`, use `aws/run_fig8_paired_ondemand prepare` once and then `run`; it preserves the original Spot campaign ID, schedules, seeds, and ledgers while freezing the lifecycle boundary separately. |
 | Legacy gap collection | `tools/collect_gap ... --processes 32` (never `auto`; legacy `step*`/`gap_step*` scripts also need GNU `parallel`, which is not installed here) |

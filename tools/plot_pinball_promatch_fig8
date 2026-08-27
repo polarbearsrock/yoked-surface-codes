@@ -1,0 +1,416 @@
+#!/usr/bin/env python3
+"""Analyze and plot a completed native Pinball/ProMatch Figure-8 campaign."""
+
+from __future__ import annotations
+
+# Configure native and plotting runtimes before importing numerical packages.
+# ruff: noqa: E402
+
+import os
+
+for _name in (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+):
+    os.environ[_name] = "1"
+
+import argparse
+from collections import defaultdict
+import csv
+import io
+import json
+import math
+import pathlib
+from pathlib import Path
+import sys
+from typing import Any, Mapping, Sequence
+
+import matplotlib
+
+matplotlib.use("Agg")
+from matplotlib import pyplot as plt
+import numpy as np
+
+
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+
+from yoked.decoding._artifact_io import install_bytes_atomic
+from yoked.decoding._pinball_promatch_analysis import (
+    aggregate_cell_ledgers,
+    build_json_report,
+    report_csv_rows,
+    report_json_bytes,
+)
+from yoked.decoding._pinball_promatch_fig8_sweep import (
+    load_validated_collection,
+    validate_analysis_runtime,
+)
+
+
+OUTPUT_NAMES = {"analysis.json", "analysis.csv", "analysis.png"}
+
+
+def _positive_int(value: Any, *, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return value
+
+
+def _declared_cells(campaign: Mapping[str, Any]) -> list[dict[str, Any]]:
+    cells = campaign.get("cells")
+    expected = campaign.get("expected_shots_by_cell")
+    if (
+        not isinstance(cells, Sequence)
+        or isinstance(cells, (str, bytes))
+        or not cells
+    ):
+        raise ValueError("campaign cells must be a nonempty array")
+    if not isinstance(expected, Mapping):
+        raise ValueError("campaign expected_shots_by_cell must be an object")
+    result: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, raw in enumerate(cells):
+        if not isinstance(raw, Mapping):
+            raise ValueError(f"campaign cells[{index}] must be an object")
+        cell_id = raw.get("cell_id")
+        if not isinstance(cell_id, str) or not cell_id or cell_id in seen:
+            raise ValueError("campaign cell IDs must be unique nonempty strings")
+        seen.add(cell_id)
+        if cell_id not in expected:
+            raise ValueError(f"expected shots missing cell {cell_id!r}")
+        d = _positive_int(raw.get("d"), name=f"cell {cell_id} d")
+        rounds = _positive_int(raw.get("r"), name=f"cell {cell_id} r")
+        if rounds % d:
+            raise ValueError(f"cell {cell_id} rounds must be divisible by distance")
+        p = raw.get("p")
+        if (
+            isinstance(p, bool)
+            or not isinstance(p, (int, float))
+            or not math.isfinite(float(p))
+            or not 0 < float(p) < 1
+        ):
+            raise ValueError(f"cell {cell_id} p must be finite and in (0, 1)")
+        result.append(
+            {
+                "cell_id": cell_id,
+                "d": d,
+                "patches": _positive_int(
+                    raw.get("patches"), name=f"cell {cell_id} patches"
+                ),
+                "rounds": rounds,
+                "round_multiplier": rounds // d,
+                "yokes": _positive_int(
+                    raw.get("yokes"), name=f"cell {cell_id} yokes"
+                ),
+                "p": float(p),
+                "expected_shots": _positive_int(
+                    expected[cell_id], name=f"cell {cell_id} expected shots"
+                ),
+            }
+        )
+    if set(expected) != seen:
+        raise ValueError("expected_shots_by_cell contains undeclared cells")
+    return sorted(
+        result,
+        key=lambda cell: (
+            cell["patches"],
+            cell["round_multiplier"],
+            cell["d"],
+        ),
+    )
+
+
+def _project_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    required = {
+        "cell_id",
+        "batch",
+        "correctness_cube",
+        "pairwise_contingencies",
+        "prediction_agreement",
+        "telemetry",
+    }
+    if not isinstance(row, Mapping) or not required <= set(row):
+        raise ValueError("validated ledger is missing analysis fields")
+    batch = row["batch"]
+    if not isinstance(batch, Mapping):
+        raise ValueError("validated ledger batch must be an object")
+    return {
+        "cell_id": row["cell_id"],
+        "shots": _positive_int(batch.get("shots"), name="ledger batch shots"),
+        "correctness_cube": row["correctness_cube"],
+        "pairwise_contingencies": row["pairwise_contingencies"],
+        "prediction_agreement": row["prediction_agreement"],
+        "telemetry": row["telemetry"],
+    }
+
+
+def _build_report(
+    campaign: Mapping[str, Any], rows: Sequence[Mapping[str, Any]]
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    cells = _declared_cells(campaign)
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in rows:
+        projected = _project_row(row)
+        grouped[projected["cell_id"]].append(projected)
+    declared_ids = {cell["cell_id"] for cell in cells}
+    if set(grouped) != declared_ids:
+        raise ValueError("validated ledgers do not exactly cover declared cells")
+    aggregates = [
+        aggregate_cell_ledgers(
+            grouped[cell["cell_id"]],
+            expected_cell_id=cell["cell_id"],
+            expected_shots=cell["expected_shots"],
+        )
+        for cell in cells
+    ]
+    campaign_id = campaign.get("experiment_id")
+    if not isinstance(campaign_id, str) or not campaign_id:
+        raise ValueError("campaign experiment_id must be a nonempty string")
+    report = build_json_report(
+        aggregates,
+        campaign_id=campaign_id,
+        expected_cell_ids=[cell["cell_id"] for cell in cells],
+    )
+    return report, cells
+
+
+def _csv_bytes(
+    report: Mapping[str, Any], cells: Sequence[Mapping[str, Any]]
+) -> bytes:
+    geometry = {cell["cell_id"]: cell for cell in cells}
+    rows = report_csv_rows(report)
+    enriched: list[dict[str, Any]] = []
+    geometry_fields = (
+        "d",
+        "patches",
+        "rounds",
+        "round_multiplier",
+        "yokes",
+        "p",
+        "expected_shots",
+    )
+    for row in rows:
+        cell = geometry.get(row["cell_id"])
+        if cell is None:
+            raise ValueError("analyzed cell is absent from campaign geometry")
+        enriched.append(
+            {
+                "cell_id": row["cell_id"],
+                **{field: cell[field] for field in geometry_fields},
+                **{key: value for key, value in row.items() if key != "cell_id"},
+            }
+        )
+    buffer = io.StringIO(newline="")
+    writer = csv.DictWriter(buffer, fieldnames=list(enriched[0]))
+    writer.writeheader()
+    writer.writerows(enriched)
+    return buffer.getvalue().encode("utf-8")
+
+
+def _plot_bytes(
+    report: Mapping[str, Any], cells: Sequence[Mapping[str, Any]]
+) -> bytes:
+    analyzed = {cell["cell_id"]: cell for cell in report["cells"]}
+    if set(analyzed) != {cell["cell_id"] for cell in cells}:
+        raise ValueError("plot cells do not reconcile with campaign geometry")
+    ordered = [analyzed[cell["cell_id"]] for cell in cells]
+    x = np.arange(len(cells), dtype=float)
+    labels = [
+        f"d{cell['d']}/n{cell['patches']}/{cell['round_multiplier']}d"
+        for cell in cells
+    ]
+
+    figure, axes = plt.subplots(
+        3,
+        1,
+        figsize=(13.5, 12),
+        sharex=True,
+        constrained_layout=True,
+        gridspec_kw={"height_ratios": [1.2, 1, 1]},
+    )
+    colors = {"u0": "#303030", "promatch": "#2878b5", "pinball": "#d1495b"}
+    offsets = {"u0": -0.18, "promatch": 0.0, "pinball": 0.18}
+    for arm in ("u0", "promatch", "pinball"):
+        estimates = np.asarray(
+            [
+                cell["marginals"][arm]["any_observable_logical_error_rate"]
+                for cell in ordered
+            ]
+        )
+        lower = np.asarray(
+            [cell["marginals"][arm]["confidence_interval"]["lower"] for cell in ordered]
+        )
+        upper = np.asarray(
+            [cell["marginals"][arm]["confidence_interval"]["upper"] for cell in ordered]
+        )
+        axes[0].errorbar(
+            x + offsets[arm],
+            estimates,
+            yerr=np.vstack((estimates - lower, upper - estimates)),
+            fmt="o",
+            markersize=4.5,
+            capsize=2,
+            color=colors[arm],
+            label=arm.upper() if arm == "u0" else arm.capitalize(),
+        )
+    min_shots = min(int(cell["shots"]) for cell in ordered)
+    axes[0].set_yscale("symlog", linthresh=0.5 / min_shots)
+    axes[0].set_ylabel("Any-observable logical error rate")
+    axes[0].set_title("Native YSC decoder stacks at p = 0.2% (paired shots)")
+    axes[0].legend(ncols=3, loc="best")
+    axes[0].grid(True, which="both", alpha=0.25)
+
+    pair_name = "pinball_minus_promatch"
+    delta = np.asarray(
+        [cell["pairwise"][pair_name]["paired_risk_difference"] for cell in ordered]
+    )
+    delta_lower = np.asarray(
+        [
+            cell["pairwise"][pair_name]["confidence_interval"]["lower"]
+            for cell in ordered
+        ]
+    )
+    delta_upper = np.asarray(
+        [
+            cell["pairwise"][pair_name]["confidence_interval"]["upper"]
+            for cell in ordered
+        ]
+    )
+    axes[1].errorbar(
+        x,
+        delta,
+        yerr=np.vstack((delta - delta_lower, delta_upper - delta)),
+        fmt="o",
+        capsize=3,
+        color="#6f4e7c",
+        label="Pinball LER − ProMatch LER (95% paired CI)",
+    )
+    axes[1].axhline(0, color="black", linewidth=1)
+    axes[1].set_ylabel("Paired risk difference")
+    axes[1].legend(loc="best")
+    axes[1].grid(True, alpha=0.25)
+
+    for arm in ("promatch", "pinball"):
+        key = f"{arm}_residual_over_original"
+        ratios = [
+            cell["telemetry_summary"]["workload_ratios"][key] for cell in ordered
+        ]
+        if any(value is None for value in ratios):
+            raise ValueError(
+                "workload ratio is undefined because original workload is zero"
+            )
+        axes[2].plot(
+            x,
+            ratios,
+            "o-",
+            color=colors[arm],
+            label=f"{arm.capitalize()} residual/original",
+        )
+    axes[2].axhline(1, color="black", linewidth=1, linestyle="--")
+    axes[2].set_ylabel("Residual detector-event ratio")
+    axes[2].set_xlabel("Cell geometry: distance / patches / rounds÷distance")
+    axes[2].legend(loc="best")
+    axes[2].grid(True, alpha=0.25)
+    axes[2].set_xticks(x, labels, rotation=55, ha="right")
+
+    buffer = io.BytesIO()
+    figure.savefig(
+        buffer,
+        format="png",
+        dpi=180,
+        metadata={"Software": "yoked-surface-codes"},
+    )
+    plt.close(figure)
+    return buffer.getvalue()
+
+
+def _output_directory(campaign_directory: Path, *, overwrite: bool) -> Path:
+    output = campaign_directory / "analysis"
+    if output.is_symlink():
+        raise ValueError("campaign analysis directory may not be a symlink")
+    if output.exists():
+        if not output.is_dir():
+            raise ValueError("campaign analysis path must be a directory")
+        entries = tuple(output.iterdir())
+        if any(entry.is_symlink() or not entry.is_file() for entry in entries):
+            raise ValueError("campaign analysis entries must be regular files")
+        unexpected = {entry.name for entry in entries} - OUTPUT_NAMES
+        if unexpected:
+            raise ValueError(
+                f"campaign analysis contains unexpected files: {sorted(unexpected)}"
+            )
+        if entries and not overwrite:
+            raise FileExistsError("analysis artifacts already exist; pass --overwrite")
+    else:
+        output.mkdir()
+    return output
+
+
+def _write_artifacts(
+    output: Path,
+    *,
+    report: Mapping[str, Any],
+    csv_bytes: bytes,
+    png_bytes: bytes,
+    overwrite: bool,
+) -> None:
+    # Validate the report and its self-hash before any output mutation.
+    report_json_bytes(report)
+    json_bytes = (
+        json.dumps(report, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    ).encode("utf-8")
+    for name, payload in (
+        ("analysis.json", json_bytes),
+        ("analysis.csv", csv_bytes),
+        ("analysis.png", png_bytes),
+    ):
+        install_bytes_atomic(
+            output / name,
+            payload,
+            prefix="pinball-promatch-analysis-",
+            overwrite=overwrite,
+        )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Analyze and plot a complete native Pinball/ProMatch YSC sweep"
+    )
+    parser.add_argument("--campaign", type=Path, required=True)
+    parser.add_argument("--overwrite", action="store_true")
+    args = parser.parse_args()
+    try:
+        # Preserve the spelled path so the campaign loader can reject a
+        # symlink root instead of silently validating its resolved target.
+        campaign_directory = args.campaign.absolute()
+        campaign, ledgers = load_validated_collection(
+            campaign_directory, require_complete=True
+        )
+        validate_analysis_runtime(campaign)
+        report, cells = _build_report(campaign, ledgers)
+        csv_bytes = _csv_bytes(report, cells)
+        png_bytes = _plot_bytes(report, cells)
+        output = _output_directory(campaign_directory, overwrite=args.overwrite)
+        _write_artifacts(
+            output,
+            report=report,
+            csv_bytes=csv_bytes,
+            png_bytes=png_bytes,
+            overwrite=args.overwrite,
+        )
+        print(f"wrote {output / 'analysis.json'}")
+        print(f"wrote {output / 'analysis.csv'}")
+        print(f"wrote {output / 'analysis.png'}")
+        return 0
+    except (ValueError, TypeError, RuntimeError, OSError, KeyError) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

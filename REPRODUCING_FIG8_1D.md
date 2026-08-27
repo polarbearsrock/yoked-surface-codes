@@ -182,8 +182,9 @@ full-circuit points.
 
 ## L1 ProMatch-style predecoder
 
-The repository also registers four custom decoder paths for studying a local
-L1 predecoder in front of the existing flat, joint PyMatching residual decode:
+The repository also registers four ProMatch-related custom decoder paths for
+studying a local L1 predecoder in front of the existing flat, joint PyMatching
+residual decode:
 
 | Short role | Sinter decoder name | Scientific scope |
 | --- | --- | --- |
@@ -214,6 +215,59 @@ PROCESSES=32 THREADS_PER_PROCESS=1 MAX_SHOTS=10000 \
 All documented collections keep `MAX_ERRORS` unset and use a fixed shot count.
 This keeps smoke and scientific command lines operationally consistent; the
 smoke remains non-claim-bearing.
+
+## Pinball-style predecoder
+
+The frozen exploratory Pinball-style V1 path is registered as
+`pinball-style-v1-fullhistory-nine-stage-wholeshotrollback-pymatching`. It
+applies the fixed `M`, `B1`--`B4`, `ST1`--`ST2`, `H`, `E` schedule to the
+compiled full-history detector graph. A simple shot commits the tentative
+predecode and sends its residual syndrome to the joint PyMatching decoder; a
+complex shot rolls back the whole tentative predecode and sends the original
+syndrome to PyMatching. The implementation currently accepts odd code
+distances only and includes the terminal detector layer.
+
+This adapter is intentionally outside the frozen paired ProMatch workflow and
+is not yet claim-bearing. Its source mapping, adaptation limits, and validation
+gates are documented in [`docs/PINBALL_INTEGRATION_PLAN.md`](docs/PINBALL_INTEGRATION_PLAN.md).
+A full Sinter smoke can be run with:
+
+```bash
+env -u MAX_ERRORS \
+DECODER=pinball-style-v1-fullhistory-nine-stage-wholeshotrollback-pymatching \
+PROCESSES=32 THREADS_PER_PROCESS=1 MAX_SHOTS=1000 \
+./reproduce_fig8_1d smoke "$TMPDIR/yoked-pinball-sinter-smoke"
+```
+
+A stricter YSC V2 path is separately registered as
+`pinball-ysc-v2-cz-fullhistory-nine-stage-domainatomic-yokeedge-pymatching`.
+V2 uses an exact signed CZ temporal profile, validates the complete geometric
+slot catalog, consumes both the true-boundary and inner-to-yoke `E` mechanisms,
+and commits or rolls back each full-history `(patch, check_basis)` domain
+independently. An inner-to-yoke `E` match is activated by its inner detector
+but XORs the complete inner/yoke detector boundary and patch observable frame.
+The residual, including yoke deltas and every complex domain, is decoded by the
+same global PyMatching backend.
+
+V2 currently supports odd distance, the maintained CZ circuit, exactly two
+yoke detectors, both check bases, and arbitrary full-history round counts. It
+records each primitive's patch-local physical Pauli support, XOR-reduces the
+durable and tentative correction buffers, and validates their logical parity
+against the corresponding DEM frame. The X-domain map is a reflection of the
+pinned public correction buffer; the Z-domain map uses an explicitly
+conjugated checkerboard symmetry and stage order. It remains a YSC-specific
+software extension: raw circuit qubit IDs and fault-location provenance are
+not reconstructed, and the public cryogenic artifact has no multi-patch/yoke
+contract.
+
+A V2 generic Sinter smoke uses:
+
+```bash
+env -u MAX_ERRORS \
+DECODER=pinball-ysc-v2-cz-fullhistory-nine-stage-domainatomic-yokeedge-pymatching \
+PROCESSES=32 THREADS_PER_PROCESS=1 MAX_SHOTS=1000 \
+./reproduce_fig8_1d smoke "$TMPDIR/yoked-pinball-v2-sinter-smoke"
+```
 
 ## Paired ProMatch experiment workflow
 

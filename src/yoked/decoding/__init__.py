@@ -1,6 +1,6 @@
 """Decoders and decoder-building utilities for yoked surface codes.
 
-The package groups four layers of the ProMatch-L1 experiment:
+The package groups four layers of the frozen ProMatch-L1 experiment:
 
 * Layout/graph compilation (``compile_layout``, ``compile_matching_graph``)
   and the sinter-facing decoders (``PromatchDecoder``,
@@ -15,6 +15,11 @@ The package groups four layers of the ProMatch-L1 experiment:
 * The latency benchmark (``run_latency_benchmark``,
   ``analyze_latency_suite``, ``YokedPromatchLatencyFactory``, ...).
 
+It also exposes separate generic Sinter adapters for the frozen exploratory
+Pinball-style V1 policy and the stricter domain-atomic YSC Pinball V2 policy.
+Neither adapter is part of the frozen ProMatch paired-collection or latency
+protocols.
+
 Not eagerly imported: the diagnostic full-graph oracle and policy-audit
 experiments live in :mod:`yoked.decoding.oracle` (import its submodules
 directly; some lazily pull in Matplotlib on rendering paths), and the
@@ -24,6 +29,16 @@ JSON-artifact I/O infrastructure shared by the ``tools/`` scripts lives in
 
 import sinter
 
+from yoked.decoding._pinball_decoder import (
+    PINBALL_DECODER_NAME,
+    CompiledPinballDecoder,
+    PinballDecoder,
+)
+from yoked.decoding._pinball_v2_decoder import (
+    PINBALL_V2_DECODER_NAME,
+    CompiledPinballV2Decoder,
+    PinballV2Decoder,
+)
 from yoked.decoding._promatch import (
     CommitProposal,
     DomainPrematchStats,
@@ -99,7 +114,7 @@ from yoked.decoding._promatch_stats import (
 
 
 def custom_decoders() -> dict[str, sinter.Decoder]:
-    """Returns the frozen first-round ProMatch decoder configurations."""
+    """Returns frozen ProMatch configurations plus versioned Pinball adapters."""
 
     return {
         "promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching": PromatchDecoder(
@@ -123,12 +138,16 @@ def custom_decoders() -> dict[str, sinter.Decoder]:
         "pymatching-u0-wrap-v1-windowd": IdentityWrappedPyMatchingDecoder(
             domain_mode="windowd"
         ),
+        PINBALL_DECODER_NAME: PinballDecoder(),
+        PINBALL_V2_DECODER_NAME: PinballV2Decoder(),
     }
 
 
 __all__ = [
     "ArrayDigest",
     "CommitProposal",
+    "CompiledPinballDecoder",
+    "CompiledPinballV2Decoder",
     "CompiledPromatchGraph",
     "DetectorRole",
     "DomainGraph",
@@ -143,7 +162,11 @@ __all__ = [
     "L1FullHistoryDomain",
     "L1TerminalDetector",
     "L1WindowDomain",
+    "PINBALL_DECODER_NAME",
+    "PINBALL_V2_DECODER_NAME",
     "PairedContingency",
+    "PinballDecoder",
+    "PinballV2Decoder",
     "PrematchResult",
     "PrematchedPath",
     "PreparedCell",
