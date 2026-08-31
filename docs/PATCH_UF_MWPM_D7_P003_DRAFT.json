@@ -52,7 +52,7 @@
   "diagnostics": {
     "alpha": 0.05,
     "bootstrap_replicates": 10000,
-    "bootstrap_seed_root": "ffa870e52e57be35874d82aaa5217d2faa3a985b613cd73af8d7533f9f576461",
+    "bootstrap_seed_root": "6cff6ac5341a8030a2d86e95ff86662b0c16cbca7f71c23b93e8d3b5dc49575f",
     "cluster_defect_count_display_bins": [
       {
         "label": "1",
@@ -94,7 +94,7 @@
       "+inf"
     ],
     "maximum_cases_per_category": 100,
-    "replay_selection_seed_root": "e9eda33a8fe8c32acbb71933991f0c2ce2c27f92e33878dcd9b0e0db04ff3936"
+    "replay_selection_seed_root": "a42c0ea603ce43dcdb54d7b72056ef4f28117a920514cebc388c35d8f38acb25"
   },
   "frozen": false,
   "latency": {
@@ -136,18 +136,18 @@
         0
       ]
     },
-    "schedule_seed": "d2804a60d2941d176192c845b4f1a8b6bd2b522fa8e7a801e06cf94c81848b70"
+    "schedule_seed": "6226f3e2efb0f385aa3f444c88317556b45c48f9b2030fa2cc485232ecf23fde"
   },
   "sampling": {
     "range_count": 32,
     "seed_derivation": "sha256(root-bytes || ASCII(patch-uf-named-seed-v1\\0) || canonical-json(identity))-first8-uint64le",
     "stages": {
       "characterization": {
-        "seed_root": "02300561e69acec85b7ee37c413b26986646666f6e11be1940e705b5992d94ac",
+          "seed_root": "7785097e7447b99ee72134fef15bfbb68f42fe3866a65e4c1a76fb10fc02abee",
         "shots": 10000
       },
       "engineering-shakeout": {
-        "seed_root": "3ab2db8c1bc72e84179b3c67fbf49d07866b4f9c3113c5c1c0dc3ebb00d7bf11",
+          "seed_root": "3d41da03f1659f67967f4a60f1a4b04d92e554c551ba375a240141b387798a6f",
         "shots": 1000
       }
     }

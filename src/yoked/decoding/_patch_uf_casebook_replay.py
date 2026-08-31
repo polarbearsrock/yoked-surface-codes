@@ -129,20 +129,34 @@ def _load_analysis(path: Path) -> dict[str, Any]:
     return value
 
 
-def _read_detector_corpus(
+def _read_authenticated_detector_corpus(
     collection_out: Path,
     *,
     verified: VerifiedCollection,
     num_detectors: int,
 ) -> tuple[np.ndarray, str]:
-    path = collection_out / "corpus" / "detectors.bitpack"
-    if path.is_symlink() or not path.is_file():
-        raise ValueError("casebook detector corpus must be a regular file")
-    raw = path.read_bytes()
+    """Return shard-authenticated bytes, cross-checking an installed corpus."""
+
+    raw = bytes(verified.detector_corpus_bytes)
     digest = _sha256(raw)
-    identity = _mapping(verified.corpus_identity, name="collection corpus identity")
-    if identity.get("detectors_sha256") != digest:
-        raise ValueError("casebook detector corpus digest mismatch")
+    if (
+        not is_lowercase_hex(verified.detector_corpus_sha256, length=64)
+        or verified.detector_corpus_sha256 != digest
+    ):
+        raise ValueError("casebook authenticated detector-corpus digest mismatch")
+    if verified.corpus_identity is not None:
+        identity = _mapping(
+            verified.corpus_identity, name="collection corpus identity"
+        )
+        if identity.get("detectors_sha256") != digest:
+            raise ValueError("casebook installed detector-corpus identity mismatch")
+        path = collection_out / "corpus" / "detectors.bitpack"
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("casebook installed detector corpus must be a regular file")
+        if path.read_bytes() != raw:
+            raise ValueError(
+                "casebook installed detector corpus differs from authenticated ranges"
+            )
     rows = len(verified.shot_rows)
     width = (num_detectors + 7) // 8
     if len(raw) != rows * width:
@@ -323,7 +337,7 @@ def build_authenticated_casebook_replay_request(
     num_detectors = _integer(
         provenance.get("num_detectors"), name="collection num_detectors", minimum=1
     )
-    detectors, detector_digest = _read_detector_corpus(
+    detectors, detector_digest = _read_authenticated_detector_corpus(
         collection,
         verified=verified,
         num_detectors=num_detectors,

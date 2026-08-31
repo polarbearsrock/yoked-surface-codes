@@ -295,6 +295,21 @@ class VerifiedCollection:
     cluster_records: tuple[ShotClusterRecord, ...]
     control_equality: Mapping[str, Any]
     corpus_identity: Mapping[str, Any] | None
+    detector_corpus_bytes: bytes
+    detector_corpus_sha256: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(
+            self.detector_corpus_bytes, (bytes, bytearray, memoryview)
+        ):
+            raise TypeError("verified detector-corpus bytes must be bytes-like")
+        detector_bytes = bytes(self.detector_corpus_bytes)
+        detector_sha256 = self.detector_corpus_sha256
+        if not is_lowercase_hex(detector_sha256, length=64):
+            raise ValueError("verified detector-corpus digest is malformed")
+        if _sha256(detector_bytes) != detector_sha256:
+            raise ValueError("verified detector-corpus bytes/digest mismatch")
+        object.__setattr__(self, "detector_corpus_bytes", detector_bytes)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -2129,6 +2144,19 @@ def _expected_corpus_artifacts(
     return detector_bytes, observable_bytes, index, identity
 
 
+def _aggregate_detector_corpus_bytes(
+    range_rows: Sequence[
+        tuple[Mapping[str, Any], Mapping[str, Any], bytes, bytes]
+    ],
+) -> bytes:
+    """Concatenate detector bytes from already-authenticated range shards."""
+
+    return b"".join(
+        bytes.fromhex(shot_payload["packed_corpus"]["detectors"]["data_hex"])
+        for _, shot_payload, _, _ in range_rows
+    )
+
+
 def _install_corpus(
     *,
     out: Path,
@@ -2248,6 +2276,8 @@ def verify_collection(
     ):
         raise ValueError("collection protocol differs from runtime protocol")
     rows = _verify_complete_rows(out=out, context=context)
+    detector_corpus_bytes = _aggregate_detector_corpus_bytes(rows)
+    detector_corpus_sha256 = _sha256(detector_corpus_bytes)
     expected = _aggregate_summary(context=context, range_rows=rows)
     if context.stage == CHARACTERIZATION_STAGE:
         for path, name in (
@@ -2274,6 +2304,10 @@ def verify_collection(
                 shot_rows=[row[1] for row in rows],
             )
         )
+        if detectors != detector_corpus_bytes:
+            raise ValueError(
+                "characterization detector corpus differs from authenticated ranges"
+            )
         if detectors != expected_detectors or observables != expected_observables:
             raise ValueError("characterization corpus bytes differ from range shards")
         if corpus_index != expected_index:
@@ -2306,6 +2340,8 @@ def verify_collection(
         cluster_records=cluster_records,
         control_equality=recorded["control_equality"],
         corpus_identity=recorded["corpus"],
+        detector_corpus_bytes=detector_corpus_bytes,
+        detector_corpus_sha256=detector_corpus_sha256,
     )
 
 

@@ -259,6 +259,8 @@ def test_materialization_uses_persisted_decisions_without_planner(
             "detectors_sha256": detector_digest,
             "observables_sha256": sentinel_observable_digest,
         },
+        detector_corpus_bytes=detector_bytes,
+        detector_corpus_sha256=detector_digest,
     )
     monkeypatch.setattr(
         integration, "verify_collection", lambda *args, **kwargs: verified
@@ -366,6 +368,8 @@ def test_materialization_rejects_tampered_boundary_or_metric_rows(
         cluster_records=(),
         control_equality=_control_equality(1),
         corpus_identity={"detectors_sha256": integration._sha256(data)},
+        detector_corpus_bytes=data,
+        detector_corpus_sha256=integration._sha256(data),
     )
     monkeypatch.setattr(
         integration, "verify_collection", lambda *args, **kwargs: verified
@@ -427,6 +431,8 @@ def test_materialization_rejects_control_or_full_corpus_prediction_mismatch(
         cluster_records=(),
         control_equality=controls,
         corpus_identity={"detectors_sha256": integration._sha256(data)},
+        detector_corpus_bytes=data,
+        detector_corpus_sha256=integration._sha256(data),
     )
     monkeypatch.setattr(
         integration, "verify_collection", lambda *args, **kwargs: verified

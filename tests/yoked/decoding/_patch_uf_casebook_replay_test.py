@@ -16,6 +16,7 @@ from yoked.decoding._patch_uf_experiment import (
     CHARACTERIZATION_STAGE,
     PROTOCOL_SCHEMA,
     SEED_DERIVATION,
+    SHAKEOUT_STAGE,
     VerifiedCollection,
     _normalize_metrics,
     canonical_protocol_self_sha256,
@@ -208,15 +209,30 @@ def _write_analysis(path: Path, value: dict[str, object]) -> None:
     path.write_bytes(canonical_json_bytes(value))
 
 
-def test_authenticated_request_reconciles_casebook_and_excludes_actual_observables(
-    real_case, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("stage", "install_corpus"),
+    (
+        (SHAKEOUT_STAGE, False),
+        (CHARACTERIZATION_STAGE, True),
+    ),
+)
+def test_authenticated_request_uses_range_detectors_for_both_scientific_stages(
+    real_case,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    stage: str,
+    install_corpus: bool,
 ) -> None:
     protocol, prepared, case = real_case
     detector_bytes = case.packed_detector
     detector_digest = replay._sha256(detector_bytes)
     collection = tmp_path / "collection"
-    (collection / "corpus").mkdir(parents=True)
-    (collection / "corpus" / "detectors.bitpack").write_bytes(detector_bytes)
+    collection.mkdir()
+    if install_corpus:
+        (collection / "corpus").mkdir()
+        (collection / "corpus" / "detectors.bitpack").write_bytes(
+            detector_bytes
+        )
     lanes = [
         {"global_shot_id": 0, **copy.deepcopy(row)} for row in case.lanes
     ]
@@ -235,12 +251,16 @@ def test_authenticated_request_reconciles_casebook_and_excludes_actual_observabl
         "component_count": len(components),
         "adapter_metrics": copy.deepcopy(case.adapter_metrics),
     }
-    corpus_identity = {
-        "index_path": "corpus/index.json",
-        "index_payload_sha256": "41" * 32,
-        "detectors_sha256": detector_digest,
-        "observables_sha256": "42" * 32,
-    }
+    corpus_identity = (
+        {
+            "index_path": "corpus/index.json",
+            "index_payload_sha256": "41" * 32,
+            "detectors_sha256": detector_digest,
+            "observables_sha256": "42" * 32,
+        }
+        if install_corpus
+        else None
+    )
     collection_digest = "43" * 32
     verified = VerifiedCollection(
         summary={
@@ -253,6 +273,8 @@ def test_authenticated_request_reconciles_casebook_and_excludes_actual_observabl
         cluster_records=(),
         control_equality={},
         corpus_identity=corpus_identity,
+        detector_corpus_bytes=detector_bytes,
+        detector_corpus_sha256=detector_digest,
     )
     monkeypatch.setattr(replay, "verify_collection", lambda *args, **kwargs: verified)
     root_hex = "51" * 32
@@ -263,7 +285,7 @@ def test_authenticated_request_reconciles_casebook_and_excludes_actual_observabl
             "experiment_id": protocol["experiment_id"],
             "protocol_self_sha256": protocol["protocol_self_sha256"],
             "collection_payload_sha256": collection_digest,
-            "stage": CHARACTERIZATION_STAGE,
+            "stage": stage,
             "cell_id": protocol["selected_cell"]["cell_id"],
             "corpus_identity": corpus_identity,
         },
@@ -286,13 +308,32 @@ def test_authenticated_request_reconciles_casebook_and_excludes_actual_observabl
         protocol,
         collection_out=collection,
         analysis_path=analysis_path,
+        stage=stage,
         processes=1,
         scientific=False,
     )
 
     assert len(request.cases) == 1
     assert request.cases[0].packed_detector == detector_bytes
-    assert "actual_observables" not in repr(request.cases[0])
+    assert request.detector_corpus_sha256 == detector_digest
+    assert "actual_observables" not in repr(request)
+
+    if install_corpus:
+        (collection / "corpus" / "detectors.bitpack").write_bytes(
+            bytes([detector_bytes[0] ^ 1, *detector_bytes[1:]])
+        )
+        with pytest.raises(ValueError, match="differs from authenticated ranges"):
+            replay.build_authenticated_casebook_replay_request(
+                protocol,
+                collection_out=collection,
+                analysis_path=analysis_path,
+                stage=stage,
+                processes=1,
+                scientific=False,
+            )
+        (collection / "corpus" / "detectors.bitpack").write_bytes(
+            detector_bytes
+        )
 
     tampered = copy.deepcopy(analysis)
     tampered["casebook"]["highest-heap-operation-count"]["rows"][0]["shot"][
@@ -304,6 +345,87 @@ def test_authenticated_request_reconciles_casebook_and_excludes_actual_observabl
             protocol,
             collection_out=collection,
             analysis_path=analysis_path,
+            stage=stage,
+            processes=1,
+            scientific=False,
+        )
+
+
+def test_authenticated_request_fails_closed_on_range_aggregate_tampering(
+    real_case, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    protocol, prepared, case = real_case
+    detector_bytes = case.packed_detector
+    detector_digest = replay._sha256(detector_bytes)
+    collection = tmp_path / "shakeout"
+    collection.mkdir()
+    lanes = [{"global_shot_id": 0, **copy.deepcopy(row)} for row in case.lanes]
+    components = [
+        {"global_shot_id": 0, **copy.deepcopy(row)} for row in case.components
+    ]
+    shot = {
+        "global_shot_id": 0,
+        "global_prediction_hex": case.global_prediction_hex,
+        "treatment_prediction_hex": case.treatment_prediction_hex,
+        "actual_observables_hex": "00",
+        "global_failed": False,
+        "treatment_failed": False,
+        "prediction_agreement": True,
+        "lane_count": len(lanes),
+        "component_count": len(components),
+        "adapter_metrics": copy.deepcopy(case.adapter_metrics),
+    }
+    collection_digest = "43" * 32
+    verified = VerifiedCollection(
+        summary={
+            "payload_sha256": collection_digest,
+            "provenance": prepared.provenance,
+        },
+        shot_rows=(shot,),
+        lane_rows=tuple(lanes),
+        component_rows=tuple(components),
+        cluster_records=(),
+        control_equality={},
+        corpus_identity=None,
+        detector_corpus_bytes=detector_bytes,
+        detector_corpus_sha256=detector_digest,
+    )
+    # Simulate a compromised return value despite the frozen dataclass guard.
+    object.__setattr__(verified, "detector_corpus_bytes", b"\xff" * len(detector_bytes))
+    monkeypatch.setattr(replay, "verify_collection", lambda *args, **kwargs: verified)
+    root_hex = "51" * 32
+    analysis = {
+        "schema": "patch-uf-analysis-v1",
+        "schema_version": 1,
+        "source": {
+            "experiment_id": protocol["experiment_id"],
+            "protocol_self_sha256": protocol["protocol_self_sha256"],
+            "collection_payload_sha256": collection_digest,
+            "stage": SHAKEOUT_STAGE,
+            "cell_id": protocol["selected_cell"]["cell_id"],
+            "corpus_identity": None,
+        },
+        "config": {
+            "casebook_seed_root": root_hex,
+            "maximum_cases_per_category": 1,
+        },
+        "reconciliation": {"status": "reconciled", "shots": 1},
+        "casebook": _analysis_casebook(
+            shot=shot,
+            lanes=lanes,
+            components=components,
+            root_hex=root_hex,
+        ),
+    }
+    analysis_path = tmp_path / "analysis.json"
+    _write_analysis(analysis_path, analysis)
+
+    with pytest.raises(ValueError, match="authenticated detector-corpus digest"):
+        replay.build_authenticated_casebook_replay_request(
+            protocol,
+            collection_out=collection,
+            analysis_path=analysis_path,
+            stage=SHAKEOUT_STAGE,
             processes=1,
             scientific=False,
         )

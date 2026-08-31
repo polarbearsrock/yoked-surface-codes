@@ -348,6 +348,12 @@ def test_run_verify_resume_and_characterization_corpus(tmp_path: Path):
     assert len(verified.cluster_records) == 32
     assert all(record.completed_component_size_histogram == ((1, 1),) for record in verified.cluster_records)
     assert verified.corpus_identity == summary["corpus"]
+    assert verified.detector_corpus_bytes == (
+        out / "corpus" / "detectors.bitpack"
+    ).read_bytes()
+    assert verified.detector_corpus_sha256 == summary["corpus"][
+        "detectors_sha256"
+    ]
 
     resumed = run_collection(
         protocol,
@@ -390,6 +396,17 @@ def test_valid_orphan_component_is_regenerated_before_shot_commit(tmp_path: Path
     assert component.read_bytes() == artifact.component_bytes
     shot_path = out / "collection" / "shards" / component.name
     assert shot_path.is_file()
+    verified = verify_collection(
+        protocol,
+        stage="smoke",
+        out=out,
+        processes=2,
+        scientific=False,
+    )
+    assert verified.corpus_identity is None
+    assert len(verified.detector_corpus_bytes) == 64
+    assert verified.detector_corpus_sha256
+    assert not (out / "corpus").exists()
 
 
 def test_tamper_and_missing_corpus_fail_closed_without_repair(tmp_path: Path):

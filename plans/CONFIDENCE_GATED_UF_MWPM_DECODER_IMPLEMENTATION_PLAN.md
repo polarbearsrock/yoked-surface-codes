@@ -1,6 +1,7 @@
 # Confidence-Gated Weighted Union-Find Decoder Implementation Plan
 
-- **Status:** implemented; final freeze and scientific execution gates pending
+- **Status:** implemented; initial V1 campaign stopped at replay gate, V2
+  campaign recovery in progress
 - **Last updated:** 2026-08-30
 - **Target experiment:** `cguf-01-d7-n6-y2-r28-p0.003`
 - **Target decoder:** `weighted-uf-fullhistory-patchlocal-zeroframe-residual-global-mwpm-v1`
@@ -14,6 +15,14 @@ milestones, tests, and readiness gates. The user authorized implementation and
 execution on 2026-08-30; protocol freezing and scientific sampling remain
 subject to the explicit gates below. If this plan and the experiment
 specification disagree, the experiment specification wins.
+
+The `FROZEN_V1` and `out/..._v1` names retained later in this plan describe
+the original execution sequence. That sequence produced an immutable 1k
+failed-gate audit artifact: non-characterization verification authenticated
+the detector arrays inside its range shards but did not expose those bytes to
+fresh-process replay. The active V2 recovery, its disjoint roots, and its
+`FROZEN_V2`/`out/..._v2` paths are normative in the experiment specification;
+the decoder algorithm and public decoder identifier are unchanged.
 
 The production design is a **confidence-gated weighted Union-Find frontend with
 residual Global MWPM**. It borrows the clustering, component-validity, spanning-

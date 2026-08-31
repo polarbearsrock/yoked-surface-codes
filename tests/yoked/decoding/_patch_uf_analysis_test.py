@@ -226,6 +226,11 @@ def _verified() -> VerifiedCollection:
         cluster_records=records,
         control_equality=controls,
         corpus_identity={"index_payload_sha256": "44" * 32},
+        detector_corpus_bytes=b"",
+        detector_corpus_sha256=(
+            "e3b0c44298fc1c149afbf4c8996fb924"
+            "27ae41e4649b934ca495991b7852b855"
+        ),
     )
 
 
@@ -404,6 +409,8 @@ def test_zero_workload_denominators_are_null_not_estimable() -> None:
         cluster_records=(record,),
         control_equality=controls,
         corpus_identity=verified.corpus_identity,
+        detector_corpus_bytes=verified.detector_corpus_bytes,
+        detector_corpus_sha256=verified.detector_corpus_sha256,
     )
 
     result = analyze_verified_collection(zero, config=_config()).analysis
@@ -503,6 +510,8 @@ def test_censored_lower_bounds_are_not_treated_as_exact_lane_workload() -> None:
         cluster_records=records,
         control_equality=verified.control_equality,
         corpus_identity=verified.corpus_identity,
+        detector_corpus_bytes=verified.detector_corpus_bytes,
+        detector_corpus_sha256=verified.detector_corpus_sha256,
     )
 
     result = analyze_verified_collection(changed, config=_config()).analysis
