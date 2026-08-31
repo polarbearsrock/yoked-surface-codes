@@ -213,6 +213,47 @@ def test_rejects_duplicate_normalized_edges(monkeypatch):
         compile_matching_graph(dem, layout)
 
 
+def test_cross_patch_edge_is_retained_only_by_explicit_uf_opt_in(monkeypatch):
+    dem = _dem()
+    layout = compile_layout(dem, mode="fullhistory")
+    source = next(
+        detector_id
+        for detector_id in layout.body_detector_ids
+        if layout.role_of(detector_id).patch_id == 0
+    )
+    source_role = layout.role_of(source)
+    target = next(
+        detector_id
+        for detector_id in layout.body_detector_ids
+        if layout.role_of(detector_id).patch_id == 1
+        and layout.role_of(detector_id).check_basis == source_role.check_basis
+    )
+    _patch_fake_matching(
+        monkeypatch,
+        [(source, target, {"weight": 1.0, "fault_ids": set()})],
+    )
+
+    with pytest.raises(ValueError, match="crosses patches"):
+        compile_matching_graph(dem, layout, require_zero_frame=False)
+
+    compiled = compile_matching_graph(
+        dem,
+        layout,
+        require_zero_frame=False,
+        retain_cross_lane_edges=True,
+    )
+    assert [(edge.source, edge.target) for edge in compiled.edges] == [
+        tuple(sorted((source, target)))
+    ]
+
+
+def test_cross_lane_opt_in_requires_a_bool():
+    dem = _dem()
+    layout = compile_layout(dem)
+    with pytest.raises(TypeError, match="must be a bool"):
+        compile_matching_graph(dem, layout, retain_cross_lane_edges=1)
+
+
 def test_large_dem_count_and_coordinate_metadata_are_materialized_once(monkeypatch):
     real_dem = _dem()
     layout = compile_layout(real_dem)

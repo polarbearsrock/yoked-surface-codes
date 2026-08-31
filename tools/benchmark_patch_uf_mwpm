@@ -1,0 +1,1777 @@
+#!/usr/bin/env python3
+"""Freeze, collect, and time the confidence-gated Patch-UF experiment."""
+
+from __future__ import annotations
+
+# These assignments intentionally precede every numerical/project import.
+# ruff: noqa: E402
+import os
+
+_THREAD_ENVIRONMENT = (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+)
+for _thread_name in _THREAD_ENVIRONMENT:
+    os.environ[_thread_name] = "1"
+_early_tmpdir = os.environ.get("TMPDIR")
+if _early_tmpdir:
+    os.environ.setdefault(
+        "MPLCONFIGDIR",
+        os.path.join(_early_tmpdir, "yoked-surface-codes-matplotlib"),
+    )
+
+import argparse
+import copy
+import dataclasses
+import hashlib
+import importlib.metadata
+import json
+from pathlib import Path
+import platform
+import subprocess
+import sys
+from typing import Any, Mapping, Sequence
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+
+import numpy as np
+
+from yoked.decoding._artifact_io import (
+    install_bytes_atomic,
+    is_lowercase_hex,
+    load_json_strict,
+    validate_resumable_output_root,
+)
+from yoked.decoding._patch_uf_decoder import (
+    ADAPTER_CONTROL_DECODER_NAME,
+    GLOBAL_MWPM_DECODER_NAME,
+    PATCH_UF_TREATMENT_DECODER_NAME,
+    PATCH_UF_V1_POLICY,
+    UF_SHADOW_DECODER_NAME,
+)
+from yoked.decoding._patch_uf_experiment import (
+    CHARACTERIZATION_STAGE,
+    PROTOCOL_SCHEMA,
+    RANGE_COUNT,
+    SEED_DERIVATION,
+    SHAKEOUT_STAGE,
+    PreparedCell,
+    VerifiedCollection,
+    canonical_protocol_self_sha256,
+    configure_single_thread_runtime,
+    prepare_selected_cell,
+    run_collection,
+    verify_collection,
+)
+from yoked.decoding import _patch_uf_latency as _latency
+from yoked.decoding._patch_uf_latency import (
+    BatchTiming,
+    HostPolicy,
+    LatencyProtocol,
+    capture_host_policy,
+    load_authenticated_latency_corpus,
+    run_latency_suite,
+)
+from yoked.decoding._patch_uf_latency_integration import (
+    MATERIALIZATION_SCHEMA,
+    YokedPatchUFLatencyFactory,
+    latency_protocol_from_experiment,
+    materialize_latency_corpus_from_characterization,
+)
+from yoked.decoding._patch_uf_casebook_replay import (
+    REPLAY_SCHEMA,
+    replay_casebook_in_fresh_process,
+)
+from yoked.decoding._promatch_stats import canonical_json_bytes
+
+
+CLI_CORPUS_IDENTITY_SCHEMA = "patch-uf-latency-corpus-identity-v1"
+CONFIG_COMMIT_POLICY = (
+    "HEAD-is-a-clean-descendant-of-implementation-commit-with-exactly-one-"
+    "added-frozen-protocol-file"
+)
+CAMPAIGN_LOCK_POLICY = (
+    "one-exclusive-$TMPDIR/patch-uf-mwpm-campaign-v1.lock-for-smoke-probe-"
+    "collect-latency-replay;atomic-O_EXCL;stale-unlink-only-after-owner-pid-"
+    "absent"
+)
+CAMPAIGN_LOCK_SCHEMA = "patch-uf-exclusive-campaign-lock-v1"
+SCRATCH_SCHEMA = "patch-uf-scratch-gate-v1"
+EXPERIMENT_ID_DOMAIN = b"patch-uf-mwpm-experiment-v1\0"
+SCRATCH_ID_DOMAIN = b"patch-uf-mwpm-scratch-v1\0"
+
+STAGE_ALIASES = {
+    "shakeout-1k": SHAKEOUT_STAGE,
+    "characterization-10k": CHARACTERIZATION_STAGE,
+}
+
+EXPECTED_ARMS = {
+    "global_mwpm": GLOBAL_MWPM_DECODER_NAME,
+    "adapter_control": ADAPTER_CONTROL_DECODER_NAME,
+    "uf_shadow": UF_SHADOW_DECODER_NAME,
+    "treatment": PATCH_UF_TREATMENT_DECODER_NAME,
+}
+
+EXPECTED_SEMANTIC_LIMITS = dataclasses.asdict(PATCH_UF_V1_POLICY.semantic_limits)
+EXPECTED_PRODUCTION_LIMITS = dataclasses.asdict(PATCH_UF_V1_POLICY.production_limits)
+EXPECTED_CONFIDENCE_EDGES = [
+    0.0,
+    0.0625,
+    0.125,
+    0.25,
+    0.5,
+    1.0,
+    2.0,
+    4.0,
+    8.0,
+    16.0,
+    "+inf",
+]
+EXPECTED_CLUSTER_BINS = [
+    {"label": "1", "minimum": 1, "maximum": 1},
+    {"label": "2", "minimum": 2, "maximum": 2},
+    {"label": "3-4", "minimum": 3, "maximum": 4},
+    {"label": "5-8", "minimum": 5, "maximum": 8},
+    {"label": "9+", "minimum": 9, "maximum": None},
+]
+EXPECTED_LATENCY_BATCHES = [
+    {
+        "batch_size": 1,
+        "restarts": 10,
+        "blocks_per_restart": 20,
+        "warmup_calls_per_variant": 50,
+        "timed_calls_per_side_per_block": 10,
+    },
+    {
+        "batch_size": 64,
+        "restarts": 5,
+        "blocks_per_restart": 4,
+        "warmup_calls_per_variant": 5,
+        "timed_calls_per_side_per_block": 2,
+    },
+    {
+        "batch_size": 1024,
+        "restarts": 3,
+        "blocks_per_restart": 2,
+        "warmup_calls_per_variant": 1,
+        "timed_calls_per_side_per_block": 1,
+    },
+]
+
+_STATIC_MINIMUM_SOURCE_PATHS = {
+        "requirements.txt",
+        "experiments/CONFIDENCE_GATED_UF_MWPM_D7_P003.md",
+        "src/yoked/__init__.py",
+        "src/yoked/_patch_rotation.py",
+        "src/yoked/_yoked_memory_circuits.py",
+        "src/yoked/decoding/__init__.py",
+        "src/yoked/decoding/_artifact_io.py",
+        "src/yoked/decoding/_dem_catalog.py",
+        "src/yoked/decoding/_promatch_graph.py",
+        "src/yoked/decoding/_promatch_layout.py",
+        "src/yoked/decoding/_promatch_stats.py",
+        "src/yoked/decoding/_patch_uf.py",
+        "src/yoked/decoding/_patch_uf_analysis.py",
+        "src/yoked/decoding/_patch_uf_casebook_replay.py",
+        "src/yoked/decoding/_patch_uf_decoder.py",
+        "src/yoked/decoding/_patch_uf_experiment.py",
+        "src/yoked/decoding/_patch_uf_graph.py",
+        "src/yoked/decoding/_patch_uf_latency.py",
+        "src/yoked/decoding/_patch_uf_latency_analysis.py",
+        "src/yoked/decoding/_patch_uf_latency_integration.py",
+        "src/yoked/decoding/_patch_uf_reference.py",
+        "src/yoked/decoding/_patch_uf_stats.py",
+        "tests/yoked/decoding/_patch_uf_casebook_replay_test.py",
+        "tools/benchmark_patch_uf_mwpm",
+    }
+for _completion_path in (
+    "tools/analyze_patch_uf_mwpm",
+):
+    if (_REPO_ROOT / _completion_path).is_file():
+        _STATIC_MINIMUM_SOURCE_PATHS.add(_completion_path)
+MINIMUM_SOURCE_PATHS = frozenset(
+    _STATIC_MINIMUM_SOURCE_PATHS
+    | {
+        path.relative_to(_REPO_ROOT).as_posix()
+        for path in (_REPO_ROOT / "src" / "gen").rglob("*.py")
+        if path.is_file() and not path.is_symlink()
+    }
+)
+
+def _sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _json_digest(value: Any) -> str:
+    return _sha256(canonical_json_bytes(value))
+
+
+def _payload_with_digest(value: Mapping[str, Any]) -> dict[str, Any]:
+    result = dict(value)
+    if "payload_sha256" in result:
+        raise ValueError("payload_sha256 is reserved")
+    result["payload_sha256"] = _json_digest(result)
+    return result
+
+
+def _validate_payload_digest(value: Mapping[str, Any], *, name: str) -> None:
+    claimed = value.get("payload_sha256")
+    if not is_lowercase_hex(claimed, length=64):
+        raise ValueError(f"{name} payload_sha256 is malformed")
+    unsigned = dict(value)
+    del unsigned["payload_sha256"]
+    if _json_digest(unsigned) != claimed:
+        raise ValueError(f"{name} payload digest mismatch")
+
+
+def _print_json(value: Any) -> None:
+    print(json.dumps(value, indent=2, sort_keys=True, allow_nan=False))
+
+
+def _write_new_json(path: Path, value: Mapping[str, Any]) -> None:
+    payload = (
+        json.dumps(value, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    ).encode("utf-8")
+    install_bytes_atomic(
+        path,
+        payload,
+        prefix="patch-uf-new-json-",
+        overwrite=False,
+    )
+
+
+def _install_or_compare_json(path: Path, value: Mapping[str, Any], *, name: str) -> None:
+    if path.exists():
+        if load_json_strict(path, description=name) != dict(value):
+            raise ValueError(f"existing {name} differs")
+        return
+    install_bytes_atomic(
+        path,
+        canonical_json_bytes(dict(value)) + b"\n",
+        prefix="patch-uf-cli-json-",
+        overwrite=False,
+    )
+
+
+def _require_tmpdir() -> Path:
+    raw = os.environ.get("TMPDIR")
+    if not raw:
+        raise ValueError("TMPDIR must be set for Patch-UF experiment commands")
+    root = Path(raw)
+    if not root.is_absolute():
+        raise ValueError("TMPDIR must be an absolute path")
+    root.mkdir(parents=True, exist_ok=True)
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("TMPDIR must be a regular directory, not a symlink")
+    os.environ.setdefault(
+        "MPLCONFIGDIR", str(root / "yoked-surface-codes-matplotlib")
+    )
+    Path(os.environ["MPLCONFIGDIR"]).mkdir(parents=True, exist_ok=True)
+    return root.resolve()
+
+
+def _require_under(path: Path, root: Path, *, name: str) -> Path:
+    candidate = path.absolute()
+    if candidate.is_symlink():
+        raise ValueError(f"{name} may not be a symlink")
+    resolved = candidate.resolve()
+    if resolved != root and root not in resolved.parents:
+        raise ValueError(f"{name} must be under {root}")
+    return resolved
+
+
+def _latency_sidecar_paths(suite_root: Path) -> tuple[Path, Path]:
+    root = suite_root.absolute()
+    if not root.name or root.name in {".", ".."}:
+        raise ValueError("latency suite output must have a nonempty directory name")
+    return (
+        root.with_name(f"{root.name}.workload"),
+        root.with_name(f"{root.name}.source.json"),
+    )
+
+
+def _pid_is_alive(pid: int) -> bool:
+    if isinstance(pid, bool) or not isinstance(pid, int) or pid <= 0:
+        raise ValueError("campaign lock owner PID is malformed")
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+@dataclasses.dataclass(frozen=True)
+class _CampaignLockLease:
+    path: Path
+    device: int
+    inode: int
+
+    def release(self) -> None:
+        try:
+            current = self.path.lstat()
+        except FileNotFoundError as ex:
+            raise RuntimeError("campaign lock disappeared before cleanup") from ex
+        if (current.st_dev, current.st_ino) != (self.device, self.inode):
+            raise RuntimeError("campaign lock identity changed before cleanup")
+        self.path.unlink()
+
+
+def _acquire_campaign_lock(
+    tmp_root: Path, *, command: str, target: Path
+) -> _CampaignLockLease:
+    path = tmp_root / "patch-uf-mwpm-campaign-v1.lock"
+    record = {
+        "schema": CAMPAIGN_LOCK_SCHEMA,
+        "pid": os.getpid(),
+        "command": command,
+        "target": str(target.absolute()),
+        "policy": CAMPAIGN_LOCK_POLICY,
+    }
+    payload = canonical_json_bytes(record) + b"\n"
+    stale_retry = False
+    while True:
+        try:
+            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError as ex:
+            if path.is_symlink() or not path.is_file():
+                raise RuntimeError("campaign lock is not a regular file") from ex
+            stat_before = path.lstat()
+            existing = load_json_strict(path, description="Patch-UF campaign lock")
+            if existing.get("schema") != CAMPAIGN_LOCK_SCHEMA:
+                raise RuntimeError("campaign lock schema is malformed") from ex
+            owner = existing.get("pid")
+            if _pid_is_alive(owner):
+                raise RuntimeError(
+                    f"Patch-UF campaign already active under PID {owner}"
+                ) from ex
+            if stale_retry:
+                raise RuntimeError("campaign lock stale-owner recovery raced") from ex
+            try:
+                stat_after = path.lstat()
+            except FileNotFoundError:
+                stale_retry = True
+                continue
+            if (stat_before.st_dev, stat_before.st_ino) != (
+                stat_after.st_dev,
+                stat_after.st_ino,
+            ):
+                stale_retry = True
+                continue
+            path.unlink()
+            stale_retry = True
+            continue
+        try:
+            with os.fdopen(descriptor, "wb") as destination:
+                destination.write(payload)
+                destination.flush()
+                os.fsync(destination.fileno())
+            acquired = path.lstat()
+            return _CampaignLockLease(path, acquired.st_dev, acquired.st_ino)
+        except BaseException:
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+            raise
+
+
+def _reject_max_errors() -> None:
+    if "MAX_ERRORS" in os.environ:
+        raise ValueError("MAX_ERRORS must remain unset for fixed-N execution")
+
+
+def _validate_processes(value: int, *, scientific: bool) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError("--processes must be a positive integer")
+    if value > RANGE_COUNT:
+        raise ValueError("--processes exceeds the hard maximum of 32")
+    if scientific and value != RANGE_COUNT:
+        raise ValueError("scientific collection requires exactly 32 processes")
+    return value
+
+
+def _git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args],
+        cwd=_REPO_ROOT,
+        check=check,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _repository_state() -> dict[str, Any]:
+    head = _git("rev-parse", "HEAD").stdout.strip()
+    status = _git("status", "--porcelain", "--untracked-files=all").stdout
+    if not is_lowercase_hex(head, length=40):
+        raise ValueError("repository HEAD is not a 40-character Git object ID")
+    return {
+        "implementation_commit": head,
+        "clean_worktree": status == "",
+        "porcelain": status.splitlines(),
+    }
+
+
+def _software_versions() -> dict[str, str | None]:
+    result: dict[str, str | None] = {
+        "python": platform.python_version(),
+        "numpy": np.__version__,
+    }
+    for name in ("stim", "sinter", "pymatching", "scipy"):
+        try:
+            result[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            result[name] = None
+    return result
+
+
+def _execution_environment() -> dict[str, Any]:
+    try:
+        affinity = sorted(os.sched_getaffinity(0))
+    except (AttributeError, OSError):
+        affinity = []
+    uname = platform.uname()
+    return {
+        "os": uname.system,
+        "kernel": uname.release,
+        "machine": uname.machine,
+        "cpu_affinity": affinity,
+        "native_thread_environment": {
+            name: os.environ.get(name) for name in _THREAD_ENVIRONMENT
+        },
+    }
+
+
+def _experiment_id(protocol: Mapping[str, Any], *, scratch: bool = False) -> str:
+    value = copy.deepcopy(dict(protocol))
+    value.pop("experiment_id", None)
+    value.pop("protocol_self_sha256", None)
+    domain = SCRATCH_ID_DOMAIN if scratch else EXPERIMENT_ID_DOMAIN
+    return _sha256(domain + canonical_json_bytes(value))
+
+
+def _draft_digest(protocol: Mapping[str, Any]) -> str:
+    value = copy.deepcopy(dict(protocol))
+    for key in (
+        "experiment_id",
+        "protocol_self_sha256",
+        "source_hashes",
+        "source_inventory_sha256",
+        "implementation_commit",
+        "config_commit_policy",
+        "frozen_protocol_path",
+        "template_sha256",
+        "gate_attestations",
+        "software_versions",
+        "execution_environment",
+        "source_identity",
+    ):
+        value.pop(key, None)
+    cell = value.get("selected_cell")
+    if isinstance(cell, Mapping):
+        cell = dict(cell)
+        cell.pop("provenance", None)
+        value["selected_cell"] = cell
+    value["status"] = "DRAFT"
+    value["frozen"] = False
+    return _json_digest(value)
+
+
+def _reject_tbd(value: Any, *, path: str = "$") -> None:
+    if isinstance(value, str) and "TBD" in value.upper():
+        raise ValueError(f"unresolved TBD at {path}")
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            _reject_tbd(child, path=f"{path}.{key}")
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            _reject_tbd(child, path=f"{path}[{index}]")
+
+
+def _protocol_contract() -> dict[str, Any]:
+    return {
+        "schema": PROTOCOL_SCHEMA,
+        "schema_version": 1,
+        "required_top_level": [
+            "schema",
+            "schema_version",
+            "status",
+            "frozen",
+            "claim_status",
+            "source_paths",
+            "selected_cell",
+            "dem_options",
+            "decoder",
+            "collection_limits",
+            "sampling",
+            "diagnostics",
+            "latency",
+        ],
+        "selected_cell": {
+            "cell_id": "cguf-01-d7-n6-y2-r28-p0.003",
+            "d": 7,
+            "r": 28,
+            "p": 0.003,
+            "patches": 6,
+            "yokes": 2,
+            "style": "cz",
+            "noise": "si1000",
+            "remove_x_yoke": False,
+            "provenance": "generated-by-freeze",
+        },
+        "dem_options": {
+            "decompose_errors": True,
+            "approximate_disjoint_errors": True,
+        },
+        "decoder": {
+            "arms": EXPECTED_ARMS,
+            "policy": {
+                "tau": "0x0.0p+0",
+                "comparison": "strict-greater-than",
+                "semantic_limits": EXPECTED_SEMANTIC_LIMITS,
+                "production_limits": EXPECTED_PRODUCTION_LIMITS,
+            },
+        },
+        "collection_limits_required": [
+            "expected_lanes_per_shot",
+            "maximum_component_records_per_shot",
+            "maximum_metric_bytes_per_range",
+        ],
+        "sampling": {
+            "range_count": RANGE_COUNT,
+            "seed_derivation": SEED_DERIVATION,
+            "stages": {
+                SHAKEOUT_STAGE: {"shots": 1_000, "seed_root": "64 lowercase hex"},
+                CHARACTERIZATION_STAGE: {
+                    "shots": 10_000,
+                    "seed_root": "64 lowercase hex",
+                },
+            },
+        },
+        "diagnostics": {
+            "confidence_margin_bin_edges": EXPECTED_CONFIDENCE_EDGES,
+            "cluster_defect_count_display_bins": EXPECTED_CLUSTER_BINS,
+            "bootstrap_seed_root": "64 lowercase hex",
+            "replay_selection_seed_root": "64 lowercase hex",
+            "bootstrap_replicates": 10_000,
+            "alpha": 0.05,
+            "maximum_cases_per_category": 100,
+        },
+        "latency": {
+            "schedule_seed": "64 lowercase hex",
+            "batches": EXPECTED_LATENCY_BATCHES,
+            "host_policy": {
+                "cpu_affinity": [31],
+                "expected_host": {
+                    key: "literal string or null"
+                    for key in ("cpu_model", "kernel", "machine", "microcode", "os")
+                },
+                "expected_numa_nodes": "sorted unique integer array",
+            },
+        },
+        "minimum_source_paths": sorted(MINIMUM_SOURCE_PATHS),
+        "source_paths_rules": {
+            "ordering": "sorted-unique-repository-relative-regular-files",
+            "minimum_set": "minimum_source_paths",
+            "freeze_requires_draft_path": True,
+        },
+        "freeze_generated_top_level": [
+            "campaign_lock_policy",
+            "experiment_id",
+            "protocol_self_sha256",
+            "implementation_commit",
+            "config_commit_policy",
+            "frozen_protocol_path",
+            "template_sha256",
+            "source_hashes",
+            "source_inventory_sha256",
+            "gate_attestations",
+            "software_versions",
+            "execution_environment",
+            "source_identity",
+        ],
+        "independent_seed_roots": [
+            f"sampling.stages.{SHAKEOUT_STAGE}.seed_root",
+            f"sampling.stages.{CHARACTERIZATION_STAGE}.seed_root",
+            "latency.schedule_seed",
+            "diagnostics.bootstrap_seed_root",
+            "diagnostics.replay_selection_seed_root",
+        ],
+    }
+
+
+def _parse_latency_protocol(protocol: Mapping[str, Any]) -> LatencyProtocol:
+    value = protocol.get("latency")
+    if not isinstance(value, Mapping):
+        raise ValueError("latency must be an object")
+    batches = value.get("batches")
+    if not isinstance(batches, list) or not batches:
+        raise ValueError("latency.batches must be a nonempty array")
+    parsed_batches: list[BatchTiming] = []
+    expected_batch_fields = set(EXPECTED_LATENCY_BATCHES[0])
+    for index, raw in enumerate(batches):
+        if not isinstance(raw, Mapping) or set(raw) != expected_batch_fields:
+            raise ValueError(f"latency.batches[{index}] fields are malformed")
+        parsed_batches.append(BatchTiming(**dict(raw)))
+    seed = value.get("schedule_seed")
+    if not is_lowercase_hex(seed, length=64):
+        raise ValueError("latency.schedule_seed must be 64 lowercase hex characters")
+    host = value.get("host_policy")
+    if not isinstance(host, Mapping):
+        raise ValueError("latency.host_policy must be an object")
+    expected_host = host.get("expected_host")
+    if not isinstance(expected_host, Mapping):
+        raise ValueError("latency.host_policy.expected_host must be an object")
+    affinity = host.get("cpu_affinity")
+    nodes = host.get("expected_numa_nodes")
+    if not isinstance(affinity, list) or not isinstance(nodes, list):
+        raise ValueError("latency host affinity and NUMA nodes must be arrays")
+    return LatencyProtocol(
+        batches=tuple(parsed_batches),
+        schedule_seed=int(seed, 16),
+        host_policy=HostPolicy(
+            cpu_affinity=tuple(affinity),
+            expected_host=tuple(sorted(expected_host.items())),
+            expected_numa_nodes=tuple(nodes),
+        ),
+    )
+
+
+def _validate_source_path_list(value: Any) -> tuple[str, ...]:
+    if not isinstance(value, list) or not value:
+        raise ValueError("source_paths must be a nonempty array")
+    if any(not isinstance(item, str) or not item for item in value):
+        raise ValueError("source_paths entries must be nonempty strings")
+    result = tuple(value)
+    if result != tuple(sorted(set(result))):
+        raise ValueError("source_paths must be sorted and unique")
+    missing = sorted(MINIMUM_SOURCE_PATHS - set(result))
+    if missing:
+        raise ValueError(f"source_paths omits required implementation files: {missing}")
+    for relative in result:
+        candidate = Path(relative)
+        if candidate.is_absolute() or ".." in candidate.parts or candidate == Path("."):
+            raise ValueError(f"invalid source path {relative!r}")
+    return result
+
+
+def _validate_protocol_contract(
+    protocol: Mapping[str, Any], *, expected_status: str
+) -> LatencyProtocol:
+    if not isinstance(protocol, Mapping):
+        raise TypeError("protocol must be an object")
+    value = dict(protocol)
+    required = set(_protocol_contract()["required_top_level"])
+    missing = sorted(required - set(value))
+    if missing:
+        raise ValueError(f"protocol is missing required fields: {missing}")
+    if value.get("schema") != PROTOCOL_SCHEMA or value.get("schema_version") != 1:
+        raise ValueError("protocol schema/version mismatch")
+    if value.get("status") != expected_status:
+        raise ValueError(f"protocol status must be {expected_status!r}")
+    if value.get("frozen") is not (expected_status == "FROZEN"):
+        raise ValueError("protocol frozen flag disagrees with status")
+    if value.get("claim_status") != "non-claim-bearing":
+        raise ValueError("claim_status must be 'non-claim-bearing'")
+    _reject_tbd(value)
+
+    cell = value.get("selected_cell")
+    if not isinstance(cell, Mapping):
+        raise ValueError("selected_cell must be an object")
+    expected_cell = {
+        "cell_id": "cguf-01-d7-n6-y2-r28-p0.003",
+        "d": 7,
+        "r": 28,
+        "p": 0.003,
+        "patches": 6,
+        "yokes": 2,
+        "style": "cz",
+        "noise": "si1000",
+        "remove_x_yoke": False,
+    }
+    for key, expected in expected_cell.items():
+        if cell.get(key) != expected:
+            raise ValueError(f"selected_cell.{key} must be {expected!r}")
+    if not isinstance(cell.get("p"), float) or cell["p"].hex() != (0.003).hex():
+        raise ValueError("selected_cell.p must be exact binary64 0.003")
+    permitted_cell = set(expected_cell) | {"provenance"}
+    if set(cell) - permitted_cell:
+        raise ValueError(
+            f"selected_cell has unknown fields: {sorted(set(cell) - permitted_cell)}"
+        )
+
+    if dict(value.get("dem_options", {})) != {
+        "decompose_errors": True,
+        "approximate_disjoint_errors": True,
+    }:
+        raise ValueError("dem_options differs from the frozen V1 contract")
+    decoder = value.get("decoder")
+    expected_decoder = {
+        "arms": EXPECTED_ARMS,
+        "policy": {
+            "tau": "0x0.0p+0",
+            "comparison": "strict-greater-than",
+            "semantic_limits": EXPECTED_SEMANTIC_LIMITS,
+            "production_limits": EXPECTED_PRODUCTION_LIMITS,
+        },
+    }
+    if decoder != expected_decoder:
+        raise ValueError("decoder differs from the literal Patch-UF V1 contract")
+
+    limits = value.get("collection_limits")
+    required_limit_fields = {
+        "expected_lanes_per_shot",
+        "maximum_component_records_per_shot",
+        "maximum_metric_bytes_per_range",
+    }
+    if not isinstance(limits, Mapping) or set(limits) != required_limit_fields:
+        raise ValueError("collection_limits fields are malformed")
+    if limits.get("expected_lanes_per_shot") != 12:
+        raise ValueError("expected_lanes_per_shot must be 12")
+    for name in required_limit_fields - {"expected_lanes_per_shot"}:
+        raw = limits.get(name)
+        if isinstance(raw, bool) or not isinstance(raw, int) or raw <= 0:
+            raise ValueError(f"collection_limits.{name} must be positive")
+
+    sampling = value.get("sampling")
+    if not isinstance(sampling, Mapping):
+        raise ValueError("sampling must be an object")
+    if set(sampling) != {"range_count", "seed_derivation", "stages"}:
+        raise ValueError("sampling fields are malformed")
+    if sampling.get("range_count") != RANGE_COUNT:
+        raise ValueError("sampling.range_count must be 32")
+    if sampling.get("seed_derivation") != SEED_DERIVATION:
+        raise ValueError("sampling.seed_derivation mismatch")
+    stages = sampling.get("stages")
+    if not isinstance(stages, Mapping) or set(stages) != {
+        SHAKEOUT_STAGE,
+        CHARACTERIZATION_STAGE,
+    }:
+        raise ValueError("sampling.stages must contain the two internal stage names")
+    stage_roots: list[str] = []
+    for name, shots in ((SHAKEOUT_STAGE, 1_000), (CHARACTERIZATION_STAGE, 10_000)):
+        stage = stages[name]
+        if not isinstance(stage, Mapping) or set(stage) != {"shots", "seed_root"}:
+            raise ValueError(f"sampling.stages.{name} fields are malformed")
+        if stage.get("shots") != shots:
+            raise ValueError(f"sampling.stages.{name}.shots must be {shots}")
+        root = stage.get("seed_root")
+        if not is_lowercase_hex(root, length=64):
+            raise ValueError(f"sampling.stages.{name}.seed_root is malformed")
+        stage_roots.append(root)
+
+    diagnostics = value.get("diagnostics")
+    expected_diagnostic_fields = {
+        "confidence_margin_bin_edges",
+        "cluster_defect_count_display_bins",
+        "bootstrap_seed_root",
+        "replay_selection_seed_root",
+        "bootstrap_replicates",
+        "alpha",
+        "maximum_cases_per_category",
+    }
+    if not isinstance(diagnostics, Mapping) or set(diagnostics) != expected_diagnostic_fields:
+        raise ValueError("diagnostics fields are malformed")
+    if diagnostics.get("confidence_margin_bin_edges") != EXPECTED_CONFIDENCE_EDGES:
+        raise ValueError("diagnostics confidence-margin bins differ from V1")
+    if diagnostics.get("cluster_defect_count_display_bins") != EXPECTED_CLUSTER_BINS:
+        raise ValueError("diagnostics cluster display bins differ from V1")
+    for key in ("bootstrap_seed_root", "replay_selection_seed_root"):
+        if not is_lowercase_hex(diagnostics.get(key), length=64):
+            raise ValueError(f"diagnostics.{key} is malformed")
+    if diagnostics.get("bootstrap_replicates") != 10_000:
+        raise ValueError("diagnostics.bootstrap_replicates must be 10000")
+    if diagnostics.get("alpha") != 0.05:
+        raise ValueError("diagnostics.alpha must be 0.05")
+    if diagnostics.get("maximum_cases_per_category") != 100:
+        raise ValueError("diagnostics.maximum_cases_per_category must be 100")
+
+    latency_protocol = _parse_latency_protocol(value)
+    if [batch.to_json() for batch in latency_protocol.batches] != EXPECTED_LATENCY_BATCHES:
+        raise ValueError("latency batches differ from the frozen V1 schedule")
+    if latency_protocol.host_policy.cpu_affinity != (31,):
+        raise ValueError("latency CPU affinity must be exactly [31]")
+    roots = [
+        *stage_roots,
+        f"{latency_protocol.schedule_seed:064x}",
+        diagnostics["bootstrap_seed_root"],
+        diagnostics["replay_selection_seed_root"],
+    ]
+    if len(set(roots)) != 5:
+        raise ValueError("the five experiment seed roots must be pairwise distinct")
+
+    _validate_source_path_list(value.get("source_paths"))
+    if expected_status == "FROZEN":
+        if value.get("campaign_lock_policy") != CAMPAIGN_LOCK_POLICY:
+            raise ValueError("frozen campaign_lock_policy differs from V1")
+        experiment_id = value.get("experiment_id")
+        self_hash = value.get("protocol_self_sha256")
+        if not is_lowercase_hex(experiment_id, length=64):
+            raise ValueError("frozen experiment_id is malformed")
+        if experiment_id != _experiment_id(value):
+            raise ValueError("frozen experiment_id mismatch")
+        if not is_lowercase_hex(self_hash, length=64):
+            raise ValueError("frozen protocol self hash is malformed")
+        if self_hash != canonical_protocol_self_sha256(value):
+            raise ValueError("frozen protocol self hash mismatch")
+    return latency_protocol
+
+
+def _source_inventory(
+    protocol: Mapping[str, Any], *, extra_required: Sequence[str] = ()
+) -> tuple[dict[str, str], str]:
+    paths = _validate_source_path_list(protocol.get("source_paths"))
+    missing_extra = sorted(set(extra_required) - set(paths))
+    if missing_extra:
+        raise ValueError(f"source_paths omits command inputs: {missing_extra}")
+    hashes: dict[str, str] = {}
+    root = _REPO_ROOT.resolve()
+    for relative in paths:
+        unresolved = _REPO_ROOT / relative
+        if unresolved.is_symlink():
+            raise ValueError(f"source inventory path is a symlink: {relative}")
+        candidate = unresolved.resolve()
+        if root not in candidate.parents or not candidate.is_file():
+            raise ValueError(f"source inventory path is not a repository file: {relative}")
+        hashes[relative] = _sha256(candidate.read_bytes())
+    return hashes, _json_digest(hashes)
+
+
+def _prepare_protocol(protocol: Mapping[str, Any], *, stage: str) -> dict[str, Any]:
+    value = copy.deepcopy(dict(protocol))
+    value["status"] = "SCRATCH"
+    value["frozen"] = False
+    value.pop("implementation_commit", None)
+    value.pop("config_commit_policy", None)
+    value.pop("frozen_protocol_path", None)
+    value.pop("source_hashes", None)
+    value.pop("source_inventory_sha256", None)
+    value.pop("gate_attestations", None)
+    value.pop("template_sha256", None)
+    value.pop("software_versions", None)
+    value.pop("execution_environment", None)
+    cell = dict(value["selected_cell"])
+    cell.pop("provenance", None)
+    value["selected_cell"] = cell
+    source = {
+        "mode": stage,
+        "repository_commit": _repository_state()["implementation_commit"],
+        "draft_template_sha256": _draft_digest(protocol),
+    }
+    value["source_identity"] = source
+    value["sampling"] = {
+        "range_count": RANGE_COUNT,
+        "seed_derivation": SEED_DERIVATION,
+        "stages": {stage: {"shots": 32, "seed_root": "00" * 32}},
+    }
+    value["experiment_id"] = _experiment_id(value, scratch=True)
+    value["protocol_self_sha256"] = canonical_protocol_self_sha256(value)
+    return value
+
+
+def _scratch_protocol(
+    draft: Mapping[str, Any], *, stage: str, shots: int, state: Mapping[str, Any]
+) -> dict[str, Any]:
+    _validate_protocol_contract(draft, expected_status="DRAFT")
+    if shots < RANGE_COUNT:
+        raise ValueError("scratch shots must be at least 32")
+    value = _prepare_protocol(draft, stage=stage)
+    scientific_root_name = (
+        SHAKEOUT_STAGE if stage == "smoke" else CHARACTERIZATION_STAGE
+    )
+    original_root = draft["sampling"]["stages"][scientific_root_name]["seed_root"]
+    scratch_root = _sha256(
+        bytes.fromhex(original_root) + b"patch-uf-scratch-root\0" + stage.encode()
+    )
+    value["sampling"]["stages"][stage] = {
+        "shots": shots,
+        "seed_root": scratch_root,
+    }
+    value["scratch_gate"] = {
+        "schema": SCRATCH_SCHEMA,
+        "kind": stage,
+        "shots": shots,
+        "draft_template_sha256": _draft_digest(draft),
+        "repository_commit": state["implementation_commit"],
+        "clean_worktree": bool(state["clean_worktree"]),
+        "campaign_lock_policy": CAMPAIGN_LOCK_POLICY,
+    }
+    value["source_identity"] = {
+        "mode": stage,
+        "repository_commit": state["implementation_commit"],
+        "draft_template_sha256": _draft_digest(draft),
+        "campaign_lock_policy": CAMPAIGN_LOCK_POLICY,
+    }
+    value["experiment_id"] = _experiment_id(value, scratch=True)
+    value["protocol_self_sha256"] = canonical_protocol_self_sha256(value)
+    return value
+
+
+def _verify_scratch_gate(
+    root: Path,
+    *,
+    kind: str,
+    shots: int,
+    draft_digest: str,
+    implementation_commit: str,
+) -> tuple[dict[str, Any], VerifiedCollection]:
+    protocol = load_json_strict(root / "protocol.json", description=f"{kind} protocol")
+    gate = protocol.get("scratch_gate")
+    expected = {
+        "schema": SCRATCH_SCHEMA,
+        "kind": kind,
+        "shots": shots,
+        "draft_template_sha256": draft_digest,
+        "repository_commit": implementation_commit,
+        "clean_worktree": True,
+        "campaign_lock_policy": CAMPAIGN_LOCK_POLICY,
+    }
+    if gate != expected:
+        raise ValueError(f"{kind} scratch gate identity differs from commit A")
+    if protocol.get("status") != "SCRATCH" or protocol.get("frozen") is not False:
+        raise ValueError(f"{kind} is not a scratch protocol")
+    if protocol.get("protocol_self_sha256") != canonical_protocol_self_sha256(protocol):
+        raise ValueError(f"{kind} scratch protocol self hash mismatch")
+    verified = verify_collection(
+        protocol,
+        stage=kind,
+        out=root,
+        processes=RANGE_COUNT,
+        scientific=False,
+    )
+    if verified.summary.get("shots") != shots:
+        raise ValueError(f"{kind} collection has the wrong shot count")
+    attestation = {
+        "kind": kind,
+        "shots": shots,
+        "protocol_self_sha256": protocol["protocol_self_sha256"],
+        "collection_summary_payload_sha256": verified.summary["payload_sha256"],
+        "selected_cell_provenance_sha256": _json_digest(
+            verified.summary["provenance"]
+        ),
+        "campaign_lock_policy": CAMPAIGN_LOCK_POLICY,
+    }
+    return attestation, verified
+
+
+def _validate_frozen_lineage(protocol: Mapping[str, Any], protocol_path: Path) -> str:
+    state = _repository_state()
+    if not state["clean_worktree"]:
+        raise ValueError("scientific protocol verification requires a clean worktree")
+    implementation = protocol.get("implementation_commit")
+    if not is_lowercase_hex(implementation, length=40):
+        raise ValueError("implementation_commit is malformed")
+    if protocol.get("config_commit_policy") != CONFIG_COMMIT_POLICY:
+        raise ValueError("config_commit_policy differs from the supported two-commit rule")
+    head = state["implementation_commit"]
+    if head == implementation:
+        raise ValueError("frozen protocol must be committed in config-only commit B")
+    ancestry = _git("merge-base", "--is-ancestor", implementation, head, check=False)
+    if ancestry.returncode != 0:
+        raise ValueError("implementation commit A is not an ancestor of HEAD")
+    changed = _git(
+        "diff", "--name-status", "--find-renames", f"{implementation}..{head}"
+    ).stdout.splitlines()
+    if len(changed) != 1:
+        raise ValueError("A..B must contain exactly one frozen protocol file")
+    pieces = changed[0].split("\t")
+    if len(pieces) != 2 or pieces[0] != "A":
+        raise ValueError("config commit B must add exactly one new file")
+    expected_relative = protocol.get("frozen_protocol_path")
+    if pieces[1] != expected_relative:
+        raise ValueError("A..B changed file differs from frozen_protocol_path")
+    resolved = protocol_path.resolve()
+    try:
+        actual_relative = resolved.relative_to(_REPO_ROOT.resolve()).as_posix()
+    except ValueError as ex:
+        raise ValueError("frozen protocol must live inside the repository") from ex
+    if actual_relative != expected_relative:
+        raise ValueError("runtime protocol path differs from frozen_protocol_path")
+    if (
+        resolved.parent != (_REPO_ROOT / "docs").resolve()
+        or resolved.suffix != ".json"
+        or "FROZEN" not in resolved.name
+    ):
+        raise ValueError("frozen protocol path must be docs/*FROZEN*.json")
+    return head
+
+
+def _validate_frozen_sources(protocol: Mapping[str, Any]) -> None:
+    hashes = protocol.get("source_hashes")
+    paths = _validate_source_path_list(protocol.get("source_paths"))
+    if not isinstance(hashes, Mapping) or set(hashes) != set(paths):
+        raise ValueError("source_hashes must exactly cover source_paths")
+    if protocol.get("source_inventory_sha256") != _json_digest(dict(hashes)):
+        raise ValueError("source inventory digest mismatch")
+    root = _REPO_ROOT.resolve()
+    for relative in paths:
+        path = (_REPO_ROOT / relative)
+        if path.is_symlink():
+            raise ValueError(f"source path became a symlink: {relative}")
+        resolved = path.resolve()
+        if root not in resolved.parents or not resolved.is_file():
+            raise ValueError(f"source path is no longer a regular file: {relative}")
+        if _sha256(resolved.read_bytes()) != hashes[relative]:
+            raise ValueError(f"source hash mismatch for {relative}")
+
+
+def _verify_frozen_protocol(
+    protocol: Mapping[str, Any],
+    *,
+    protocol_path: Path,
+    authenticate_cell: bool = True,
+) -> tuple[dict[str, Any], PreparedCell | None]:
+    latency_protocol = _validate_protocol_contract(
+        protocol, expected_status="FROZEN"
+    )
+    integrated_latency_protocol = latency_protocol_from_experiment(protocol, cpu=31)
+    if integrated_latency_protocol != latency_protocol:
+        raise ValueError("CLI and integration latency protocol mappings disagree")
+    config_commit = _validate_frozen_lineage(protocol, protocol_path)
+    _validate_frozen_sources(protocol)
+    if protocol.get("software_versions") != _software_versions():
+        raise ValueError("runtime software versions differ from frozen protocol")
+    if protocol.get("execution_environment") != _execution_environment():
+        raise ValueError("runtime execution environment differs from frozen protocol")
+    actual_policy = capture_host_policy(cpu=31)
+    if latency_protocol.host_policy != actual_policy:
+        raise ValueError("latency host policy differs from current CPU-31 host identity")
+    expected_source_identity = {
+        "implementation_commit": protocol["implementation_commit"],
+        "config_commit_policy": CONFIG_COMMIT_POLICY,
+        "frozen_protocol_path": protocol["frozen_protocol_path"],
+        "source_inventory_sha256": protocol["source_inventory_sha256"],
+        "campaign_lock_policy": CAMPAIGN_LOCK_POLICY,
+    }
+    if protocol.get("source_identity") != expected_source_identity:
+        raise ValueError("source_identity differs from frozen lineage")
+    prepared = None
+    if authenticate_cell:
+        prepared = prepare_selected_cell(
+            protocol,
+            stage=SHAKEOUT_STAGE,
+            processes=RANGE_COUNT,
+            scientific=True,
+        )
+    report = {
+        "valid": True,
+        "experiment_id": protocol["experiment_id"],
+        "protocol_self_sha256": protocol["protocol_self_sha256"],
+        "implementation_commit": protocol["implementation_commit"],
+        "config_commit": config_commit,
+        "frozen_protocol_path": protocol["frozen_protocol_path"],
+        "source_inventory_sha256": protocol["source_inventory_sha256"],
+        "selected_cell_provenance": (
+            dict(prepared.provenance)
+            if prepared is not None
+            else dict(protocol["selected_cell"]["provenance"])
+        ),
+    }
+    return report, prepared
+
+
+def _freeze(
+    draft: Mapping[str, Any],
+    *,
+    draft_path: Path,
+    smoke_root: Path,
+    probe_root: Path,
+    out_protocol: Path,
+    tmp_root: Path,
+) -> dict[str, Any]:
+    _validate_protocol_contract(draft, expected_status="DRAFT")
+    state = _repository_state()
+    if not state["clean_worktree"]:
+        raise ValueError("freeze requires a clean worktree at implementation commit A")
+    output = out_protocol.absolute()
+    if output.exists() or output.is_symlink():
+        raise FileExistsError("frozen protocol output must be a new path")
+    resolved_parent = output.parent.resolve()
+    if (
+        resolved_parent != (_REPO_ROOT / "docs").resolve()
+        or output.suffix != ".json"
+        or "FROZEN" not in output.name
+    ):
+        raise ValueError("--out-protocol must be a new docs/*FROZEN*.json path")
+    try:
+        output_relative = output.resolve().relative_to(_REPO_ROOT.resolve()).as_posix()
+        draft_relative = draft_path.resolve().relative_to(_REPO_ROOT.resolve()).as_posix()
+    except ValueError as ex:
+        raise ValueError("draft and frozen protocol must live in the repository") from ex
+    smoke_root = _require_under(smoke_root, tmp_root, name="smoke root")
+    probe_root = _require_under(probe_root, tmp_root, name="probe root")
+    template_digest = _draft_digest(draft)
+    smoke_attestation, smoke = _verify_scratch_gate(
+        smoke_root,
+        kind="smoke",
+        shots=32,
+        draft_digest=template_digest,
+        implementation_commit=state["implementation_commit"],
+    )
+    probe_attestation, probe = _verify_scratch_gate(
+        probe_root,
+        kind="probe",
+        shots=100,
+        draft_digest=template_digest,
+        implementation_commit=state["implementation_commit"],
+    )
+    if smoke.summary["provenance"] != probe.summary["provenance"]:
+        raise ValueError("smoke and probe selected-cell provenances disagree")
+
+    prepare_protocol = _prepare_protocol(draft, stage="freeze-inspect")
+    prepared = prepare_selected_cell(
+        prepare_protocol,
+        stage="freeze-inspect",
+        processes=1,
+        scientific=False,
+    )
+    if dict(prepared.provenance) != smoke.summary["provenance"]:
+        raise ValueError("fresh selected-cell provenance differs from scratch gates")
+
+    source_hashes, source_inventory_sha256 = _source_inventory(
+        draft, extra_required=(draft_relative,)
+    )
+    latency_protocol = _parse_latency_protocol(draft)
+    if latency_protocol.host_policy != capture_host_policy(cpu=31):
+        raise ValueError("draft latency host policy differs from current CPU-31 host")
+
+    frozen = copy.deepcopy(dict(draft))
+    frozen["status"] = "FROZEN"
+    frozen["frozen"] = True
+    frozen["implementation_commit"] = state["implementation_commit"]
+    frozen["config_commit_policy"] = CONFIG_COMMIT_POLICY
+    frozen["frozen_protocol_path"] = output_relative
+    frozen["template_sha256"] = template_digest
+    frozen["source_hashes"] = source_hashes
+    frozen["source_inventory_sha256"] = source_inventory_sha256
+    frozen["gate_attestations"] = {
+        "smoke_32": smoke_attestation,
+        "probe_100": probe_attestation,
+    }
+    frozen["software_versions"] = _software_versions()
+    frozen["execution_environment"] = _execution_environment()
+    frozen["campaign_lock_policy"] = CAMPAIGN_LOCK_POLICY
+    frozen["source_identity"] = {
+        "implementation_commit": state["implementation_commit"],
+        "config_commit_policy": CONFIG_COMMIT_POLICY,
+        "frozen_protocol_path": output_relative,
+        "source_inventory_sha256": source_inventory_sha256,
+        "campaign_lock_policy": CAMPAIGN_LOCK_POLICY,
+    }
+    cell = dict(frozen["selected_cell"])
+    cell["provenance"] = dict(prepared.provenance)
+    frozen["selected_cell"] = cell
+    frozen["experiment_id"] = _experiment_id(frozen)
+    frozen["protocol_self_sha256"] = canonical_protocol_self_sha256(frozen)
+    _validate_protocol_contract(frozen, expected_status="FROZEN")
+    _write_new_json(output, frozen)
+    return frozen
+
+
+def _corpus_identity_record(
+    *,
+    protocol: Mapping[str, Any],
+    corpus: Any,
+    source_detector_sha256: str,
+    collection: Path,
+    collection_summary_sha256: str,
+    suite_root: Path,
+    suite: Mapping[str, Any],
+) -> dict[str, Any]:
+    workload_root, source_path = _latency_sidecar_paths(suite_root)
+    return _payload_with_digest(
+        {
+            "schema": CLI_CORPUS_IDENTITY_SCHEMA,
+            "schema_version": 1,
+            "experiment_id": protocol["experiment_id"],
+            "protocol_self_sha256": protocol["protocol_self_sha256"],
+            "source_collection_path": str(collection.resolve()),
+            "collection_summary_payload_sha256": collection_summary_sha256,
+            "source_detector_sha256": source_detector_sha256,
+            "latency_suite_path": str(suite_root.resolve()),
+            "latency_workload_path": str(workload_root.resolve()),
+            "latency_source_identity_path": str(source_path.resolve()),
+            "latency_corpus_manifest_path": str(
+                (workload_root / "manifest.json").resolve()
+            ),
+            "latency_corpus_manifest_sha256": corpus.manifest_sha256,
+            "latency_corpus_digest": corpus.corpus_digest,
+            "rows": corpus.row_count,
+            "suite_id": suite["suite_id"],
+            "workload_id": suite["workload_id"],
+            "campaign_lock_policy": CAMPAIGN_LOCK_POLICY,
+        }
+    )
+
+
+def _validate_restart_suite(
+    *,
+    root: Path,
+    latency_protocol: LatencyProtocol,
+    suite_identity: Mapping[str, Any],
+) -> dict[str, Any]:
+    protocol_json = latency_protocol.to_json()
+    protocol_id = _latency._json_digest(protocol_json)
+    workload_id = _latency._json_digest(dict(suite_identity))
+    suite_id = _latency._json_digest(
+        {
+            "protocol_id": protocol_id,
+            "workload_id": workload_id,
+            "fresh_process_per_restart": True,
+            "timed_restart_concurrency": 1,
+        }
+    )
+    expected_names = {
+        "protocol.json",
+        "suite.json",
+        *(
+            _latency._restart_name(batch.batch_size, restart)
+            for batch in latency_protocol.batches
+            for restart in range(batch.restarts)
+        ),
+    }
+    validated_root, actual = validate_resumable_output_root(
+        root,
+        allowed_entries=expected_names,
+        description="Patch-UF latency restart suite",
+    )
+    if actual != frozenset(expected_names):
+        raise ValueError("latency restart suite is incomplete")
+    if load_json_strict(
+        validated_root / "protocol.json", description="latency protocol"
+    ) != protocol_json:
+        raise ValueError("latency restart protocol differs from frozen schedule")
+    ledger_names: list[str] = []
+    ledger_digests: dict[str, str] = {}
+    for batch in latency_protocol.batches:
+        for restart in range(batch.restarts):
+            name = _latency._restart_name(batch.batch_size, restart)
+            path = validated_root / name
+            record = load_json_strict(path, description="latency restart ledger")
+            _latency._validate_existing_restart(
+                record,
+                protocol_id=protocol_id,
+                suite_id=suite_id,
+                workload_id=workload_id,
+                batch=batch,
+                restart=restart,
+            )
+            ledger_names.append(name)
+            ledger_digests[name] = _sha256(path.read_bytes())
+    expected_suite = {
+        "schema": _latency.SUITE_SCHEMA,
+        "protocol_id": protocol_id,
+        "suite_id": suite_id,
+        "workload_id": workload_id,
+        "workload_identity": dict(suite_identity),
+        "fresh_process_per_restart": True,
+        "timed_restart_concurrency": 1,
+        "affinity_policy": latency_protocol.host_policy.to_json(),
+        "restart_ledgers": ledger_names,
+        "restart_ledger_sha256": ledger_digests,
+    }
+    if load_json_strict(
+        validated_root / "suite.json", description="latency suite"
+    ) != expected_suite:
+        raise ValueError("latency suite summary does not reconcile")
+    return expected_suite
+
+
+def _run_latency(
+    *,
+    protocol: Mapping[str, Any],
+    protocol_path: Path,
+    collection: Path,
+    out: Path,
+    prepared: PreparedCell,
+) -> dict[str, Any]:
+    del protocol_path
+    latency_protocol = latency_protocol_from_experiment(protocol, cpu=31)
+    verified = verify_collection(
+        protocol,
+        stage=CHARACTERIZATION_STAGE,
+        out=collection,
+        processes=RANGE_COUNT,
+        scientific=True,
+    )
+    root = out.absolute()
+    corpus_root, source_path = _latency_sidecar_paths(root)
+    if corpus_root.is_symlink() or source_path.is_symlink():
+        raise ValueError("latency sidecars may not be symlinks")
+    corpus_manifest = corpus_root / "manifest.json"
+    if not corpus_root.exists():
+        corpus_manifest = materialize_latency_corpus_from_characterization(
+            protocol,
+            characterization_dir=collection,
+            out_dir=corpus_root,
+            scientific=True,
+            processes=RANGE_COUNT,
+            prepared=prepared,
+        )
+    corpus = load_authenticated_latency_corpus(corpus_manifest)
+    materialization = json.loads(corpus.provenance_json)
+    source_corpus_identity = verified.corpus_identity
+    if not isinstance(source_corpus_identity, Mapping):
+        raise ValueError("characterization collection omits detector corpus identity")
+    source_detector_sha256 = source_corpus_identity.get("detectors_sha256")
+    if (
+        materialization.get("schema") != MATERIALIZATION_SCHEMA
+        or materialization.get("source_detector_sha256") != source_detector_sha256
+        or materialization.get("source_collection_summary_payload_sha256")
+        != verified.summary["payload_sha256"]
+        or materialization.get("shot_count") != len(verified.shot_rows)
+    ):
+        raise ValueError("latency materialization differs from characterization")
+    factory = YokedPatchUFLatencyFactory(
+        protocol=protocol,
+        corpus_manifest_path=str(corpus_manifest.resolve()),
+        scientific=True,
+        processes=RANGE_COUNT,
+    )
+    suite = run_latency_suite(
+        factory,
+        protocol=latency_protocol,
+        out_dir=root,
+        resume=True,
+    )
+    corpus_identity = _corpus_identity_record(
+        protocol=protocol,
+        corpus=corpus,
+        source_detector_sha256=str(source_detector_sha256),
+        collection=collection,
+        collection_summary_sha256=verified.summary["payload_sha256"],
+        suite_root=root,
+        suite=suite,
+    )
+    _install_or_compare_json(
+        source_path,
+        corpus_identity,
+        name="latency corpus identity",
+    )
+    return {
+        "suite": suite,
+        "suite_path": str(root.resolve()),
+        "workload_path": str(corpus_root.resolve()),
+        "source_identity_path": str(source_path.resolve()),
+        "source_identity_payload_sha256": corpus_identity["payload_sha256"],
+    }
+
+
+def _verify_latency(
+    *,
+    protocol: Mapping[str, Any],
+    input_root: Path,
+    collection_override: Path | None,
+    prepared: PreparedCell,
+) -> dict[str, Any]:
+    root = input_root.absolute()
+    corpus_root, source_path = _latency_sidecar_paths(root)
+    if corpus_root.is_symlink() or source_path.is_symlink():
+        raise ValueError("latency sidecars may not be symlinks")
+    corpus_identity = load_json_strict(
+        source_path, description="latency corpus identity"
+    )
+    _validate_payload_digest(corpus_identity, name="latency corpus identity")
+    stored_collection = corpus_identity.get("source_collection_path")
+    if not isinstance(stored_collection, str) or not stored_collection:
+        raise ValueError("latency corpus identity omits source collection path")
+    collection = (
+        collection_override.resolve()
+        if collection_override is not None
+        else Path(stored_collection).resolve()
+    )
+    verified = verify_collection(
+        protocol,
+        stage=CHARACTERIZATION_STAGE,
+        out=collection,
+        processes=RANGE_COUNT,
+        scientific=True,
+    )
+    corpus_manifest = corpus_root / "manifest.json"
+    corpus = load_authenticated_latency_corpus(corpus_manifest)
+    factory = YokedPatchUFLatencyFactory(
+        protocol=protocol,
+        corpus_manifest_path=str(corpus_manifest.resolve()),
+        scientific=True,
+        processes=RANGE_COUNT,
+    )
+    materialization = json.loads(corpus.provenance_json)
+    source_corpus_identity = verified.corpus_identity
+    if not isinstance(source_corpus_identity, Mapping):
+        raise ValueError("characterization collection omits detector corpus identity")
+    source_detector_sha256 = source_corpus_identity.get("detectors_sha256")
+    if (
+        materialization.get("schema") != MATERIALIZATION_SCHEMA
+        or materialization.get("source_detector_sha256") != source_detector_sha256
+        or materialization.get("source_collection_summary_payload_sha256")
+        != verified.summary["payload_sha256"]
+        or materialization.get("shot_count") != len(verified.shot_rows)
+    ):
+        raise ValueError("latency materialization differs from characterization")
+    latency_protocol = latency_protocol_from_experiment(protocol, cpu=31)
+    identity = dict(factory.suite_identity)
+    suite = _validate_restart_suite(
+        root=root,
+        latency_protocol=latency_protocol,
+        suite_identity=identity,
+    )
+    expected_corpus_identity = _corpus_identity_record(
+        protocol=protocol,
+        corpus=corpus,
+        source_detector_sha256=str(source_detector_sha256),
+        collection=Path(stored_collection),
+        collection_summary_sha256=verified.summary["payload_sha256"],
+        suite_root=root,
+        suite=suite,
+    )
+    if corpus_identity != expected_corpus_identity:
+        raise ValueError("latency corpus identity differs from characterization")
+    return {
+        "valid": True,
+        "experiment_id": protocol["experiment_id"],
+        "suite_id": suite["suite_id"],
+        "workload_id": suite["workload_id"],
+        "corpus_rows": corpus.row_count,
+        "restart_ledgers": len(suite["restart_ledgers"]),
+        "source_identity_payload_sha256": corpus_identity["payload_sha256"],
+    }
+
+
+def _run_casebook_replay(
+    *,
+    protocol: Mapping[str, Any],
+    stage: str,
+    collection: Path,
+    analysis: Path,
+    out: Path,
+    worker_processes: int,
+) -> dict[str, Any]:
+    root, existing = validate_resumable_output_root(
+        out,
+        allowed_entries={"replay.json"},
+        description="Patch-UF casebook replay bundle",
+    )
+    if existing not in (frozenset(), frozenset({"replay.json"})):
+        raise ValueError("casebook replay bundle has unexpected entries")
+    summary = replay_casebook_in_fresh_process(
+        protocol,
+        collection_out=collection,
+        analysis_path=analysis,
+        stage=stage,
+        processes=RANGE_COUNT,
+        worker_processes=worker_processes,
+        scientific=True,
+    )
+    if (
+        summary.get("schema") != REPLAY_SCHEMA
+        or summary.get("status") != "reconciled"
+        or summary.get("replayed_cases") != len(summary.get("cases", ()))
+    ):
+        raise ValueError("casebook replay did not reconcile every retained shot")
+    root.mkdir(parents=True, exist_ok=True)
+    path = root / "replay.json"
+    payload = canonical_json_bytes(summary) + b"\n"
+    if path.exists():
+        if path.is_symlink() or not path.is_file() or path.read_bytes() != payload:
+            raise ValueError("existing casebook replay bundle differs")
+    else:
+        install_bytes_atomic(
+            path,
+            payload,
+            prefix="patch-uf-casebook-replay-",
+            overwrite=False,
+        )
+    return {
+        "valid": True,
+        "replay_path": str(path.resolve()),
+        "payload_sha256": summary["payload_sha256"],
+        "replayed_cases": summary["replayed_cases"],
+        "worker_processes": summary["worker_processes"],
+    }
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Confidence-Gated Patch Union-Find plus residual Global-MWPM "
+            "experiment harness"
+        )
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    inspect = commands.add_parser(
+        "inspect", help="compile and report draft cell/source provenance without sampling"
+    )
+    inspect.add_argument("--protocol", type=Path, required=True)
+
+    smoke = commands.add_parser(
+        "smoke", help="run the fixed non-scientific 32-shot integration gate"
+    )
+    smoke.add_argument("--protocol", type=Path, required=True)
+    smoke.add_argument("--out", type=Path, required=True)
+    smoke.add_argument("--processes", type=int, default=32)
+
+    probe = commands.add_parser(
+        "probe", help="run a bounded non-scientific storage/runtime probe"
+    )
+    probe.add_argument("--protocol", type=Path, required=True)
+    probe.add_argument("--shots", type=int, default=100)
+    probe.add_argument("--out", type=Path, required=True)
+    probe.add_argument("--processes", type=int, default=32)
+
+    freeze = commands.add_parser(
+        "freeze", help="freeze a clean commit-A draft after scratch gates"
+    )
+    freeze.add_argument("--draft", type=Path, required=True)
+    freeze.add_argument("--smoke-root", type=Path, required=True)
+    freeze.add_argument("--probe-root", type=Path, required=True)
+    freeze.add_argument("--out-protocol", type=Path, required=True)
+
+    verify_protocol = commands.add_parser(
+        "verify-protocol", help="verify two-commit lineage, sources, host, and cell"
+    )
+    verify_protocol.add_argument("--protocol", type=Path)
+    verify_protocol.add_argument(
+        "--describe",
+        action="store_true",
+        help="print the exact draft/frozen field contract",
+    )
+
+    for command, help_text in (
+        ("collect", "collect or resume one fixed scientific stage"),
+        ("verify-collection", "read-only verification of one scientific stage"),
+    ):
+        sub = commands.add_parser(command, help=help_text)
+        sub.add_argument("--stage", choices=tuple(STAGE_ALIASES), required=True)
+        sub.add_argument("--protocol", type=Path, required=True)
+        sub.add_argument(
+            "--out" if command == "collect" else "--input",
+            type=Path,
+            required=True,
+        )
+        if command == "collect":
+            sub.add_argument("--processes", type=int, default=32)
+
+    latency = commands.add_parser(
+        "latency", help="run serialized fresh-process timing on characterization rows"
+    )
+    latency.add_argument("--protocol", type=Path, required=True)
+    latency.add_argument("--collection", type=Path, required=True)
+    latency.add_argument("--out", type=Path, required=True)
+
+    verify_latency = commands.add_parser(
+        "verify-latency", help="read-only verification of corpus and restart ledgers"
+    )
+    verify_latency.add_argument("--protocol", type=Path, required=True)
+    verify_latency.add_argument("--input", type=Path, required=True)
+    verify_latency.add_argument(
+        "--collection",
+        type=Path,
+        help="optional relocated characterization collection path",
+    )
+    replay = commands.add_parser(
+        "replay", help="fresh-process bit-exact replay of an authenticated casebook"
+    )
+    replay.add_argument("--stage", choices=tuple(STAGE_ALIASES), required=True)
+    replay.add_argument("--protocol", type=Path, required=True)
+    replay.add_argument("--collection", type=Path, required=True)
+    replay.add_argument("--analysis", type=Path, required=True)
+    replay.add_argument("--processes", type=int, default=32)
+    replay.add_argument("--out", type=Path, required=True)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    campaign_lease: _CampaignLockLease | None = None
+    try:
+        tmp_root = _require_tmpdir()
+        if args.command in {"smoke", "probe", "collect", "latency", "replay"}:
+            campaign_lease = _acquire_campaign_lock(
+                tmp_root,
+                command=args.command,
+                target=args.out,
+            )
+        configure_single_thread_runtime()
+        _reject_max_errors()
+
+        if args.command == "verify-protocol" and args.protocol is None:
+            if not args.describe:
+                raise ValueError("verify-protocol requires --protocol or --describe")
+            _print_json({"protocol_contract": _protocol_contract()})
+            return 0
+
+        if args.command == "inspect":
+            protocol = load_json_strict(args.protocol, description="Patch-UF protocol")
+            _validate_protocol_contract(protocol, expected_status="DRAFT")
+            inventory, inventory_digest = _source_inventory(protocol)
+            prepared_protocol = _prepare_protocol(protocol, stage="inspect")
+            prepared = prepare_selected_cell(
+                prepared_protocol,
+                stage="inspect",
+                processes=1,
+                scientific=False,
+            )
+            _print_json(
+                {
+                    "protocol_contract": _protocol_contract(),
+                    "repository": _repository_state(),
+                    "draft_template_sha256": _draft_digest(protocol),
+                    "source_hashes": inventory,
+                    "source_inventory_sha256": inventory_digest,
+                    "selected_cell_provenance": dict(prepared.provenance),
+                    "captured_cpu31_host_policy": capture_host_policy(cpu=31).to_json(),
+                }
+            )
+            return 0
+
+        if args.command in {"smoke", "probe"}:
+            processes = _validate_processes(args.processes, scientific=False)
+            shots = 32 if args.command == "smoke" else args.shots
+            if args.command == "probe" and not 32 <= shots <= 10_000:
+                raise ValueError("probe --shots must be in [32, 10000]")
+            out = _require_under(args.out, tmp_root, name=f"{args.command} output")
+            draft = load_json_strict(args.protocol, description="Patch-UF draft")
+            scratch = _scratch_protocol(
+                draft,
+                stage=args.command,
+                shots=shots,
+                state=_repository_state(),
+            )
+            summary = run_collection(
+                scratch,
+                stage=args.command,
+                out=out,
+                processes=processes,
+                scientific=False,
+            )
+            _print_json(summary)
+            return 0
+
+        if args.command == "freeze":
+            draft = load_json_strict(args.draft, description="Patch-UF draft")
+            frozen = _freeze(
+                draft,
+                draft_path=args.draft,
+                smoke_root=args.smoke_root,
+                probe_root=args.probe_root,
+                out_protocol=args.out_protocol,
+                tmp_root=tmp_root,
+            )
+            _print_json(
+                {
+                    "wrote": str(args.out_protocol),
+                    "experiment_id": frozen["experiment_id"],
+                    "protocol_self_sha256": frozen["protocol_self_sha256"],
+                    "implementation_commit": frozen["implementation_commit"],
+                    "next_step": "commit only the frozen JSON as config commit B",
+                }
+            )
+            return 0
+
+        protocol = load_json_strict(args.protocol, description="frozen Patch-UF protocol")
+        report, prepared = _verify_frozen_protocol(
+            protocol,
+            protocol_path=args.protocol,
+            authenticate_cell=True,
+        )
+        assert prepared is not None
+
+        if args.command == "verify-protocol":
+            report["protocol_contract"] = _protocol_contract()
+            _print_json(report)
+            return 0
+
+        if args.command == "collect":
+            processes = _validate_processes(args.processes, scientific=True)
+            summary = run_collection(
+                protocol,
+                stage=STAGE_ALIASES[args.stage],
+                out=args.out,
+                processes=processes,
+                scientific=True,
+                prepared=prepared,
+            )
+            _print_json(summary)
+            return 0
+
+        if args.command == "verify-collection":
+            verified = verify_collection(
+                protocol,
+                stage=STAGE_ALIASES[args.stage],
+                out=args.input,
+                processes=RANGE_COUNT,
+                scientific=True,
+            )
+            _print_json(
+                {
+                    "valid": True,
+                    "summary": verified.summary,
+                    "shot_rows": len(verified.shot_rows),
+                    "lane_rows": len(verified.lane_rows),
+                    "component_rows": len(verified.component_rows),
+                }
+            )
+            return 0
+
+        if args.command == "latency":
+            manifest = _run_latency(
+                protocol=protocol,
+                protocol_path=args.protocol,
+                collection=args.collection,
+                out=args.out,
+                prepared=prepared,
+            )
+            _print_json(manifest)
+            return 0
+
+        if args.command == "verify-latency":
+            result = _verify_latency(
+                protocol=protocol,
+                input_root=args.input,
+                collection_override=args.collection,
+                prepared=prepared,
+            )
+            _print_json(result)
+            return 0
+
+        if args.command == "replay":
+            worker_processes = _validate_processes(
+                args.processes, scientific=False
+            )
+            result = _run_casebook_replay(
+                protocol=protocol,
+                stage=STAGE_ALIASES[args.stage],
+                collection=args.collection,
+                analysis=args.analysis,
+                out=args.out,
+                worker_processes=worker_processes,
+            )
+            _print_json(result)
+            return 0
+        raise AssertionError(f"unhandled command {args.command!r}")
+    except (
+        FileExistsError,
+        KeyError,
+        OSError,
+        RuntimeError,
+        subprocess.CalledProcessError,
+        TypeError,
+        ValueError,
+    ) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return 2
+    finally:
+        if campaign_lease is not None:
+            campaign_lease.release()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -217,11 +217,22 @@ def compile_matching_graph(
     layout: PromatchLayout,
     *,
     require_zero_frame: bool = True,
+    retain_cross_lane_edges: bool = False,
 ) -> CompiledPromatchGraph:
-    """Builds the residual matcher and canonical domain-local predecoder graphs."""
+    """Builds the residual matcher and canonical domain-local predecoder graphs.
+
+    By default, the maintained ProMatch topology validation rejects non-yoke
+    edges crossing patches.  ``retain_cross_lane_edges=True`` is the additive UF
+    compile path: these edges remain canonical/global so a later role-derived
+    projection can expose them as guard-port incidences.  The option does not
+    add them to any existing :class:`DomainGraph` and intentionally does not
+    alter fingerprints when the canonical edge table itself is unchanged.
+    """
 
     if not isinstance(dem, stim.DetectorErrorModel):
         raise TypeError(f"dem must be a stim.DetectorErrorModel, got {type(dem)!r}")
+    if not isinstance(retain_cross_lane_edges, bool):
+        raise TypeError("retain_cross_lane_edges must be a bool")
     # Stim's DEM count properties scan the model. Cache them before the edge
     # loop instead of accidentally rescanning a large DEM for every edge.
     num_detectors = dem.num_detectors
@@ -319,7 +330,10 @@ def compile_matching_graph(
         target_inner = isinstance(target_role, (L1BodyDetector, L1TerminalDetector))
         if not source_inner or not target_inner:
             raise ValueError(f"unsupported detector roles on edge {edge.edge_id}")
-        if source_role.patch_id != target_role.patch_id:  # type: ignore[union-attr]
+        if (
+            source_role.patch_id != target_role.patch_id  # type: ignore[union-attr]
+            and not retain_cross_lane_edges
+        ):
             raise ValueError(
                 "unsupported non-boundary edge crosses patches: "
                 f"edge={edge.edge_id}, source_role={source_role!r}, "

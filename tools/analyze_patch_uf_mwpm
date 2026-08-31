@@ -1,0 +1,492 @@
+#!/usr/bin/env python3
+"""Authenticate and analyze Patch-UF accuracy and latency artifacts."""
+
+from __future__ import annotations
+
+# Native limits must be installed before NumPy or decoder modules are imported.
+# ruff: noqa: E402
+import os
+
+for _thread_name in (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+):
+    os.environ[_thread_name] = "1"
+if os.environ.get("TMPDIR"):
+    os.environ.setdefault(
+        "MPLCONFIGDIR", os.path.join(os.environ["TMPDIR"], "yoked-surface-codes-matplotlib")
+    )
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+from typing import Any, Mapping
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+
+from yoked.decoding._artifact_io import (  # noqa: E402
+    install_bytes_atomic,
+    unique_json_object,
+)
+from yoked.decoding._patch_uf_analysis import (  # noqa: E402
+    ANALYSIS_SCHEMA,
+    AnalysisConfig,
+    analyze_collection,
+    write_analysis_bundle,
+)
+from yoked.decoding._patch_uf_experiment import (  # noqa: E402
+    PROTOCOL_SCHEMA,
+    canonical_protocol_self_sha256,
+)
+from yoked.decoding._patch_uf_latency_analysis import (  # noqa: E402
+    LATENCY_ANALYSIS_SCHEMA,
+    analyze_latency_suite,
+    write_latency_analysis_bundle,
+)
+from yoked.decoding._patch_uf_stats import ClusterSizeBin  # noqa: E402
+from yoked.decoding._promatch_stats import canonical_json_bytes  # noqa: E402
+
+
+FINALIZATION_SCHEMA = "patch-uf-finalization-v1"
+
+
+def _require_tmpdir() -> Path:
+    raw = os.environ.get("TMPDIR")
+    if not raw:
+        raise RuntimeError("TMPDIR must be set for analysis writes")
+    path = Path(raw)
+    if path.is_symlink() or not path.is_dir():
+        raise RuntimeError("TMPDIR must name an existing regular directory")
+    return path
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"JSON input must be a regular file: {path}")
+    try:
+        value = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=unique_json_object,
+            parse_constant=lambda item: (_ for _ in ()).throw(
+                ValueError(f"nonfinite JSON constant {item}")
+            ),
+        )
+    except (UnicodeError, json.JSONDecodeError) as ex:
+        raise ValueError(f"cannot decode JSON input: {path}") from ex
+    if not isinstance(value, dict):
+        raise ValueError(f"JSON input must contain one object: {path}")
+    return value
+
+
+def _authenticate_frozen_protocol(path: Path) -> dict[str, Any]:
+    """Delegate the full two-commit/source/host/cell gate to the harness.
+
+    Keeping one executable authentication boundary prevents the collector and
+    analyzer from gradually acquiring different interpretations of a frozen
+    protocol.  The benchmark verifier is itself part of the frozen source
+    inventory, and its successful report is checked against the bytes loaded
+    here before any scientific analysis is written.
+    """
+
+    protocol = _load_json(path)
+    if (
+        protocol.get("schema") != PROTOCOL_SCHEMA
+        or protocol.get("schema_version") != 1
+        or protocol.get("status") != "FROZEN"
+        or protocol.get("frozen") is not True
+        or protocol.get("protocol_self_sha256")
+        != canonical_protocol_self_sha256(protocol)
+    ):
+        raise ValueError("scientific analysis requires a self-authenticating frozen protocol")
+    verifier = _REPO_ROOT / "tools" / "benchmark_patch_uf_mwpm"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(verifier),
+            "verify-protocol",
+            "--protocol",
+            str(path),
+        ],
+        cwd=_REPO_ROOT,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip()
+        raise ValueError(f"frozen protocol authentication failed: {detail}")
+    try:
+        report = json.loads(
+            completed.stdout,
+            object_pairs_hook=unique_json_object,
+            parse_constant=lambda item: (_ for _ in ()).throw(
+                ValueError(f"nonfinite verifier JSON constant {item}")
+            ),
+        )
+    except (json.JSONDecodeError, ValueError) as ex:
+        raise ValueError("frozen protocol verifier returned malformed JSON") from ex
+    if not isinstance(report, Mapping) or report.get("valid") is not True:
+        raise ValueError("frozen protocol verifier did not return a valid attestation")
+    if (
+        report.get("experiment_id") != protocol.get("experiment_id")
+        or report.get("protocol_self_sha256")
+        != protocol.get("protocol_self_sha256")
+        or report.get("implementation_commit")
+        != protocol.get("implementation_commit")
+        or report.get("source_inventory_sha256")
+        != protocol.get("source_inventory_sha256")
+    ):
+        raise ValueError("frozen protocol verifier identity disagrees with input bytes")
+    return protocol
+
+
+def _paths_disjoint(output: Path, inputs: list[Path]) -> None:
+    destination = output.resolve()
+    for raw in inputs:
+        source = raw.resolve()
+        if source == destination or source in destination.parents or destination in source.parents:
+            raise ValueError("analysis input and output paths must be disjoint and non-nested")
+
+
+def _seed_literal(raw: Mapping[str, Any], name: str) -> int:
+    direct = raw.get(name)
+    if isinstance(direct, int) and not isinstance(direct, bool) and direct >= 0:
+        return direct
+    roots = raw.get("seed_roots")
+    root_name = name.removesuffix("_seed")
+    root = roots.get(root_name) if isinstance(roots, Mapping) else None
+    if not isinstance(root, str) or len(root) != 64:
+        raise ValueError(f"analysis literal {name} or seed_roots.{root_name} is required")
+    try:
+        root_bytes = bytes.fromhex(root)
+    except ValueError as ex:
+        raise ValueError(f"analysis seed root {root_name} must be hexadecimal") from ex
+    return int.from_bytes(
+        hashlib.sha256(root_bytes + b"patch-uf-analysis-seed-v1\0" + root_name.encode()).digest()[:8],
+        "little",
+    )
+
+
+def _analysis_config(protocol: Mapping[str, Any], *, scientific: bool) -> AnalysisConfig:
+    raw = protocol.get(
+        "analysis_config", protocol.get("analysis", protocol.get("diagnostics"))
+    )
+    if not isinstance(raw, Mapping):
+        raise ValueError("protocol requires a diagnostics/analysis_config object")
+    if raw is protocol.get("diagnostics"):
+        replicates = raw.get("bootstrap_replicates")
+        bins_raw = raw.get("cluster_defect_count_display_bins")
+        if not isinstance(bins_raw, list):
+            raise ValueError("protocol diagnostics require cluster display bins")
+        bins = tuple(
+            ClusterSizeBin(
+                label=str(item["label"]),
+                minimum=int(item["minimum"]),
+                maximum_exclusive=(
+                    None
+                    if item["maximum"] is None
+                    else int(item["maximum"]) + 1
+                ),
+            )
+            for item in bins_raw
+        )
+        bootstrap_root = raw.get("bootstrap_seed_root")
+        replay_root = raw.get("replay_selection_seed_root")
+        if scientific and replicates != 10_000:
+            raise ValueError(
+                "scientific analysis requires literal 10,000-replicate bootstraps"
+            )
+        if not isinstance(bootstrap_root, str) or len(bootstrap_root) != 64:
+            raise ValueError("protocol diagnostics require bootstrap_seed_root")
+        if not isinstance(replay_root, str) or len(replay_root) != 64:
+            raise ValueError("protocol diagnostics require replay_selection_seed_root")
+        try:
+            seed_bytes = bytes.fromhex(bootstrap_root)
+        except ValueError as ex:
+            raise ValueError(
+                "protocol diagnostics bootstrap_seed_root must be hexadecimal"
+            ) from ex
+        workload_seed = int.from_bytes(
+            hashlib.sha256(
+                seed_bytes + b"patch-uf-analysis-seed-v1\0workload_bootstrap"
+            ).digest()[:8],
+            "little",
+        )
+        cluster_seed = int.from_bytes(
+            hashlib.sha256(
+                seed_bytes + b"patch-uf-analysis-seed-v1\0cluster_bootstrap"
+            ).digest()[:8],
+            "little",
+        )
+        return AnalysisConfig(
+            alpha=float(raw["alpha"]),
+            workload_bootstrap_replicates=int(replicates),
+            cluster_bootstrap_replicates=int(replicates),
+            workload_bootstrap_seed=workload_seed,
+            cluster_bootstrap_seed=cluster_seed,
+            casebook_seed_root=replay_root,
+            maximum_cases_per_category=int(raw["maximum_cases_per_category"]),
+            cluster_bins=bins,
+            confidence_bin_edges=tuple(raw["confidence_margin_bin_edges"]),
+        )
+    bootstrap = raw.get("bootstrap", raw)
+    if not isinstance(bootstrap, Mapping):
+        raise ValueError("protocol analysis bootstrap literals must be an object")
+    workload_replicates = bootstrap.get("workload_bootstrap_replicates")
+    cluster_replicates = bootstrap.get("cluster_bootstrap_replicates")
+    if scientific and (workload_replicates != 10_000 or cluster_replicates != 10_000):
+        raise ValueError("scientific analysis requires literal 10,000-replicate bootstraps")
+    bins_raw = raw.get("cluster_bins")
+    bins = (
+        tuple(ClusterSizeBin(**dict(item)) for item in bins_raw)
+        if isinstance(bins_raw, list)
+        else AnalysisConfig().cluster_bins
+    )
+    casebook_root = raw.get("casebook_seed_root")
+    if casebook_root is None:
+        roots = bootstrap.get("seed_roots")
+        casebook_root = roots.get("casebook") if isinstance(roots, Mapping) else None
+    return AnalysisConfig(
+        alpha=float(raw.get("alpha_two_sided", raw.get("alpha", 0.05))),
+        workload_bootstrap_replicates=int(workload_replicates),
+        cluster_bootstrap_replicates=int(cluster_replicates),
+        workload_bootstrap_seed=_seed_literal(bootstrap, "workload_bootstrap_seed"),
+        cluster_bootstrap_seed=_seed_literal(bootstrap, "cluster_bootstrap_seed"),
+        casebook_seed_root=casebook_root,
+        maximum_cases_per_category=int(raw.get("maximum_cases_per_category", 100)),
+        cluster_bins=bins,
+    )
+
+
+def _authenticated_analysis_identity(
+    root: Path,
+    *,
+    filename: str,
+    schema: str,
+    expected_names: set[str],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError(f"analysis input must be a regular directory: {root}")
+    if {item.name for item in root.iterdir()} != expected_names:
+        raise ValueError(f"analysis input has an unexpected artifact set: {root}")
+    path = root / filename
+    raw = path.read_bytes()
+    value = _load_json(path)
+    if value.get("schema") != schema or canonical_json_bytes(value) != raw:
+        raise ValueError(f"analysis input is not canonical {schema}: {path}")
+    digest = value.get("payload_sha256")
+    if not isinstance(digest, str) or len(digest) != 64:
+        raise ValueError("analysis payload digest is malformed")
+    unsigned = dict(value)
+    unsigned.pop("payload_sha256")
+    if hashlib.sha256(canonical_json_bytes(unsigned)).hexdigest() != digest:
+        raise ValueError("analysis payload digest mismatch")
+    report = root / "report.md"
+    return value, {
+        "path": str(path.resolve()),
+        "payload_sha256": digest,
+        "file_sha256": hashlib.sha256(raw).hexdigest(),
+        "report_sha256": hashlib.sha256(report.read_bytes()).hexdigest(),
+    }
+
+
+def _write_finalization(out: Path, payload: dict[str, Any], report: str) -> None:
+    out.mkdir(parents=True, exist_ok=True)
+    allowed = {"finalization.json", "report.md"}
+    if {item.name for item in out.iterdir()} - allowed:
+        raise ValueError("finalization output contains unexpected entries")
+    data = canonical_json_bytes(payload)
+    for path, body, prefix in (
+        (out / "finalization.json", data, "patch-uf-finalization-"),
+        (out / "report.md", report.encode(), "patch-uf-final-report-"),
+    ):
+        if path.exists():
+            if path.is_symlink() or not path.is_file() or path.read_bytes() != body:
+                raise ValueError(f"existing finalization artifact differs: {path}")
+        else:
+            install_bytes_atomic(path, body, prefix=prefix, overwrite=False)
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    stage = sub.add_parser("stage", help="analyze one authenticated paired collection")
+    stage.add_argument("--protocol", type=Path, required=True)
+    stage.add_argument("--collection", type=Path, required=True)
+    stage.add_argument("--stage", required=True)
+    stage.add_argument("--out", type=Path, required=True)
+    stage.add_argument("--processes", type=int, default=32)
+    stage.add_argument("--allow-non-scientific", action="store_true")
+
+    timing = sub.add_parser("latency", help="analyze one authenticated latency suite")
+    timing.add_argument("--protocol", type=Path, required=True)
+    timing.add_argument("--input", type=Path, required=True)
+    timing.add_argument("--out", type=Path, required=True)
+    timing.add_argument("--bootstrap-replicates", type=int, default=10_000)
+    timing.add_argument("--allow-non-scientific", action="store_true")
+
+    finalize = sub.add_parser("finalize", help="bind 1k/10k/latency analysis identities")
+    finalize.add_argument("--protocol", type=Path, required=True)
+    finalize.add_argument("--shakeout", type=Path, required=True)
+    finalize.add_argument("--characterization", type=Path, required=True)
+    finalize.add_argument("--latency", type=Path, required=True)
+    finalize.add_argument("--out", type=Path, required=True)
+    finalize.add_argument("--allow-non-scientific", action="store_true")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    _require_tmpdir()
+    args = _parser().parse_args(argv)
+    if args.command == "stage":
+        _paths_disjoint(args.out, [args.protocol, args.collection])
+        scientific = not args.allow_non_scientific
+        protocol = (
+            _authenticate_frozen_protocol(args.protocol)
+            if scientific
+            else _load_json(args.protocol)
+        )
+        config = _analysis_config(protocol, scientific=scientific)
+        artifacts = analyze_collection(
+            protocol,
+            stage=args.stage,
+            collection_out=args.collection,
+            config=config,
+            processes=args.processes,
+            scientific=scientific,
+        )
+        write_analysis_bundle(args.out, artifacts)
+    elif args.command == "latency":
+        _paths_disjoint(args.out, [args.protocol, args.input])
+        scientific = not args.allow_non_scientific
+        protocol = (
+            _authenticate_frozen_protocol(args.protocol)
+            if scientific
+            else _load_json(args.protocol)
+        )
+        if scientific and args.bootstrap_replicates != 10_000:
+            raise ValueError("scientific latency analysis requires 10,000 bootstrap replicates")
+        artifacts = analyze_latency_suite(
+            args.input, bootstrap_replicates=args.bootstrap_replicates
+        )
+        if scientific and set(artifacts.analysis["batches"]) != {
+            "1",
+            "64",
+            "1024",
+        }:
+            raise ValueError(
+                "scientific latency analysis requires batch sizes 1, 64, and 1024"
+            )
+        if scientific:
+            workload = artifacts.analysis.get("workload_identity")
+            if not isinstance(workload, Mapping) or (
+                workload.get("experiment_id") != protocol.get("experiment_id")
+                or workload.get("protocol_self_sha256")
+                != protocol.get("protocol_self_sha256")
+            ):
+                raise ValueError("latency suite belongs to a different frozen protocol")
+        write_latency_analysis_bundle(args.out, artifacts)
+    else:
+        _paths_disjoint(
+            args.out,
+            [args.protocol, args.shakeout, args.characterization, args.latency],
+        )
+        protocol = (
+            _load_json(args.protocol)
+            if args.allow_non_scientific
+            else _authenticate_frozen_protocol(args.protocol)
+        )
+        if (
+            protocol.get("schema") != PROTOCOL_SCHEMA
+            or protocol.get("schema_version") != 1
+            or protocol.get("protocol_self_sha256")
+            != canonical_protocol_self_sha256(protocol)
+        ):
+            raise ValueError("finalization protocol schema or self hash mismatch")
+        shakeout, shakeout_id = _authenticated_analysis_identity(
+            args.shakeout,
+            filename="analysis.json",
+            schema=ANALYSIS_SCHEMA,
+            expected_names={"analysis.json", "report.md"},
+        )
+        characterization, characterization_id = _authenticated_analysis_identity(
+            args.characterization,
+            filename="analysis.json",
+            schema=ANALYSIS_SCHEMA,
+            expected_names={"analysis.json", "report.md"},
+        )
+        latency_result, latency_id = _authenticated_analysis_identity(
+            args.latency,
+            filename="latency_analysis.json",
+            schema=LATENCY_ANALYSIS_SCHEMA,
+            expected_names={"latency_analysis.json", "report.md"},
+        )
+        experiment_id = protocol.get("experiment_id")
+        protocol_sha = protocol.get("protocol_self_sha256")
+        for name, value in (
+            ("shakeout", shakeout),
+            ("characterization", characterization),
+        ):
+            source = value.get("source", {})
+            if source.get("experiment_id") != experiment_id or source.get(
+                "protocol_self_sha256"
+            ) != protocol_sha:
+                raise ValueError(f"{name} analysis belongs to a different protocol")
+        latency_workload = latency_result.get("workload_identity")
+        if not isinstance(latency_workload, Mapping):
+            raise ValueError("latency analysis omits authenticated workload identity")
+        if (
+            latency_workload.get("experiment_id") != experiment_id
+            or latency_workload.get("protocol_self_sha256") != protocol_sha
+        ):
+            raise ValueError("latency analysis belongs to a different protocol")
+        if shakeout.get("reconciliation", {}).get("shots") != 1_000:
+            raise ValueError("shakeout analysis must contain exactly 1,000 shots")
+        if characterization.get("reconciliation", {}).get("shots") != 10_000:
+            raise ValueError("characterization analysis must contain exactly 10,000 shots")
+        payload = {
+            "schema": FINALIZATION_SCHEMA,
+            "schema_version": 1,
+            "experiment_id": experiment_id,
+            "protocol_self_sha256": protocol_sha,
+            "sources": {
+                "shakeout_1k": shakeout_id,
+                "characterization_10k": characterization_id,
+                "latency": {
+                    **latency_id,
+                    "suite_id": latency_result.get("suite_id"),
+                    "protocol_id": latency_result.get("protocol_id"),
+                    "workload_id": latency_result.get("workload_id"),
+                },
+            },
+            "status": "authenticated-analysis-identities-combined",
+        }
+        payload["payload_sha256"] = hashlib.sha256(
+            canonical_json_bytes(payload)
+        ).hexdigest()
+        report = (
+            "# Patch-UF analysis finalization\n\n"
+            f"Finalization digest: `{payload['payload_sha256']}`.\n\n"
+            "This artifact binds the authenticated 1,000-shot shakeout, "
+            "10,000-shot characterization, and latency analysis identities. "
+            "It does not mutate or replace any source artifact.\n"
+        )
+        _write_finalization(args.out, payload, report)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (FileExistsError, RuntimeError, TypeError, ValueError) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        raise SystemExit(2)

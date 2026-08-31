@@ -288,6 +288,7 @@ def test_custom_decoder_names_keep_frozen_promatch_entries() -> None:
         "pymatching-u0-wrap-v1-windowd",
         "pinball-style-v1-fullhistory-nine-stage-wholeshotrollback-pymatching",
         "pinball-ysc-v2-cz-fullhistory-nine-stage-domainatomic-yokeedge-pymatching",
+        "weighted-uf-fullhistory-patchlocal-zeroframe-residual-global-mwpm-v1",
     }
 
 

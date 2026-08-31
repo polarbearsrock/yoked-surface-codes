@@ -64,6 +64,7 @@ def test_registry_adds_pinball_without_changing_frozen_promatch_factories() -> N
         "pymatching-u0-wrap-v1-windowd",
         PINBALL_DECODER_NAME,
         PINBALL_V2_DECODER_NAME,
+        "weighted-uf-fullhistory-patchlocal-zeroframe-residual-global-mwpm-v1",
     }
     assert factories[
         "promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching"

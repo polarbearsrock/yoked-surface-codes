@@ -39,6 +39,11 @@ from yoked.decoding._pinball_v2_decoder import (
     CompiledPinballV2Decoder,
     PinballV2Decoder,
 )
+from yoked.decoding._patch_uf_decoder import (
+    PATCH_UF_TREATMENT_DECODER_NAME,
+    PATCH_UF_V1_POLICY,
+    PatchUFTreatmentDecoder,
+)
 from yoked.decoding._promatch import (
     CommitProposal,
     DomainPrematchStats,
@@ -140,6 +145,9 @@ def custom_decoders() -> dict[str, sinter.Decoder]:
         ),
         PINBALL_DECODER_NAME: PinballDecoder(),
         PINBALL_V2_DECODER_NAME: PinballV2Decoder(),
+        PATCH_UF_TREATMENT_DECODER_NAME: PatchUFTreatmentDecoder(
+            policy=PATCH_UF_V1_POLICY
+        ),
     }
 
 
@@ -162,9 +170,12 @@ __all__ = [
     "L1FullHistoryDomain",
     "L1TerminalDetector",
     "L1WindowDomain",
+    "PATCH_UF_TREATMENT_DECODER_NAME",
+    "PATCH_UF_V1_POLICY",
     "PINBALL_DECODER_NAME",
     "PINBALL_V2_DECODER_NAME",
     "PairedContingency",
+    "PatchUFTreatmentDecoder",
     "PinballDecoder",
     "PinballV2Decoder",
     "PrematchResult",

@@ -4,7 +4,7 @@ This page is the mutable dashboard for the experiment specifications in this
 directory. The long specifications describe contracts and rationale; this
 index records what has actually been implemented or run.
 
-Status as of **2026-08-26**:
+Status as of **2026-08-30**:
 
 | Experiment | Status | Scientific role | Primary artifacts |
 | --- | --- | --- | --- |
@@ -14,6 +14,7 @@ Status as of **2026-08-26**:
 | L1 ProMatch paired V3 pilot | Completed. The unsigned selector chose `pilot-02`, but unblinded PU-window accuracy was worse than U0-direct in all five cells. | Diagnostic pilot; no confirmatory accuracy run followed. | `out/promatch_l1_round1_v3_20260817_32p/` |
 | Phase-A global-context oracle replay | Completed over retained V3 shots. | Detector-only oracle decisions followed by downstream outcome comparison; exploratory, input-preserving, and without new sampling. | `out/promatch_l1_global_context_oracle_v1/replay/` |
 | B1 20,000-shot policy audit | Completed and finalized on 2026-08-19 using the frozen V2 protocol: 20,000 shots across 32 workers, followed by authenticated analysis and casebook expansion. | Exploratory policy-discovery corpus; explicitly non-claim-bearing. | Checked-in [human report](results/PROMATCH_L1_POLICY_AUDIT_20K_REPORT.md); full corpus workstation-local at `$TMPDIR/promatch-l1-policy-audit-20k-v2/`. |
+| Confidence-Gated UF–MWPM at `d=7`, `p=0.003` | Decoder, paired harness, authenticated analysis, replay, and latency paths implemented; frozen scientific collection pending commit-A gates. | Non-claim-bearing single-cell paired accuracy, workload, confidence-routing, and software-latency characterization. | [`CONFIDENCE_GATED_UF_MWPM_D7_P003.md`](CONFIDENCE_GATED_UF_MWPM_D7_P003.md). |
 
 The released paper CSV files and figures under `assets/` are delivered by a
 fresh clone. Every `out/` or `$TMPDIR` path in this table is instead a
@@ -47,6 +48,9 @@ remains outside Git.
   [`PROMATCH_L1_POLICY_AUDIT_20K.md`](PROMATCH_L1_POLICY_AUDIT_20K.md),
   `tools/benchmark_promatch_policy_audit`, and
   `tools/analyze_promatch_policy_audit`.
+- Confidence-Gated UF–MWPM initial experiment:
+  [`CONFIDENCE_GATED_UF_MWPM_D7_P003.md`](CONFIDENCE_GATED_UF_MWPM_D7_P003.md),
+  `tools/benchmark_patch_uf_mwpm`, and `tools/analyze_patch_uf_mwpm`.
 
 ## Provenance rule
 
