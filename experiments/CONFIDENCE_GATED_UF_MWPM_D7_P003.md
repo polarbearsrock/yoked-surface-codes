@@ -1,6 +1,7 @@
 # Confidence-Gated Union-Find with Residual Global MWPM
 
-- **Status:** V1 shakeout stopped at its replay gate; V2 recovery pending freeze
+- **Status:** V1 stopped at replay; V2 stopped at the characterization
+  telemetry-cap gate; V3 recovery in progress
 - **Date:** 2026-08-30
 - **Scientific role:** non-claim-bearing, single-cell paired characterization
 - **Physical cell:** `d=7`, SI1000 `p=0.003`, six patches, two yokes, 28 rounds
@@ -13,7 +14,12 @@
   paths are implemented. The first frozen 1,000-shot run was rejected because
   non-characterization verification did not expose its already-authenticated
   detector bytes to the replay request. V2 fixes that harness boundary without
-  changing decoder semantics and restarts from disjoint roots.
+  changing decoder semantics and restarted from disjoint roots. Its 1,000-shot
+  gate passed, but the disjoint 10,000-shot run stopped before committing any
+  range because the frozen 128 MiB normalized-telemetry ceiling was smaller
+  than a 312/313-shot range. V3 retains the decoder and statistical design,
+  raises only that ceiling to 512 MiB, adds an exact 313-shot capacity probe
+  plus a probe-derived 2x safety gate, and restarts from five new roots.
 - **Claim status:** no accuracy-preservation, speedup, workload-reduction, or
   hardware-latency claim is authorized
 
@@ -802,7 +808,12 @@ The following must pass before the first 1,000 shots:
    bit-for-bit.
 6. A disjoint 100-shot storage/runtime probe under `$TMPDIR` establishes that
    all required artifacts fit and that no unbounded trace is retained.
-7. The analyzer accepts a synthetic complete corpus and rejects missing,
+7. A one-worker scratch capacity probe executes one exact 313-shot logical
+   range through normalization and serialization. Its canonical normalized
+   metric tree, and the largest authenticated single-shot tree from the
+   100-shot probe scaled to 313 shots, must each fit below half the configured
+   per-range ceiling.
+8. The analyzer accepts a synthetic complete corpus and rejects missing,
    duplicated, overlapping, tampered, or inconsistent records.
 
 The smoke and probe are engineering inputs only. They are not copied into the
@@ -1674,7 +1685,7 @@ satisfy every identity in Section 12.2.
 The planned output root is:
 
 ```text
-out/cguf_mwpm_d7_p003_v2/
+out/cguf_mwpm_d7_p003_v3/
 ├── shakeout_1k_collection/
 │   ├── protocol.json
 │   ├── manifest.json
@@ -1758,19 +1769,19 @@ not copied, resumed, or promoted into this experiment.
 
 ### 16.1 Two-commit freeze
 
-The active V2 scientific collection follows the repository's two-commit
+The active V3 scientific collection follows the repository's two-commit
 pattern:
 
-1. **Implementation commit A2** contains all decoder, graph, collector,
+1. **Implementation commit A3** contains all decoder, graph, collector,
    analyzer, timing, replay, plotting, CLI, and test code, plus the final form
    of this specification, its `experiments/README.md` dashboard entry, and the
    resolved `docs/PATCH_UF_MWPM_D7_P003_DRAFT.json`.
-2. Generate the complete frozen protocol from a clean worktree at A2.
-3. **Config-only commit B2** changes exactly one file relative to A2:
-   `docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json`.
-4. Run the shakeout and characterization from a clean worktree at B2.
-5. The runner records A2 and B2 and verifies that
-   `git diff --name-only A2..B2`
+2. Generate the complete frozen protocol from a clean worktree at A3.
+3. **Config-only commit B3** changes exactly one file relative to A3:
+   `docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json`.
+4. Run the shakeout and characterization from a clean worktree at B3.
+5. The runner records A3 and B3 and verifies that
+   `git diff --name-only A3..B3`
    contains only that frozen JSON path.
 
 ### 16.1.1 Superseded V1 launch record
@@ -1783,7 +1794,7 @@ detector file instead of consuming the detector-only bytes already validated
 inside the 32 range shards. No characterization or latency run was started.
 
 The V1 files under `out/cguf_mwpm_d7_p003_v1/` are immutable failed-gate audit
-artifacts. They are never resumed, pooled, or promoted. V2 exposes an
+artifacts. They are never resumed, pooled, or promoted. V2 exposed an
 authenticated detector-only aggregate from `verify_collection`, additionally
 checks it against the installed detector corpus during characterization, and
 passes only detector bytes into the replay workers. Per Section 10.2, this
@@ -1792,6 +1803,28 @@ SHA-256 digests of
 `patch-uf-mwpm-d7-p003-v2-shakeout-replay-fix\\0<PURPOSE>`, with purposes
 `engineering-shakeout`, `characterization`, `latency-schedule`, `bootstrap`,
 and `replay-selection`; their literal values live in the draft/frozen JSON.
+
+### 16.1.2 Superseded V2 launch record
+
+V2 passed its fresh 1,000-shot collection, verification, analysis, and
+fresh-process replay gates. Its disjoint 10,000-shot characterization sampled
+the fixed worker ranges, but `_normalize_metrics` rejected the first completed
+range before joining actual outcomes or installing either range artifact: the
+uncompressed canonical normalized metric tree exceeded the frozen 128 MiB
+per-range limit. The partial characterization root contains only its immutable
+protocol copy and no committed scientific row. Nevertheless, the V2
+characterization root is burned and is never resumed, deleted, pooled, or
+promoted.
+
+The V3 implementation adds a capacity gate without changing decoder
+semantics. A scratch command executes one exact 313-shot logical range, and
+freeze authenticates both that full-range measurement and a 2x projection of
+the largest single-shot metric tree in the 100-shot probe. The V3 ceiling is
+512 MiB. Its five roots are the SHA-256 digests of
+`patch-uf-mwpm-d7-p003-v3-telemetry-cap-recovery\0<PURPOSE>`, with purposes
+`engineering-shakeout`, `characterization`, `latency-schedule`, `bootstrap`,
+and `replay-selection`, where `\0` denotes one NUL byte; the literal values
+live in the draft/frozen JSON.
 
 The eventual draft protocol may be developed at
 `docs/PATCH_UF_MWPM_D7_P003_DRAFT.json`, but neither that path nor this
@@ -2054,6 +2087,10 @@ tools/benchmark_patch_uf_mwpm probe \
     --shots 100 \
     --out "$TMPDIR/patch-uf-mwpm-probe" \
     --processes 32
+
+tools/benchmark_patch_uf_mwpm capacity-probe \
+    --protocol docs/PATCH_UF_MWPM_D7_P003_DRAFT.json \
+    --out "$TMPDIR/patch-uf-mwpm-capacity"
 ```
 
 After those development gates pass, commit all implementation, tests, the
@@ -2072,6 +2109,10 @@ tools/benchmark_patch_uf_mwpm probe \
     --shots 100 \
     --out "$TMPDIR/patch-uf-mwpm-probe-commit-a" \
     --processes 32
+
+tools/benchmark_patch_uf_mwpm capacity-probe \
+    --protocol docs/PATCH_UF_MWPM_D7_P003_DRAFT.json \
+    --out "$TMPDIR/patch-uf-mwpm-capacity-commit-a"
 ```
 
 The only permitted repository write before config commit B is then:
@@ -2081,96 +2122,97 @@ tools/benchmark_patch_uf_mwpm freeze \
     --draft docs/PATCH_UF_MWPM_D7_P003_DRAFT.json \
     --smoke-root "$TMPDIR/patch-uf-mwpm-smoke-commit-a" \
     --probe-root "$TMPDIR/patch-uf-mwpm-probe-commit-a" \
-    --out-protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json
+    --capacity-root "$TMPDIR/patch-uf-mwpm-capacity-commit-a" \
+    --out-protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json
 ```
 
 Authenticate the generated protocol, confirm that the A-to-B diff contains
-only `docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json`, commit that one file as B,
+only `docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json`, commit that one file as B,
 and verify a clean worktree at B. Then run:
 
 ```bash
 tools/benchmark_patch_uf_mwpm verify-protocol \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json
 
 tools/benchmark_patch_uf_mwpm collect \
     --stage shakeout-1k \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --out out/cguf_mwpm_d7_p003_v2/shakeout_1k_collection \
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --out out/cguf_mwpm_d7_p003_v3/shakeout_1k_collection \
     --processes 32
 
 tools/benchmark_patch_uf_mwpm verify-collection \
     --stage shakeout-1k \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --input out/cguf_mwpm_d7_p003_v2/shakeout_1k_collection
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --input out/cguf_mwpm_d7_p003_v3/shakeout_1k_collection
 
 tools/analyze_patch_uf_mwpm stage \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --collection out/cguf_mwpm_d7_p003_v2/shakeout_1k_collection \
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --collection out/cguf_mwpm_d7_p003_v3/shakeout_1k_collection \
     --stage engineering-shakeout \
-    --out out/cguf_mwpm_d7_p003_v2/shakeout_1k_analysis
+    --out out/cguf_mwpm_d7_p003_v3/shakeout_1k_analysis
 
 tools/benchmark_patch_uf_mwpm replay \
     --stage shakeout-1k \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --collection out/cguf_mwpm_d7_p003_v2/shakeout_1k_collection \
-    --analysis out/cguf_mwpm_d7_p003_v2/shakeout_1k_analysis/analysis.json \
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --collection out/cguf_mwpm_d7_p003_v3/shakeout_1k_collection \
+    --analysis out/cguf_mwpm_d7_p003_v3/shakeout_1k_analysis/analysis.json \
     --processes 32 \
-    --out out/cguf_mwpm_d7_p003_v2/shakeout_1k_replay
+    --out out/cguf_mwpm_d7_p003_v3/shakeout_1k_replay
 
 tools/benchmark_patch_uf_mwpm collect \
     --stage characterization-10k \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --out out/cguf_mwpm_d7_p003_v2/characterization_10k_collection \
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --out out/cguf_mwpm_d7_p003_v3/characterization_10k_collection \
     --processes 32
 
 tools/benchmark_patch_uf_mwpm verify-collection \
     --stage characterization-10k \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --input out/cguf_mwpm_d7_p003_v2/characterization_10k_collection
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --input out/cguf_mwpm_d7_p003_v3/characterization_10k_collection
 
 tools/analyze_patch_uf_mwpm stage \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --collection out/cguf_mwpm_d7_p003_v2/characterization_10k_collection \
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --collection out/cguf_mwpm_d7_p003_v3/characterization_10k_collection \
     --stage characterization \
-    --out out/cguf_mwpm_d7_p003_v2/characterization_10k_analysis
+    --out out/cguf_mwpm_d7_p003_v3/characterization_10k_analysis
 
 tools/benchmark_patch_uf_mwpm replay \
     --stage characterization-10k \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --collection out/cguf_mwpm_d7_p003_v2/characterization_10k_collection \
-    --analysis out/cguf_mwpm_d7_p003_v2/characterization_10k_analysis/analysis.json \
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --collection out/cguf_mwpm_d7_p003_v3/characterization_10k_collection \
+    --analysis out/cguf_mwpm_d7_p003_v3/characterization_10k_analysis/analysis.json \
     --processes 32 \
-    --out out/cguf_mwpm_d7_p003_v2/characterization_10k_replay
+    --out out/cguf_mwpm_d7_p003_v3/characterization_10k_replay
 
 tools/benchmark_patch_uf_mwpm latency \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --collection out/cguf_mwpm_d7_p003_v2/characterization_10k_collection \
-    --out out/cguf_mwpm_d7_p003_v2/latency_collection
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --collection out/cguf_mwpm_d7_p003_v3/characterization_10k_collection \
+    --out out/cguf_mwpm_d7_p003_v3/latency_collection
 
 tools/benchmark_patch_uf_mwpm verify-latency \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --input out/cguf_mwpm_d7_p003_v2/latency_collection
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --input out/cguf_mwpm_d7_p003_v3/latency_collection
 
 tools/analyze_patch_uf_mwpm latency \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --input out/cguf_mwpm_d7_p003_v2/latency_collection \
-    --out out/cguf_mwpm_d7_p003_v2/latency_analysis \
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --input out/cguf_mwpm_d7_p003_v3/latency_collection \
+    --out out/cguf_mwpm_d7_p003_v3/latency_analysis \
     --bootstrap-replicates 10000
 
 tools/analyze_patch_uf_mwpm finalize \
-    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V2.json \
-    --shakeout out/cguf_mwpm_d7_p003_v2/shakeout_1k_analysis \
-    --characterization out/cguf_mwpm_d7_p003_v2/characterization_10k_analysis \
-    --latency out/cguf_mwpm_d7_p003_v2/latency_analysis \
-    --out out/cguf_mwpm_d7_p003_v2/finalization
+    --protocol docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json \
+    --shakeout out/cguf_mwpm_d7_p003_v3/shakeout_1k_analysis \
+    --characterization out/cguf_mwpm_d7_p003_v3/characterization_10k_analysis \
+    --latency out/cguf_mwpm_d7_p003_v3/latency_analysis \
+    --out out/cguf_mwpm_d7_p003_v3/finalization
 ```
 
 Smoke/probe outputs live under `$TMPDIR`. Scientific output uses a fresh
 `out/` directory and is never run over an old corpus. Accuracy collection is
 exactly 32 processes; latency restarts are serialized fresh processes.
-The `smoke`, `probe`, `collect`, `latency`, and `replay` commands share one exclusive
-campaign lock under `$TMPDIR`; a stale lock is removed only after its recorded
-owner PID is proven absent.
+The `smoke`, `probe`, `capacity-probe`, `collect`, `latency`, and `replay`
+commands share one exclusive campaign lock under `$TMPDIR`; a stale lock is
+removed only after its recorded owner PID is proven absent.
 
 ## 20. Interpretation and follow-up routing
 

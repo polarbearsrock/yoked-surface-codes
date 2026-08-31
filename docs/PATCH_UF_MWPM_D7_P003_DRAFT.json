@@ -3,7 +3,7 @@
   "collection_limits": {
     "expected_lanes_per_shot": 12,
     "maximum_component_records_per_shot": 4096,
-    "maximum_metric_bytes_per_range": 134217728
+    "maximum_metric_bytes_per_range": 536870912
   },
   "decoder": {
     "arms": {
@@ -52,7 +52,7 @@
   "diagnostics": {
     "alpha": 0.05,
     "bootstrap_replicates": 10000,
-    "bootstrap_seed_root": "6cff6ac5341a8030a2d86e95ff86662b0c16cbca7f71c23b93e8d3b5dc49575f",
+    "bootstrap_seed_root": "a623bd6e8a5cbf04c1cad3d96b171d01432d16718b6e49188e42bc3b1f824bf0",
     "cluster_defect_count_display_bins": [
       {
         "label": "1",
@@ -94,7 +94,7 @@
       "+inf"
     ],
     "maximum_cases_per_category": 100,
-    "replay_selection_seed_root": "a42c0ea603ce43dcdb54d7b72056ef4f28117a920514cebc388c35d8f38acb25"
+    "replay_selection_seed_root": "d0ea8ee49333b73abd6efd4ddc78ebfa2318b5e22c9c288907350283f41a0ec0"
   },
   "frozen": false,
   "latency": {
@@ -136,18 +136,18 @@
         0
       ]
     },
-    "schedule_seed": "6226f3e2efb0f385aa3f444c88317556b45c48f9b2030fa2cc485232ecf23fde"
+    "schedule_seed": "5cbee24595d86127816900494c44ac84a5ca3893b53d03e9279d355bf1093abe"
   },
   "sampling": {
     "range_count": 32,
     "seed_derivation": "sha256(root-bytes || ASCII(patch-uf-named-seed-v1\\0) || canonical-json(identity))-first8-uint64le",
     "stages": {
       "characterization": {
-          "seed_root": "7785097e7447b99ee72134fef15bfbb68f42fe3866a65e4c1a76fb10fc02abee",
+        "seed_root": "d01fa9ddf9a4fcb2b206a8a8013391c6bb63627dd93ef889d4ea2c425512e868",
         "shots": 10000
       },
       "engineering-shakeout": {
-          "seed_root": "3d41da03f1659f67967f4a60f1a4b04d92e554c551ba375a240141b387798a6f",
+        "seed_root": "e847b59e39c7f99f0765b4e50a3c0ee4d27d284836d84052c576da5b8671647e",
         "shots": 1000
       }
     }

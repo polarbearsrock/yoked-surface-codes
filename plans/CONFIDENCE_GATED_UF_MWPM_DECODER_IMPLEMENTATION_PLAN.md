@@ -1,7 +1,7 @@
 # Confidence-Gated Weighted Union-Find Decoder Implementation Plan
 
-- **Status:** implemented; initial V1 campaign stopped at replay gate, V2
-  campaign recovery in progress
+- **Status:** implemented; V1 stopped at replay, V2 stopped at the
+  characterization telemetry-cap gate, and V3 recovery is in progress
 - **Last updated:** 2026-08-30
 - **Target experiment:** `cguf-01-d7-n6-y2-r28-p0.003`
 - **Target decoder:** `weighted-uf-fullhistory-patchlocal-zeroframe-residual-global-mwpm-v1`
@@ -20,9 +20,17 @@ The `FROZEN_V1` and `out/..._v1` names retained later in this plan describe
 the original execution sequence. That sequence produced an immutable 1k
 failed-gate audit artifact: non-characterization verification authenticated
 the detector arrays inside its range shards but did not expose those bytes to
-fresh-process replay. The active V2 recovery, its disjoint roots, and its
-`FROZEN_V2`/`out/..._v2` paths are normative in the experiment specification;
-the decoder algorithm and public decoder identifier are unchanged.
+fresh-process replay. V2 used disjoint roots and preserved the decoder
+algorithm and public decoder identifier. The active V3 recovery likewise
+uses new roots and `FROZEN_V3`/`out/..._v3` paths without changing the decoder.
+
+V2 subsequently passed its fresh 1,000-shot gate, but the first disjoint
+10,000-shot range exceeded the frozen 128 MiB uncompressed canonical metric
+ceiling before any range commit. V2 is therefore also immutable and stopped.
+V3 raises only this resource ceiling to 512 MiB, adds an authenticated exact
+313-shot capacity probe and a 2x probe-derived freeze gate, and uses five fresh
+roots. Graph identities, decoder semantics, confidence threshold, arms, and
+statistical endpoints remain unchanged.
 
 The production design is a **confidence-gated weighted Union-Find frontend with
 residual Global MWPM**. It borrows the clustering, component-validity, spanning-
@@ -794,7 +802,7 @@ given the wrong null-versus-zero rule.
 | `src/yoked/decoding/_patch_uf_stats.py` | Paired, workload, coverage, grouped cluster bootstrap statistics | 9 |
 | `src/yoked/decoding/_patch_uf_latency.py` | Fixed-corpus timing workload, five pairs, cyclic schedules, fresh restarts | 10 |
 | `src/yoked/decoding/_patch_uf_analysis.py` | Validation, reconciliation, reports, tables, plots, casebook selection | 9--10 |
-| `tools/benchmark_patch_uf_mwpm` | Smoke, probe, freeze, collect, verify, latency commands | 8--11 |
+| `tools/benchmark_patch_uf_mwpm` | Smoke, probe, exact-range capacity probe, freeze, collect, verify, latency commands | 8--11 |
 | `tools/analyze_patch_uf_mwpm` | Accuracy/workload/cluster/latency analysis and finalization commands | 9--11 |
 | `docs/PATCH_UF_MWPM_D7_P003_DRAFT.json` | Resolved draft policy and experiment protocol | 0--11 |
 | `docs/PATCH_UF_MWPM_D7_P003_FROZEN_V1.json` | Config-only frozen protocol generated after implementation commit A | 12 |
@@ -1536,10 +1544,13 @@ mismatch.
    specification, dashboard, and resolved draft protocol as implementation
    commit A.
 2. From a clean worktree at A, rerun the complete test suite, twice-identical
-   32-shot smoke, and independent 100-shot storage/runtime probe under
-   `$TMPDIR`.
+   32-shot smoke, independent 100-shot storage/runtime probe, and one exact
+   313-shot capacity probe under `$TMPDIR`. The capacity probe and the largest
+   authenticated single-shot probe tree scaled to 313 shots must each fit
+   below half the configured ceiling.
 3. Generate the frozen protocol from those authenticated artifacts.
-4. Commit exactly `docs/PATCH_UF_MWPM_D7_P003_FROZEN_V1.json` as config commit
+4. For the active recovery, commit exactly
+   `docs/PATCH_UF_MWPM_D7_P003_FROZEN_V3.json` as config commit
    B.
 5. Verify that `git diff --name-only A..B` contains only that path and that the
    worktree is clean.

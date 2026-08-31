@@ -63,11 +63,17 @@ from yoked.decoding._patch_uf_experiment import (
     PreparedCell,
     VerifiedCollection,
     canonical_protocol_self_sha256,
+    collect_prepared_range,
     configure_single_thread_runtime,
+    fixed_worker_ranges,
     prepare_selected_cell,
     run_collection,
     verify_collection,
 )
+from yoked.decoding._patch_uf_experiment import (
+    _protocol_context as _collection_protocol_context,
+)
+from yoked.decoding._patch_uf_experiment import _read_range_pair
 from yoked.decoding import _patch_uf_latency as _latency
 from yoked.decoding._patch_uf_latency import (
     BatchTiming,
@@ -97,13 +103,18 @@ CONFIG_COMMIT_POLICY = (
 )
 CAMPAIGN_LOCK_POLICY = (
     "one-exclusive-$TMPDIR/patch-uf-mwpm-campaign-v1.lock-for-smoke-probe-"
-    "collect-latency-replay;atomic-O_EXCL;stale-unlink-only-after-owner-pid-"
-    "absent"
+    "capacity-probe-collect-latency-replay;atomic-O_EXCL;stale-unlink-only-"
+    "after-owner-pid-absent"
 )
 CAMPAIGN_LOCK_SCHEMA = "patch-uf-exclusive-campaign-lock-v1"
 SCRATCH_SCHEMA = "patch-uf-scratch-gate-v1"
 EXPERIMENT_ID_DOMAIN = b"patch-uf-mwpm-experiment-v1\0"
 SCRATCH_ID_DOMAIN = b"patch-uf-mwpm-scratch-v1\0"
+METRIC_CAPACITY_GATE_SCHEMA = "patch-uf-metric-capacity-gate-v1"
+METRIC_CAPACITY_PROBE_SCHEMA = "patch-uf-metric-capacity-probe-v1"
+METRIC_CAPACITY_SAFETY_FACTOR = 2
+MAX_CHARACTERIZATION_RANGE_SHOTS = (10_000 + RANGE_COUNT - 1) // RANGE_COUNT
+EXPECTED_MAX_METRIC_BYTES_PER_RANGE = 512 * 1024 * 1024
 
 STAGE_ALIASES = {
     "shakeout-1k": SHAKEOUT_STAGE,
@@ -544,6 +555,7 @@ def _protocol_contract() -> dict[str, Any]:
             "maximum_component_records_per_shot",
             "maximum_metric_bytes_per_range",
         ],
+        "maximum_metric_bytes_per_range": EXPECTED_MAX_METRIC_BYTES_PER_RANGE,
         "sampling": {
             "range_count": RANGE_COUNT,
             "seed_derivation": SEED_DERIVATION,
@@ -735,6 +747,13 @@ def _validate_protocol_contract(
         raise ValueError("collection_limits fields are malformed")
     if limits.get("expected_lanes_per_shot") != 12:
         raise ValueError("expected_lanes_per_shot must be 12")
+    if (
+        limits.get("maximum_metric_bytes_per_range")
+        != EXPECTED_MAX_METRIC_BYTES_PER_RANGE
+    ):
+        raise ValueError(
+            "maximum_metric_bytes_per_range must be the frozen 512 MiB ceiling"
+        )
     for name in required_limit_fields - {"expected_lanes_per_shot"}:
         raw = limits.get(name)
         if isinstance(raw, bool) or not isinstance(raw, int) or raw <= 0:
@@ -961,6 +980,351 @@ def _verify_scratch_gate(
     return attestation, verified
 
 
+def _metric_capacity_attestation(
+    verified: VerifiedCollection, *, configured_limit: int
+) -> dict[str, Any]:
+    """Prove that the metric cap safely covers a full 313-shot range.
+
+    Scratch collection divides its 100 shots over all 32 fixed workers, so a
+    successful probe alone exercises only three- or four-shot ranges. Rebuild
+    each authenticated probe shot's normalized metric tree, then require twice
+    the largest observed byte count times the largest characterization range.
+    This gate is outcome-blind and does not alter decoder decisions.
+    """
+
+    if (
+        isinstance(configured_limit, bool)
+        or not isinstance(configured_limit, int)
+        or configured_limit <= 0
+    ):
+        raise ValueError("configured metric byte limit must be positive")
+    lanes_by_shot: dict[int, list[dict[str, Any]]] = {}
+    components_by_shot: dict[int, list[dict[str, Any]]] = {}
+    for source, destination, name in (
+        (verified.lane_rows, lanes_by_shot, "lane"),
+        (verified.component_rows, components_by_shot, "component"),
+    ):
+        for raw in source:
+            row = dict(raw)
+            shot_id = row.pop("global_shot_id", None)
+            if isinstance(shot_id, bool) or not isinstance(shot_id, int):
+                raise ValueError(f"probe {name} row has malformed global_shot_id")
+            destination.setdefault(shot_id, []).append(row)
+
+    byte_counts: list[int] = []
+    seen_shots: set[int] = set()
+    for raw_shot in verified.shot_rows:
+        shot = dict(raw_shot)
+        shot_id = shot.get("global_shot_id")
+        if isinstance(shot_id, bool) or not isinstance(shot_id, int):
+            raise ValueError("probe shot row has malformed global_shot_id")
+        if shot_id in seen_shots:
+            raise ValueError("probe metric-capacity rows contain duplicate shot IDs")
+        seen_shots.add(shot_id)
+        metrics = shot.get("adapter_metrics")
+        if not isinstance(metrics, Mapping):
+            raise ValueError("probe shot row omits adapter_metrics")
+        metric_tree = {
+            "shot_corrections": [dict(metrics)],
+            "lane_groups": [lanes_by_shot.pop(shot_id, [])],
+            "component_groups": [components_by_shot.pop(shot_id, [])],
+        }
+        byte_counts.append(len(canonical_json_bytes(metric_tree)))
+    if not byte_counts:
+        raise ValueError("probe metric-capacity gate requires at least one shot")
+    if lanes_by_shot or components_by_shot:
+        raise ValueError("probe metric-capacity rows reference unknown shot IDs")
+
+    observed_max = max(byte_counts)
+    required_limit = (
+        observed_max
+        * MAX_CHARACTERIZATION_RANGE_SHOTS
+        * METRIC_CAPACITY_SAFETY_FACTOR
+    )
+    if configured_limit < required_limit:
+        raise ValueError(
+            "maximum_metric_bytes_per_range is below the authenticated "
+            f"probe-derived capacity requirement ({configured_limit} < "
+            f"{required_limit})"
+        )
+    return {
+        "schema": METRIC_CAPACITY_GATE_SCHEMA,
+        "probe_shots": len(byte_counts),
+        "observed_max_single_shot_metric_bytes": observed_max,
+        "observed_total_single_shot_metric_bytes": sum(byte_counts),
+        "characterization_max_range_shots": MAX_CHARACTERIZATION_RANGE_SHOTS,
+        "safety_factor": METRIC_CAPACITY_SAFETY_FACTOR,
+        "required_metric_bytes_per_range": required_limit,
+        "configured_metric_bytes_per_range": configured_limit,
+    }
+
+
+def _range_metric_tree_bytes(
+    component_payload: Mapping[str, Any], shot_payload: Mapping[str, Any]
+) -> int:
+    """Rebuild the exact normalized metric tree measured by the runtime cap."""
+
+    shot_metrics = [dict(row["adapter_metrics"]) for row in shot_payload["shots"]]
+    lane_groups: list[list[dict[str, Any]]] = []
+    component_groups: list[list[dict[str, Any]]] = []
+    lanes = component_payload["lanes"]
+    components = component_payload["components"]
+    for _, lane_start, lane_count, component_start, component_count in (
+        component_payload["shot_index"]
+    ):
+        lane_groups.append(
+            [
+                {key: value for key, value in row.items() if key != "global_shot_id"}
+                for row in lanes[lane_start : lane_start + lane_count]
+            ]
+        )
+        component_groups.append(
+            [
+                {key: value for key, value in row.items() if key != "global_shot_id"}
+                for row in components[
+                    component_start : component_start + component_count
+                ]
+            ]
+        )
+    return len(
+        canonical_json_bytes(
+            {
+                "shot_corrections": shot_metrics,
+                "lane_groups": lane_groups,
+                "component_groups": component_groups,
+            }
+        )
+    )
+
+
+def _capacity_probe_range():
+    ranges = fixed_worker_ranges(10_000)
+    return next(
+        shot_range
+        for shot_range in ranges
+        if shot_range.shots == MAX_CHARACTERIZATION_RANGE_SHOTS
+    )
+
+
+def _capacity_probe_record(
+    *,
+    protocol: Mapping[str, Any],
+    component_payload: Mapping[str, Any],
+    shot_payload: Mapping[str, Any],
+    component_bytes: bytes,
+    shot_bytes: bytes,
+) -> dict[str, Any]:
+    metric_bytes = _range_metric_tree_bytes(component_payload, shot_payload)
+    configured = protocol["collection_limits"][
+        "maximum_metric_bytes_per_range"
+    ]
+    required = metric_bytes * METRIC_CAPACITY_SAFETY_FACTOR
+    if configured < required:
+        raise ValueError(
+            "maximum_metric_bytes_per_range is below the exact 313-shot "
+            f"capacity-probe requirement ({configured} < {required})"
+        )
+    return _payload_with_digest(
+        {
+            "schema": METRIC_CAPACITY_PROBE_SCHEMA,
+            "schema_version": 1,
+            "experiment_id": protocol["experiment_id"],
+            "protocol_self_sha256": protocol["protocol_self_sha256"],
+            "source_identity": protocol["source_identity"],
+            "scratch_gate": protocol["scratch_gate"],
+            "range": component_payload["range"],
+            "provenance": component_payload["provenance"],
+            "canonical_metric_tree_bytes": metric_bytes,
+            "safety_factor": METRIC_CAPACITY_SAFETY_FACTOR,
+            "required_metric_bytes_per_range": required,
+            "configured_metric_bytes_per_range": configured,
+            "raw_headroom_bytes": configured - metric_bytes,
+            "safety_adjusted_headroom_bytes": configured - required,
+            "component_artifact": {
+                "path": _component_probe_relative_path(),
+                "sha256": _sha256(component_bytes),
+                "bytes": len(component_bytes),
+                "canonical_payload_sha256": component_payload["payload_sha256"],
+            },
+            "shot_artifact": {
+                "path": _shot_probe_relative_path(),
+                "sha256": _sha256(shot_bytes),
+                "bytes": len(shot_bytes),
+                "canonical_payload_sha256": shot_payload["payload_sha256"],
+            },
+        }
+    )
+
+
+def _component_probe_relative_path() -> str:
+    shot_range = _capacity_probe_range()
+    return (
+        "collection/component_metrics/"
+        f"range-{shot_range.range_id:02d}-{shot_range.shot_start:08d}-"
+        f"{shot_range.shot_stop:08d}.json.gz"
+    )
+
+
+def _shot_probe_relative_path() -> str:
+    shot_range = _capacity_probe_range()
+    return (
+        "collection/shards/"
+        f"range-{shot_range.range_id:02d}-{shot_range.shot_start:08d}-"
+        f"{shot_range.shot_stop:08d}.json.gz"
+    )
+
+
+def _verify_capacity_probe(
+    root: Path,
+    *,
+    draft: Mapping[str, Any],
+    state: Mapping[str, Any],
+) -> tuple[dict[str, Any], Mapping[str, Any]]:
+    expected_paths = {
+        "protocol.json",
+        "capacity.json",
+        _component_probe_relative_path(),
+        _shot_probe_relative_path(),
+    }
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("capacity-probe root must be a regular directory")
+    expected_directories = {
+        "collection",
+        "collection/component_metrics",
+        "collection/shards",
+    }
+    actual_paths: set[str] = set()
+    actual_directories: set[str] = set()
+    invalid_nodes: list[str] = []
+    for path in root.rglob("*"):
+        relative = path.relative_to(root).as_posix()
+        if path.is_symlink() or (not path.is_file() and not path.is_dir()):
+            invalid_nodes.append(relative)
+        elif path.is_file():
+            actual_paths.add(relative)
+        else:
+            actual_directories.add(relative)
+    if (
+        invalid_nodes
+        or actual_paths != expected_paths
+        or actual_directories != expected_directories
+    ):
+        raise ValueError("capacity-probe artifact paths are incomplete or unexpected")
+
+    protocol = load_json_strict(
+        root / "protocol.json", description="capacity-probe protocol"
+    )
+    expected_protocol = _scratch_protocol(
+        draft,
+        stage="capacity-probe",
+        shots=10_000,
+        state=state,
+    )
+    if protocol != expected_protocol:
+        raise ValueError(
+            "capacity-probe protocol differs from the exact draft-derived identity"
+        )
+    context = _collection_protocol_context(
+        protocol, stage="capacity-probe", processes=1, scientific=False
+    )
+    component, shot, component_bytes, shot_bytes = _read_range_pair(
+        out=root,
+        context=context,
+        shot_range=_capacity_probe_range(),
+        provenance=None,
+    )
+    expected_record = _capacity_probe_record(
+        protocol=protocol,
+        component_payload=component,
+        shot_payload=shot,
+        component_bytes=component_bytes,
+        shot_bytes=shot_bytes,
+    )
+    recorded = load_json_strict(
+        root / "capacity.json", description="capacity-probe attestation"
+    )
+    _validate_payload_digest(recorded, name="capacity-probe attestation")
+    if recorded != expected_record:
+        raise ValueError("capacity-probe attestation does not reconcile")
+    return recorded, component["provenance"]
+
+
+def _run_capacity_probe(
+    *,
+    draft: Mapping[str, Any],
+    out: Path,
+    state: Mapping[str, Any],
+) -> dict[str, Any]:
+    _validate_protocol_contract(draft, expected_status="DRAFT")
+    root, existing = validate_resumable_output_root(
+        out,
+        allowed_entries={"protocol.json", "capacity.json", "collection"},
+        description="Patch-UF capacity probe",
+    )
+    if existing:
+        record, _ = _verify_capacity_probe(
+            root,
+            draft=draft,
+            state=state,
+        )
+        return record
+    scratch = _scratch_protocol(
+        draft,
+        stage="capacity-probe",
+        shots=10_000,
+        state=state,
+    )
+    prepared = prepare_selected_cell(
+        scratch, stage="capacity-probe", processes=1, scientific=False
+    )
+    artifacts = collect_prepared_range(
+        prepared,
+        protocol=scratch,
+        stage="capacity-probe",
+        shot_range=_capacity_probe_range(),
+        scientific=False,
+        processes=1,
+    )
+    record = _capacity_probe_record(
+        protocol=scratch,
+        component_payload=artifacts.component_payload,
+        shot_payload=artifacts.shot_payload,
+        component_bytes=artifacts.component_bytes,
+        shot_bytes=artifacts.shot_bytes,
+    )
+    root.mkdir(parents=True, exist_ok=True)
+    install_bytes_atomic(
+        root / "protocol.json",
+        canonical_json_bytes(scratch) + b"\n",
+        prefix="patch-uf-capacity-protocol-",
+        overwrite=False,
+    )
+    for relative, payload, prefix in (
+        (
+            _component_probe_relative_path(),
+            artifacts.component_bytes,
+            "patch-uf-capacity-components-",
+        ),
+        (
+            _shot_probe_relative_path(),
+            artifacts.shot_bytes,
+            "patch-uf-capacity-shots-",
+        ),
+    ):
+        destination = root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        install_bytes_atomic(
+            destination, payload, prefix=prefix, overwrite=False
+        )
+    _write_new_json(root / "capacity.json", record)
+    verified, _ = _verify_capacity_probe(
+        root,
+        draft=draft,
+        state=state,
+    )
+    return verified
+
+
 def _validate_frozen_lineage(protocol: Mapping[str, Any], protocol_path: Path) -> str:
     state = _repository_state()
     if not state["clean_worktree"]:
@@ -1083,6 +1447,7 @@ def _freeze(
     draft_path: Path,
     smoke_root: Path,
     probe_root: Path,
+    capacity_root: Path,
     out_protocol: Path,
     tmp_root: Path,
 ) -> dict[str, Any]:
@@ -1107,6 +1472,9 @@ def _freeze(
         raise ValueError("draft and frozen protocol must live in the repository") from ex
     smoke_root = _require_under(smoke_root, tmp_root, name="smoke root")
     probe_root = _require_under(probe_root, tmp_root, name="probe root")
+    capacity_root = _require_under(
+        capacity_root, tmp_root, name="capacity-probe root"
+    )
     template_digest = _draft_digest(draft)
     smoke_attestation, smoke = _verify_scratch_gate(
         smoke_root,
@@ -1122,8 +1490,25 @@ def _freeze(
         draft_digest=template_digest,
         implementation_commit=state["implementation_commit"],
     )
-    if smoke.summary["provenance"] != probe.summary["provenance"]:
-        raise ValueError("smoke and probe selected-cell provenances disagree")
+    probe_attestation["metric_capacity"] = _metric_capacity_attestation(
+        probe,
+        configured_limit=draft["collection_limits"][
+            "maximum_metric_bytes_per_range"
+        ],
+    )
+    capacity_attestation, capacity_provenance = _verify_capacity_probe(
+        capacity_root,
+        draft=draft,
+        state=state,
+    )
+    if not (
+        smoke.summary["provenance"]
+        == probe.summary["provenance"]
+        == capacity_provenance
+    ):
+        raise ValueError(
+            "smoke, probe, and capacity-probe selected-cell provenances disagree"
+        )
 
     prepare_protocol = _prepare_protocol(draft, stage="freeze-inspect")
     prepared = prepare_selected_cell(
@@ -1154,6 +1539,7 @@ def _freeze(
     frozen["gate_attestations"] = {
         "smoke_32": smoke_attestation,
         "probe_100": probe_attestation,
+        "capacity_probe_313": capacity_attestation,
     }
     frozen["software_versions"] = _software_versions()
     frozen["execution_environment"] = _execution_environment()
@@ -1526,12 +1912,20 @@ def _parser() -> argparse.ArgumentParser:
     probe.add_argument("--out", type=Path, required=True)
     probe.add_argument("--processes", type=int, default=32)
 
+    capacity_probe = commands.add_parser(
+        "capacity-probe",
+        help="run one exact 313-shot normalized-telemetry range preflight",
+    )
+    capacity_probe.add_argument("--protocol", type=Path, required=True)
+    capacity_probe.add_argument("--out", type=Path, required=True)
+
     freeze = commands.add_parser(
         "freeze", help="freeze a clean commit-A draft after scratch gates"
     )
     freeze.add_argument("--draft", type=Path, required=True)
     freeze.add_argument("--smoke-root", type=Path, required=True)
     freeze.add_argument("--probe-root", type=Path, required=True)
+    freeze.add_argument("--capacity-root", type=Path, required=True)
     freeze.add_argument("--out-protocol", type=Path, required=True)
 
     verify_protocol = commands.add_parser(
@@ -1593,7 +1987,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     campaign_lease: _CampaignLockLease | None = None
     try:
         tmp_root = _require_tmpdir()
-        if args.command in {"smoke", "probe", "collect", "latency", "replay"}:
+        if args.command in {
+            "smoke",
+            "probe",
+            "capacity-probe",
+            "collect",
+            "latency",
+            "replay",
+        }:
             campaign_lease = _acquire_campaign_lock(
                 tmp_root,
                 command=args.command,
@@ -1655,6 +2056,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             _print_json(summary)
             return 0
 
+        if args.command == "capacity-probe":
+            out = _require_under(
+                args.out, tmp_root, name="capacity-probe output"
+            )
+            draft = load_json_strict(args.protocol, description="Patch-UF draft")
+            result = _run_capacity_probe(
+                draft=draft,
+                out=out,
+                state=_repository_state(),
+            )
+            _print_json(result)
+            return 0
+
         if args.command == "freeze":
             draft = load_json_strict(args.draft, description="Patch-UF draft")
             frozen = _freeze(
@@ -1662,6 +2076,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 draft_path=args.draft,
                 smoke_root=args.smoke_root,
                 probe_root=args.probe_root,
+                capacity_root=args.capacity_root,
                 out_protocol=args.out_protocol,
                 tmp_root=tmp_root,
             )
