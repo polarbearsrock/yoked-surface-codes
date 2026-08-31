@@ -1,0 +1,560 @@
+#!/usr/bin/env python3
+"""Import, decode, and time the matched d=7 frontend comparison."""
+
+from __future__ import annotations
+
+# Apply numerical-thread controls before importing NumPy/PyMatching.
+import os
+
+_THREAD_ENVIRONMENT = (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+)
+for _name in _THREAD_ENVIRONMENT:
+    os.environ[_name] = "1"
+
+import argparse  # noqa: E402
+from concurrent.futures import ProcessPoolExecutor, as_completed  # noqa: E402
+import hashlib  # noqa: E402
+import json  # noqa: E402
+import multiprocessing  # noqa: E402
+from pathlib import Path  # noqa: E402
+import subprocess  # noqa: E402
+import sys  # noqa: E402
+from typing import Any, Mapping  # noqa: E402
+
+_REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPOSITORY_ROOT / "src"))
+
+from yoked.decoding._artifact_io import (  # noqa: E402
+    install_bytes_atomic,
+    load_json_strict,
+)
+from yoked.decoding._patch_uf_experiment import (  # noqa: E402
+    CHARACTERIZATION_STAGE,
+    verify_collection,
+)
+from yoked.decoding._pinball_promatch_experiment import (  # noqa: E402
+    PINBALL_CONFIG,
+    PROMATCH_CONFIG,
+    prepare_cell,
+)
+from yoked.decoding._pinball_promatch_matched_accuracy import (  # noqa: E402
+    aggregate_matched_ledgers,
+    clear_matched_worker_preload,
+    load_matched_corpus,
+    matched_corpus_from_verified,
+    matched_range_tasks,
+    preload_matched_worker,
+    validate_matched_ledger,
+    worker_collect_matched_range,
+    write_matched_corpus,
+)
+from yoked.decoding._pinball_promatch_matched_analysis import (  # noqa: E402
+    MatchedAnalysisConfig,
+    analyze_matched_aggregate,
+    render_matched_analysis_markdown,
+)
+from yoked.decoding._pinball_promatch_matched_latency import (  # noqa: E402
+    run_latency_suite,
+)
+from yoked.decoding._pinball_promatch_matched_latency_integration import (  # noqa: E402
+    YokedMatchedLatencyFactory,
+    latency_protocol_from_matched_protocol,
+    materialize_detector_corpus_from_patch_uf,
+)
+from yoked.decoding._pinball_promatch_matched_latency_analysis import (  # noqa: E402
+    analyze_latency_suite,
+)
+from yoked.decoding._promatch_stats import canonical_json_bytes  # noqa: E402
+
+
+PROTOCOL_SCHEMA = "yoked.matched-frontends-d7-p003-protocol-v1"
+REQUIRED_PROCESSES = 32
+
+
+def _compact(value: object) -> str:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+
+
+def _write_json_new(path: Path, value: Mapping[str, Any]) -> None:
+    install_bytes_atomic(
+        path,
+        canonical_json_bytes(dict(value)) + b"\n",
+        prefix="matched-frontends-json-",
+        overwrite=False,
+    )
+
+
+def _write_text_new(path: Path, value: str) -> None:
+    install_bytes_atomic(
+        path,
+        value.encode("utf-8"),
+        prefix="matched-frontends-text-",
+        overwrite=False,
+    )
+
+
+def _load_protocol(path: Path, *, require_frozen: bool) -> dict[str, Any]:
+    value = load_json_strict(path, description="matched frontend protocol")
+    if value.get("schema") != PROTOCOL_SCHEMA or value.get("schema_version") != 1:
+        raise ValueError("matched frontend protocol schema differs")
+    if value.get("promatch_config") != PROMATCH_CONFIG:
+        raise ValueError("matched frontend protocol ProMatch config differs")
+    if value.get("pinball_config") != PINBALL_CONFIG:
+        raise ValueError("matched frontend protocol Pinball config differs")
+    accuracy = value.get("accuracy")
+    if not isinstance(accuracy, Mapping) or accuracy.get("shots") != 10_000:
+        raise ValueError("matched frontend protocol accuracy settings differ")
+    if accuracy.get("processes") != REQUIRED_PROCESSES:
+        raise ValueError("matched frontend protocol must use exactly 32 processes")
+    if accuracy.get("ranges") != REQUIRED_PROCESSES:
+        raise ValueError("matched frontend protocol must use the exact 32 UF ranges")
+    if accuracy.get("microbatch_size") != 32:
+        raise ValueError("matched frontend protocol microbatch size differs")
+    if require_frozen and (
+        value.get("status") != "FROZEN"
+        or value.get("frozen") is not True
+        or value.get("implementation_commit") in (None, "TBD")
+    ):
+        raise ValueError("scientific command requires a frozen protocol")
+    return value
+
+
+def _require_runtime() -> None:
+    raw = os.environ.get("TMPDIR")
+    if not raw or not Path(raw).is_absolute():
+        raise ValueError("TMPDIR must be set to an absolute scratch directory")
+    if "MAX_ERRORS" in os.environ:
+        raise ValueError("MAX_ERRORS must remain unset for fixed-N execution")
+    for name in _THREAD_ENVIRONMENT:
+        if os.environ.get(name) != "1":
+            raise ValueError(f"{name} must equal 1")
+
+
+def _require_clean_worktree() -> None:
+    status = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=all"],
+        cwd=_REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    if status:
+        raise ValueError("scientific collection requires a clean Git worktree")
+
+
+def _validate_accuracy_corpus(protocol: Mapping[str, Any], corpus: Any) -> None:
+    source = protocol["source"]
+    identity = corpus.source_identity
+    expected = {
+        "experiment_id": source["patch_uf_experiment_id"],
+        "protocol_self_sha256": source["patch_uf_protocol_self_sha256"],
+        "collection_summary_payload_sha256": source[
+            "characterization_collection_summary_payload_sha256"
+        ],
+        "detector_corpus_sha256": source["detector_corpus_sha256"],
+        "observable_corpus_sha256": source["observables_corpus_sha256"],
+        "corpus_index_payload_sha256": source["corpus_index_payload_sha256"],
+        "shots": protocol["accuracy"]["shots"],
+        "num_detectors": protocol["cell"]["num_detectors"],
+        "num_observables": protocol["cell"]["num_observables"],
+        "cell_id": protocol["cell"]["cell_id"],
+    }
+    for name, value in expected.items():
+        if identity.get(name) != value:
+            raise ValueError(f"matched accuracy corpus {name!r} differs from protocol")
+    for name in ("circuit_sha256", "dem_sha256", "num_detectors", "num_observables"):
+        if corpus.source_provenance.get(name) != protocol["cell"][name]:
+            raise ValueError(f"matched accuracy source provenance {name!r} differs")
+
+
+def _load_accuracy_corpus(protocol: Mapping[str, Any], root: Path) -> Any:
+    manifest_path = root / "manifest.json"
+    if manifest_path.is_symlink() or not manifest_path.is_file():
+        raise ValueError("matched accuracy corpus manifest must be a regular file")
+    payload = manifest_path.read_bytes()
+    manifest = load_json_strict(
+        manifest_path, description="matched accuracy corpus manifest"
+    )
+    source = protocol["source"]
+    if manifest.get("manifest_sha256") != source[
+        "matched_accuracy_manifest_sha256"
+    ]:
+        raise ValueError("matched accuracy corpus manifest identity differs")
+    if hashlib.sha256(payload).hexdigest() != source[
+        "matched_accuracy_manifest_file_sha256"
+    ]:
+        raise ValueError("matched accuracy corpus manifest file hash differs")
+    corpus = load_matched_corpus(root)
+    _validate_accuracy_corpus(protocol, corpus)
+    return corpus
+
+
+def _protocol_copy(path: Path, protocol: Mapping[str, Any], root: Path) -> None:
+    destination = root / "protocol.json"
+    if destination.exists():
+        if load_json_strict(destination, description="collection protocol") != dict(
+            protocol
+        ):
+            raise ValueError("existing collection protocol differs")
+    else:
+        _write_json_new(destination, protocol)
+
+
+def _cmd_import_accuracy(args: argparse.Namespace) -> dict[str, Any]:
+    protocol = _load_protocol(args.protocol, require_frozen=False)
+    uf_protocol = load_json_strict(args.uf_protocol, description="UF V3 protocol")
+    verified = verify_collection(
+        uf_protocol,
+        stage=CHARACTERIZATION_STAGE,
+        out=args.uf_collection,
+        processes=REQUIRED_PROCESSES,
+        scientific=True,
+    )
+    corpus = matched_corpus_from_verified(verified)
+    _validate_accuracy_corpus(protocol, corpus)
+    manifest = write_matched_corpus(args.out, corpus)
+    return {
+        "manifest": str(manifest),
+        "shots": corpus.shots,
+        "source_identity": dict(corpus.source_identity),
+    }
+
+
+def _cmd_import_latency(args: argparse.Namespace) -> dict[str, Any]:
+    protocol = _load_protocol(args.protocol, require_frozen=False)
+    source = protocol["source"]
+    manifest = materialize_detector_corpus_from_patch_uf(
+        args.uf_latency_manifest,
+        args.out,
+        expected_source_identity={
+            "manifest_sha256": protocol["corpus"][
+                "source_patch_uf_manifest_sha256"
+            ],
+            "corpus_digest": protocol["corpus"][
+                "source_patch_uf_corpus_digest"
+            ],
+            "detectors_sha256": source[
+                "patch_uf_latency_detector_file_sha256"
+            ],
+            "detector_array_digest": protocol["corpus"][
+                "source_detector_array_digest"
+            ],
+            "num_detectors": protocol["cell"]["num_detectors"],
+            "row_count": source["shots"],
+        },
+    )
+    return {"manifest": str(manifest)}
+
+
+def _range_name(range_id: int) -> str:
+    return f"range-{range_id:02d}.json"
+
+
+def _cmd_collect_accuracy(args: argparse.Namespace) -> dict[str, Any]:
+    if args.processes != REQUIRED_PROCESSES:
+        raise ValueError("scientific accuracy collection requires exactly 32 processes")
+    _require_runtime()
+    _require_clean_worktree()
+    protocol = _load_protocol(args.protocol, require_frozen=True)
+    corpus = _load_accuracy_corpus(protocol, args.corpus)
+    output = args.out.absolute()
+    output.mkdir(parents=True, exist_ok=True)
+    if output.is_symlink() or not output.is_dir():
+        raise ValueError("accuracy collection output must be a regular directory")
+    ranges_dir = output / "ranges"
+    ranges_dir.mkdir(exist_ok=True)
+    if ranges_dir.is_symlink() or not ranges_dir.is_dir():
+        raise ValueError("accuracy range output must be a regular directory")
+    allowed_root = {"protocol.json", "ranges", "aggregate.json"}
+    unknown_root = {item.name for item in output.iterdir()} - allowed_root
+    if unknown_root:
+        raise ValueError(f"accuracy output has unknown entries {sorted(unknown_root)}")
+    allowed_ranges = {_range_name(index) for index in range(REQUIRED_PROCESSES)}
+    unknown_ranges = {item.name for item in ranges_dir.iterdir()} - allowed_ranges
+    if unknown_ranges:
+        raise ValueError(f"accuracy output has unknown range files {sorted(unknown_ranges)}")
+    _protocol_copy(args.protocol, protocol, output)
+    print("compiling matched d=7 Global/ProMatch/Pinball cell", file=sys.stderr, flush=True)
+    prepared = prepare_cell(
+        protocol["cell"],
+        promatch_config=protocol["promatch_config"],
+        pinball_config=protocol["pinball_config"],
+        dem_options=protocol["dem_options"],
+        verify_hashes=True,
+    )
+    print("matched cell compilation complete", file=sys.stderr, flush=True)
+    tasks = matched_range_tasks(
+        corpus, microbatch_size=protocol["accuracy"]["microbatch_size"]
+    )
+    ledgers: dict[int, dict[str, Any]] = {}
+    missing = []
+    for task in tasks:
+        range_id = task["range"]["range_id"]
+        path = ranges_dir / _range_name(range_id)
+        if path.exists():
+            row = load_json_strict(path, description="matched accuracy range")
+            validate_matched_ledger(
+                row,
+                corpus=corpus,
+                expected_prepared_provenance=prepared.provenance,
+            )
+            ledgers[range_id] = row
+            print(f"validated existing accuracy range {range_id:02d}", file=sys.stderr, flush=True)
+        else:
+            missing.append(task)
+    if missing:
+        preload_matched_worker(prepared, corpus)
+        context = multiprocessing.get_context("fork")
+        try:
+            with ProcessPoolExecutor(
+                max_workers=REQUIRED_PROCESSES,
+                mp_context=context,
+            ) as executor:
+                future_tasks = {
+                    executor.submit(worker_collect_matched_range, task): task
+                    for task in missing
+                }
+                for future in as_completed(future_tasks):
+                    task = future_tasks[future]
+                    row = future.result()
+                    range_id = task["range"]["range_id"]
+                    validate_matched_ledger(
+                        row,
+                        corpus=corpus,
+                        expected_prepared_provenance=prepared.provenance,
+                    )
+                    _write_json_new(ranges_dir / _range_name(range_id), row)
+                    ledgers[range_id] = row
+                    print(f"completed accuracy range {range_id:02d}", file=sys.stderr, flush=True)
+        finally:
+            clear_matched_worker_preload()
+    aggregate = aggregate_matched_ledgers(
+        (ledgers[index] for index in range(REQUIRED_PROCESSES)),
+        corpus=corpus,
+        expected_prepared_provenance=prepared.provenance,
+        require_complete=True,
+    )
+    aggregate_path = output / "aggregate.json"
+    if aggregate_path.exists():
+        if load_json_strict(aggregate_path, description="accuracy aggregate") != aggregate:
+            raise ValueError("existing accuracy aggregate differs")
+    else:
+        _write_json_new(aggregate_path, aggregate)
+    return {
+        "aggregate": str(aggregate_path),
+        "shots": aggregate["shots"],
+        "ranges": aggregate["ranges"],
+        "payload_sha256": aggregate["payload_sha256"],
+    }
+
+
+def _cmd_analyze_accuracy(args: argparse.Namespace) -> dict[str, Any]:
+    protocol = _load_protocol(args.protocol, require_frozen=True)
+    corpus = _load_accuracy_corpus(protocol, args.corpus)
+    aggregate = load_json_strict(args.aggregate, description="matched aggregate")
+    analysis_config = protocol["analysis"]
+    seed = analysis_config["workload_bootstrap_seed"]
+    analysis = analyze_matched_aggregate(
+        aggregate,
+        corpus=corpus,
+        config=MatchedAnalysisConfig(
+            workload_bootstrap_replicates=analysis_config[
+                "workload_bootstrap_replicates"
+            ],
+            workload_bootstrap_seed=int(seed, 16),
+        ),
+        require_complete=True,
+    )
+    output = args.out.absolute()
+    if output.exists() or output.is_symlink():
+        raise FileExistsError(output)
+    output.mkdir(parents=True)
+    _write_json_new(output / "analysis.json", analysis)
+    _write_text_new(
+        output / "report.md", render_matched_analysis_markdown(analysis)
+    )
+    return {
+        "analysis": str(output / "analysis.json"),
+        "report": str(output / "report.md"),
+        "payload_sha256": analysis["payload_sha256"],
+    }
+
+
+def _cmd_latency(args: argparse.Namespace) -> dict[str, Any]:
+    _require_runtime()
+    _require_clean_worktree()
+    protocol = _load_protocol(args.protocol, require_frozen=True)
+    factory = YokedMatchedLatencyFactory.from_protocol(
+        protocol,
+        corpus_manifest_path=args.corpus_manifest,
+    )
+    timing = latency_protocol_from_matched_protocol(protocol, cpu=args.cpu)
+    print(
+        "compiling matched d=7 latency workload once before fresh fork restarts",
+        file=sys.stderr,
+        flush=True,
+    )
+    return run_latency_suite(
+        factory,
+        protocol=timing,
+        out_dir=args.out,
+        resume=True,
+        execution_mode=protocol["latency"]["execution_mode"],
+    )
+
+
+def _cmd_analyze_latency(args: argparse.Namespace) -> dict[str, Any]:
+    protocol = _load_protocol(args.protocol, require_frozen=True)
+    factory = YokedMatchedLatencyFactory.from_protocol(
+        protocol,
+        corpus_manifest_path=args.corpus_manifest,
+    )
+    timing = latency_protocol_from_matched_protocol(protocol, cpu=args.cpu)
+    config = protocol["analysis"]
+    artifacts = analyze_latency_suite(
+        args.latency_collection,
+        protocol=timing,
+        factory=factory,
+        bootstrap_replicates=config["latency_bootstrap_replicates"],
+        bootstrap_seed=int(config["latency_bootstrap_seed"], 16),
+    )
+    output = args.out.absolute()
+    if output.exists() or output.is_symlink():
+        raise FileExistsError(output)
+    output.mkdir(parents=True)
+    _write_json_new(output / "analysis.json", artifacts.analysis)
+    _write_text_new(output / "report.md", artifacts.report_markdown)
+    return {
+        "analysis": str(output / "analysis.json"),
+        "report": str(output / "report.md"),
+        "payload_sha256": artifacts.analysis["payload_sha256"],
+    }
+
+
+def _cmd_status(args: argparse.Namespace) -> dict[str, Any]:
+    protocol = _load_protocol(args.protocol, require_frozen=False)
+    result: dict[str, Any] = {
+        "status": protocol["status"],
+        "frozen": protocol["frozen"],
+        "experiment_id": protocol["experiment_id"],
+    }
+    if args.accuracy_collection is not None:
+        ranges = args.accuracy_collection / "ranges"
+        result["accuracy_ranges"] = (
+            0
+            if not ranges.is_dir()
+            else len(tuple(ranges.glob("range-*.json")))
+        )
+        result["accuracy_complete"] = (
+            args.accuracy_collection / "aggregate.json"
+        ).is_file()
+    if args.latency_collection is not None:
+        result["latency_restarts"] = (
+            0
+            if not args.latency_collection.is_dir()
+            else len(tuple(args.latency_collection.glob("batch-*.restart-*.json")))
+        )
+        result["latency_complete"] = (
+            args.latency_collection / "suite.json"
+        ).is_file()
+    return result
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="exact-corpus d=7 ProMatch/Pinball/Union-Find comparison"
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    import_accuracy = commands.add_parser(
+        "import-accuracy", help="authenticate UF V3 and persist compact matched arrays"
+    )
+    import_accuracy.add_argument("--protocol", type=Path, required=True)
+    import_accuracy.add_argument("--uf-protocol", type=Path, required=True)
+    import_accuracy.add_argument("--uf-collection", type=Path, required=True)
+    import_accuracy.add_argument("--out", type=Path, required=True)
+
+    import_latency = commands.add_parser(
+        "import-latency", help="import the detector-only UF timing corpus"
+    )
+    import_latency.add_argument("--protocol", type=Path, required=True)
+    import_latency.add_argument("--uf-latency-manifest", type=Path, required=True)
+    import_latency.add_argument("--out", type=Path, required=True)
+
+    collect = commands.add_parser(
+        "collect-accuracy", help="decode the exact 32 UF ranges with all local arms"
+    )
+    collect.add_argument("--protocol", type=Path, required=True)
+    collect.add_argument("--corpus", type=Path, required=True)
+    collect.add_argument("--out", type=Path, required=True)
+    collect.add_argument("--processes", type=int, required=True)
+
+    analyze = commands.add_parser(
+        "analyze-accuracy", help="analyze a complete four-arm accuracy collection"
+    )
+    analyze.add_argument("--protocol", type=Path, required=True)
+    analyze.add_argument("--corpus", type=Path, required=True)
+    analyze.add_argument("--aggregate", type=Path, required=True)
+    analyze.add_argument("--out", type=Path, required=True)
+
+    latency = commands.add_parser(
+        "latency", help="run matched fixed-corpus production latency restarts"
+    )
+    latency.add_argument("--protocol", type=Path, required=True)
+    latency.add_argument("--corpus-manifest", type=Path, required=True)
+    latency.add_argument("--out", type=Path, required=True)
+    latency.add_argument("--cpu", type=int, default=31)
+
+    analyze_latency = commands.add_parser(
+        "analyze-latency", help="analyze a complete matched latency suite"
+    )
+    analyze_latency.add_argument("--protocol", type=Path, required=True)
+    analyze_latency.add_argument("--corpus-manifest", type=Path, required=True)
+    analyze_latency.add_argument("--latency-collection", type=Path, required=True)
+    analyze_latency.add_argument("--out", type=Path, required=True)
+    analyze_latency.add_argument("--cpu", type=int, default=31)
+
+    status = commands.add_parser("status", help="report compact progress")
+    status.add_argument("--protocol", type=Path, required=True)
+    status.add_argument("--accuracy-collection", type=Path)
+    status.add_argument("--latency-collection", type=Path)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        if args.command == "import-accuracy":
+            result = _cmd_import_accuracy(args)
+        elif args.command == "import-latency":
+            result = _cmd_import_latency(args)
+        elif args.command == "collect-accuracy":
+            result = _cmd_collect_accuracy(args)
+        elif args.command == "analyze-accuracy":
+            result = _cmd_analyze_accuracy(args)
+        elif args.command == "latency":
+            result = _cmd_latency(args)
+        elif args.command == "analyze-latency":
+            result = _cmd_analyze_latency(args)
+        else:
+            result = _cmd_status(args)
+        print(_compact(result))
+        return 0
+    except (FileExistsError, OSError, RuntimeError, TypeError, ValueError) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,147 @@
+{
+  "accuracy": {
+    "arm_order": [
+      "global",
+      "promatch",
+      "pinball",
+      "union_find"
+    ],
+    "microbatch_size": 32,
+    "processes": 32,
+    "ranges": 32,
+    "shots": 10000
+  },
+  "analysis": {
+    "confidence_level": 0.95,
+    "latency_bootstrap_replicates": 10000,
+    "latency_bootstrap_seed": "bd806043951796a35112dcdd996833dc45820670c363074ca98a6ef42ade5538",
+    "marginal_interval": "clopper-pearson-exact",
+    "paired_accuracy_interval": "tango-efficient-score",
+    "paired_test": "mcnemar-exact-two-sided",
+    "workload_bootstrap_replicates": 10000,
+    "workload_bootstrap_seed": "57957fdb696560dfac80169448bcb7c9b24985335db26c16232ae205eae6021e"
+  },
+  "cell": {
+    "cell_id": "cguf-01-d7-n6-y2-r28-p0.003",
+    "circuit_sha256": "8cfa9bb9eaf6db86dfc9ffcfefa4582eb29932d11dc1fd911239ef1425841ff9",
+    "d": 7,
+    "dem_sha256": "9b06141668bef9b334df78e4700853f60505a71f3c4185746d0261e7e3790e0a",
+    "generator": "yoked._yoked_memory_circuits:yoked_magic_memory_circuit",
+    "noise": "si1000",
+    "num_detectors": 8354,
+    "num_observables": 12,
+    "p": 0.003,
+    "patches": 6,
+    "pinball_graph_fingerprint": "5f4639248bec80d73cd1a4cf85006188e964cfa23498d9ba6af41a49afc6e0cb",
+    "pinball_layout_fingerprint": "0af0345e3e778552f0b2392b20e59efa2b4143b4847d3ed1808a84b939003a1a",
+    "pinball_schedule_fingerprint": "74cfea4786c173fb27af3ecbf3ebeb423d5aeedc5493f096317842102950da82",
+    "promatch_graph_fingerprint": "f51536e5d3f7c0af9ef809513431648a79d1b8127a267acb2afe01c5bb16c556",
+    "promatch_layout_fingerprint": "5b0269e3827e55b2ac5d89da6f71b94c666951a2c9678dfd44f0fcf235f456e9",
+    "r": 28,
+    "remove_x_yoke": false,
+    "style": "cz",
+    "yokes": 2
+  },
+  "claim_status": "non-claim-bearing-descriptive-characterization-not-a-fresh-holdout",
+  "corpus": {
+    "corpus_digest": "bb59d6acdb11c23d8687eddeb02a52cd7e1eb479a3e35bf2ea3a87a3adc0a8a2",
+    "manifest_sha256": "abe68408eeef4285cc2421fadd947ae10c695a33a767cb4b2ae833465d51b6ef",
+    "source_detector_array_digest": "bb59d6acdb11c23d8687eddeb02a52cd7e1eb479a3e35bf2ea3a87a3adc0a8a2",
+    "source_patch_uf_corpus_digest": "614850856efb9ad65de36d1b8990471bf96c8abf9ad306202dbdf6b788cc0622",
+    "source_patch_uf_manifest_sha256": "2b637e8bd129f5127049113d4658352b4e42167339d503a5a97c84f39238e0f0"
+  },
+  "dem_options": {
+    "approximate_disjoint_errors": true,
+    "decompose_errors": true
+  },
+  "experiment_id": "c54bd0615e8752214bc9c5463c1ae85307f2dee083d479a5dda2e10cfe27f1c4",
+  "frozen": false,
+  "implementation_commit": "TBD",
+  "latency": {
+    "batches": [
+      {
+        "batch_size": 1,
+        "blocks_per_restart": 20,
+        "restarts": 10,
+        "timed_calls_per_side_per_block": 10,
+        "warmup_calls_per_variant": 50
+      },
+      {
+        "batch_size": 64,
+        "blocks_per_restart": 4,
+        "restarts": 5,
+        "timed_calls_per_side_per_block": 2,
+        "warmup_calls_per_variant": 5
+      },
+      {
+        "batch_size": 1024,
+        "blocks_per_restart": 2,
+        "restarts": 3,
+        "timed_calls_per_side_per_block": 1,
+        "warmup_calls_per_variant": 1
+      }
+    ],
+    "execution_mode": "fork-preloaded",
+    "host_policy": {
+      "cpu_affinity": [
+        31
+      ],
+      "expected_host": {
+        "cpu_model": "AMD EPYC 9374F 32-Core Processor",
+        "kernel": "4.18.0-553.50.1.el8_10.x86_64",
+        "machine": "x86_64",
+        "microcode": "0xa101148",
+        "os": "Linux"
+      },
+      "expected_numa_nodes": [
+        0
+      ]
+    },
+    "primary_batch_size": 1,
+    "schedule_seed": "5cbee24595d86127816900494c44ac84a5ca3893b53d03e9279d355bf1093abe",
+    "timer": "time.perf_counter_ns",
+    "timer_scope": "production-packed-end-to-end-no-telemetry"
+  },
+  "pinball_config": {
+    "basis_profile": "x-reflected-z-conjugated-stage-order-v2",
+    "decoder_name": "pinball-ysc-v2-cz-fullhistory-nine-stage-domainatomic-yokeedge-pymatching",
+    "geometry_profile": "ysc-cz-signed-two-yoke-physical-support-v2",
+    "source_commit": "8f16f24b621aacfaa4f456a2aeec8df088faf3a7",
+    "stage_order": [
+      "M",
+      "B1",
+      "B2",
+      "B3",
+      "B4",
+      "ST1",
+      "ST2",
+      "H",
+      "E"
+    ],
+    "transaction": "fullhistory-patch-basis-domain-atomic"
+  },
+  "promatch_config": {
+    "boundary_policy": "disabled",
+    "decoder_name": "promatch-l1-v1-windowd-hw10-stages1234-noboundary-zeroframe-pymatching",
+    "domain_mode": "windowd",
+    "observable_policy": "zero-frame",
+    "residual_hw_limit": 10
+  },
+  "schema": "yoked.matched-frontends-d7-p003-protocol-v1",
+  "schema_version": 1,
+  "source": {
+    "characterization_collection_summary_payload_sha256": "6f4f694f475cd10d580e98ac4e81f4a2eb5e5e444bbecc4804f1ad17f1246f61",
+    "corpus_index_payload_sha256": "88666fc642cbe06c3db179ba3782f91c35f538b5168465e00d19ab9d8ae927ad",
+    "detector_corpus_sha256": "614850856efb9ad65de36d1b8990471bf96c8abf9ad306202dbdf6b788cc0622",
+    "matched_accuracy_manifest_file_sha256": "96ed4b688a9a84f8d7dbac6b8f9d9f002fe24b5bbc2c343c1c5fb7ec0bc19589",
+    "matched_accuracy_manifest_sha256": "e6caa2afc0aa91edce0db04d4469a7ff8f1f37cb39e07c9a21e11ce38074a78b",
+    "observables_corpus_sha256": "dda8541867b879fa9ab78f3f08f0eb4ba2b3ffbbd4478404c2d3e970a35c7ece",
+    "patch_uf_latency_detector_file_sha256": "6ccf857ec41c112927f8c59a8229e17f6849a1ba9a11349e65e7e19ef09b81bb",
+    "patch_uf_config_commit": "872f62f2201d1533e7f333b9d662de1f6b27fd9c",
+    "patch_uf_experiment_id": "c90f2c578638670eccc73007d6a061f4c8d1b75a16699961937a5ca584432604",
+    "patch_uf_implementation_commit": "51dc959c1310ab09676d7f1ac2e6f981abb4cecb",
+    "patch_uf_protocol_self_sha256": "1ca511db862da9c79dbc06dd519b0f5213f3337d6d71ea31cb5f8392d09586b0",
+    "shots": 10000
+  },
+  "status": "DRAFT"
+}
