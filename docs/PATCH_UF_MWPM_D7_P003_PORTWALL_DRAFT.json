@@ -1,0 +1,274 @@
+{
+  "claim_status": "non-claim-bearing",
+  "collection_limits": {
+    "expected_lanes_per_shot": 12,
+    "maximum_component_records_per_shot": 4096,
+    "maximum_metric_bytes_per_range": 536870912
+  },
+  "decoder": {
+    "arms": {
+      "adapter_control": "adapter-control-global-mwpm-v1",
+      "global_mwpm": "global-mwpm-u0-joint-y2",
+      "treatment": "weighted-uf-fullhistory-patchlocal-zeroframe-portwall-residual-global-mwpm-v2",
+      "uf_shadow": "weighted-uf-shadow-global-mwpm-v1"
+    },
+    "policy": {
+      "comparison": "strict-greater-than",
+      "production_limits": {
+        "absorbed_vertex_count": null,
+        "forest_edge_count": null,
+        "growth_event_count": null,
+        "heap_operation_count": 8388608,
+        "heap_pop_count": 4194304,
+        "heap_push_count": 4194304,
+        "peak_heap_size": 262144,
+        "peel_operation_count": null,
+        "simultaneous_event_batch_count": null,
+        "successful_union_count": null,
+        "temporary_memory_units": 262144,
+        "union_attempt_count": null
+      },
+      "semantic_limits": {
+        "absorbed_vertex_count": 696,
+        "forest_edge_count": 696,
+        "growth_event_count": 3403,
+        "heap_operation_count": null,
+        "heap_pop_count": null,
+        "heap_push_count": null,
+        "peak_heap_size": null,
+        "peel_operation_count": 696,
+        "simultaneous_event_batch_count": 3403,
+        "successful_union_count": 695,
+        "temporary_memory_units": null,
+        "union_attempt_count": 3171
+      },
+      "tau": "0x0.0p+0"
+    }
+  },
+  "dem_options": {
+    "approximate_disjoint_errors": true,
+    "decompose_errors": true
+  },
+  "diagnostics": {
+    "alpha": 0.05,
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed_root": "8edaa96574b6e9f3ca0d31179bce09856b9a14573d2dd3fc6356a3946f7be8b0",
+    "cluster_defect_count_display_bins": [
+      {
+        "label": "1",
+        "maximum": 1,
+        "minimum": 1
+      },
+      {
+        "label": "2",
+        "maximum": 2,
+        "minimum": 2
+      },
+      {
+        "label": "3-4",
+        "maximum": 4,
+        "minimum": 3
+      },
+      {
+        "label": "5-8",
+        "maximum": 8,
+        "minimum": 5
+      },
+      {
+        "label": "9+",
+        "maximum": null,
+        "minimum": 9
+      }
+    ],
+    "confidence_margin_bin_edges": [
+      0,
+      0.0625,
+      0.125,
+      0.25,
+      0.5,
+      1,
+      2,
+      4,
+      8,
+      16,
+      "+inf"
+    ],
+    "maximum_cases_per_category": 100,
+    "replay_selection_seed_root": "d568255a9a66ad322666b8b5ff1ed2c7b131bd005eaedbb32c9fcadca16696a2"
+  },
+  "frozen": false,
+  "latency": {
+    "batches": [
+      {
+        "batch_size": 1,
+        "blocks_per_restart": 20,
+        "restarts": 10,
+        "timed_calls_per_side_per_block": 10,
+        "warmup_calls_per_variant": 50
+      },
+      {
+        "batch_size": 64,
+        "blocks_per_restart": 4,
+        "restarts": 5,
+        "timed_calls_per_side_per_block": 2,
+        "warmup_calls_per_variant": 5
+      },
+      {
+        "batch_size": 1024,
+        "blocks_per_restart": 2,
+        "restarts": 3,
+        "timed_calls_per_side_per_block": 1,
+        "warmup_calls_per_variant": 1
+      }
+    ],
+    "host_policy": {
+      "cpu_affinity": [
+        31
+      ],
+      "expected_host": {
+        "cpu_model": "AMD EPYC 9374F 32-Core Processor",
+        "kernel": "4.18.0-553.50.1.el8_10.x86_64",
+        "machine": "x86_64",
+        "microcode": "0xa101148",
+        "os": "Linux"
+      },
+      "expected_numa_nodes": [
+        0
+      ]
+    },
+    "schedule_seed": "fe6cbab108d97d744de3dc68b1ada9be0d768d75473c4c38e70143342101b1db"
+  },
+  "sampling": {
+    "range_count": 32,
+    "seed_derivation": "sha256(root-bytes || ASCII(patch-uf-named-seed-v1\\0) || canonical-json(identity))-first8-uint64le",
+    "stages": {
+      "characterization": {
+        "seed_root": "c0883a1707ab2341c0305ffee7701e6f2ff09057eb45017e1d6e73600fb0f0e1",
+        "shots": 10000
+      },
+      "engineering-shakeout": {
+        "seed_root": "15b5bb74e0d7d54c66804b3f50acd840c0e6f826be3c3e80d621e37ae47e320c",
+        "shots": 1000
+      }
+    }
+  },
+  "schema": "patch-uf-mwpm-protocol-v1",
+  "schema_version": 1,
+  "selected_cell": {
+    "cell_id": "cguf-01-d7-n6-y2-r28-p0.003",
+    "d": 7,
+    "noise": "si1000",
+    "p": 0.003,
+    "patches": 6,
+    "r": 28,
+    "remove_x_yoke": false,
+    "style": "cz",
+    "yokes": 2
+  },
+  "source_paths": [
+    ".python-version",
+    "docs/PATCH_UF_MWPM_D7_P003_PORTWALL_DRAFT.json",
+    "experiments/CONFIDENCE_GATED_UF_MWPM_D7_P003.md",
+    "experiments/README.md",
+    "plans/CONFIDENCE_GATED_UF_MWPM_DECODER_IMPLEMENTATION_PLAN.md",
+    "requirements.txt",
+    "src/gen/__init__.py",
+    "src/gen/_circuit_util.py",
+    "src/gen/_core/__init__.py",
+    "src/gen/_core/_builder.py",
+    "src/gen/_core/_measurement_tracker.py",
+    "src/gen/_core/_noise.py",
+    "src/gen/_core/_patch.py",
+    "src/gen/_core/_tile.py",
+    "src/gen/_core/_util.py",
+    "src/gen/_flows/__init__.py",
+    "src/gen/_flows/_chunk.py",
+    "src/gen/_flows/_flow.py",
+    "src/gen/_flows/_flow_util.py",
+    "src/gen/_flows/_flow_verifier.py",
+    "src/gen/_flows/_pauli_string.py",
+    "src/gen/_interaction_planner.py",
+    "src/gen/_layers/__init__.py",
+    "src/gen/_layers/_data.py",
+    "src/gen/_layers/_det_obs_annotation_layer.py",
+    "src/gen/_layers/_empty_layer.py",
+    "src/gen/_layers/_feedback_layer.py",
+    "src/gen/_layers/_interact_layer.py",
+    "src/gen/_layers/_interact_swap_layer.py",
+    "src/gen/_layers/_iswap_layer.py",
+    "src/gen/_layers/_layer.py",
+    "src/gen/_layers/_layer_circuit.py",
+    "src/gen/_layers/_loop_layer.py",
+    "src/gen/_layers/_measure_layer.py",
+    "src/gen/_layers/_mpp_layer.py",
+    "src/gen/_layers/_noise_layer.py",
+    "src/gen/_layers/_qubit_coord_annotation_layer.py",
+    "src/gen/_layers/_reset_layer.py",
+    "src/gen/_layers/_rotation_layer.py",
+    "src/gen/_layers/_shift_coord_annotation_layer.py",
+    "src/gen/_layers/_sqrt_pp_layer.py",
+    "src/gen/_layers/_swap_layer.py",
+    "src/gen/_layers/_transpile.py",
+    "src/gen/_main_util.py",
+    "src/gen/_plaq_problem.py",
+    "src/gen/_stabilizer_code.py",
+    "src/gen/_surf/__init__.py",
+    "src/gen/_surf/_closed_curve.py",
+    "src/gen/_surf/_css_observable_boundary_pair.py",
+    "src/gen/_surf/_geo.py",
+    "src/gen/_surf/_open_curve.py",
+    "src/gen/_surf/_order.py",
+    "src/gen/_surf/_patch_outline.py",
+    "src/gen/_surf/_patch_transition_outline.py",
+    "src/gen/_surf/_path_outline.py",
+    "src/gen/_surf/_step_outline.py",
+    "src/gen/_surf/_step_sequence_outline.py",
+    "src/gen/_surf/_surface_code.py",
+    "src/gen/_surf/_viz_gltf_3d.py",
+    "src/gen/_surf/_viz_patch_outline_svg.py",
+    "src/gen/_surf/_viz_sequence_3d.py",
+    "src/gen/_util.py",
+    "src/gen/_viz_circuit_html.py",
+    "src/gen/_viz_patch_svg.py",
+    "src/yoked/__init__.py",
+    "src/yoked/_patch_rotation.py",
+    "src/yoked/_yoked_memory_circuits.py",
+    "src/yoked/decoding/__init__.py",
+    "src/yoked/decoding/_artifact_io.py",
+    "src/yoked/decoding/_dem_catalog.py",
+    "src/yoked/decoding/_patch_uf.py",
+    "src/yoked/decoding/_patch_uf_analysis.py",
+    "src/yoked/decoding/_patch_uf_casebook_replay.py",
+    "src/yoked/decoding/_patch_uf_decoder.py",
+    "src/yoked/decoding/_patch_uf_experiment.py",
+    "src/yoked/decoding/_patch_uf_graph.py",
+    "src/yoked/decoding/_patch_uf_latency.py",
+    "src/yoked/decoding/_patch_uf_latency_analysis.py",
+    "src/yoked/decoding/_patch_uf_latency_integration.py",
+    "src/yoked/decoding/_patch_uf_reference.py",
+    "src/yoked/decoding/_patch_uf_stats.py",
+    "src/yoked/decoding/_promatch_graph.py",
+    "src/yoked/decoding/_promatch_layout.py",
+    "src/yoked/decoding/_promatch_stats.py",
+    "tests/yoked/decoding/_dem_catalog_test.py",
+    "tests/yoked/decoding/_patch_uf_analysis_cli_test.py",
+    "tests/yoked/decoding/_patch_uf_analysis_test.py",
+    "tests/yoked/decoding/_patch_uf_casebook_replay_test.py",
+    "tests/yoked/decoding/_patch_uf_cli_test.py",
+    "tests/yoked/decoding/_patch_uf_core_test.py",
+    "tests/yoked/decoding/_patch_uf_decoder_test.py",
+    "tests/yoked/decoding/_patch_uf_experiment_test.py",
+    "tests/yoked/decoding/_patch_uf_graph_test.py",
+    "tests/yoked/decoding/_patch_uf_latency_integration_test.py",
+    "tests/yoked/decoding/_patch_uf_latency_test.py",
+    "tests/yoked/decoding/_patch_uf_reference_differential_test.py",
+    "tests/yoked/decoding/_patch_uf_reference_test.py",
+    "tests/yoked/decoding/_patch_uf_stats_test.py",
+    "tests/yoked/decoding/_pinball_decoder_test.py",
+    "tests/yoked/decoding/_promatch_decoder_test.py",
+    "tests/yoked/decoding/_promatch_graph_test.py",
+    "tools/analyze_patch_uf_mwpm",
+    "tools/benchmark_patch_uf_mwpm"
+  ],
+  "status": "DRAFT"
+}
