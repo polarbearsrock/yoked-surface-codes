@@ -134,6 +134,47 @@ class CompiledPinballV2Schedule:
 
 
 @dataclasses.dataclass(frozen=True)
+class PinballV2HardwareProxies:
+    """Decision-neutral raw work and depth counters for one domain.
+
+    These values describe the maintained nine-stage schedule; they are not a
+    latency, frequency, resource, or power model.  In particular,
+    ``ideal_stream_cycle_lower_bound`` assumes one full layer block can enter a
+    fully spatial nine-stage pipeline per cycle, plus the final E-only flush.
+    A concrete RTL implementation can require additional buffering, routing,
+    arbitration, correction reduction, and I/O cycles.
+
+    ``stage_primitive_evaluation_counts`` is aligned one-for-one with the
+    domain's ``stage_match_counts``.  Every scheduled primitive is evaluated,
+    so the tuple is also the conflict-free parallel width of each stage slot.
+    Tentative writes include work later rolled back for a complex domain;
+    committed writes count only the correction made durable by this policy.
+    Physical-target toggle counts are pre-XOR raw work, not the final reduced
+    Pauli correction weight.
+    """
+
+    stage_family_pipeline_depth: int
+    scheduled_stage_slot_count: int
+    nonempty_stage_slot_count: int
+    stage_primitive_evaluation_counts: tuple[int, ...]
+    maximum_parallel_primitive_width: int
+    primitive_evaluation_count: int
+    activation_bit_read_count: int
+    fired_primitive_count: int
+    tentative_detector_xor_write_count: int
+    tentative_physical_target_toggle_count: int
+    committed_primitive_count: int
+    committed_detector_xor_write_count: int
+    committed_physical_target_toggle_count: int
+    residual_or_reduction_input_count: int
+    residual_or_reduction_tree_depth: int
+    streamed_full_block_count: int
+    streamed_terminal_flush_block_count: int
+    pipeline_drain_cycle_lower_bound: int
+    ideal_stream_cycle_lower_bound: int
+
+
+@dataclasses.dataclass(frozen=True)
 class PinballV2DomainResult:
     """Audit record for one independently committed or rolled-back domain."""
 
@@ -147,6 +188,7 @@ class PinballV2DomainResult:
     physical_correction: tuple[PinballV2PauliTarget, ...]
     tentative_physical_correction: tuple[PinballV2PauliTarget, ...]
     stage_match_counts: tuple[int, ...]
+    hardware_proxies: PinballV2HardwareProxies | None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -164,6 +206,20 @@ class PinballV2Result:
     physical_correction: tuple[PinballV2PauliTarget, ...]
     tentative_physical_correction: tuple[PinballV2PauliTarget, ...]
     domain_results: Mapping[L1FullHistoryDomain, PinballV2DomainResult]
+
+    @property
+    def hardware_proxies_by_domain(
+        self,
+    ) -> Mapping[L1FullHistoryDomain, PinballV2HardwareProxies]:
+        """Returns the immutable per-domain hardware-proxy view."""
+
+        return MappingProxyType(
+            {
+                domain: result.hardware_proxies
+                for domain, result in self.domain_results.items()
+                if result.hardware_proxies is not None
+            }
+        )
 
 
 def _is_inner(role: object) -> bool:
@@ -1073,11 +1129,92 @@ def _domain_detector_ids(
     return {domain: tuple(ids) for domain, ids in result.items()}
 
 
+def _binary_reduction_tree_depth(input_count: int) -> int:
+    """Returns the balanced binary-tree depth needed to reduce ``input_count``."""
+
+    if input_count < 0:
+        raise ValueError("reduction input count must be nonnegative")
+    return 0 if input_count <= 1 else (input_count - 1).bit_length()
+
+
+def _domain_hardware_proxies(
+    graph: CompiledPromatchGraph,
+    schedule: CompiledPinballV2Schedule,
+    *,
+    stage_indices: tuple[int, ...],
+    tentative_support: tuple[int, ...],
+    residual_or_input_count: int,
+    committed: bool,
+) -> PinballV2HardwareProxies:
+    """Derives hardware work counters after, and independently of, decisions."""
+
+    stages = tuple(schedule.stages[index] for index in stage_indices)
+    stage_widths = tuple(len(stage.primitives) for stage in stages)
+    primitives = tuple(
+        primitive for stage in stages for primitive in stage.primitives
+    )
+    primitive_by_edge = {primitive.edge_id: primitive for primitive in primitives}
+    if len(primitive_by_edge) != len(primitives):
+        raise AssertionError("domain hardware proxy saw a duplicate primitive edge")
+    try:
+        fired = tuple(primitive_by_edge[edge_id] for edge_id in tentative_support)
+    except KeyError as ex:
+        raise AssertionError(
+            "domain hardware proxy support contains an out-of-domain edge"
+        ) from ex
+
+    detector_writes = sum(len(primitive.detector_boundary) for primitive in fired)
+    physical_toggles = sum(len(primitive.physical_support) for primitive in fired)
+    full_block_count = len(
+        {
+            stage.sweep_time
+            for stage in stages
+            if stage.sweep_time <= graph.layout.rounds
+        }
+    )
+    terminal_flush_count = sum(
+        stage.sweep_time == graph.layout.rounds + 1 and stage.stage == "E"
+        for stage in stages
+    )
+    pipeline_depth = len(PINBALL_V2_STAGE_ORDER)
+    pipeline_drain = max(0, pipeline_depth - 1)
+    return PinballV2HardwareProxies(
+        stage_family_pipeline_depth=pipeline_depth,
+        scheduled_stage_slot_count=len(stages),
+        nonempty_stage_slot_count=sum(bool(width) for width in stage_widths),
+        stage_primitive_evaluation_counts=stage_widths,
+        maximum_parallel_primitive_width=max(stage_widths, default=0),
+        primitive_evaluation_count=len(primitives),
+        activation_bit_read_count=sum(
+            len(primitive.activation_detectors) for primitive in primitives
+        ),
+        fired_primitive_count=len(fired),
+        tentative_detector_xor_write_count=detector_writes,
+        tentative_physical_target_toggle_count=physical_toggles,
+        committed_primitive_count=len(fired) if committed else 0,
+        committed_detector_xor_write_count=detector_writes if committed else 0,
+        committed_physical_target_toggle_count=(
+            physical_toggles if committed else 0
+        ),
+        residual_or_reduction_input_count=residual_or_input_count,
+        residual_or_reduction_tree_depth=_binary_reduction_tree_depth(
+            residual_or_input_count
+        ),
+        streamed_full_block_count=full_block_count,
+        streamed_terminal_flush_block_count=terminal_flush_count,
+        pipeline_drain_cycle_lower_bound=pipeline_drain,
+        ideal_stream_cycle_lower_bound=(
+            full_block_count + terminal_flush_count + pipeline_drain
+        ),
+    )
+
+
 def predecode_pinball_v2(
     graph: CompiledPromatchGraph,
     schedule: CompiledPinballV2Schedule,
     detection_events: np.ndarray,
     *,
+    collect_hardware_proxies: bool = False,
     _schedule_is_validated: bool = False,
 ) -> PinballV2Result:
     """Runs independent full-history domain transactions on one syndrome.
@@ -1085,6 +1222,10 @@ def predecode_pinball_v2(
     ``_schedule_is_validated`` is the compiled-adapter fast path.  External
     callers should leave it false so a manually constructed or replaced
     schedule is checked before use.
+
+    Hardware proxies are deliberately opt-in.  The default production path
+    stores ``None`` on every domain result and never invokes the proxy builder,
+    keeping hardware characterization outside software-latency measurements.
     """
 
     if not isinstance(graph, CompiledPromatchGraph):
@@ -1093,6 +1234,8 @@ def predecode_pinball_v2(
         raise TypeError(
             f"schedule must be CompiledPinballV2Schedule, got {type(schedule)!r}"
         )
+    if not isinstance(collect_hardware_proxies, bool):
+        raise TypeError("collect_hardware_proxies must be bool")
     if schedule.graph_fingerprint != graph.fingerprint:
         raise ValueError("YSC-CZ Pinball V2 schedule belongs to another graph")
     if (schedule.num_detectors, schedule.num_observables) != (
@@ -1220,6 +1363,18 @@ def predecode_pinball_v2(
                 schedule, tentative
             ),
             stage_match_counts=domain_counts[domain],
+            hardware_proxies=(
+                _domain_hardware_proxies(
+                    graph,
+                    schedule,
+                    stage_indices=tuple(stage_indices_by_domain[domain]),
+                    tentative_support=tentative,
+                    residual_or_input_count=len(domain_ids),
+                    committed=not is_complex,
+                )
+                if collect_hardware_proxies
+                else None
+            ),
         )
 
     return PinballV2Result(
@@ -1244,6 +1399,7 @@ __all__ = [
     "PINBALL_V2_STAGE_ORDER",
     "CompiledPinballV2Schedule",
     "PinballV2DomainResult",
+    "PinballV2HardwareProxies",
     "PinballV2PauliTarget",
     "PinballV2Primitive",
     "PinballV2Result",

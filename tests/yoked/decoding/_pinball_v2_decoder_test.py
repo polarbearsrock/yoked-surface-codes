@@ -205,7 +205,10 @@ def test_frame_xor_tail_mask_one_matcher_call_and_explicit_telemetry(
     sentinels = []
 
     def fake_predecode(_graph, _schedule, shot, **kwargs):
-        assert kwargs == {"_schedule_is_validated": True}
+        assert kwargs == {
+            "collect_hardware_proxies": False,
+            "_schedule_is_validated": True,
+        }
         frame = np.zeros(10, dtype=np.uint8)
         frame[0] = shot[0]
         frame[9] = shot[1]
@@ -238,6 +241,43 @@ def test_frame_xor_tail_mask_one_matcher_call_and_explicit_telemetry(
         actual,
         np.array([[0x05, 0x03], [0x08, 0x02]], dtype=np.uint8),
     )
+
+
+def test_explicit_predecode_forwards_hardware_proxy_opt_in(monkeypatch) -> None:
+    seen = []
+
+    def fake_predecode(_graph, _schedule, shot, **kwargs):
+        seen.append(kwargs)
+        return SimpleNamespace(
+            residual_syndrome=shot.copy(),
+            observable_frame=np.zeros(1, dtype=np.uint8),
+        )
+
+    compiled = CompiledPinballV2Decoder(
+        graph=SimpleNamespace(),
+        schedule=SimpleNamespace(),
+        num_detectors=2,
+        num_observables=1,
+    )
+    monkeypatch.setattr(pinball_v2_decoder, "predecode_pinball_v2", fake_predecode)
+
+    _, _, results = compiled.predecode_shots(
+        np.zeros((2, 2), dtype=np.uint8),
+        collect_hardware_proxies=True,
+    )
+
+    assert len(results) == 2
+    assert seen == [
+        {
+            "collect_hardware_proxies": True,
+            "_schedule_is_validated": True,
+        }
+    ] * 2
+    with pytest.raises(TypeError, match="collect_hardware_proxies must be bool"):
+        compiled.predecode_shots(
+            np.zeros((1, 2), dtype=np.uint8),
+            collect_hardware_proxies=1,
+        )
 
 
 def test_standard_sinter_path_discards_results(monkeypatch) -> None:

@@ -5,9 +5,11 @@ import pytest
 
 import gen
 from yoked._yoked_memory_circuits import yoked_magic_memory_circuit
+import yoked.decoding._pinball_v2 as pinball_v2
 from yoked.decoding._pinball_v2 import (
     PINBALL_V2_STAGE_ORDER,
     CompiledPinballV2Schedule,
+    PinballV2HardwareProxies,
     PinballV2PauliTarget,
     PinballV2Result,
     compile_pinball_v2_schedule,
@@ -62,6 +64,113 @@ def _local(graph, detector_id):
     if role.check_basis == "X":
         return local_x, y, role.time
     return y, local_x, role.time
+
+
+def test_hardware_proxies_expose_exact_static_pipeline_work(
+    maintained_graph, maintained_schedule
+):
+    shot = np.zeros(maintained_graph.num_detectors, dtype=np.uint8)
+
+    result = predecode_pinball_v2(
+        maintained_graph,
+        maintained_schedule,
+        shot,
+        collect_hardware_proxies=True,
+    )
+
+    proxies = result.hardware_proxies_by_domain
+    assert set(proxies) == set(maintained_schedule.domains)
+    with pytest.raises(TypeError):
+        proxies[maintained_schedule.domains[0]] = proxies[
+            maintained_schedule.domains[0]
+        ]
+
+    for domain in maintained_schedule.domains:
+        domain_result = result.domain_results[domain]
+        proxy = domain_result.hardware_proxies
+        stages = tuple(
+            stage for stage in maintained_schedule.stages if stage.domain == domain
+        )
+        widths = tuple(len(stage.primitives) for stage in stages)
+        primitives = tuple(
+            primitive for stage in stages for primitive in stage.primitives
+        )
+        domain_detector_count = sum(
+            isinstance(role, (L1BodyDetector, L1TerminalDetector))
+            and L1FullHistoryDomain(role.patch_id, role.check_basis) == domain
+            for role in maintained_graph.layout.roles
+        )
+
+        assert isinstance(proxy, PinballV2HardwareProxies)
+        assert proxies[domain] is proxy
+        assert proxy.stage_family_pipeline_depth == len(PINBALL_V2_STAGE_ORDER)
+        assert proxy.scheduled_stage_slot_count == len(stages)
+        assert proxy.nonempty_stage_slot_count == sum(
+            bool(width) for width in widths
+        )
+        assert proxy.stage_primitive_evaluation_counts == widths
+        assert proxy.maximum_parallel_primitive_width == max(widths)
+        assert proxy.primitive_evaluation_count == len(primitives)
+        assert proxy.activation_bit_read_count == sum(
+            len(primitive.activation_detectors) for primitive in primitives
+        )
+        assert (
+            proxy.fired_primitive_count
+            == sum(domain_result.stage_match_counts)
+            == 0
+        )
+        assert proxy.tentative_detector_xor_write_count == 0
+        assert proxy.tentative_physical_target_toggle_count == 0
+        assert proxy.committed_primitive_count == 0
+        assert proxy.committed_detector_xor_write_count == 0
+        assert proxy.committed_physical_target_toggle_count == 0
+        assert proxy.residual_or_reduction_input_count == domain_detector_count
+        assert proxy.residual_or_reduction_tree_depth == (
+            0
+            if domain_detector_count <= 1
+            else (domain_detector_count - 1).bit_length()
+        )
+        assert (
+            proxy.streamed_full_block_count
+            == maintained_graph.layout.rounds + 1
+        )
+        assert proxy.streamed_terminal_flush_block_count == 1
+        assert (
+            proxy.pipeline_drain_cycle_lower_bound
+            == len(PINBALL_V2_STAGE_ORDER) - 1
+        )
+        assert proxy.ideal_stream_cycle_lower_bound == (
+            maintained_graph.layout.rounds
+            + 1
+            + 1
+            + len(PINBALL_V2_STAGE_ORDER)
+            - 1
+        )
+
+
+def test_hardware_proxy_collection_is_opt_in_and_skipped_by_default(
+    maintained_graph, maintained_schedule, monkeypatch
+):
+    def fail_if_called(*_args, **_kwargs):  # pragma: no cover
+        raise AssertionError("default decoding must not build hardware proxies")
+
+    monkeypatch.setattr(pinball_v2, "_domain_hardware_proxies", fail_if_called)
+    shot = np.zeros(maintained_graph.num_detectors, dtype=np.uint8)
+
+    result = predecode_pinball_v2(maintained_graph, maintained_schedule, shot)
+
+    assert dict(result.hardware_proxies_by_domain) == {}
+    assert all(
+        domain_result.hardware_proxies is None
+        for domain_result in result.domain_results.values()
+    )
+    with pytest.raises(TypeError, match="collect_hardware_proxies must be bool"):
+        predecode_pinball_v2(
+            maintained_graph,
+            maintained_schedule,
+            shot,
+            collect_hardware_proxies=1,
+        )
 
 
 @pytest.mark.parametrize("d", [3, 5, 7])
@@ -139,7 +248,12 @@ def test_inner_yoke_e_uses_inner_activation_but_full_boundary_and_frame(
     shot[yoke] = initial_yoke
     original = shot.copy()
 
-    result = predecode_pinball_v2(maintained_graph, maintained_schedule, shot)
+    result = predecode_pinball_v2(
+        maintained_graph,
+        maintained_schedule,
+        shot,
+        collect_hardware_proxies=True,
+    )
 
     assert isinstance(result, PinballV2Result)
     assert not result.complex
@@ -169,6 +283,45 @@ def test_inner_yoke_e_uses_inner_activation_but_full_boundary_and_frame(
         result.domain_results[primitive.domain] = result.domain_results[
             primitive.domain
         ]
+
+
+def test_hardware_proxies_count_fired_and_committed_correction_work(
+    maintained_graph, maintained_schedule
+):
+    primitive = next(
+        candidate
+        for candidate in maintained_schedule.primitives
+        if candidate.stage == "E" and len(candidate.detector_boundary) == 2
+    )
+    shot = np.zeros(maintained_graph.num_detectors, dtype=np.uint8)
+    shot[primitive.activation_detectors[0]] = 1
+
+    result = predecode_pinball_v2(
+        maintained_graph,
+        maintained_schedule,
+        shot,
+        collect_hardware_proxies=True,
+    )
+
+    domain_result = result.domain_results[primitive.domain]
+    proxy = domain_result.hardware_proxies
+    assert proxy is not None
+    assert not domain_result.complex
+    assert domain_result.tentative_edge_support == (primitive.edge_id,)
+    assert proxy.fired_primitive_count == sum(domain_result.stage_match_counts) == 1
+    assert proxy.tentative_detector_xor_write_count == len(
+        primitive.detector_boundary
+    )
+    assert proxy.tentative_physical_target_toggle_count == len(
+        primitive.physical_support
+    )
+    assert proxy.committed_primitive_count == 1
+    assert proxy.committed_detector_xor_write_count == len(
+        primitive.detector_boundary
+    )
+    assert proxy.committed_physical_target_toggle_count == len(
+        primitive.physical_support
+    )
 
 
 def test_domains_commit_and_roll_back_independently():
@@ -203,7 +356,12 @@ def test_domains_commit_and_roll_back_independently():
     shot[complex_pattern] = 1
     original = shot.copy()
 
-    result = predecode_pinball_v2(maintained_graph, maintained_schedule, shot)
+    result = predecode_pinball_v2(
+        maintained_graph,
+        maintained_schedule,
+        shot,
+        collect_hardware_proxies=True,
+    )
 
     assert result.complex
     assert simple_e.edge_id in result.edge_support
@@ -237,6 +395,20 @@ def test_domains_commit_and_roll_back_independently():
         result.domain_results[complex_domain].final_residual_hw
         == len(complex_pattern)
     )
+    simple_proxy = result.domain_results[simple_domain].hardware_proxies
+    complex_proxy = result.domain_results[complex_domain].hardware_proxies
+    assert simple_proxy is not None
+    assert complex_proxy is not None
+    assert simple_proxy.fired_primitive_count == 1
+    assert simple_proxy.committed_primitive_count == 1
+    assert complex_proxy.fired_primitive_count == len(
+        result.domain_results[complex_domain].tentative_edge_support
+    )
+    assert complex_proxy.fired_primitive_count > 0
+    assert complex_proxy.tentative_detector_xor_write_count > 0
+    assert complex_proxy.committed_primitive_count == 0
+    assert complex_proxy.committed_detector_xor_write_count == 0
+    assert complex_proxy.committed_physical_target_toggle_count == 0
     assert np.array_equal(shot, original)
 
 

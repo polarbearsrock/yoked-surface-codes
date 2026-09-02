@@ -1,0 +1,338 @@
+#!/usr/bin/env python3
+"""Replay the matched d=7 corpus with decision-neutral hardware proxies."""
+
+from __future__ import annotations
+
+# Pin native runtimes before importing NumPy, PyMatching, or Stim.
+import os
+
+_THREAD_ENVIRONMENT = (
+    "OMP_NUM_THREADS",
+    "OPENBLAS_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+    "VECLIB_MAXIMUM_THREADS",
+    "BLIS_NUM_THREADS",
+)
+for _name in _THREAD_ENVIRONMENT:
+    os.environ[_name] = "1"
+
+import argparse  # noqa: E402
+from concurrent.futures import ProcessPoolExecutor, as_completed  # noqa: E402
+import gc  # noqa: E402
+import hashlib  # noqa: E402
+import json  # noqa: E402
+import multiprocessing  # noqa: E402
+from pathlib import Path  # noqa: E402
+import sys  # noqa: E402
+from typing import Any  # noqa: E402
+
+_REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPOSITORY_ROOT / "src"))
+
+from yoked.decoding._artifact_io import load_json_strict  # noqa: E402
+from yoked.decoding._matched_frontend_hardware import (  # noqa: E402
+    CLAIM_STATUS,
+    analyze_hardware_replay,
+    clear_hardware_replay_worker,
+    concatenate_hardware_ranges,
+    hardware_replay_tasks,
+    load_hardware_replay_npz,
+    load_matched_hardware_protocol,
+    preload_hardware_replay_worker,
+    validate_protocol_corpus,
+    validate_hardware_npz_provenance,
+    validate_verified_uf_rows,
+    worker_replay_hardware_range,
+    write_hardware_reanalysis_artifacts,
+    write_hardware_replay_artifacts,
+)
+from yoked.decoding._patch_uf_experiment import (  # noqa: E402
+    CHARACTERIZATION_STAGE,
+    configure_single_thread_runtime,
+    verify_collection,
+)
+from yoked.decoding._pinball_promatch_experiment import (  # noqa: E402
+    current_execution_environment,
+    current_software_versions,
+    prepare_cell,
+    repository_state,
+)
+from yoked.decoding._pinball_promatch_matched_accuracy import (  # noqa: E402
+    load_matched_corpus,
+)
+
+
+REQUIRED_PROCESSES = 32
+
+
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _require_runtime() -> None:
+    scratch = os.environ.get("TMPDIR")
+    if not scratch or not Path(scratch).is_absolute():
+        raise ValueError("TMPDIR must be an absolute scratch directory")
+    if "MAX_ERRORS" in os.environ:
+        raise ValueError("MAX_ERRORS must remain unset for fixed-N replay")
+    for name in _THREAD_ENVIRONMENT:
+        if os.environ.get(name) != "1":
+            raise ValueError(f"{name} must equal 1")
+    configure_single_thread_runtime()
+
+
+def _compact(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _run_replay(args: argparse.Namespace) -> dict[str, Any]:
+    if args.processes != REQUIRED_PROCESSES:
+        raise ValueError("matched hardware replay requires exactly 32 processes")
+    _require_runtime()
+    output = args.out.absolute()
+    if output.exists() or output.is_symlink():
+        raise FileExistsError("hardware replay output must be a fresh absent path")
+    resolved_output = output.resolve()
+    for source_root in (args.corpus.resolve(), args.uf_collection.resolve()):
+        if resolved_output == source_root or source_root in resolved_output.parents:
+            raise ValueError("hardware replay output may not be inside a source corpus")
+
+    protocol = load_matched_hardware_protocol(args.protocol)
+    corpus = load_matched_corpus(args.corpus)
+    validate_protocol_corpus(protocol, corpus)
+    reference = load_json_strict(
+        args.reference_analysis, description="reference matched analysis"
+    )
+    if reference.get("source_identity") != dict(corpus.source_identity):
+        raise ValueError("reference analysis source identity differs from corpus")
+
+    uf_protocol = load_json_strict(args.uf_protocol, description="frozen UF protocol")
+    print("authenticating all retained Union-Find ranges", file=sys.stderr, flush=True)
+    verified = verify_collection(
+        uf_protocol,
+        stage=CHARACTERIZATION_STAGE,
+        out=args.uf_collection,
+        processes=REQUIRED_PROCESSES,
+        scientific=True,
+    )
+    if verified.detector_corpus_sha256 != corpus.source_identity[
+        "detector_corpus_sha256"
+    ]:
+        raise ValueError("verified UF detector corpus differs from matched corpus")
+    uf_summary = dict(verified.summary)
+    uf_shot_rows = validate_verified_uf_rows(
+        protocol,
+        corpus,
+        uf_summary=uf_summary,
+        uf_shot_rows=verified.shot_rows,
+    )
+    # The normalized lane/component copies are no longer needed; retained shot
+    # rows already contain the decision telemetry consumed by the proxy model.
+    del verified
+    gc.collect()
+
+    print("compiling the authenticated matched decoder cell", file=sys.stderr, flush=True)
+    prepared = prepare_cell(
+        protocol["cell"],
+        promatch_config=protocol["promatch_config"],
+        pinball_config=protocol["pinball_config"],
+        dem_options=protocol["dem_options"],
+        verify_hashes=True,
+    )
+    tasks = hardware_replay_tasks(
+        corpus, microbatch_size=protocol["accuracy"]["microbatch_size"]
+    )
+    results: dict[int, dict[str, Any]] = {}
+    preload_hardware_replay_worker(prepared, corpus, uf_shot_rows)
+    context = multiprocessing.get_context("fork")
+    try:
+        with ProcessPoolExecutor(
+            max_workers=REQUIRED_PROCESSES,
+            mp_context=context,
+            initializer=configure_single_thread_runtime,
+        ) as executor:
+            futures = {
+                executor.submit(worker_replay_hardware_range, task): task
+                for task in tasks
+            }
+            for future in as_completed(futures):
+                task = futures[future]
+                range_id = int(task["range"]["range_id"])
+                results[range_id] = future.result()
+                print(
+                    f"completed hardware replay range {range_id:02d}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+    finally:
+        clear_hardware_replay_worker()
+    arrays = concatenate_hardware_ranges(
+        [results[index] for index in range(REQUIRED_PROCESSES)],
+        shots=corpus.shots,
+    )
+    analysis = analyze_hardware_replay(
+        arrays,
+        source_identity=corpus.source_identity,
+        reference_analysis=reference,
+        enforce_frozen_expected=True,
+    )
+    provenance = {
+        "replay_schema": "yoked.matched-frontends-hardware-proxy-replay-v1",
+        "claim_status": CLAIM_STATUS,
+        "fresh_sampling": False,
+        "decision_policy_changed": False,
+        "processes": REQUIRED_PROCESSES,
+        "native_threads_per_process": 1,
+        "microbatch_size": protocol["accuracy"]["microbatch_size"],
+        "repository": repository_state(_REPOSITORY_ROOT),
+        "software_versions": current_software_versions(),
+        "execution_environment": current_execution_environment(),
+        "matched_protocol": {
+            "path": str(args.protocol.absolute()),
+            "file_sha256": _file_sha256(args.protocol),
+            "protocol_self_sha256": protocol["protocol_self_sha256"],
+        },
+        "matched_corpus": {
+            "path": str(args.corpus.absolute()),
+            "source_identity": dict(corpus.source_identity),
+        },
+        "verified_union_find_collection": {
+            "path": str(args.uf_collection.absolute()),
+            "protocol_path": str(args.uf_protocol.absolute()),
+            "protocol_file_sha256": _file_sha256(args.uf_protocol),
+            "summary_payload_sha256": uf_summary["payload_sha256"],
+        },
+        "reference_analysis": {
+            "path": str(args.reference_analysis.absolute()),
+            "file_sha256": _file_sha256(args.reference_analysis),
+            "payload_sha256": reference.get("payload_sha256"),
+        },
+        "interpretation": (
+            "exploratory, decision-identical hardware-work replay over an existing "
+            "authenticated corpus; not a fresh holdout and not an RTL timing result"
+        ),
+    }
+    paths = write_hardware_replay_artifacts(
+        output,
+        arrays=arrays,
+        analysis=analysis,
+        provenance=provenance,
+    )
+    return {
+        **paths,
+        "shots": corpus.shots,
+        "claim_status": CLAIM_STATUS,
+        "analysis_payload_sha256": analysis["payload_sha256"],
+    }
+
+
+def _run_reanalyze(args: argparse.Namespace) -> dict[str, Any]:
+    """Safely reanalyze a prior no-pickle NPZ without decoding or mutation."""
+
+    _require_runtime()
+    output = args.out.absolute()
+    if output.exists() or output.is_symlink():
+        raise FileExistsError("hardware reanalysis output must be a fresh absent path")
+    source_npz = args.per_shot.absolute()
+    source_root = source_npz.resolve().parent
+    resolved_output = output.resolve()
+    if resolved_output == source_root or source_root in resolved_output.parents:
+        raise ValueError("hardware reanalysis output may not modify the source root")
+    arrays = load_hardware_replay_npz(source_npz)
+    source_provenance = load_json_strict(
+        args.source_provenance, description="source hardware replay provenance"
+    )
+    source_binding = validate_hardware_npz_provenance(
+        source_npz, arrays, source_provenance
+    )
+    reference = load_json_strict(
+        args.reference_analysis, description="reference matched analysis"
+    )
+    source_identity = reference.get("source_identity")
+    if not isinstance(source_identity, dict):
+        raise ValueError("reference matched analysis omits source_identity")
+    analysis = analyze_hardware_replay(
+        arrays,
+        source_identity=source_identity,
+        reference_analysis=reference,
+        enforce_frozen_expected=True,
+    )
+    provenance = {
+        "replay_schema": "yoked.matched-frontends-hardware-proxy-reanalysis-v1",
+        "claim_status": CLAIM_STATUS,
+        "mode": "read-only-no-pickle-npz-reanalysis",
+        "fresh_sampling": False,
+        "decoding_executed": False,
+        "source_per_shot_npz": source_binding,
+        "source_provenance": {
+            "path": str(args.source_provenance.absolute()),
+            "file_sha256": _file_sha256(args.source_provenance),
+            "payload_sha256": source_provenance.get("payload_sha256"),
+        },
+        "reference_analysis": {
+            "path": str(args.reference_analysis.absolute()),
+            "file_sha256": _file_sha256(args.reference_analysis),
+            "payload_sha256": reference.get("payload_sha256"),
+        },
+        "repository": repository_state(_REPOSITORY_ROOT),
+        "software_versions": current_software_versions(),
+        "execution_environment": current_execution_environment(),
+        "interpretation": (
+            "exploratory read-only reanalysis of an authenticated hardware-proxy "
+            "NPZ; the source replay directory is unchanged"
+        ),
+    }
+    paths = write_hardware_reanalysis_artifacts(
+        output,
+        analysis=analysis,
+        provenance=provenance,
+    )
+    return {
+        **paths,
+        "source_per_shot": str(source_npz),
+        "shots": int(len(arrays["shot_id"])),
+        "claim_status": CLAIM_STATUS,
+        "analysis_payload_sha256": analysis["payload_sha256"],
+    }
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="exploratory matched frontend hardware-proxy replay"
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+    replay = commands.add_parser(
+        "replay", help="authenticate and replay the exact matched 10k corpus"
+    )
+    replay.add_argument("--protocol", type=Path, required=True)
+    replay.add_argument("--corpus", type=Path, required=True)
+    replay.add_argument("--uf-protocol", type=Path, required=True)
+    replay.add_argument("--uf-collection", type=Path, required=True)
+    replay.add_argument("--reference-analysis", type=Path, required=True)
+    replay.add_argument("--out", type=Path, required=True)
+    replay.add_argument("--processes", type=int, required=True)
+    reanalyze = commands.add_parser(
+        "reanalyze",
+        help="read-only analysis of an existing authenticated no-pickle NPZ",
+    )
+    reanalyze.add_argument("--per-shot", type=Path, required=True)
+    reanalyze.add_argument("--source-provenance", type=Path, required=True)
+    reanalyze.add_argument("--reference-analysis", type=Path, required=True)
+    reanalyze.add_argument("--out", type=Path, required=True)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    try:
+        result = _run_replay(args) if args.command == "replay" else _run_reanalyze(args)
+        print(_compact(result))
+        return 0
+    except (AssertionError, FileExistsError, OSError, RuntimeError, TypeError, ValueError) as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

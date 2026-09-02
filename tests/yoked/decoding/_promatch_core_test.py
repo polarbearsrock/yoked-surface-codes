@@ -85,13 +85,53 @@ def test_stage1_uses_deterministic_weight_order_and_stops_at_limit() -> None:
         _compiled(graph, num_detectors=4),
         np.ones(4, dtype=np.uint8),
         residual_hw_limit=2,
+        collect_hardware_proxies=True,
     )
 
     assert np.array_equal(result.residual_syndrome, [1, 1, 0, 0])
     assert len(result.paths) == 1
     assert result.paths[0].stage == 1
     assert result.paths[0].edge_ids == (1,)
-    assert result.domain_stats[graph.domain].committed_stage_counts == (1, 0, 0, 0)
+    stats = result.domain_stats[graph.domain]
+    assert stats.committed_stage_counts == (1, 0, 0, 0)
+    assert stats.hardware_proxy.selection_rounds == 1
+    assert stats.hardware_proxy.active_eligible_edge_checks_per_round == (2,)
+    assert stats.hardware_proxy.stage3_invoked_per_round == (False,)
+    assert stats.hardware_proxy.stage3_path_candidates_per_round == (0,)
+    assert stats.hardware_proxy.stage3_path_checks_per_round == (0,)
+    assert stats.hardware_proxy.paper_cycle_proxy_per_round == (2,)
+    assert stats.hardware_proxy.paper_cycle_proxy_total == 2
+    assert stats.hardware_proxy.peak_round_work == 2
+
+
+def test_hardware_proxy_collection_is_explicit_and_off_by_default() -> None:
+    edge = _edge(0, 0, 1)
+    graph = _domain_graph(0, (0, 1), (edge,))
+
+    result = predecode(
+        _compiled(graph, num_detectors=2),
+        np.ones(2, dtype=np.uint8),
+        residual_hw_limit=0,
+    )
+
+    assert result.domain_stats[graph.domain].hardware_proxy is None
+    collected_below_limit = predecode(
+        _compiled(graph, num_detectors=2),
+        np.ones(2, dtype=np.uint8),
+        residual_hw_limit=2,
+        collect_hardware_proxies=True,
+    )
+    proxy = collected_below_limit.domain_stats[graph.domain].hardware_proxy
+    assert proxy is not None
+    assert proxy.selection_rounds == 0
+    assert proxy.paper_cycle_proxy_total == 0
+    with pytest.raises(TypeError, match="collect_hardware_proxies"):
+        predecode(
+            _compiled(graph, num_detectors=2),
+            np.ones(2, dtype=np.uint8),
+            residual_hw_limit=0,
+            collect_hardware_proxies=1,  # type: ignore[arg-type]
+        )
 
 
 def test_stage2_prefers_safe_degree_one_pair() -> None:
@@ -126,13 +166,27 @@ def test_stage3_path_may_cross_an_active_internal_detector() -> None:
     )
     graph = _domain_graph(0, (0, 1, 2, 3, 4), edges)
     syndrome = np.asarray([1, 1, 1, 1, 0], dtype=np.uint8)
-    result = predecode(_compiled(graph, num_detectors=5), syndrome, residual_hw_limit=2)
+    result = predecode(
+        _compiled(graph, num_detectors=5),
+        syndrome,
+        residual_hw_limit=2,
+        collect_hardware_proxies=True,
+    )
 
     assert result.paths[0].stage == 3
     assert result.paths[0].endpoints == (0, 2)
     assert result.paths[0].edge_ids == (2, 3, 0)
     assert result.residual_syndrome[1] == 1
     assert np.array_equal(result.residual_syndrome, [0, 1, 0, 1, 0])
+    proxy = result.domain_stats[graph.domain].hardware_proxy
+    assert proxy.selection_rounds == 1
+    assert proxy.active_eligible_edge_checks_per_round == (2,)
+    assert proxy.stage3_invoked_per_round == (True,)
+    assert proxy.stage3_path_candidates_per_round == (3,)
+    assert proxy.stage3_path_checks_per_round == (2,)
+    assert proxy.paper_cycle_proxy_per_round == (3,)
+    assert proxy.paper_cycle_proxy_total == 3
+    assert proxy.peak_round_work == 3
 
 
 def test_stage4_is_used_only_when_every_adjacent_pair_is_risky() -> None:
@@ -166,6 +220,7 @@ def test_domain_rollback_is_transactional_and_does_not_leak_frame() -> None:
         shot,
         residual_hw_limit=0,
         observable_policy="any",
+        collect_hardware_proxies=True,
     )
 
     assert np.array_equal(result.residual_syndrome, [0, 0, 1, 1, 1, 1])
@@ -178,6 +233,14 @@ def test_domain_rollback_is_transactional_and_does_not_leak_frame() -> None:
     assert stats.attempted_residual_hw == 2
     assert stats.final_residual_hw == 4
     assert stats.fallback_reason is FallbackReason.DISCONNECTED
+    assert stats.hardware_proxy.selection_rounds == 2
+    assert stats.hardware_proxy.active_eligible_edge_checks_per_round == (1, 0)
+    assert stats.hardware_proxy.stage3_invoked_per_round == (False, True)
+    assert stats.hardware_proxy.stage3_path_candidates_per_round == (0, 2)
+    assert stats.hardware_proxy.stage3_path_checks_per_round == (0, 2)
+    assert stats.hardware_proxy.paper_cycle_proxy_per_round == (1, 2)
+    assert stats.hardware_proxy.paper_cycle_proxy_total == 3
+    assert stats.hardware_proxy.peak_round_work == 2
 
 
 def test_odd_parity_boundary_is_real_edge_and_toggles_one_detector() -> None:
@@ -329,15 +392,25 @@ def test_result_is_independent_of_edge_enumeration_and_input_is_immutable() -> N
     original = shot.copy()
 
     forward = predecode(
-        _compiled(graph_forward, num_detectors=4), shot, residual_hw_limit=2
+        _compiled(graph_forward, num_detectors=4),
+        shot,
+        residual_hw_limit=2,
+        collect_hardware_proxies=True,
     )
     reverse = predecode(
-        _compiled(graph_reverse, num_detectors=4), shot, residual_hw_limit=2
+        _compiled(graph_reverse, num_detectors=4),
+        shot,
+        residual_hw_limit=2,
+        collect_hardware_proxies=True,
     )
 
     assert np.array_equal(shot, original)
     assert forward.paths == reverse.paths
     assert np.array_equal(forward.residual_syndrome, reverse.residual_syndrome)
+    assert (
+        forward.domain_stats[graph_forward.domain].hardware_proxy
+        == reverse.domain_stats[graph_reverse.domain].hardware_proxy
+    )
 
 
 def test_equal_routes_and_zero_weight_cycle_terminate_deterministically() -> None:

@@ -120,6 +120,56 @@ class FallbackReason(enum.Enum):
 
 
 @dataclasses.dataclass(frozen=True)
+class PromatchHardwareProxyStats:
+    """Decision-neutral edge/path work proxy for one domain attempt.
+
+    The published ProMatch latency model charges one cycle for each eligible
+    edge in the active decoding subgraph during a selection round.  When the
+    Stage-3 path-table step is reached, its raw round cost is the larger of the
+    active-edge count and the number of singleton-to-active-detector path
+    candidates.  ``paper_cycle_proxy_per_round`` records exactly that raw
+    model; it deliberately excludes fixed pipeline, I/O, clock, memory, and
+    residual-decoder costs.
+
+    A selection round here means one call to this repository's frozen
+    ProMatch-style candidate policy.  The counter borrows the paper's raw
+    cycle accounting; it does not claim that this policy has the paper's exact
+    graph, simultaneous-isolated-pair behavior, or hardware schedule.
+
+    ``stage3_path_candidates_per_round`` counts every ordered
+    singleton-to-other-active-detector pair considered by Stage 3.
+    ``stage3_path_checks_per_round`` counts the subset that passes the
+    no-new-singleton test and therefore invokes the deterministic shortest-path
+    routine.  Entries are zero in rounds that do not reach Stage 3.
+
+    The counters observe the existing selection path only.  They never enter a
+    candidate key, tie break, acceptance rule, or residual/frame calculation.
+    Work from a failed transactional attempt remains visible after rollback.
+    """
+
+    selection_rounds: int
+    active_eligible_edge_checks_per_round: tuple[int, ...]
+    stage3_invoked_per_round: tuple[bool, ...]
+    stage3_path_candidates_per_round: tuple[int, ...]
+    stage3_path_checks_per_round: tuple[int, ...]
+    paper_cycle_proxy_per_round: tuple[int, ...]
+    paper_cycle_proxy_total: int
+    peak_round_work: int
+
+
+_EMPTY_HARDWARE_PROXY = PromatchHardwareProxyStats(
+    selection_rounds=0,
+    active_eligible_edge_checks_per_round=(),
+    stage3_invoked_per_round=(),
+    stage3_path_candidates_per_round=(),
+    stage3_path_checks_per_round=(),
+    paper_cycle_proxy_per_round=(),
+    paper_cycle_proxy_total=0,
+    peak_round_work=0,
+)
+
+
+@dataclasses.dataclass(frozen=True)
 class DomainPrematchStats:
     """Attempted and durable accounting for one independently decoded domain.
 
@@ -139,6 +189,7 @@ class DomainPrematchStats:
     boundary_was_added: bool = False
     boundary_was_used: bool = False
     boundary_discarded_unused: bool = False
+    hardware_proxy: PromatchHardwareProxyStats | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -201,10 +252,53 @@ class _DomainAttempt:
     fallback_reason: FallbackReason | None
     boundary_was_added: bool
     boundary_was_used: bool
+    hardware_proxy: PromatchHardwareProxyStats | None
 
     @property
     def success(self) -> bool:
         return self.fallback_reason is None
+
+
+@dataclasses.dataclass(frozen=True)
+class _SelectionRoundHardwareProxy:
+    """Private raw work counters produced by one ``_candidate`` call."""
+
+    active_eligible_edge_checks: int
+    stage3_invoked: bool
+    stage3_path_candidates: int
+    stage3_path_checks: int
+
+    @property
+    def paper_cycle_proxy(self) -> int:
+        if self.stage3_invoked:
+            return max(
+                self.active_eligible_edge_checks,
+                self.stage3_path_candidates,
+            )
+        return self.active_eligible_edge_checks
+
+
+def _hardware_proxy_from_rounds(
+    rounds: Iterable[_SelectionRoundHardwareProxy],
+) -> PromatchHardwareProxyStats:
+    values = tuple(rounds)
+    paper_cycles = tuple(item.paper_cycle_proxy for item in values)
+    return PromatchHardwareProxyStats(
+        selection_rounds=len(values),
+        active_eligible_edge_checks_per_round=tuple(
+            item.active_eligible_edge_checks for item in values
+        ),
+        stage3_invoked_per_round=tuple(item.stage3_invoked for item in values),
+        stage3_path_candidates_per_round=tuple(
+            item.stage3_path_candidates for item in values
+        ),
+        stage3_path_checks_per_round=tuple(
+            item.stage3_path_checks for item in values
+        ),
+        paper_cycle_proxy_per_round=paper_cycles,
+        paper_cycle_proxy_total=sum(paper_cycles),
+        peak_round_work=max(paper_cycles, default=0),
+    )
 
 
 def _require_int(value: object, *, name: str, type_message: str | None = None) -> int:
@@ -298,6 +392,7 @@ class _DomainEngine:
         hw_limit: int,
         boundary_policy: BoundaryPolicy,
         observable_policy: ObservablePolicy,
+        collect_hardware_proxies: bool = False,
     ) -> None:
         self.graph = graph
         self.num_detectors = num_detectors
@@ -305,6 +400,9 @@ class _DomainEngine:
         self.hw_limit = hw_limit
         self.boundary_policy = boundary_policy
         self.observable_policy = _normalized_observable_policy(observable_policy)
+        if not isinstance(collect_hardware_proxies, bool):
+            raise TypeError("collect_hardware_proxies must be bool")
+        self.collect_hardware_proxies = collect_hardware_proxies
         self.vertices = frozenset(int(v) for v in graph.detector_ids)
 
         if boundary_policy not in {"disabled", "odd-parity"}:
@@ -644,6 +742,51 @@ class _DomainEngine:
         )
         return candidate, saw_unreachable
 
+    def _hardware_proxy_for_candidate_round(
+        self,
+        active: set[int],
+        *,
+        boundary_active: bool,
+        candidate: _Candidate | None,
+    ) -> _SelectionRoundHardwareProxy:
+        """Observes one completed selection round outside the decision path."""
+
+        nodes = set(active)
+        if boundary_active:
+            nodes.add(_BOUNDARY)
+        active_edge_checks = sum(
+            1
+            for edge in self.edges
+            if self._edge_allowed_directly(edge)
+            and edge.source in nodes
+            and (_BOUNDARY if edge.target is None else edge.target) in nodes
+        )
+        stage3_invoked = candidate is None or candidate.stage >= 3
+        if not stage3_invoked:
+            return _SelectionRoundHardwareProxy(
+                active_eligible_edge_checks=active_edge_checks,
+                stage3_invoked=False,
+                stage3_path_candidates=0,
+                stage3_path_checks=0,
+            )
+
+        neighbors = self._active_neighbors(active, boundary_active=boundary_active)
+        path_candidates = 0
+        path_checks = 0
+        for singleton in sorted(v for v in active if not neighbors[v]):
+            for other in sorted(active):
+                if other == singleton:
+                    continue
+                path_candidates += 1
+                if not self._creates_new_singleton((singleton, other), neighbors):
+                    path_checks += 1
+        return _SelectionRoundHardwareProxy(
+            active_eligible_edge_checks=active_edge_checks,
+            stage3_invoked=True,
+            stage3_path_candidates=path_candidates,
+            stage3_path_checks=path_checks,
+        )
+
     def _ordered_candidate_stages(
         self, active: set[int], *, boundary_active: bool
     ) -> tuple[tuple[tuple[_Candidate, ...], ...], bool, int]:
@@ -733,12 +876,23 @@ class _DomainEngine:
         boundary_was_used = False
         paths: list[PrematchedPath] = []
         stage_counts = [0, 0, 0, 0]
+        hardware_rounds: list[_SelectionRoundHardwareProxy] | None = (
+            [] if self.collect_hardware_proxies else None
+        )
         saw_unreachable = False
 
         while len(active) > self.hw_limit:
             candidate, unreachable = self._candidate(
                 active, boundary_active=boundary_active
             )
+            if hardware_rounds is not None:
+                hardware_rounds.append(
+                    self._hardware_proxy_for_candidate_round(
+                        active,
+                        boundary_active=boundary_active,
+                        candidate=candidate,
+                    )
+                )
             saw_unreachable |= unreachable
             if candidate is None:
                 if boundary_active and not any(
@@ -757,6 +911,11 @@ class _DomainEngine:
                     fallback_reason=reason,
                     boundary_was_added=boundary_was_added,
                     boundary_was_used=boundary_was_used,
+                    hardware_proxy=(
+                        None
+                        if hardware_rounds is None
+                        else _hardware_proxy_from_rounds(hardware_rounds)
+                    ),
                 )
 
             path_mask = _path_mask(candidate.edges, mask_bytes=self.mask_bytes)
@@ -790,6 +949,11 @@ class _DomainEngine:
             fallback_reason=None,
             boundary_was_added=boundary_was_added,
             boundary_was_used=boundary_was_used,
+            hardware_proxy=(
+                None
+                if hardware_rounds is None
+                else _hardware_proxy_from_rounds(hardware_rounds)
+            ),
         )
 
 
@@ -1216,12 +1380,15 @@ def predecode(
     residual_hw_limit: int = 10,
     boundary_policy: BoundaryPolicy = "disabled",
     observable_policy: ObservablePolicy = "edge-zero",
+    collect_hardware_proxies: bool = False,
 ) -> PrematchResult:
     """Predecodes one unpacked detector shot transactionally by L1 domain."""
 
     residual_hw_limit = _require_int(residual_hw_limit, name="residual_hw_limit")
     if residual_hw_limit < 0:
         raise ValueError("residual_hw_limit must be nonnegative")
+    if not isinstance(collect_hardware_proxies, bool):
+        raise TypeError("collect_hardware_proxies must be bool")
 
     policy = _normalized_observable_policy(observable_policy)
     original = _validate_syndrome(syndrome, num_detectors=compiled_graph.num_detectors)
@@ -1259,6 +1426,9 @@ def predecode(
                 committed_matches=0,
                 status="below-limit",
                 fallback_reason=None,
+                hardware_proxy=(
+                    _EMPTY_HARDWARE_PROXY if collect_hardware_proxies else None
+                ),
             )
             continue
 
@@ -1269,6 +1439,7 @@ def predecode(
             hw_limit=residual_hw_limit,
             boundary_policy=boundary_policy,
             observable_policy=policy,  # type: ignore[arg-type]
+            collect_hardware_proxies=collect_hardware_proxies,
         ).run(initial_active)
         attempted_matches = len(attempt.paths)
         attempted_hw = len(attempt.active)
@@ -1287,6 +1458,7 @@ def predecode(
                 boundary_was_added=attempt.boundary_was_added,
                 boundary_was_used=attempt.boundary_was_used,
                 boundary_discarded_unused=False,
+                hardware_proxy=attempt.hardware_proxy,
             )
             continue
 
@@ -1324,6 +1496,7 @@ def predecode(
             boundary_discarded_unused=(
                 attempt.boundary_was_added and not attempt.boundary_was_used
             ),
+            hardware_proxy=attempt.hardware_proxy,
         )
 
     edge_parity: dict[int, int] = defaultdict(int)
@@ -1363,6 +1536,7 @@ __all__ = [
     "ExhaustionKind",
     "FallbackReason",
     "ObservablePolicy",
+    "PromatchHardwareProxyStats",
     "PrematchResult",
     "PrematchedPath",
     "TransactionPolicy",

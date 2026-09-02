@@ -159,12 +159,15 @@ class CompiledPromatchDecoder(sinter.CompiledDecoder):
     def predecode_shots(
         self,
         unpacked_detection_events: np.ndarray,
+        *,
+        collect_hardware_proxies: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, tuple[PrematchResult, ...]]:
         """Predecodes unpacked shots and retains one result record per shot."""
 
         return self._predecode_shots(
             unpacked_detection_events,
             retain_results=True,
+            collect_hardware_proxies=collect_hardware_proxies,
         )
 
     def _predecode_shots(
@@ -172,6 +175,7 @@ class CompiledPromatchDecoder(sinter.CompiledDecoder):
         unpacked_detection_events: np.ndarray,
         *,
         retain_results: bool,
+        collect_hardware_proxies: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, tuple[PrematchResult, ...]]:
         if unpacked_detection_events.ndim != 2:
             raise ValueError("unpacked_detection_events must be 2-D")
@@ -191,6 +195,7 @@ class CompiledPromatchDecoder(sinter.CompiledDecoder):
                 residual_hw_limit=self.residual_hw_limit,
                 boundary_policy=self.boundary_policy,
                 observable_policy=self.observable_policy,
+                collect_hardware_proxies=collect_hardware_proxies,
             )
             residual[shot_index] = result.residual_syndrome
             frames[shot_index] = result.observable_frame

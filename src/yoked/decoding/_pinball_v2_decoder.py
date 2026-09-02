@@ -207,12 +207,15 @@ class CompiledPinballV2Decoder(sinter.CompiledDecoder):
     def predecode_shots(
         self,
         unpacked_detection_events: np.ndarray,
+        *,
+        collect_hardware_proxies: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, tuple[PinballV2Result, ...]]:
-        """Predecodes unpacked shots and retains immutable per-shot telemetry."""
+        """Predecodes shots, with hardware work proxies available by opt-in."""
 
         return self._predecode_shots(
             unpacked_detection_events,
             retain_results=True,
+            collect_hardware_proxies=collect_hardware_proxies,
         )
 
     def _predecode_shots(
@@ -220,7 +223,10 @@ class CompiledPinballV2Decoder(sinter.CompiledDecoder):
         unpacked_detection_events: np.ndarray,
         *,
         retain_results: bool,
+        collect_hardware_proxies: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, tuple[PinballV2Result, ...]]:
+        if not isinstance(collect_hardware_proxies, bool):
+            raise TypeError("collect_hardware_proxies must be bool")
         raw = np.asarray(unpacked_detection_events)
         if raw.ndim != 2:
             raise ValueError("unpacked_detection_events must be 2-D")
@@ -235,6 +241,7 @@ class CompiledPinballV2Decoder(sinter.CompiledDecoder):
                 self.graph,
                 self.schedule,
                 shot,
+                collect_hardware_proxies=collect_hardware_proxies,
                 _schedule_is_validated=True,
             )
             if result.residual_syndrome.shape != (self.num_detectors,):
@@ -287,6 +294,7 @@ class CompiledPinballV2Decoder(sinter.CompiledDecoder):
         residual, frames, results = self._predecode_shots(
             unpacked,
             retain_results=retain_results,
+            collect_hardware_proxies=False,
         )
         residual_packed = np.packbits(residual, axis=1, bitorder="little")
         predictions = self.graph.matcher.decode_batch(
