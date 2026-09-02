@@ -90,29 +90,75 @@ def test_merged_boundary_components_retain_one_canonical_incidence() -> None:
     assert component.peeled_support_edge_ids in ((3, 8), (3, 9))
 
 
-def test_port_taint_is_permanent_and_primary_reason_is_port_tie() -> None:
+def test_port_contact_neutralizes_component_and_skips_peeling() -> None:
     graph = UFLaneGraph(
         2,
         (
             UFEdge(1, 0, None, 1.0, "port", port_kind="yoke"),
-            UFEdge(2, 0, 1, 1.0, "correction"),
+            UFEdge(2, 0, 1, 3.0, "correction"),
             UFEdge(3, 1, None, 2.0, "boundary"),
         ),
     )
     result = run_reference_lane(graph, [0], _policy())
 
     assert result.status == "completed"
+    # The port saturates at t=1 and the component stops there: the correction
+    # never closes and the true boundary is never reached.
+    assert result.terminal_event_time == Fraction(1)
+    assert result.counters.growth_event_count == 1
+    assert result.counters.union_attempt_count == 0
+    assert result.counters.forest_edge_count == 0
+    assert result.counters.peel_operation_count == 0
     component = result.completed_components[0]
+    assert component.absorbed_vertices == (0,)
+    assert component.original_defects == (0,)
+    assert component.forest_edge_ids == ()
+    assert component.peeled_support_edge_ids == ()
+    assert not component.boundary_reached
     assert component.port_tainted
     assert component.port_kind_set == ("yoke",)
     assert component.saturated_port_count == 1
+    assert component.exact_margin == 0
     assert component.gate_decision == "deferred"
-    assert component.primary_gate_reason == "port-tie"
+    assert component.primary_gate_reason == "port-contact"
     assert set(component.gate_reason_set) == {
         "below-threshold",
-        "port-tie",
+        "port-contact",
         "port-yoke",
     }
+    assert component.maximum_incident_half_edge_charge == Fraction(1)
+
+
+def test_port_contact_is_inherited_through_union_and_stops_growth() -> None:
+    graph = UFLaneGraph(
+        3,
+        (
+            UFEdge(0, 0, None, 1.0, "port", port_kind="yoke"),
+            UFEdge(1, 0, 1, 2.0, "correction"),
+            UFEdge(2, 1, 2, 2.0, "correction"),
+            UFEdge(3, 2, None, 10.0, "boundary"),
+        ),
+    )
+    result = run_reference_lane(graph, [0, 2], _policy())
+
+    assert result.status == "completed"
+    # Vertex 0 stops at its port at t=1.  Vertex 2 keeps growing, absorbs
+    # vertex 1 at t=2, and reaches the stopped component at t=3; the union
+    # inherits the port contact and is neutral immediately.
+    assert result.terminal_event_time == Fraction(3)
+    assert result.counters.growth_event_count == 3
+    assert result.counters.successful_union_count == 2
+    assert result.counters.peel_operation_count == 0
+    component = result.completed_components[0]
+    assert component.absorbed_vertices == (0, 1, 2)
+    assert component.original_defects == (0, 2)
+    assert component.forest_edge_ids == (1, 2)
+    assert component.peeled_support_edge_ids == ()
+    assert not component.boundary_reached
+    assert component.port_tainted
+    assert component.event_batch_ids == (1, 2, 3)
+    assert component.gate_decision == "deferred"
+    assert component.primary_gate_reason == "port-contact"
 
 
 def test_strict_threshold_uses_exact_post_growth_slack() -> None:

@@ -202,3 +202,28 @@ def test_stale_queue_drain_is_counted_before_local_incompleteness() -> None:
     assert result.counters.growth_event_count == 1
     assert result.counters.simultaneous_event_batch_count == 1
     assert result.last_complete_batch_id == 1
+
+
+def test_production_port_contact_stops_growth_and_records_no_peel() -> None:
+    graph = UFLaneGraph(
+        3,
+        (
+            UFEdge(0, 0, None, 1.0, "port", port_kind="yoke"),
+            UFEdge(1, 0, 1, 2.0, "correction"),
+            UFEdge(2, 1, 2, 2.0, "correction"),
+            UFEdge(3, 2, None, 10.0, "boundary"),
+        ),
+    )
+    result = run_lane(graph, [0, 2], _policy())
+
+    assert result.status == "completed"
+    assert result.terminal_event_time == 3
+    assert result.counters.peel_operation_count == 0
+    component = result.completed_components[0]
+    assert component.absorbed_vertices == (0, 1, 2)
+    assert component.forest_edge_ids == (1, 2)
+    assert component.peeled_support_edge_ids == ()
+    assert not component.boundary_reached
+    assert component.port_tainted
+    assert component.gate_decision == "deferred"
+    assert component.primary_gate_reason == "port-contact"

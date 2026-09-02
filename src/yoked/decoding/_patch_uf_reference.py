@@ -10,6 +10,12 @@ time, slack, and threshold comparison.  It processes a complete equal-time
 event set atomically and retains at most one (the canonical-minimum) saturated
 true-boundary incidence in each component forest.  Other saturated boundary
 incidences remain zero-slack confidence competitors.
+
+Guard ports are walls, not taints.  A component that saturates a port stops
+growing exactly as one that reaches a true boundary does, the contact is
+inherited through later unions, and the component is a deferred final
+component with no peeled support: everything it contains is handed to the
+global residual decoder, which owns every edge leaving the lane.
 """
 
 from __future__ import annotations
@@ -328,8 +334,16 @@ class _ComponentState:
         return self.boundary_forest_edge is not None
 
     @property
+    def port_reached(self) -> bool:
+        return bool(self.saturated_port_edges)
+
+    @property
     def active(self) -> bool:
-        return bool(len(self.defects) & 1) and not self.boundary_reached
+        return (
+            bool(len(self.defects) & 1)
+            and not self.boundary_reached
+            and not self.port_reached
+        )
 
     @property
     def forest_edges(self) -> set[int]:
@@ -820,7 +834,7 @@ def _peel_component(
 
 
 _PRIMARY_REASON_ORDER = (
-    "port-tie",
+    "port-contact",
     "port-yoke",
     "port-cross-lane",
     "below-threshold",
@@ -843,7 +857,11 @@ def _finish_components(
     edge_by_id = {edge.edge_id: edge for edge in graph.edges}
     states = [dsu.state[root] for root in dsu.roots() if dsu.state[root].defects]
     states.sort(key=lambda state: tuple(sorted(state.vertices)))
-    total_peel = sum(len(state.forest_edges) for state in states)
+    # Port-contact components are deferred without peeling; their forest edges
+    # are retained for telemetry only and cost no peel operations.
+    total_peel = sum(
+        len(state.forest_edges) for state in states if not state.port_reached
+    )
     proposed = _counter_dict(counters)
     proposed["peel_operation_count"] = counters.peel_operation_count + total_peel
     exceeded = _exceeded(policy.semantic_limits, proposed)
@@ -856,7 +874,12 @@ def _finish_components(
     completed: list[CompletedComponent] = []
     actual_peel = 0
     for index, state in enumerate(states):
-        support, operations = _peel_component(state, graph=graph, edge_by_id=edge_by_id)
+        if state.port_reached:
+            support, operations = (), 0
+        else:
+            support, operations = _peel_component(
+                state, graph=graph, edge_by_id=edge_by_id
+            )
         actual_peel += operations
         forest = state.forest_edges
         competitors: list[object] = []
@@ -887,8 +910,8 @@ def _finish_components(
             competitors.append(slack)
         margin = min(competitors) if competitors else None
         reasons: set[str] = set()
-        if state.saturated_port_edges:
-            reasons.add("port-tie")
+        if state.port_reached:
+            reasons.add("port-contact")
             for kind in state.port_kinds:
                 reasons.add("port-yoke" if kind == "yoke" else "port-cross-lane")
         if margin is not None and margin <= tau:
@@ -1527,6 +1550,9 @@ def _run_lane_persistent(
         boundary_before = {
             root: dsu.state[root].boundary_reached for root in affected_roots
         }
+        port_before = {
+            root: dsu.state[root].port_reached for root in affected_roots
+        }
         old_root_by_vertex = {
             vertex: root
             for root, vertices in vertices_before.items()
@@ -1550,12 +1576,19 @@ def _run_lane_persistent(
         boundary_groups = {
             scratch_find(dsu.find(edge.source)) for edge in boundary_edges
         }
+        port_groups = {
+            scratch_find(dsu.find(graph.edges[k].source))
+            for k in selected_indices
+            if graph.edges[k].kind == "port"
+        }
         touch_indices = set(selected_indices)
         for group_root, roots in grouped_roots.items():
             post_active = (
                 bool(sum(defect_counts_before[root] for root in roots) & 1)
                 and group_root not in boundary_groups
                 and not any(boundary_before[root] for root in roots)
+                and group_root not in port_groups
+                and not any(port_before[root] for root in roots)
             )
             for root in roots:
                 if active_before[root] != post_active:

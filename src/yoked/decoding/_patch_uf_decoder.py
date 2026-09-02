@@ -2,6 +2,11 @@
 
 It provides parameterized, pickleable factories, the frozen V1 policy, and the
 complete packed execution boundary used by the public decoder registry.
+
+The registered treatment is the v2 "port-wall" decoder: a lane component that
+touches a guard port stops growing there and is deferred whole, so the yoke
+side of every patch behaves as a wall for L1 and stays owned by the global
+residual matcher.  Policy literals (tau and budgets) are unchanged from V1.
 """
 
 from __future__ import annotations
@@ -40,7 +45,7 @@ GLOBAL_MWPM_DECODER_NAME = "global-mwpm-u0-joint-y2"
 ADAPTER_CONTROL_DECODER_NAME = "adapter-control-global-mwpm-v1"
 UF_SHADOW_DECODER_NAME = "weighted-uf-shadow-global-mwpm-v1"
 PATCH_UF_TREATMENT_DECODER_NAME = (
-    "weighted-uf-fullhistory-patchlocal-zeroframe-residual-global-mwpm-v1"
+    "weighted-uf-fullhistory-patchlocal-zeroframe-portwall-residual-global-mwpm-v2"
 )
 
 
@@ -709,6 +714,17 @@ def _plan_patch(
         lane = compiled_lanes[lane_id].projection
         for component in outcome.completed_components:
             support = tuple(component.peeled_support_edge_ids)
+            if component.port_tainted:
+                # Port contact is a wall: the component stopped there, was
+                # never peeled, and every defect it holds stays in the
+                # residual for the global matcher.
+                if support:
+                    raise ValueError(
+                        "port-contact UF component must not carry support"
+                    )
+                if component.gate_decision != "deferred":
+                    raise ValueError("port-contact UF component must be deferred")
+                continue
             if support != tuple(sorted(set(support))):
                 raise ValueError("UF component support must be sorted and unique")
             replay = replay_support(

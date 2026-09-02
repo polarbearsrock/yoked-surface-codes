@@ -24,6 +24,7 @@ from yoked.decoding._patch_uf_decoder import (
 )
 from yoked.decoding._patch_uf_graph import (
     ExactDyadic,
+    GuardPortIncidence,
     PatchUFLaneKey,
     PatchUFLaneProjection,
     PatchUFProjection,
@@ -54,7 +55,28 @@ def _policy(*, limit: int | None = None) -> UFPolicy:
     return UFPolicy(tau=Fraction(0), semantic_limits=limits, production_limits=limits)
 
 
-def _lane(lane_id: int, detector_id: int, edge_id: int) -> PatchUFLaneProjection:
+def _lane(
+    lane_id: int,
+    detector_id: int,
+    edge_id: int,
+    *,
+    port_edge_id: int | None = None,
+    boundary_weight_index: int = 0,
+) -> PatchUFLaneProjection:
+    ports = ()
+    if port_edge_id is not None:
+        ports = (
+            GuardPortIncidence(
+                edge_id=port_edge_id,
+                lane_id=lane_id,
+                local_vertex=0,
+                remote_detector_id=2,
+                remote_lane_id=None,
+                port_kind="yoke",
+                exact_weight_index=0,
+                observable_mask=b"\x01",
+            ),
+        )
     return PatchUFLaneProjection(
         lane_id=lane_id,
         key=PatchUFLaneKey(0, "X" if lane_id == 0 else "Z"),
@@ -63,20 +85,37 @@ def _lane(lane_id: int, detector_id: int, edge_id: int) -> PatchUFLaneProjection
         y2=(0,),
         times=(0,),
         internal_correction_edges=(),
-        true_boundary_edges=(TrueBoundaryIncidence(edge_id, 0, 0),),
-        guard_ports=(),
+        true_boundary_edges=(
+            TrueBoundaryIncidence(edge_id, 0, boundary_weight_index),
+        ),
+        guard_ports=ports,
         incidences=(),
         incidence_offsets=(0, 0),
         incidence_indices=(),
     )
 
 
-def _projection() -> PatchUFProjection:
-    lanes = (_lane(0, 0, 0), _lane(1, 1, 1))
-    support = (
+def _projection(*, with_port: bool = False) -> PatchUFProjection:
+    # Lane 0 detector 0 optionally carries a yoke port (weight 1) next to a
+    # heavier true boundary (weight 3) so that port contact happens first.
+    lanes = (
+        _lane(0, 0, 0, port_edge_id=2, boundary_weight_index=1)
+        if with_port
+        else _lane(0, 0, 0),
+        _lane(1, 1, 1),
+    )
+    support = [
         PatchUFSupportEdge(0, 0, None, b"\x00", 0, "local-correction", 0),
         PatchUFSupportEdge(1, 1, None, b"\x00", 0, "local-correction", 1),
-    )
+    ]
+    owner_kind = ["local-correction", "local-correction"]
+    owner_lane: list[int | None] = [0, 1]
+    exact_weights = [ExactDyadic(1, 0)]
+    if with_port:
+        support.append(PatchUFSupportEdge(2, 0, 2, b"\x01", 0, "global-port", None))
+        owner_kind.append("global-port")
+        owner_lane.append(None)
+        exact_weights.append(ExactDyadic(3, 0))
     return PatchUFProjection(
         canonical_graph_fingerprint="graph",
         validated_catalog_fingerprint="catalog",
@@ -90,12 +129,12 @@ def _projection() -> PatchUFProjection:
         detector_role_kind=("body", "terminal", "yoke"),
         detector_lane_id_array=(0, 1, -1),
         detector_local_index_array=(0, 0, -1),
-        support_edges=support,
-        edge_owner_kind=("local-correction", "local-correction"),
-        edge_owner_lane=(0, 1),
-        edge_owner_lane_array=(0, 1),
-        exact_weights=(ExactDyadic(1, 0),),
-        fingerprint="projection",
+        support_edges=tuple(support),
+        edge_owner_kind=tuple(owner_kind),
+        edge_owner_lane=tuple(owner_lane),
+        edge_owner_lane_array=tuple(-1 if v is None else v for v in owner_lane),
+        exact_weights=tuple(exact_weights),
+        fingerprint="projection-port" if with_port else "projection",
     )
 
 
@@ -117,8 +156,8 @@ class _MatcherSpy:
         return np.full((len(shots), 1), 0xFF, dtype=np.uint8)
 
 
-def _compiled(compiled_type, matcher, *, policy=None):
-    projection = _projection()
+def _compiled(compiled_type, matcher, *, policy=None, with_port=False):
+    projection = _projection(with_port=with_port)
     if compiled_type is CompiledGlobalMWPMDecoder:
         return compiled_type(
             graph=SimpleNamespace(matcher=matcher),
@@ -338,6 +377,42 @@ def test_censored_sibling_aborts_entire_patch_and_treatment_bitmatches_direct() 
     assert correction.maximum_final_component_defect_count is None
 
 
+def test_port_contact_component_is_deferred_with_empty_support_and_bitmatches_direct() -> None:
+    direct_spy = _MatcherSpy()
+    treatment_spy = _MatcherSpy()
+    direct = _compiled(CompiledGlobalMWPMDecoder, direct_spy)
+    treatment = _compiled(
+        CompiledPatchUFTreatmentDecoder, treatment_spy, with_port=True
+    )
+    packed = np.array([[0b001]], dtype=np.uint8)
+
+    expected = direct.decode_shots_bit_packed(
+        bit_packed_detection_event_data=packed
+    )
+    actual, corrections = treatment.decode_shots_bit_packed_with_telemetry(
+        bit_packed_detection_event_data=packed
+    )
+
+    np.testing.assert_array_equal(actual, expected)
+    np.testing.assert_array_equal(treatment_spy.inputs[0], packed)
+    correction = corrections[0]
+    outcome = correction.lane_outcomes[0]
+    assert outcome.status == "completed"
+    assert outcome.terminal_event_time == 1
+    (component,) = outcome.completed_components
+    assert component.port_tainted
+    assert component.gate_decision == "deferred"
+    assert component.primary_gate_reason == "port-contact"
+    assert component.peeled_support_edge_ids == ()
+    assert component.forest_edge_ids == ()
+    assert not component.boundary_reached
+    assert correction.patch_outcomes[0].status == "durable"
+    assert correction.durable_support_edge_ids == ()
+    assert correction.committed_defect_count == 0
+    assert correction.residual_detector_count == correction.original_detector_count
+    assert correction.component_durable_decision(0, 0) == (False, "port-contact")
+
+
 def test_capture_modes_share_identical_immutable_core_outcomes() -> None:
     compiled = _compiled(CompiledPatchUFTreatmentDecoder, _MatcherSpy())
     shot = np.array([1, 1, 0], dtype=np.uint8)
@@ -434,7 +509,7 @@ def test_factories_are_top_level_pickleable_and_require_explicit_policy() -> Non
         PatchUFTreatmentDecoder()
 
     assert decoder.PATCH_UF_TREATMENT_DECODER_NAME == (
-        "weighted-uf-fullhistory-patchlocal-zeroframe-residual-global-mwpm-v1"
+        "weighted-uf-fullhistory-patchlocal-zeroframe-portwall-residual-global-mwpm-v2"
     )
     assert decoder.PATCH_UF_V1_POLICY.tau == 0
     assert decoder.PATCH_UF_V1_POLICY.semantic_limits.growth_event_count == 3_403
