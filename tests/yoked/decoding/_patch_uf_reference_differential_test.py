@@ -35,6 +35,7 @@ def _semantic(outcome: LaneOutcome) -> object:
             c.absorbed_vertices,
             c.original_defects,
             c.forest_edge_ids,
+            c.forest_diameter_hops,
             c.peeled_support_edge_ids,
             _exact(c.exact_margin),
             c.gate_decision,

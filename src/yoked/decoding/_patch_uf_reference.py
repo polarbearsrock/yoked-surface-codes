@@ -236,6 +236,7 @@ class CompletedComponent:
     absorbed_vertices: tuple[int, ...]
     original_defects: tuple[int, ...]
     forest_edge_ids: tuple[int, ...]
+    forest_diameter_hops: int
     peeled_support_edge_ids: tuple[int, ...]
     exact_margin: object | None
     gate_decision: GateDecision
@@ -458,6 +459,63 @@ def _validate_defects(graph: UFLaneGraph, defects: Iterable[int]) -> set[int]:
             raise ValueError(f"duplicate defect vertex {value}")
         result.add(value)
     return result
+
+
+def forest_diameter_hops(
+    vertices: Iterable[int],
+    edge_endpoints: Iterable[tuple[int, int]],
+) -> int:
+    """Returns the hop diameter of a tree spanning ``vertices``.
+
+    The edges must form exactly one tree over the vertex set: a disconnected
+    forest or a cycle is a malformed component forest and raises.  A single
+    vertex has diameter zero.  In Helios terms this bounds the number of
+    clock cycles the merged cluster needs to flood its cluster id and
+    converge its parity, because both travel one hop per cycle.
+    """
+
+    vertex_set = set()
+    for vertex in vertices:
+        if isinstance(vertex, bool) or not isinstance(vertex, numbers.Integral):
+            raise TypeError("forest vertices must be integers")
+        vertex_set.add(int(vertex))
+    if not vertex_set:
+        raise ValueError("a component forest needs at least one vertex")
+    adjacency: dict[int, list[int]] = {vertex: [] for vertex in vertex_set}
+    edge_count = 0
+    for source, target in edge_endpoints:
+        if source not in adjacency or target not in adjacency:
+            raise ValueError("forest edge endpoint is outside the vertex set")
+        if source == target:
+            raise ValueError("forest edge is a self-loop cycle")
+        adjacency[source].append(target)
+        adjacency[target].append(source)
+        edge_count += 1
+    if edge_count >= len(vertex_set):
+        raise ValueError("component forest contains a cycle")
+
+    def farthest(start: int) -> tuple[int, int]:
+        distance = {start: 0}
+        frontier = [start]
+        last = start
+        while frontier:
+            next_frontier: list[int] = []
+            for node in frontier:
+                for neighbour in adjacency[node]:
+                    if neighbour not in distance:
+                        distance[neighbour] = distance[node] + 1
+                        next_frontier.append(neighbour)
+            if next_frontier:
+                last = next_frontier[-1]
+            frontier = next_frontier
+        if len(distance) != len(vertex_set):
+            raise ValueError("component forest is disconnected")
+        return last, distance[last]
+
+    start = min(vertex_set)
+    far, _ = farthest(start)
+    _, diameter = farthest(far)
+    return diameter
 
 
 def _edge_order(edge: UFEdge, weight: object) -> tuple[object, ...]:
@@ -882,6 +940,13 @@ def _finish_components(
             )
         actual_peel += operations
         forest = state.forest_edges
+        diameter = forest_diameter_hops(
+            state.vertices,
+            (
+                (edge_by_id[edge_id].source, int(edge_by_id[edge_id].target))
+                for edge_id in sorted(state.correction_forest)
+            ),
+        )
         competitors: list[object] = []
         if adjacency is None:
             incident_indices: Iterable[int] = range(len(graph.edges))
@@ -928,6 +993,7 @@ def _finish_components(
                 absorbed_vertices=tuple(sorted(state.vertices)),
                 original_defects=tuple(sorted(state.defects)),
                 forest_edge_ids=tuple(sorted(forest)),
+                forest_diameter_hops=diameter,
                 peeled_support_edge_ids=support,
                 exact_margin=margin,
                 gate_decision=decision,
@@ -1861,5 +1927,6 @@ __all__ = [
     "UFLaneGraph",
     "UFPolicy",
     "as_fraction",
+    "forest_diameter_hops",
     "run_reference_lane",
 ]

@@ -11,8 +11,11 @@ The modeled cycle fields are deliberately algorithm specific:
 * ProMatch uses the paper-inspired raw edge/path selection-round proxy.
 * Pinball reports an ideal nine-stage streaming lower bound and, separately,
   an optional offline full-history residual OR-tree depth.
-* Union-Find uses the parameterized synthetic parallel-depth proxy from
-  :mod:`yoked.decoding._patch_uf_hw_proxy`.
+* Union-Find uses the Helios-style depth proxy from
+  :mod:`yoked.decoding._patch_uf_hw_proxy`: growth iterations from each
+  lane's terminal event time at the caller's weight resolution, plus merge
+  flooding charged by the diameter of the clusters that merge.  Diameters
+  missing from older corpora are rebuilt from the retained forest edge ids.
 
 Consequently these fields are architecture studies, not measured latency and
 not interchangeable estimates of a common RTL implementation.  Transport,
@@ -23,6 +26,8 @@ latency are outside this module.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+import copy
+from fractions import Fraction
 import hashlib
 import io
 from pathlib import Path
@@ -34,7 +39,11 @@ import numpy as np
 
 from yoked.decoding._artifact_io import install_bytes_atomic, load_json_strict
 from yoked.decoding._patch_uf_experiment import ShotRange, fixed_worker_ranges
-from yoked.decoding._patch_uf_hw_proxy import derive_uf_shot_hardware_proxy
+from yoked.decoding._patch_uf_hw_proxy import (
+    UFParallelDepthAssumptions,
+    derive_uf_shot_hardware_proxy,
+)
+from yoked.decoding._patch_uf_reference import forest_diameter_hops
 from yoked.decoding._pinball_promatch_experiment import _decode_residual
 from yoked.decoding._pinball_promatch_matched_accuracy import (
     MatchedCorpus,
@@ -189,9 +198,33 @@ RAW_WORK_METRICS: dict[str, tuple[tuple[str, str, str, str], ...]] = {
     ),
     "union_find": (
         (
+            "growth_iterations",
+            "union_find_growth_iteration_count",
+            "Helios growth iterations (slowest lane)",
+            "iterations",
+        ),
+        (
+            "growth_depth_milli_weight_units",
+            "union_find_growth_depth_milli_weight_units",
+            "Growth depth, slowest lane (milli weight-units)",
+            "milli-weight-units",
+        ),
+        (
+            "maximum_forest_diameter_hops",
+            "union_find_maximum_forest_diameter_hops",
+            "Largest component forest diameter",
+            "hops",
+        ),
+        (
+            "merge_depth_cycles",
+            "union_find_merge_depth_cycles",
+            "Merge flooding cycles (slowest lane)",
+            "cycles",
+        ),
+        (
             "synchronous_event_batch_work",
             "union_find_synchronous_event_batch_work",
-            "Synchronous event batches summed across lanes",
+            "Synchronous event batches summed across lanes (raw software work)",
             "lane-batches",
         ),
         (
@@ -568,9 +601,80 @@ def _flatten_uf_lanes(shot: Mapping[str, Any], *, patches: int) -> tuple[Any, ..
     return tuple(lane for patch in range(patches) for lane in indexed[patch])
 
 
-def _uf_shot_metrics(shot: Mapping[str, Any], *, patches: int) -> dict[str, int]:
+def _component_forest_diameter(
+    component: Mapping[str, Any],
+    edge_endpoints: Mapping[int, tuple[int, int | None]],
+) -> int:
+    raw_ids = component.get("forest_edge_ids")
+    if not isinstance(raw_ids, Sequence) or isinstance(raw_ids, (str, bytes)):
+        raise ValueError("completed component omits forest_edge_ids")
+    tree_edges: list[tuple[int, int]] = []
+    vertices: set[int] = set()
+    for raw in raw_ids:
+        edge_id = _positive_int(raw, name="forest edge id") if raw else 0
+        if edge_id not in edge_endpoints:
+            raise ValueError(f"forest edge {edge_id} is not a canonical edge")
+        source, target = edge_endpoints[edge_id]
+        vertices.add(int(source))
+        if target is None:
+            continue  # true-boundary incidence: a virtual leaf, not a tree edge
+        vertices.add(int(target))
+        tree_edges.append((int(source), int(target)))
+    absorbed = component.get("absorbed_vertex_count")
+    if absorbed is None:
+        absorbed = len(component.get("absorbed_vertices", ()))
+    if not tree_edges:
+        if int(absorbed) > 1:
+            raise ValueError(
+                "multi-vertex component has no correction forest edges"
+            )
+        return 0
+    if len(vertices) != int(absorbed):
+        raise ValueError(
+            "correction forest endpoints do not span the absorbed vertices"
+        )
+    return forest_diameter_hops(vertices, tree_edges)
+
+
+def annotate_forest_diameters(
+    shot: Mapping[str, Any],
+    edge_endpoints: Mapping[int, tuple[int, int | None]],
+) -> dict[str, Any]:
+    """Return a copy of a retained UF shot row with every completed component
+    carrying ``forest_diameter_hops``.
+
+    Corpora collected before the engine recorded the diameter retain each
+    component's canonical ``forest_edge_ids``; the diameter is rebuilt from
+    those edges' endpoints.  Values already present are kept unchanged.
+    """
+
+    result = copy.deepcopy(dict(shot))
+    metrics = result.get("adapter_metrics")
+    if not isinstance(metrics, dict):
+        raise ValueError("UF shot omits adapter_metrics")
+    for patch in metrics.get("patch_outcomes", ()):
+        for lane in patch.get("lane_outcomes", ()):
+            for component in lane.get("completed_components", ()) or ():
+                if "forest_diameter_hops" in component:
+                    continue
+                component["forest_diameter_hops"] = _component_forest_diameter(
+                    component, edge_endpoints
+                )
+    return result
+
+
+def _uf_shot_metrics(
+    shot: Mapping[str, Any],
+    *,
+    patches: int,
+    assumptions: UFParallelDepthAssumptions,
+    edge_endpoints: Mapping[int, tuple[int, int | None]],
+) -> dict[str, int]:
+    if not isinstance(assumptions, UFParallelDepthAssumptions):
+        raise TypeError("assumptions must be UFParallelDepthAssumptions")
+    shot = annotate_forest_diameters(shot, edge_endpoints)
     lanes = _flatten_uf_lanes(shot, patches=patches)
-    proxy = derive_uf_shot_hardware_proxy(shot, lane_rows=lanes)
+    proxy = derive_uf_shot_hardware_proxy(shot, lane_rows=lanes, assumptions=assumptions)
     if proxy.global_shot_id != shot.get("global_shot_id"):
         raise ValueError("UF proxy shot identity differs")
     if proxy.lane_count != 2 * patches or proxy.patch_count != patches:
@@ -590,8 +694,19 @@ def _uf_shot_metrics(shot: Mapping[str, Any], *, patches: int) -> dict[str, int]
     if any(value is None for value in explicit_architecture):
         raise ValueError("UF telemetry omits exact per-patch architecture depth")
     architecture = dict(zip(ARCHITECTURES, map(int, explicit_architecture)))
+    depth_milli = proxy.growth_depth_weight * 1000
     return {
         **{f"union_find_cycles_{name}": value for name, value in architecture.items()},
+        "union_find_growth_iteration_count": int(proxy.growth_iteration_count),
+        "union_find_growth_depth_milli_weight_units": int(
+            depth_milli.numerator // depth_milli.denominator
+        ),
+        "union_find_maximum_forest_diameter_hops": int(
+            proxy.maximum_forest_diameter_hops
+        ),
+        "union_find_merge_depth_cycles": max(
+            (lane.merge_depth_cycles for lane in proxy.lanes), default=0
+        ),
         "union_find_lane_core_cycles_fully_parallel_12_lane": lane_arch[
             "fully_parallel_12_lane"
         ],
@@ -657,11 +772,15 @@ def replay_hardware_range(
     uf_shot_rows: Sequence[Mapping[str, Any]],
     *,
     shot_range: ShotRange,
+    uf_assumptions: UFParallelDepthAssumptions,
     microbatch_size: int = 32,
 ) -> dict[str, np.ndarray]:
     """Replay one exact matched range and return decision-aligned proxies."""
 
     validate_prepared_cell(prepared, corpus)
+    if not isinstance(uf_assumptions, UFParallelDepthAssumptions):
+        raise TypeError("uf_assumptions must be UFParallelDepthAssumptions")
+    edge_endpoints = canonical_edge_endpoints(prepared)
     if shot_range not in fixed_worker_ranges(corpus.shots):
         raise ValueError("hardware replay requires one exact matched range")
     microbatch_size = _positive_int(microbatch_size, name="microbatch_size")
@@ -752,7 +871,14 @@ def replay_hardware_range(
             }
             values.update(_promatch_shot_metrics(pm_results[local], patches=patches))
             values.update(_pinball_shot_metrics(pb_results[local], patches=patches))
-            values.update(_uf_shot_metrics(row, patches=patches))
+            values.update(
+                _uf_shot_metrics(
+                    row,
+                    patches=patches,
+                    assumptions=uf_assumptions,
+                    edge_endpoints=edge_endpoints,
+                )
+            )
             parts["shot_id"].append(shot_id)
             append_metrics(values)
     arrays = {
@@ -769,22 +895,64 @@ def replay_hardware_range(
     return arrays
 
 
-_WORKER_PRELOAD: tuple[Any, MatchedCorpus, tuple[Mapping[str, Any], ...]] | None = None
+def canonical_edge_endpoints(prepared: Any) -> dict[int, tuple[int, int | None]]:
+    """Map canonical edge ids to detector endpoints from the prepared cell."""
+
+    graph = getattr(getattr(prepared, "compiled_promatch", None), "graph", None)
+    edges = getattr(graph, "edges", None)
+    if edges is None:
+        raise ValueError("prepared cell does not expose the canonical edge table")
+    return {
+        int(edge.edge_id): (int(edge.source), None if edge.target is None else int(edge.target))
+        for edge in edges
+    }
+
+
+def maximum_canonical_edge_weight(prepared: Any) -> Fraction:
+    """Exact maximum canonical edge weight of the prepared cell's graph."""
+
+    graph = getattr(getattr(prepared, "compiled_promatch", None), "graph", None)
+    edges = getattr(graph, "edges", None)
+    if not edges:
+        raise ValueError("prepared cell does not expose the canonical edge table")
+    return max(Fraction.from_float(float(edge.weight)) for edge in edges)
+
+
+def helios_assumptions(
+    prepared: Any, *, weight_resolution: int
+) -> UFParallelDepthAssumptions:
+    """Default Helios-style assumptions at an integer weight resolution ``w_max``."""
+
+    resolution = _positive_int(weight_resolution, name="weight_resolution")
+    if resolution < 2:
+        raise ValueError("weight_resolution must be at least 2")
+    return UFParallelDepthAssumptions(
+        growth_quantum_weight=maximum_canonical_edge_weight(prepared) / resolution
+    )
+
+
+_WORKER_PRELOAD: (
+    tuple[Any, MatchedCorpus, tuple[Mapping[str, Any], ...], UFParallelDepthAssumptions]
+    | None
+) = None
 
 
 def preload_hardware_replay_worker(
     prepared: Any,
     corpus: MatchedCorpus,
     uf_shot_rows: Sequence[Mapping[str, Any]],
+    uf_assumptions: UFParallelDepthAssumptions,
 ) -> None:
     """Install parent-owned state for inheritance by explicit-fork workers."""
 
     global _WORKER_PRELOAD
     validate_prepared_cell(prepared, corpus)
+    if not isinstance(uf_assumptions, UFParallelDepthAssumptions):
+        raise TypeError("uf_assumptions must be UFParallelDepthAssumptions")
     rows = tuple(uf_shot_rows)
     if len(rows) != corpus.shots:
         raise ValueError("UF shot rows do not cover the matched corpus")
-    _WORKER_PRELOAD = (prepared, corpus, rows)
+    _WORKER_PRELOAD = (prepared, corpus, rows, uf_assumptions)
 
 
 def clear_hardware_replay_worker() -> None:
@@ -824,12 +992,13 @@ def worker_replay_hardware_range(task: Mapping[str, Any]) -> dict[str, np.ndarra
     )
     if raw["shots"] != shot_range.shots:
         raise ValueError("hardware replay range size differs")
-    prepared, corpus, rows = _WORKER_PRELOAD
+    prepared, corpus, rows, uf_assumptions = _WORKER_PRELOAD
     return replay_hardware_range(
         prepared,
         corpus,
         rows,
         shot_range=shot_range,
+        uf_assumptions=uf_assumptions,
         microbatch_size=int(task["microbatch_size"]),
     )
 
@@ -1441,8 +1610,11 @@ def analyze_hardware_replay(
                 "accumulated complex flag"
             ),
             "union_find": (
-                "synthetic full-shot schedule using parameterized batch, peel, "
-                "confidence-check, transaction, and exact per-patch update work"
+                "Helios-style schedule: growth iterations from each lane's "
+                "terminal event time at the configured weight resolution, merge "
+                "flooding charged by merging-cluster forest diameter, then "
+                "serialized peel, confidence-check, transaction, and exact "
+                "per-patch update work"
             ),
         },
         "proxy_caveats": [
@@ -1453,6 +1625,8 @@ def analyze_hardware_replay(
             "Union-Find architecture fields use exact per-patch residual-boundary update counts retained by the frontend telemetry.",
             "Residual detector-event reduction is an L2 input-size metric, not an L2 latency measurement.",
             "The UF proxy charges one serialized confidence cycle per completed component; detailed confidence arithmetic and confidence-payload transport are outside the model.",
+            "UF growth iterations are the slowest lane's terminal event time divided by the growth quantum (maximum canonical edge weight over the weight resolution), rounded up; the quantum is recorded in provenance.",
+            "UF merge flooding uses each component's final forest diameter for every iteration in which it had an event, an upper bound on Helios's cluster-id and parity convergence over saturated edges; synchronous event batches are reported as raw software work only.",
             "Transport, queueing, clock frequency, routing, and residual-MWPM execution are outside the frontend cycle proxies.",
         ],
     }

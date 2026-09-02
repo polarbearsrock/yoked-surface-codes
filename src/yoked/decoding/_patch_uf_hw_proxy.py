@@ -6,25 +6,42 @@ records retained by the experiment collector.  It never participates in
 growth, gating, correction selection, or residual construction.
 
 The raw counters are exact properties of the software policy and are the
-primary output.  The cycle count is only a synthetic, parameterized schedule.
-In particular, the default assumes every equal-time event batch crosses one
-growth, event-resolution, merge, and settle stage; it does *not* establish that
-an event-driven weighted batch equals one Helios growth iteration.  Distributed
-merge/check convergence may require topology-dependent repeated stages.  The
-default also assumes synchronous spatial work within a lane, parallel patches,
-parallel basis lanes, and serialized peeling, component-confidence checks, and
-residual bit updates within their owning engine.  The legacy field name
-``conservative_parallel_depth_cycles`` refers only to those deliberately
-serialized latter phases.  It is not an FPGA timing result or a guaranteed
-upper bound: routing, convergence, memory, clock-domain, transport, and
-L2-decoder costs are outside the model.
+primary output.  The cycle figures follow the stage model of the Helios
+distributed Union-Find decoder (Liyanage, Wu, Deters, Zhong, 2023):
+
+* Every cluster in a lane grows in lockstep, one integer weight unit per
+  iteration.  The lane's terminal event time is the radius of its slowest
+  cluster in log-likelihood weight units, so the number of growth iterations
+  is that radius divided by the configured quantum, rounded up.  The quantum
+  is the caller's hardware weight resolution (Helios's ``w_max``) expressed
+  in weight units; it has no default.
+* Each iteration is charged a fixed cost: the one-cycle Growing stage, the
+  controller's stage-transition wait, and one settle cycle for the concurrent
+  Merging/Checking pass.
+* Merging additionally floods the cluster id and converges the parity across
+  the merged cluster one hop per cycle, so an iteration in which a cluster
+  merges is charged ``merge_cycles_per_hop`` times the diameter of the largest
+  cluster that had an event in that iteration.  The component's final forest
+  diameter stands in for its diameter at every one of its events, which makes
+  this an upper bound; a censored snapshot has no forest diameter and uses the
+  chain bound ``absorbed_vertex_count - 1``.
+* Peeling, confidence checks, the patch transaction, and residual bit updates
+  remain serialized inside their owning engine, as before.
+
+Synchronous event batches, the number of distinct exact event times, remain
+reported as raw software work but no longer enter any cycle figure: they are a
+property of exact arithmetic on many distinct weights, not of a quantized
+grid.  Routing, memory, clock-domain, transport, and L2-decoder costs are
+outside the model.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import math
 import numbers
 from collections.abc import Mapping, Sequence
+from fractions import Fraction
 
 
 _MISSING = object()
@@ -43,6 +60,53 @@ def _optional_integer(value: object, *, name: str) -> int | None:
     if value is None:
         return None
     return _integer(value, name=name)
+
+
+def _exact_value(value: object, *, name: str) -> Fraction:
+    """Converts live exact values or their serialized forms to a Fraction."""
+
+    if isinstance(value, Fraction):
+        return value
+    if isinstance(value, bool):
+        raise TypeError(f"{name} must not be bool")
+    if isinstance(value, numbers.Integral):
+        return Fraction(int(value))
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError(f"{name} must be finite")
+        return Fraction.from_float(value)
+    if isinstance(value, Mapping):
+        if set(value) != {"mantissa", "exponent"}:
+            raise ValueError(f"{name} serialized value must have mantissa/exponent")
+        mantissa = _integer(value["mantissa"], name=f"{name}.mantissa", minimum=-(1 << 62))
+        exponent = _integer(value["exponent"], name=f"{name}.exponent", minimum=-(1 << 62))
+        if exponent >= 0:
+            return Fraction(mantissa << exponent)
+        return Fraction(mantissa, 1 << -exponent)
+    method = getattr(value, "as_fraction", None)
+    if method is not None:
+        result = method()
+        if not isinstance(result, Fraction):
+            raise TypeError(f"{name}.as_fraction() must return Fraction")
+        return result
+    raise TypeError(f"{name} must be an exact value, got {type(value)!r}")
+
+
+def iteration_index(time: object, quantum: object) -> int:
+    """Returns the Helios growth iteration in which an event at ``time`` lands.
+
+    Growth advances one quantum per iteration from time zero, so an event at
+    time t belongs to iteration ceil(t / quantum); time zero is iteration 0.
+    The division is exact.
+    """
+
+    exact_time = _exact_value(time, name="event time")
+    exact_quantum = _exact_value(quantum, name="growth_quantum_weight")
+    if exact_quantum <= 0:
+        raise ValueError("growth_quantum_weight must be positive")
+    if exact_time < 0:
+        raise ValueError("event time must not be negative")
+    return int(-((-exact_time) // exact_quantum))
 
 
 def _get(value: object, name: str, default: object = _MISSING) -> object:
@@ -77,21 +141,21 @@ def _records(value: object, *, name: str) -> tuple[object, ...]:
 
 @dataclasses.dataclass(frozen=True)
 class UFParallelDepthAssumptions:
-    """Explicit coefficients for the synthetic parallel-depth schedule.
+    """Explicit coefficients for the Helios-style depth schedule.
 
-    One synchronous event batch is charged one growth, event-resolution,
-    merge, and settle stage by default.  All events within that equal-time
-    batch are treated as spatially parallel.  The default then serializes each
-    peel operation, completed-component confidence check, and durable residual
-    boundary update.  ``lanes_per_patch`` describes the dense lane ordering in
-    the frozen patch-UF projection (X/Z pairs for the current experiment).
+    ``growth_quantum_weight`` is the weight-unit advance of every growing
+    boundary per iteration: the cell's maximum edge weight divided by the
+    hardware weight resolution ``w_max``.  It has no default because it is a
+    hardware choice.  The remaining coefficients are cycles.  ``lanes_per_patch``
+    describes the dense lane ordering in the frozen patch-UF projection.
     """
 
+    growth_quantum_weight: object
     syndrome_load_cycles: int = 1
-    growth_cycles_per_synchronous_batch: int = 1
-    event_resolution_cycles_per_synchronous_batch: int = 1
-    merge_cycles_per_synchronous_batch: int = 1
-    settle_cycles_per_synchronous_batch: int = 1
+    growing_cycles_per_iteration: int = 1
+    controller_cycles_per_iteration: int = 2
+    merge_settle_cycles_per_iteration: int = 1
+    merge_cycles_per_hop: int = 1
     peel_cycles_per_operation: int = 1
     confidence_cycles_per_completed_component: int = 1
     patch_transaction_cycles: int = 1
@@ -100,7 +164,13 @@ class UFParallelDepthAssumptions:
     basis_lanes_parallel: bool = True
 
     def __post_init__(self) -> None:
+        quantum = _exact_value(self.growth_quantum_weight, name="growth_quantum_weight")
+        if quantum <= 0:
+            raise ValueError("growth_quantum_weight must be positive")
+        object.__setattr__(self, "growth_quantum_weight", quantum)
         for field in dataclasses.fields(self):
+            if field.name == "growth_quantum_weight":
+                continue
             value = getattr(self, field.name)
             if field.name == "basis_lanes_parallel":
                 if not isinstance(value, bool):
@@ -110,27 +180,23 @@ class UFParallelDepthAssumptions:
             _integer(value, name=field.name, minimum=minimum)
 
     @property
-    def cycles_per_synchronous_batch(self) -> int:
+    def fixed_cycles_per_iteration(self) -> int:
         return (
-            self.growth_cycles_per_synchronous_batch
-            + self.event_resolution_cycles_per_synchronous_batch
-            + self.merge_cycles_per_synchronous_batch
-            + self.settle_cycles_per_synchronous_batch
+            self.growing_cycles_per_iteration
+            + self.controller_cycles_per_iteration
+            + self.merge_settle_cycles_per_iteration
         )
-
-
-DEFAULT_UF_PARALLEL_DEPTH_ASSUMPTIONS = UFParallelDepthAssumptions()
 
 
 @dataclasses.dataclass(frozen=True)
 class UFLaneHardwareProxy:
-    """Raw work and synthetic modeled depth for one basis lane.
+    """Raw work and Helios-style modeled depth for one basis lane.
 
-    ``synchronous_event_batch_count`` is the number of atomic equal-time
-    batches in the weighted event-driven implementation, not a count of
-    fixed-distance lattice-growth iterations.  ``saturated_growth_event_count``
-    counts selected saturated incidences across those batches and is work, not
-    depth.
+    ``growth_depth_weight`` is the lane's terminal event time, the radius of
+    its slowest cluster.  ``growth_iteration_count`` is that radius in
+    quanta, rounded up.  ``maximum_forest_diameter_hops`` is exact for
+    completed components and the chain bound for censored snapshots.
+    ``synchronous_event_batch_count`` is retained as raw software work only.
     """
 
     lane_offset: int | None
@@ -149,7 +215,11 @@ class UFLaneHardwareProxy:
     maximum_observed_component_defect_count: int
     maximum_absorbed_vertex_count: int
     maximum_component_event_batch_count: int
-    synchronous_batch_depth_cycles: int
+    growth_depth_weight: Fraction
+    growth_iteration_count: int
+    maximum_forest_diameter_hops: int
+    growth_depth_cycles: int
+    merge_depth_cycles: int
     peel_depth_cycles: int
     confidence_depth_cycles: int
     conservative_parallel_depth_cycles: int
@@ -161,12 +231,14 @@ class UFLaneHardwareProxy:
 
 @dataclasses.dataclass(frozen=True)
 class UFShotHardwareProxy:
-    """Raw aggregate work and synthetic modeled L1 depths for one shot.
+    """Raw aggregate work and modeled L1 depths for one shot.
 
-    The exact completed-component maximum and censored-component lower-bound
-    maximum are separate fields.  The compatibility field
-    ``maximum_observed_component_defect_count`` is their numeric maximum; when
-    a censored component supplies that maximum it remains only a lower bound.
+    ``growth_depth_weight``, ``growth_iteration_count``, and
+    ``maximum_forest_diameter_hops`` are maxima over lanes: with every lane and
+    cluster growing in parallel, the slowest lane sets the critical path.  The
+    exact completed-component maximum and censored-component lower-bound
+    maximum are separate fields; ``maximum_observed_component_defect_count``
+    is their numeric maximum.
 
     When exact patch transactions are present, three additional schedules are
     reported.  ``parallel_lane_cores_per_patch_depth_cycles`` models one X and
@@ -199,6 +271,9 @@ class UFShotHardwareProxy:
     maximum_observed_component_defect_count: int
     maximum_absorbed_vertex_count: int
     maximum_component_event_batch_count: int
+    growth_depth_weight: Fraction
+    growth_iteration_count: int
+    maximum_forest_diameter_hops: int
     residual_boundary_update_work: int | None
     lane_core_critical_path_cycles: int
     patch_transaction_depth_cycles: int
@@ -236,7 +311,17 @@ def _component_state_kind(value: object) -> str:
     raise ValueError("component telemetry does not identify completed/censored state")
 
 
-def _component_values(value: object) -> tuple[str, int, int, int]:
+@dataclasses.dataclass(frozen=True)
+class _ComponentValues:
+    kind: str
+    size: int
+    absorbed: int
+    batches: int
+    event_times: tuple[Fraction, ...]
+    diameter_hops: int
+
+
+def _component_values(value: object) -> _ComponentValues:
     kind = _component_state_kind(value)
     adapter = _unwrap_adapter(value)
     if kind == "completed":
@@ -245,9 +330,7 @@ def _component_values(value: object) -> tuple[str, int, int, int]:
             size_value = len(
                 _records(_get(adapter, "original_defects"), name="original_defects")
             )
-        size = _integer(
-            size_value, name="cluster_defect_count", minimum=1
-        )
+        size = _integer(size_value, name="cluster_defect_count", minimum=1)
     else:
         size_value = _get(adapter, "partial_cluster_defect_lower_bound", None)
         if size_value is None:
@@ -255,18 +338,14 @@ def _component_values(value: object) -> tuple[str, int, int, int]:
                 _records(_get(adapter, "current_defects"), name="current_defects")
             )
         size = _integer(
-            size_value,
-            name="partial_cluster_defect_lower_bound",
-            minimum=1,
+            size_value, name="partial_cluster_defect_lower_bound", minimum=1
         )
     absorbed_value = _get(adapter, "absorbed_vertex_count", None)
     if absorbed_value is None:
         absorbed_value = len(
             _records(_get(adapter, "absorbed_vertices"), name="absorbed_vertices")
         )
-    absorbed = _integer(
-        absorbed_value, name="absorbed_vertex_count", minimum=1
-    )
+    absorbed = _integer(absorbed_value, name="absorbed_vertex_count", minimum=1)
     if absorbed < size:
         raise ValueError(
             "absorbed_vertex_count must cover the reported component defects"
@@ -275,24 +354,40 @@ def _component_values(value: object) -> tuple[str, int, int, int]:
     event_batch_ids = _get(adapter, "event_batch_ids", None)
     if batches_value is None:
         batches_value = len(_records(event_batch_ids, name="event_batch_ids"))
-    batches = _integer(
-        batches_value, name="component simultaneous_event_batch_count"
-    )
+    batches = _integer(batches_value, name="component simultaneous_event_batch_count")
     if event_batch_ids is not None and batches != len(
         _records(event_batch_ids, name="event_batch_ids")
     ):
         raise ValueError("component event-batch count does not match event_batch_ids")
-    return kind, size, absorbed, batches
+    raw_times = _get(adapter, "event_batch_times", None)
+    if raw_times is None:
+        raise ValueError("component telemetry omits event_batch_times")
+    event_times = tuple(
+        _exact_value(item, name="event_batch_times")
+        for item in _records(raw_times, name="event_batch_times")
+    )
+    if len(event_times) != batches:
+        raise ValueError("component event_batch_times do not match its batch count")
+    raw_diameter = _get(adapter, "forest_diameter_hops", None)
+    if raw_diameter is None:
+        if kind == "completed":
+            raise ValueError("completed component telemetry omits forest_diameter_hops")
+        diameter = absorbed - 1
+    else:
+        diameter = _integer(raw_diameter, name="forest_diameter_hops")
+        if diameter >= absorbed:
+            raise ValueError("forest_diameter_hops exceeds the absorbed vertex count")
+    return _ComponentValues(kind, size, absorbed, batches, event_times, diameter)
 
 
 def derive_uf_lane_hardware_proxy(
     lane_outcome: object,
     *,
+    assumptions: UFParallelDepthAssumptions,
     components: Sequence[object] | None = None,
     lane_offset: int | None = None,
-    assumptions: UFParallelDepthAssumptions = DEFAULT_UF_PARALLEL_DEPTH_ASSUMPTIONS,
 ) -> UFLaneHardwareProxy:
-    """Derive exact lane work and the configured depth proxy.
+    """Derive exact lane work and the configured Helios-style depth proxy.
 
     ``lane_outcome`` may be a live ``LaneOutcome``, its ``dataclasses.asdict``
     representation, or a normalized collector row with an ``adapter`` field.
@@ -307,13 +402,12 @@ def derive_uf_lane_hardware_proxy(
     if lane_offset is None:
         raw_offset = _get(wrapper, "lane_offset", None)
         lane_offset = _optional_integer(raw_offset, name="lane_offset")
-    elif lane_offset is not None:
+    else:
         lane_offset = _integer(lane_offset, name="lane_offset")
     status = _get(adapter, "status")
     if status not in ("empty", "completed", "censored"):
         raise ValueError(f"unsupported UF lane status {status!r}")
-    counters = _get(adapter, "counters")
-    counters = _unwrap_adapter(counters)
+    counters = _unwrap_adapter(_get(adapter, "counters"))
     batches = _integer(
         _get(counters, "simultaneous_event_batch_count"),
         name="simultaneous_event_batch_count",
@@ -325,8 +419,7 @@ def derive_uf_lane_hardware_proxy(
         _get(counters, "union_attempt_count"), name="union_attempt_count"
     )
     successes = _integer(
-        _get(counters, "successful_union_count"),
-        name="successful_union_count",
+        _get(counters, "successful_union_count"), name="successful_union_count"
     )
     failures = _integer(
         _get(counters, "failed_union_count"), name="failed_union_count"
@@ -344,42 +437,23 @@ def derive_uf_lane_hardware_proxy(
 
     if components is None:
         completed = _records(
-            _get(adapter, "completed_components", ()),
-            name="completed_components",
+            _get(adapter, "completed_components", ()), name="completed_components"
         )
         censored = _records(
-            _get(adapter, "censored_components", ()),
-            name="censored_components",
+            _get(adapter, "censored_components", ()), name="censored_components"
         )
         component_records = tuple(completed) + tuple(censored)
     else:
         component_records = _records(components, name="components")
 
-    completed_sizes: list[int] = []
-    censored_sizes: list[int] = []
-    absorbed_sizes: list[int] = []
-    component_batches: list[int] = []
-    for component in component_records:
-        kind, size, absorbed, component_batch_count = _component_values(component)
-        if kind == "completed":
-            completed_sizes.append(size)
-        else:
-            censored_sizes.append(size)
-        absorbed_sizes.append(absorbed)
-        component_batches.append(component_batch_count)
+    values = [_component_values(component) for component in component_records]
+    completed_sizes = [v.size for v in values if v.kind == "completed"]
+    censored_sizes = [v.size for v in values if v.kind == "censored"]
     if status == "empty":
         if component_records:
             raise ValueError("empty lane cannot contain component telemetry")
         if any(
-            (
-                batches,
-                growth_events,
-                attempts,
-                successes,
-                failures,
-                forest_edges,
-                peel_operations,
-            )
+            (batches, growth_events, attempts, successes, failures, forest_edges, peel_operations)
         ):
             raise ValueError("empty lane cannot contain UF operation work")
     elif status == "completed":
@@ -394,19 +468,47 @@ def derive_uf_lane_hardware_proxy(
             raise ValueError("censored lane cannot contain completed components")
         if not censored_sizes:
             raise ValueError("censored lane requires its partial component telemetry")
-    maximum_component_batches = max(component_batches, default=0)
+    maximum_component_batches = max((v.batches for v in values), default=0)
     if maximum_component_batches > batches:
         raise ValueError("component event-batch count exceeds its lane total")
 
-    synchronous_depth = batches * assumptions.cycles_per_synchronous_batch
+    quantum = assumptions.growth_quantum_weight
+    if status == "empty":
+        depth_weight = Fraction(0)
+    else:
+        raw_terminal = _get(adapter, "terminal_event_time", None)
+        if raw_terminal is None:
+            raise ValueError("active lane telemetry omits terminal_event_time")
+        depth_weight = _exact_value(raw_terminal, name="terminal_event_time")
+        if depth_weight < 0:
+            raise ValueError("terminal_event_time must not be negative")
+    iterations = iteration_index(depth_weight, quantum)
+
+    # Merge flooding: each iteration with a merge event is charged the diameter
+    # of the largest cluster that had an event in it.
+    diameter_by_iteration: dict[int, int] = {}
+    for v in values:
+        for time in v.event_times:
+            if time > depth_weight:
+                raise ValueError(
+                    "component event time exceeds the lane terminal event time"
+                )
+            index = iteration_index(time, quantum)
+            if index < 1:
+                raise ValueError("component events cannot precede the first iteration")
+            diameter_by_iteration[index] = max(
+                diameter_by_iteration.get(index, 0), v.diameter_hops
+            )
+    merge_depth = assumptions.merge_cycles_per_hop * sum(diameter_by_iteration.values())
+    growth_depth = iterations * assumptions.fixed_cycles_per_iteration
     peel_depth = peel_operations * assumptions.peel_cycles_per_operation
     confidence_depth = (
-        len(completed_sizes)
-        * assumptions.confidence_cycles_per_completed_component
+        len(completed_sizes) * assumptions.confidence_cycles_per_completed_component
     )
     total_depth = (
         assumptions.syndrome_load_cycles
-        + synchronous_depth
+        + growth_depth
+        + merge_depth
         + peel_depth
         + confidence_depth
     )
@@ -426,12 +528,14 @@ def derive_uf_lane_hardware_proxy(
         censored_component_count=len(censored_sizes),
         maximum_completed_component_defect_count=maximum_completed,
         maximum_censored_component_defect_lower_bound=maximum_censored,
-        maximum_observed_component_defect_count=max(
-            maximum_completed, maximum_censored
-        ),
-        maximum_absorbed_vertex_count=max(absorbed_sizes, default=0),
+        maximum_observed_component_defect_count=max(maximum_completed, maximum_censored),
+        maximum_absorbed_vertex_count=max((v.absorbed for v in values), default=0),
         maximum_component_event_batch_count=maximum_component_batches,
-        synchronous_batch_depth_cycles=synchronous_depth,
+        growth_depth_weight=depth_weight,
+        growth_iteration_count=iterations,
+        maximum_forest_diameter_hops=max((v.diameter_hops for v in values), default=0),
+        growth_depth_cycles=growth_depth,
+        merge_depth_cycles=merge_depth,
         peel_depth_cycles=peel_depth,
         confidence_depth_cycles=confidence_depth,
         conservative_parallel_depth_cycles=total_depth,
@@ -520,9 +624,7 @@ def _patch_boundary_work(
     indexed: dict[int, int] = {}
     for position, raw in enumerate(records):
         adapter = _unwrap_adapter(raw)
-        patch_id = _integer(
-            _get(adapter, "patch_id", position), name="patch_id"
-        )
+        patch_id = _integer(_get(adapter, "patch_id", position), name="patch_id")
         if patch_id in indexed:
             raise ValueError(f"duplicate patch_id {patch_id}")
         lane_outcomes = _get(adapter, "lane_outcomes", None)
@@ -540,9 +642,7 @@ def _patch_boundary_work(
         if boundary is not None:
             detector_ids = tuple(
                 _integer(item, name="durable boundary detector ID")
-                for item in _records(
-                    boundary, name="patch durable_detector_boundary"
-                )
+                for item in _records(boundary, name="patch durable_detector_boundary")
             )
             if detector_ids != tuple(sorted(set(detector_ids))):
                 raise ValueError(
@@ -550,13 +650,9 @@ def _patch_boundary_work(
                 )
             counts.append(len(detector_ids))
         if not counts:
-            raise ValueError(
-                f"patch {patch_id} omits its durable residual-boundary work"
-            )
+            raise ValueError(f"patch {patch_id} omits its durable residual-boundary work")
         if len(set(counts)) != 1:
-            raise ValueError(
-                f"patch {patch_id} durable boundary metrics do not reconcile"
-            )
+            raise ValueError(f"patch {patch_id} durable boundary metrics do not reconcile")
         indexed[patch_id] = counts[0]
     if tuple(sorted(indexed)) != tuple(range(expected_patches)):
         raise ValueError(
@@ -565,9 +661,7 @@ def _patch_boundary_work(
     # The selected YSC cell has six physical patches and two basis lanes.  The
     # generic path remains usable for smaller unit graphs, but whenever either
     # side exposes the production cardinality, require the exact 6x2 layout.
-    if lane_count == 12 and (
-        expected_patches != 6 or lanes_per_patch != 2
-    ):
+    if lane_count == 12 and (expected_patches != 6 or lanes_per_patch != 2):
         raise ValueError("the 12-lane YSC layout must be six dense two-lane patches")
     return tuple(indexed[patch_id] for patch_id in range(expected_patches))
 
@@ -575,12 +669,12 @@ def _patch_boundary_work(
 def derive_uf_shot_hardware_proxy(
     shot: object,
     *,
+    assumptions: UFParallelDepthAssumptions,
     lane_rows: Sequence[object] | None = None,
     component_rows: Sequence[object] | None = None,
     residual_boundary_update_work: int | None = None,
-    assumptions: UFParallelDepthAssumptions = DEFAULT_UF_PARALLEL_DEPTH_ASSUMPTIONS,
 ) -> UFShotHardwareProxy:
-    """Derive one shot's raw work and conservative L1 depth proxy.
+    """Derive one shot's raw work and Helios-style L1 depth proxy.
 
     Live ``ShotCorrection`` objects and ``dataclasses.asdict`` mappings expose
     ``lane_outcomes`` directly.  A normalized artifact bundle may instead use
@@ -617,9 +711,7 @@ def derive_uf_shot_hardware_proxy(
         if row_shot is not None:
             shot_ids.add(_integer(row_shot, name="lane global_shot_id"))
         raw_offset = _get(row, "lane_offset", None)
-        offset = position if raw_offset is None else _integer(
-            raw_offset, name="lane_offset"
-        )
+        offset = position if raw_offset is None else _integer(raw_offset, name="lane_offset")
         if offset in indexed_lanes:
             raise ValueError(f"duplicate lane_offset {offset}")
         indexed_lanes[offset] = row
@@ -628,9 +720,7 @@ def derive_uf_shot_hardware_proxy(
     if tuple(sorted(indexed_lanes)) != tuple(range(len(indexed_lanes))):
         raise ValueError("lane offsets must be dense from zero")
 
-    components_by_lane: dict[int, list[object]] = {
-        offset: [] for offset in indexed_lanes
-    }
+    components_by_lane: dict[int, list[object]] = {offset: [] for offset in indexed_lanes}
     for row in resolved_components:
         row_shot = _get(row, "global_shot_id", None)
         if row_shot is not None:
@@ -642,75 +732,55 @@ def derive_uf_shot_hardware_proxy(
     if len(shot_ids) > 1:
         raise ValueError("serialized rows belong to more than one global shot")
 
-    lane_proxies: list[UFLaneHardwareProxy] = []
-    for offset in range(len(indexed_lanes)):
-        external = components_by_lane[offset]
-        lane_proxies.append(
-            derive_uf_lane_hardware_proxy(
-                indexed_lanes[offset],
-                components=external if resolved_components else None,
-                lane_offset=offset,
-                assumptions=assumptions,
-            )
+    lanes = tuple(
+        derive_uf_lane_hardware_proxy(
+            indexed_lanes[offset],
+            assumptions=assumptions,
+            components=components_by_lane[offset] if resolved_components else None,
+            lane_offset=offset,
         )
-    lanes = tuple(lane_proxies)
+        for offset in range(len(indexed_lanes))
+    )
 
     patch_depths: list[int] = []
     width = assumptions.lanes_per_patch
     for start in range(0, len(lanes), width):
         group = lanes[start : start + width]
         depths = [lane.conservative_parallel_depth_cycles for lane in group]
-        patch_depths.append(
-            max(depths)
-            if assumptions.basis_lanes_parallel
-            else sum(depths)
-        )
+        patch_depths.append(max(depths) if assumptions.basis_lanes_parallel else sum(depths))
     lane_critical = max(patch_depths, default=0)
 
     per_patch_residual_work = _patch_boundary_work(
-        metric_source,
-        lane_count=len(lanes),
-        lanes_per_patch=width,
+        metric_source, lane_count=len(lanes), lanes_per_patch=width
     )
     if per_patch_residual_work is None and metric_source is not shot:
         per_patch_residual_work = _patch_boundary_work(
-            shot,
-            lane_count=len(lanes),
-            lanes_per_patch=width,
+            shot, lane_count=len(lanes), lanes_per_patch=width
         )
     inferred_residual_work = _candidate_residual_work(metric_source)
     if inferred_residual_work is None:
         inferred_residual_work = _candidate_residual_work(shot)
     if per_patch_residual_work is not None:
         patch_total = sum(per_patch_residual_work)
-        if (
-            inferred_residual_work is not None
-            and patch_total != inferred_residual_work
-        ):
+        if inferred_residual_work is not None and patch_total != inferred_residual_work:
             raise ValueError(
                 "per-patch residual boundary work does not reconcile with shot total"
             )
         inferred_residual_work = patch_total
     if residual_boundary_update_work is not None:
-        explicit = _integer(
-            residual_boundary_update_work,
-            name="residual_boundary_update_work",
-        )
+        explicit = _integer(residual_boundary_update_work, name="residual_boundary_update_work")
         if inferred_residual_work is not None and explicit != inferred_residual_work:
             raise ValueError("explicit residual boundary work disagrees with telemetry")
         inferred_residual_work = explicit
     residual_depth = (
         None
         if inferred_residual_work is None
-        else inferred_residual_work
-        * assumptions.residual_update_cycles_per_boundary_event
+        else inferred_residual_work * assumptions.residual_update_cycles_per_boundary_event
     )
     total_depth = (
         None
         if residual_depth is None
-        else lane_critical
-        + assumptions.patch_transaction_cycles
-        + residual_depth
+        else lane_critical + assumptions.patch_transaction_cycles + residual_depth
     )
     if per_patch_residual_work is None:
         parallel_patch_depths = None
@@ -722,16 +792,11 @@ def derive_uf_shot_hardware_proxy(
         serial_values: list[int] = []
         for patch_id, boundary_work in enumerate(per_patch_residual_work):
             group = lanes[patch_id * width : (patch_id + 1) * width]
-            lane_depths = [
-                lane.conservative_parallel_depth_cycles for lane in group
-            ]
+            lane_depths = [lane.conservative_parallel_depth_cycles for lane in group]
             residual_patch_depth = (
-                boundary_work
-                * assumptions.residual_update_cycles_per_boundary_event
+                boundary_work * assumptions.residual_update_cycles_per_boundary_event
             )
-            common_tail = (
-                assumptions.patch_transaction_cycles + residual_patch_depth
-            )
+            common_tail = assumptions.patch_transaction_cycles + residual_patch_depth
             parallel_values.append(max(lane_depths) + common_tail)
             serial_values.append(sum(lane_depths) + common_tail)
         parallel_patch_depths = tuple(parallel_values)
@@ -746,15 +811,10 @@ def derive_uf_shot_hardware_proxy(
         + residual_depth
     )
     maximum_completed = max(
-        (lane.maximum_completed_component_defect_count for lane in lanes),
-        default=0,
+        (lane.maximum_completed_component_defect_count for lane in lanes), default=0
     )
     maximum_censored = max(
-        (
-            lane.maximum_censored_component_defect_lower_bound
-            for lane in lanes
-        ),
-        default=0,
+        (lane.maximum_censored_component_defect_lower_bound for lane in lanes), default=0
     )
     return UFShotHardwareProxy(
         global_shot_id=next(iter(shot_ids), None),
@@ -762,43 +822,31 @@ def derive_uf_shot_hardware_proxy(
         patch_count=len(patch_depths),
         active_lane_count=sum(lane.active for lane in lanes),
         censored_lane_count=sum(lane.status == "censored" for lane in lanes),
-        synchronous_event_batch_work=sum(
-            lane.synchronous_event_batch_count for lane in lanes
-        ),
-        saturated_growth_event_work=sum(
-            lane.saturated_growth_event_count for lane in lanes
-        ),
-        union_merge_attempt_work=sum(
-            lane.union_merge_attempt_count for lane in lanes
-        ),
-        successful_union_merge_work=sum(
-            lane.successful_union_merge_count for lane in lanes
-        ),
-        redundant_union_merge_work=sum(
-            lane.redundant_union_merge_count for lane in lanes
-        ),
+        synchronous_event_batch_work=sum(lane.synchronous_event_batch_count for lane in lanes),
+        saturated_growth_event_work=sum(lane.saturated_growth_event_count for lane in lanes),
+        union_merge_attempt_work=sum(lane.union_merge_attempt_count for lane in lanes),
+        successful_union_merge_work=sum(lane.successful_union_merge_count for lane in lanes),
+        redundant_union_merge_work=sum(lane.redundant_union_merge_count for lane in lanes),
         forest_edge_work=sum(lane.forest_edge_count for lane in lanes),
         peel_operation_work=sum(lane.peel_operation_count for lane in lanes),
-        completed_component_count=sum(
-            lane.completed_component_count for lane in lanes
-        ),
-        censored_component_count=sum(
-            lane.censored_component_count for lane in lanes
-        ),
+        completed_component_count=sum(lane.completed_component_count for lane in lanes),
+        censored_component_count=sum(lane.censored_component_count for lane in lanes),
         maximum_lane_synchronous_event_batches=max(
             (lane.synchronous_event_batch_count for lane in lanes), default=0
         ),
         maximum_completed_component_defect_count=maximum_completed,
         maximum_censored_component_defect_lower_bound=maximum_censored,
-        maximum_observed_component_defect_count=max(
-            maximum_completed, maximum_censored
-        ),
+        maximum_observed_component_defect_count=max(maximum_completed, maximum_censored),
         maximum_absorbed_vertex_count=max(
             (lane.maximum_absorbed_vertex_count for lane in lanes), default=0
         ),
         maximum_component_event_batch_count=max(
-            (lane.maximum_component_event_batch_count for lane in lanes),
-            default=0,
+            (lane.maximum_component_event_batch_count for lane in lanes), default=0
+        ),
+        growth_depth_weight=max((lane.growth_depth_weight for lane in lanes), default=Fraction(0)),
+        growth_iteration_count=max((lane.growth_iteration_count for lane in lanes), default=0),
+        maximum_forest_diameter_hops=max(
+            (lane.maximum_forest_diameter_hops for lane in lanes), default=0
         ),
         residual_boundary_update_work=inferred_residual_work,
         lane_core_critical_path_cycles=lane_critical,
@@ -817,10 +865,10 @@ def derive_uf_shot_hardware_proxy(
 
 
 __all__ = [
-    "DEFAULT_UF_PARALLEL_DEPTH_ASSUMPTIONS",
     "UFLaneHardwareProxy",
     "UFParallelDepthAssumptions",
     "UFShotHardwareProxy",
     "derive_uf_lane_hardware_proxy",
     "derive_uf_shot_hardware_proxy",
+    "iteration_index",
 ]

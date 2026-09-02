@@ -10,6 +10,7 @@ from yoked.decoding._patch_uf_reference import (
     UFEdge,
     UFLaneGraph,
     UFPolicy,
+    forest_diameter_hops,
     run_reference_lane,
 )
 
@@ -39,6 +40,7 @@ def test_two_active_components_grow_at_rate_two_and_peel() -> None:
     assert component.original_defects == (0, 1)
     assert component.forest_edge_ids == (7,)
     assert component.peeled_support_edge_ids == (7,)
+    assert component.forest_diameter_hops == 1
     assert component.exact_margin is None
     assert component.gate_decision == "eligible"
     assert component.event_batch_ids == (1,)
@@ -221,3 +223,69 @@ def test_graph_and_policy_validation_fail_closed() -> None:
         )
     with pytest.raises(ValueError, match="tau"):
         UFPolicy(Fraction(-1), limits, limits)
+
+
+def test_forest_diameter_helper_measures_hops_and_fails_closed() -> None:
+    assert forest_diameter_hops([5], []) == 0
+    assert forest_diameter_hops([0, 1], [(0, 1)]) == 1
+    # chain 0-1-2-3
+    assert forest_diameter_hops([0, 1, 2, 3], [(0, 1), (1, 2), (2, 3)]) == 3
+    # star centred on 0
+    assert forest_diameter_hops([0, 1, 2, 3], [(0, 1), (0, 2), (0, 3)]) == 2
+    # forest must span the vertex set
+    with pytest.raises(ValueError, match="disconnected"):
+        forest_diameter_hops([0, 1, 2], [(0, 1)])
+    with pytest.raises(ValueError, match="cycle"):
+        forest_diameter_hops([0, 1, 2], [(0, 1), (1, 2), (2, 0)])
+
+
+def test_final_components_record_forest_diameter_for_chain_star_and_singleton() -> None:
+    # Chain: defects at both ends of 0-1-2-3, equal weights.
+    chain = UFLaneGraph(
+        4,
+        (
+            UFEdge(0, 0, 1, 2.0, "correction"),
+            UFEdge(1, 1, 2, 2.0, "correction"),
+            UFEdge(2, 2, 3, 2.0, "correction"),
+        ),
+    )
+    result = run_reference_lane(chain, [0, 3], _policy())
+    assert result.completed_components[0].absorbed_vertices == (0, 1, 2, 3)
+    assert result.completed_components[0].forest_diameter_hops == 3
+
+    # Star: a lone defect at the centre absorbs three leaves at once, then
+    # reaches the boundary through leaf 1.
+    star = UFLaneGraph(
+        4,
+        (
+            UFEdge(0, 0, 1, 1.0, "correction"),
+            UFEdge(1, 0, 2, 1.0, "correction"),
+            UFEdge(2, 0, 3, 1.0, "correction"),
+            UFEdge(3, 1, None, 10.0, "boundary"),
+        ),
+    )
+    result = run_reference_lane(star, [0], _policy())
+    component = result.completed_components[0]
+    assert component.absorbed_vertices == (0, 1, 2, 3)
+    assert component.boundary_reached
+    assert component.forest_diameter_hops == 2
+
+    # Singleton reaching a boundary directly.
+    single = UFLaneGraph(1, (UFEdge(0, 0, None, 1.0, "boundary"),))
+    result = run_reference_lane(single, [0], _policy())
+    assert result.completed_components[0].forest_diameter_hops == 0
+
+    # A port-contact component still reports its forest diameter.
+    port = UFLaneGraph(
+        3,
+        (
+            UFEdge(0, 0, None, 1.0, "port", port_kind="yoke"),
+            UFEdge(1, 0, 1, 2.0, "correction"),
+            UFEdge(2, 1, 2, 2.0, "correction"),
+            UFEdge(3, 2, None, 10.0, "boundary"),
+        ),
+    )
+    result = run_reference_lane(port, [0, 2], _policy())
+    component = result.completed_components[0]
+    assert component.port_tainted
+    assert component.forest_diameter_hops == 2

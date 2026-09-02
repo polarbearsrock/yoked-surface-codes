@@ -37,6 +37,7 @@ from yoked.decoding._matched_frontend_hardware import (  # noqa: E402
     clear_hardware_replay_worker,
     concatenate_hardware_ranges,
     hardware_replay_tasks,
+    helios_assumptions,
     load_hardware_replay_npz,
     load_matched_hardware_protocol,
     preload_hardware_replay_worker,
@@ -143,8 +144,11 @@ def _run_replay(args: argparse.Namespace) -> dict[str, Any]:
     tasks = hardware_replay_tasks(
         corpus, microbatch_size=protocol["accuracy"]["microbatch_size"]
     )
+    uf_assumptions = helios_assumptions(
+        prepared, weight_resolution=args.uf_weight_resolution
+    )
     results: dict[int, dict[str, Any]] = {}
-    preload_hardware_replay_worker(prepared, corpus, uf_shot_rows)
+    preload_hardware_replay_worker(prepared, corpus, uf_shot_rows, uf_assumptions)
     context = multiprocessing.get_context("fork")
     try:
         with ProcessPoolExecutor(
@@ -185,6 +189,29 @@ def _run_replay(args: argparse.Namespace) -> dict[str, Any]:
         "processes": REQUIRED_PROCESSES,
         "native_threads_per_process": 1,
         "microbatch_size": protocol["accuracy"]["microbatch_size"],
+        "union_find_depth_model": {
+            "stage_model": "helios-growth-iterations-plus-forest-diameter-merge-flooding-v1",
+            "weight_resolution": int(args.uf_weight_resolution),
+            "growth_quantum_weight": str(uf_assumptions.growth_quantum_weight),
+            "growth_quantum_weight_float": float(uf_assumptions.growth_quantum_weight),
+            "cycle_coefficients": {
+                name: getattr(uf_assumptions, name)
+                for name in (
+                    "syndrome_load_cycles",
+                    "growing_cycles_per_iteration",
+                    "controller_cycles_per_iteration",
+                    "merge_settle_cycles_per_iteration",
+                    "merge_cycles_per_hop",
+                    "peel_cycles_per_operation",
+                    "confidence_cycles_per_completed_component",
+                    "patch_transaction_cycles",
+                    "residual_update_cycles_per_boundary_event",
+                    "lanes_per_patch",
+                    "basis_lanes_parallel",
+                )
+            },
+            "forest_diameters": "rebuilt from retained forest_edge_ids where the corpus predates the engine field",
+        },
         "repository": repository_state(_REPOSITORY_ROOT),
         "software_versions": current_software_versions(),
         "execution_environment": current_execution_environment(),
@@ -312,6 +339,12 @@ def _parser() -> argparse.ArgumentParser:
     replay.add_argument("--reference-analysis", type=Path, required=True)
     replay.add_argument("--out", type=Path, required=True)
     replay.add_argument("--processes", type=int, required=True)
+    replay.add_argument(
+        "--uf-weight-resolution",
+        type=int,
+        default=16,
+        help="Helios integer weight resolution w_max; growth quantum is max edge weight / w_max",
+    )
     reanalyze = commands.add_parser(
         "reanalyze",
         help="read-only analysis of an existing authenticated no-pickle NPZ",

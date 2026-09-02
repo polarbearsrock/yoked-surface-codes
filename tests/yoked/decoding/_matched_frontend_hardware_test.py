@@ -270,3 +270,129 @@ def test_safe_npz_loader_rejects_object_arrays(tmp_path) -> None:
     np.savez(unsafe, shot_id=np.asarray([object()], dtype=object))
     with pytest.raises(ValueError, match="unsafe NumPy array"):
         load_hardware_replay_npz(unsafe)
+
+
+def _uf_shard_row() -> dict:
+    from yoked.decoding._matched_frontend_hardware import _uf_shot_metrics  # noqa: F401
+
+    zero = {
+        "growth_event_count": 0,
+        "simultaneous_event_batch_count": 0,
+        "union_attempt_count": 0,
+        "successful_union_count": 0,
+        "failed_union_count": 0,
+        "forest_edge_count": 0,
+        "peel_operation_count": 0,
+    }
+    lane0 = {
+        "status": "completed",
+        "terminal_event_time": {"mantissa": 3, "exponent": 0},
+        "counters": {
+            **zero,
+            "growth_event_count": 3,
+            "simultaneous_event_batch_count": 2,
+            "union_attempt_count": 2,
+            "successful_union_count": 2,
+            "forest_edge_count": 3,
+            "peel_operation_count": 2,
+        },
+        "completed_components": [
+            {
+                "cluster_defect_count": 2,
+                "absorbed_vertex_count": 3,
+                "absorbed_vertices": [0, 1, 2],
+                "simultaneous_event_batch_count": 2,
+                "event_batch_ids": [1, 2],
+                "event_batch_times": [
+                    {"mantissa": 1, "exponent": 0},
+                    {"mantissa": 3, "exponent": 0},
+                ],
+                # Two correction edges forming the chain 10-11-12 plus the
+                # boundary incidence 9 at vertex 10, which is not a tree edge.
+                "forest_edge_ids": [3, 5, 9],
+            }
+        ],
+        "censored_components": [],
+    }
+    lane1 = {
+        "status": "empty",
+        "terminal_event_time": {"mantissa": 0, "exponent": 0},
+        "counters": dict(zero),
+        "completed_components": [],
+        "censored_components": [],
+    }
+    return {
+        "global_shot_id": 4,
+        "adapter_metrics": {
+            "original_detector_count": 2,
+            "residual_detector_count": 0,
+            "committed_defect_count": 2,
+            "durable_boundary_count": 2,
+            "patch_outcomes": [
+                {
+                    "patch_id": 0,
+                    "lane_outcomes": [lane0, lane1],
+                    "durable_detector_boundary": [10, 12],
+                }
+            ],
+        },
+    }
+
+
+_ENDPOINTS = {3: (10, 11), 5: (11, 12), 9: (10, None)}
+
+
+def test_forest_diameters_are_rebuilt_from_canonical_forest_edges() -> None:
+    from yoked.decoding._matched_frontend_hardware import annotate_forest_diameters
+
+    row = _uf_shard_row()
+    annotated = annotate_forest_diameters(row, _ENDPOINTS)
+    component = annotated["adapter_metrics"]["patch_outcomes"][0]["lane_outcomes"][0][
+        "completed_components"
+    ][0]
+    assert component["forest_diameter_hops"] == 2
+    # The source row is left untouched and an already-present value is kept.
+    assert "forest_diameter_hops" not in row["adapter_metrics"]["patch_outcomes"][0][
+        "lane_outcomes"
+    ][0]["completed_components"][0]
+    component["forest_diameter_hops"] = 7
+    assert annotate_forest_diameters(annotated, _ENDPOINTS) == annotated
+
+    # A lone defect whose forest is only its boundary incidence has diameter 0.
+    single = _uf_shard_row()
+    lane = single["adapter_metrics"]["patch_outcomes"][0]["lane_outcomes"][0]
+    lane["completed_components"][0].update(
+        {"absorbed_vertex_count": 1, "absorbed_vertices": [0], "forest_edge_ids": [9]}
+    )
+    assert annotate_forest_diameters(single, _ENDPOINTS)["adapter_metrics"][
+        "patch_outcomes"
+    ][0]["lane_outcomes"][0]["completed_components"][0]["forest_diameter_hops"] == 0
+
+    # A multi-vertex component without correction forest edges is malformed.
+    broken = _uf_shard_row()
+    broken["adapter_metrics"]["patch_outcomes"][0]["lane_outcomes"][0][
+        "completed_components"
+    ][0]["forest_edge_ids"] = [9]
+    with pytest.raises(ValueError, match="forest"):
+        annotate_forest_diameters(broken, _ENDPOINTS)
+
+
+def test_uf_shot_metrics_report_growth_depth_iterations_and_merge_cycles() -> None:
+    from yoked.decoding._matched_frontend_hardware import _uf_shot_metrics
+    from yoked.decoding._patch_uf_hw_proxy import UFParallelDepthAssumptions
+
+    metrics = _uf_shot_metrics(
+        _uf_shard_row(),
+        patches=1,
+        assumptions=UFParallelDepthAssumptions(growth_quantum_weight=1),
+        edge_endpoints=_ENDPOINTS,
+    )
+    assert metrics["union_find_growth_iteration_count"] == 3
+    assert metrics["union_find_growth_depth_milli_weight_units"] == 3000
+    assert metrics["union_find_maximum_forest_diameter_hops"] == 2
+    # Events in iterations 1 and 3 each flood a diameter-2 cluster.
+    assert metrics["union_find_merge_depth_cycles"] == 4
+    # Lane 0: 1 load + 3*(1+2+1) + 4 merge + 2 peel + 1 confidence = 20;
+    # patch: 20 + 1 transaction + 2 residual updates.
+    assert metrics["union_find_cycles_fully_parallel_12_lane"] == 23
+    assert metrics["union_find_maximum_lane_synchronous_event_batches"] == 2
