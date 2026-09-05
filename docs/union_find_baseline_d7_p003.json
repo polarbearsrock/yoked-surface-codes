@@ -1,0 +1,96 @@
+{
+  "versions": {
+    "stim": "1.16.0",
+    "sinter": "1.16.0",
+    "pymatching": "2.4.0"
+  },
+  "rows": [
+    {
+      "d": 7,
+      "p": 0.003,
+      "rounds": 28,
+      "patches": 4,
+      "yokes": 0,
+      "detectors": 5569,
+      "observables": 8,
+      "graph_edges": 27224,
+      "yoke_degrees": [],
+      "yoke_fires": [],
+      "shots": 10000,
+      "seed": 42,
+      "mwpm_block_failures": 4794,
+      "sample_digest": "291d9190fce64f9f4e57e5c21acf55c5f1dd52a34426b27aaca7aaf3b7e52b28",
+      "dem_digest": "f094ba4eae5de25ed1ca27fbaf08075743740fa78f02b3d916af5ac18c5cc2fc"
+    },
+    {
+      "d": 7,
+      "p": 0.003,
+      "rounds": 28,
+      "patches": 5,
+      "yokes": 1,
+      "detectors": 6961,
+      "observables": 10,
+      "graph_edges": 34315,
+      "yoke_degrees": [
+        1160
+      ],
+      "yoke_fires": [
+        4938
+      ],
+      "shots": 10000,
+      "seed": 42,
+      "mwpm_block_failures": 3612,
+      "sample_digest": "57badab065396a29e3114f653f1651e977abbd0bfdd4a23861283ec2c12ac2fa",
+      "dem_digest": "eb44e5b1791aa7d6f32f408133c0d7092e3c47386858524012240595a0820b2f"
+    },
+    {
+      "d": 7,
+      "p": 0.003,
+      "rounds": 28,
+      "patches": 6,
+      "yokes": 2,
+      "detectors": 8354,
+      "observables": 12,
+      "graph_edges": 40836,
+      "yoke_degrees": [
+        696,
+        696
+      ],
+      "yoke_fires": [
+        5011,
+        5060
+      ],
+      "shots": 10000,
+      "seed": 42,
+      "mwpm_block_failures": 3424,
+      "sample_digest": "1b3118c60a20ecef08cee4528bc782dd04b03fdbcaa7dc4b1bf470e49d3ceb75",
+      "dem_digest": "9b06141668bef9b334df78e4700853f60505a71f3c4185746d0261e7e3790e0a"
+    }
+  ],
+  "description": "Vanilla PyMatching baseline only; this is not a UF accuracy or latency result.",
+  "circuit_parameters": {
+    "style": "cz",
+    "noise": "si1000",
+    "patch_diameter": 7,
+    "noise_strength": 0.003,
+    "rounds": 28,
+    "patches": "4+yokes",
+    "yokes": [
+      0,
+      1,
+      2
+    ]
+  },
+  "dem_parameters": {
+    "decompose_errors": true,
+    "approximate_disjoint_errors": true
+  },
+  "sample_parameters": {
+    "shots_per_circuit": 10000,
+    "seed": 42,
+    "bit_packed": true,
+    "separate_observables": true,
+    "batches_per_circuit": 1
+  },
+  "sample_digest_format": "SHA-256 of C-order uint8 detector bytes followed by C-order uint8 observable bytes, little-endian bits."
+}
