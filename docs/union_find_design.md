@@ -40,19 +40,40 @@ as historical evidence and marks it excluded from the active comparison.
 | 0 | 4 | 5,569 | 8 | 27,224 | — | — | 4,794 / 10,000 |
 | 2 | 6 | 8,354 | 12 | 40,836 | 696, 696 | 50.11%, 50.60% | 3,424 / 10,000 |
 
-These are graph/baseline measurements, not UF results or decoder timing results.
-The review's earlier d=3/d=5 measurements at p=0.001 similarly found frequent
-fired yokes. Half-rate firing is an observation at these points, not a universal
-property of yoke detectors. The new point has substantial block failure rates;
-report absolute paired differences as well as ratios and avoid low-error scaling
-claims. The paired comparison still requires enough discordant outcomes.
+These are graph/baseline measurements, not UF results. Half-rate yoke firing is
+expected in a regime where raw patch logical parities are sufficiently noisy.
+For independent patches with raw flip probabilities `q_i`, a yoke fires with
+probability `(1 - product_i(1 - 2*q_i))/2`. The product becomes small in the
+long/noisy memories considered here. This is a statement about raw parity,
+distinct from the logical failure probability after decoding; it does not assert
+half-rate firing at every possible operating point.
 
-**The main hypothesis is growth from active yokes.** A fired yoke starts as an
-odd singleton with a large frontier and can grow toward several patches at once.
-The design freezes internal edges and peels a merge forest, so growth order and
-tie decisions determine most correction choices. A performance assessment must
-therefore examine whether this behavior introduces a large accuracy penalty,
-before optimizing or running the full campaign.
+The latest review supplies these additional machine measurements. They motivate
+the experiment; the UF event summaries must be measured again using the actual
+implemented scheduler and its documented batch definition.
+
+| Arm | Mean defects/shot | MWPM batch-one median / p99 | All-zero floor |
+| --- | --- | --- | --- |
+| Unyoked | 511 | 180 / 412 microseconds | 3.4 microseconds |
+| 1D yoked | 767 | 712 / 1,553 microseconds | 4.4 microseconds |
+
+Each yoke has eight distinct edge weights, including 324 of its 696 edges at
+the minimum weight `3.544870902667`. A local graph audit confirms these values.
+The review reports about 33 fired minimum-weight neighbors per fired yoke;
+the first tied merge has median 33, p90 41, and maximum 54 ordinary detectors,
+touches all six patches in 95% of shots, and leaves the cluster odd about half
+the time. Treat these as review-reported event statistics, not existing UF
+decoder results. Record unfired-yoke events too, including an absent first
+event on syndromes such as the all-zero input.
+
+**The main hypothesis is growth through large tied yoke events.** A fired yoke
+starts as an odd singleton. Many equal-weight edges can complete together and
+join defects across patches in one event. Half of these large clusters may
+remain active, and later activity changes reschedule a large frontier. Internal
+edges are frozen and correction uses a merge forest, so growth and tie order
+determine most correction choices. The accuracy gate must distinguish a yoke
+penalty from UF's penalty on the unyoked control, while work counters expose
+the cost of rescheduling the yoke cluster.
 
 A yoke is a stabilizer formed from patch-level logical operators, represented by
 an additional constrained detector. Its graph edges connect relevant patch-boundary
@@ -84,6 +105,17 @@ Each one-detector edge gets a separate unconstrained virtual terminal. All real
 detectors, including yokes, keep their syndrome constraints. The checked yokes
 have detector-to-detector edges rather than virtual-boundary edges.
 
+For the 1D arm, audit every edge `e` using observable sets
+`X={0,2,...,10}` and `Z={1,3,...,11}`: the parity of `L_X(e)` must equal
+its incidence to the X yoke, and likewise for Z. Also verify that each labelled
+edge joins its matching yoke to the patch named by its sole observable; ordinary
+detector-to-detector edges stay within one patch and check sector. Obtain patch
+and check-sector metadata from the known generator and validate it against the
+graph. All observable-carrying edges in this arm are yoke edges. The control's
+observable edges are boundary edges. The 1D graph still has 1,392 unlabelled
+boundary edges away from its yokes; terminal contact must remain part of growth
+and diagnostics.
+
 Initially accept finite nonnegative weights. Preserve zero-cost edges and their
 labels during initial closure. Reject unsupported nonzero-probability hyperedges,
 nontrivial observable-only components, and negative/nonfinite weights explicitly.
@@ -100,8 +132,9 @@ Each DSU root stores size, syndrome parity, terminal presence, and frontier stat
 A root grows when odd and without a virtual terminal. Merge parity by XOR and
 terminal presence by OR. A paused even cluster can become active after merging
 with an odd cluster. Record physical forest edges separately from path-compressed
-DSU parents. Diagnostic `contains_yoke` flags propagate by OR and do not change
-the decoding policy.
+DSU parents. Use iterative find with path compression and iterative peeling;
+large clusters must not depend on Python's recursion limit. Track yoke IDs and
+per-patch, per-sector syndrome parities as diagnostic metadata.
 
 Use continuous, simultaneous weighted growth. Edge length is its exported
 `w_e = log((1-p_e)/p_e)`. For a crossing edge with accumulated growth `g_e` and
@@ -109,9 +142,16 @@ Use continuous, simultaneous weighted growth. Edge length is its exported
 `(w_e-g_e)/k_e` when `k_e>0`. Advance to the earliest completion, process tied
 completions, and recompute activity. Retain partial growth across merges.
 
-At each completed edge, re-find both endpoint roots before processing. If already
-in the same component, skip the edge without recording it; otherwise union and
-record it. Settle all events at the current time before advancing. A closed odd
+Define a batch at the earliest valid completion time `t`. Collect all completions
+through `t + epsilon(t)`, with defaults `epsilon(t)=1e-12 + 1e-12*abs(t)`
+recorded in the policy manifest, and settle their growth using the rates before
+the batch. Latch these completed edges:
+an intermediate parity change must not cancel another already-completed edge.
+Process each closure wave in stable edge-ID order, re-finding both roots for every edge;
+skip internal edges without recording them, otherwise union and record once.
+Recompute activity after these unions, publish affected deadlines, and collect
+again until no valid entry lies within the same batch tolerance. Do not extend
+the tolerance window transitively. Only then advance time. A closed odd
 component with no continuation raises `InvalidSyndromeError`. No silent discard,
 zero prediction, or fallback matching is permitted. This follows UF's usual
 growth-and-peeling structure, with the specified weighted schedule.
@@ -119,11 +159,16 @@ growth-and-peeling structure, with the specified weighted schedule.
 [edge-weighted UF](https://arxiv.org/abs/2004.04693).
 
 The run implementation uses a heap of completion times with generation tokens
-and lazy deletion. Settle affected edges using their old activity rates before
-publishing new deadlines. Rate increases must immediately publish earlier
-possible completions. A stale-key check only when popping is insufficient if it
+and lazy deletion. Settling an edge at time `t` is idempotent: repeated visits
+at that time add no growth, including when both endpoints change activity.
+Settle affected edges using their old activity rates before publishing new
+deadlines. Rate increases must immediately publish earlier possible completions.
+A stale-key check only when popping is insufficient if it
 can hide an earlier event. Reschedule changed frontiers; do not rescan a stable
-active yoke frontier for unrelated events. Count rescheduling and stale work.
+active yoke frontier for unrelated events. Coalesce updates within a batch where
+rates have not changed between visits, but account for every real activity
+change. Count rescheduled edges, rescheduling passes, and stale work separately,
+including the part attributable to clusters containing each yoke.
 Keep an explicit scan implementation as a small-graph test oracle.
 
 Peel each merge tree toward a virtual terminal when present, otherwise a
@@ -132,26 +177,50 @@ XOR their observable masks. Non-root terminal leaves impose no constraint.
 Only a detector root must finish with zero residual parity. Peeling selects from
 the grown forest; cluster membership alone does not select a correction edge.
 
-**Required tests and early gate.** The implementation plan specifies numeric
-fixtures for an unfired yoke between defects, a fired yoke with competing defects
-at unequal distances in different patches, and a fired yoke meeting an even
-cluster. Include a three-defect equal-weight triangle: the cycle-closing edge
-must be skipped, and the closed odd component must fail unless a valid terminal
-continuation exists. Inject a fired isolated detector into the zero-yoke circuit.
-Retain zero-cost and terminal-root tests.
+**Required tests and yoke diagnostics.** Retain the unequal-distance, even-cluster,
+triangle, isolated-detector, zero-cost, and terminal fixtures in the plan. Add
+equal-weight yoke stars spanning multiple patches, with odd and even numbers
+of fired neighbors, unfired yokes, and simultaneous neighbor-partner completions.
+For `k` fired neighbors and no extra fired members, post-batch parity is
+`s_yoke XOR (k mod 2)`. If `m` additional fired partners join, it is
+`s_yoke XOR ((k+m) mod 2)`. Count all unique members; union order cannot change
+membership or parity in these fixtures, though cycles can change the forest.
 
-After growth and peeling work, run 2,000 shared shots on the initial two-yoke
-arm with the Python heap backend and verify every correction. A UF/MWPM failure
-ratio above about 2 triggers investigation before expanding the implementation;
-record uncertainty and mark borderline evidence inconclusive. A bounded extra
-pilot or a minimal native port can resolve uncertainty without a long Python
-campaign. Use fresh samples for the later main experiment.
+Replace a boolean yoke-contact failure tag with one record per yoke per shot:
+input bit; first union batch time and post-closure size (ordinary detectors and
+fired ordinary members separately); parity and patch bitset at that time; final
+ordinary-member and fired-member counts, patch bitset, terminal presence, and
+per-patch member-defect parity by X/Z sector.
+Record an absent first event explicitly. Save compact records on successful and
+failed shots for denominators, plus failed-observable masks and selected traces.
+Keep stable yoke IDs if roots change or yoke-containing components ever merge.
+
+For the final component `C_b` containing yoke `b`, let `D_i,b` be the XOR of
+input defects among its ordinary members in patch `i`, sector `b`. Let `B_i,b`
+be the parity of selected unlabelled boundary edges from those members.
+The structural audit and `H*c=s` imply
+`prediction_i,b = D_i,b XOR B_i,b`, since selected internal edges cancel.
+When the component has no terminal, `B_i,b=0`: member-defect parity alone
+predicts that patch's observable. Always cross-check the direct parity of
+selected yoke edges, `L*c`, and this identity with its terminal term. Also check
+`XOR_i prediction_i,X = s_X_yoke` and its Z counterpart. Cluster tags describe
+association, not unique causation of a shot failure.
 
 **Native implementation and interfaces.** Select C++17, pybind11 3.0.4, and
-CMake/Ninja now. Build a binding smoke test with the existing Python at the start,
-then implement the native kernel immediately after the accuracy gate. Keep
-compiled dependencies and artifacts under `$TMPDIR`. Use Release mode without
-fast-math and record the compiler/build configuration.
+CMake/Ninja, using GCC toolset 14 at
+`/opt/rh/gcc-toolset-14/root/usr/bin/{gcc,g++}` (locally verified as 14.2.1).
+The Python 3.14.5 venv has headers and the GIL enabled, but no pip. Install the
+pinned optional requirements with `uv pip install --python .venv/bin/python -r
+requirements-uf-native.txt`; use `$TMPDIR` for uv and compiler caches. Build and
+import a binding smoke test at M1, then port the decoder after the accuracy
+gate. Use Release mode without fast-math and record compiler/build settings.
+[pybind11 compatibility](https://pybind11.readthedocs.io/en/stable/changelog.html),
+[uv installation](https://docs.astral.sh/uv/pip/packages/).
+
+Keep intermediates and the built extension under `$TMPDIR`, following the
+workspace instruction that build artifacts belong there. Use an explicit,
+stable extension path on `PYTHONPATH` and record its digest. A repo-local build
+directory is unnecessary for this plan.
 
 The native kernel owns the packed batch loop, reusable workspace, heap, DSU,
 and peeling. A top-level `_yoked_uf_native` extension loaded from an explicit
@@ -167,6 +236,9 @@ Report prediction mismatch rates on tied/random cases and trace tolerance-induce
 differences instead of requiring universal exact equality. Unexplained mismatches
 remain defects. PyMatching also quantizes weights internally, so near-tie
 prediction differences need not indicate a broken graph or decoder.
+Use `pytest.importorskip` for optional native tests when the extension is absent;
+the explicit native validation run must first require a successful import, so
+missing builds cannot turn required native checks into a passing skipped suite.
 
 **Accuracy and latency measurements.** Use the 1D yoked arm and unyoked control
 at the fixed initial point, with **100,000 shared shots per arm** and native UF
@@ -176,24 +248,85 @@ inputs to both decoders. Store seed, batch partition, actual shot totals, hashes
 versions, source/backend identity, policy/tolerance settings, and raw counts in
 a manifest and tables. A simple fixed-seed paired tool is sufficient initially.
 
-Primary accuracy outputs are block failure probabilities, UF/MWPM ratios
-`R_0` (unyoked control) and `R_2` (1D yoked code), absolute paired differences,
-four paired outcome counts, discordant counts, and prediction disagreements,
-with uncertainty and zero-count handling.
-The fixed shot budget is not itself a guarantee of power. No baseline failures
-means the ratio is undefined or unbounded, rather than evidence of zero penalty.
+For decoder `D` and arm `a`, retain the block failure probability `P_D,a` and
+report an effective per-patch-round rate using the exact [Sinter conversion](https://github.com/quantumlib/Stim/blob/main/glue/sample/src/sinter/_probability_util.py):
 
-Every failed shot gets its yoke firing mask and UF cluster-yoke tags. Keep
-per-component flags and a small set of detailed traces. Exclude untouched
-zero-syndrome yoke singletons from the cluster-contact summary. Multiple
-components can contribute to a shot, so these tags describe association rather
-than a unique causal attribution. Stratify work and failures by yoke firing and
-cluster contact to test the central hypothesis.
+```python
+q_D_a = sinter.shot_error_rate_to_piece_error_rate(
+    P_D_a, pieces=patches * rounds, values=2 * (patches - yokes))
+```
+
+This matches [step3_plot](../step3_plot). `values` counts twice the encoded
+patches, not all tracked observable columns. Record the numeric arguments:
+
+| Arm | Pieces | Values | MWPM block probability | MWPM effective rate / patch-round |
+| --- | --- | --- | --- | --- |
+| Control, four patches | 112 | 8 | 0.4794 | 0.006066623185 |
+| 1D yoked, six patches | 168 | 8 | 0.3424 | 0.002560290509 |
+
+These rates are derived from the committed 10,000-shot probe. The review's
+earlier 100,000-shot value `2.48e-3` is a separate reported estimate in the same
+unit; do not substitute it for this manifest's counts. This is an equivalent
+independent-piece normalization, not a direct measurement of independent patch
+failures. Preserve raw block rates and paired differences. If an observed rate
+or its bootstrap interval reaches the independent-value saturation
+`P=1-2**(-values)`, flag the converted ratio as unresolved. Report the raw rates
+and the number of saturated replicates instead of forcing finite penalty bounds.
+
+Define `Q_a = q_UF,a / q_MWPM,a` and the primary yoke-specific excess
+`E = Q_2 / Q_0`. Report both `Q_0` and `Q_2`, `E`, the block ratios `R_0` and
+`R_2`, absolute differences in both units, all four paired outcome counts,
+discordance counts, and prediction disagreements. `E` measures excess relative
+to the chosen control; differing graph sizes prevent a pure causal attribution
+to yokes. A small `E` does not establish acceptable absolute UF accuracy.
+
+Use 10,000 paired bootstrap replicates with a recorded seed and 95% percentile
+intervals. Within each arm, resample whole `(UF_failure, MWPM_failure)` shot
+pairs; equivalently draw multinomial replicates of their four joint counts.
+With count indices `(UF_failure, MWPM_failure)`, the block-rate difference is
+`(n_10-n_01)/N`, and the individual rates are `(n_10+n_11)/N` and
+`(n_01+n_11)/N`.
+Resample the two arms independently, then recompute the piece conversions,
+ratios, differences, and `E` in each replicate. Do not pair unrelated shots
+across arms or resample the two decoders independently. These are approximate
+bootstrap intervals, without the previous exact-coverage claim. Retain and
+report zero-denominator or saturated replicates; do not drop them or add
+pseudocounts to force finite bounds. Zero observed failures/discordances can
+make the empirical bootstrap degenerate: report count-based one-sided bounds
+and mark ratio/gate evidence unresolved where needed. Shot count alone does
+not guarantee power.
+
+**Gate after M3.** First profile 50 fully checked, instrumented Python shots per
+arm. Use their elapsed time only to choose an outcome-independent gate size:
+`N=min(2000, floor(300 / (1.25 * max(t_0,t_2))))` per arm, where `t_a` is mean
+seconds per calibration shot. Record the 300-second per-arm budget and 25%
+timing margin. Calibration samples are separate from accuracy samples. If fewer
+than 200 shots per arm fit, mark the Python gate underpowered and use a minimal
+native port to finish the fixed 2,000-shot gate. A runtime stop or an interval
+crossing the threshold is also inconclusive, not a pass. Avoid repeated sampling
+until a favorable interval appears; reserve fresh seeds for the main experiment.
+For native resolution, rerun all 2,000 shots per arm with seed 4242 and bootstrap
+seed 4203, report that check separately, and do not combine Python/native
+outcomes into one estimate. Gate intervals are exploratory; the fixed M6 run
+provides the main accuracy evidence. If the native gate remains inconclusive,
+retain that status rather than declaring a pass.
+
+Use `E*=2` as the preregistered investigation threshold: it now means an
+additional factor-of-two penalty beyond UF's unyoked penalty. This is a work
+ordering choice, not a demonstrated accuracy target. An interval wholly above
+2 triggers diagnosis of tied-yoke events before benchmark expansion; one wholly
+below 2 permits M4, with absolute accuracy still reported. An unresolved gate
+may use the minimal native port for the predeclared 2,000-shot check. Report
+rescheduled edges/passes per shot, yoke-cluster activity toggles, and heap work
+at this stage so the port is informed by the dominant cost.
 
 Count edge/frontier visits, heap operations, DSU operations, maximum sizes, and
 yoke-related activity from the first growth implementation. Record instrumentation
 settings and overhead. Python is limited to the gate and at most 256 additional
-profiled shots per arm; it is not the backend for the full timing experiment.
+profiled shots per arm, including the 50-shot calibration; it is not the backend
+for the full timing experiment. Validate every Python correction. Verify the
+100,000-shot native accuracy run in native code or by sparse-matrix operations
+per batch, without a Python loop over shots. Time verification separately.
 
 For native latency, warm up precompiled decoders and time calls on pre-sampled
 inputs. Include unpacking, resets, growth, peeling, and packing; exclude sampling,
@@ -204,10 +337,37 @@ output work, report it beside real-shot times, and do not subtract it. Fix threa
 counts, alternate decoder order, and record CPU/build details. These are software
 latencies at d=7, not hardware timing estimates.
 
+Add a timing-only point at `p=0.001` for both arms, retaining d=7 and rounds=28.
+Regenerate circuits, samples, DEMs, and weights at that noise strength. A local
+audit found the same endpoint/observable topology at the two noise strengths,
+but weights differ; do not decode the lower-noise samples with p=0.003 weights.
+No extra accuracy campaign is required. Keep both noise points separate in plots
+and manifests. Commit the results note and small tables under
+`docs/decoder_comparison/`; bulky samples and traces may remain in ignored `out/`.
+
+**Preregistered follow-up.** If the gate finds a large yoke-specific excess,
+investigate `uf_weighted_passive_yoke_v1` as a separate policy. It uses the same
+graph, weights, constrained yokes, tie rule, and peeling; only ordinary detector
+endpoints contribute growth. For a crossing edge, replace the endpoint rate by
+`active(root(u))*ordinary(u) + active(root(v))*ordinary(v)`, where `ordinary`
+excludes yokes and virtual terminals. A yoke endpoint contributes zero even after
+joining another cluster; this is stronger than suppressing only a singleton.
+A stalled odd cluster is a policy failure (`GrowthStalledError`), not proof of
+an invalid syndrome. A local audit found a seven-edge path from each yoke to a
+boundary whose syndrome contains only that yoke and whose observable mask has
+one bit. This realizable syndrome has no ordinary growth source, so the strict
+passive rule stalls. Retain this as a required counterexample: the candidate
+needs a separately versioned completion rule before it can be a valid decoder.
+No MWPM fallback or silent discard is allowed. Establish validity before any
+performance comparison. Keep the original
+active-yoke results and separate policy IDs/digests, and use fresh confirmatory
+samples after diagnosis. This preregistration does not add a new initial arm.
+
 **Deferred extensions.** Large-sweep collection and Sinter resume/pickling tests,
 manifest merge/compatibility frameworks, isolated peak-RSS measurement, larger
-observable masks, and extra 1D operating points follow the first comparison.
-Later noise sweeps can use `p in {0.001,0.002,0.003}`. Broader
+observable masks, and extra 1D accuracy operating points follow the first
+comparison. The p=0.001 timing point above is included now. Later accuracy
+sweeps can use `p in {0.001,0.002,0.003}`. Broader
 collection must eventually version task metadata to prevent incompatible resume.
 
 The existing [GapWorkHandler](../src/yoked/gap/_gap_worker_handler.py) subtracts
