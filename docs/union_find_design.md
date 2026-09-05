@@ -2,13 +2,13 @@
 
 Implement weighted Union Find (UF) on the complete joint detector graph used by
 vanilla PyMatching. The initial operating point is **d=7, p=0.003, rounds=28,
-CZ gates, SI1000 noise**. Compare the **1D yoked code with six patches and two
-yokes** against an **unyoked control with four patches**. Both encode four
-logical qubits. The two yokes check the logical X and Z parities of the same
-patch group; `yokes=2` denotes this 1D code. The single-Y-yoke variant and 2D
+CZ gates, SI1000 noise**. Compare **UF against joint MWPM on the 1D yoked code
+with six patches and two yokes**, encoding four logical qubits. The two yokes
+check the logical X and Z parities of the same patch group; `yokes=2` denotes
+this 1D code. The single-Y-yoke variant and 2D
 Squareberg code are outside the current implementation and benchmark scope. The
 [implementation plan](union_find_implementation_plan.md) defines the work order,
-accuracy gate, and native benchmark. Decoder implementation remains pending.
+paired pilot, and native benchmark. Decoder implementation remains pending.
 
 **Baseline and scope.** [step2_collect](../step2_collect) selects `pymatching`
 through Sinter. [The memory generator](../src/yoked/_yoked_memory_circuits.py)
@@ -28,16 +28,15 @@ The [README](../README.md) identifies the paper's correlated implementation as
 internal; historical `sparse_blossom_correlated` results are not assumed to be
 identical to the current public implementation. Record actual versions.
 
-**Measured initial graphs.** A fresh probe at the selected point used vanilla
-PyMatching, 10,000 circuit samples per arm, seed 42, and the versions above.
+**Measured initial graph.** The probe at the selected point used vanilla
+PyMatching, 10,000 circuit samples, seed 42, and the versions above.
 Parameters and sample/DEM digests are in the
 [baseline evidence](union_find_baseline_d7_p003.json). The table includes only
-the two arms in scope; the manifest retains the original single-yoke probe row
-as historical evidence and marks it excluded from the active comparison.
+the six-patch, two-yoke circuit. Other original probe rows remain historical
+evidence in the manifest and are excluded from the active comparison.
 
 | Yokes | Patches | Detectors | Observables | Graph edges | Yoke degrees | Yoke fire fractions | MWPM block failures |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | 4 | 5,569 | 8 | 27,224 | — | — | 4,794 / 10,000 |
 | 2 | 6 | 8,354 | 12 | 40,836 | 696, 696 | 50.11%, 50.60% | 3,424 / 10,000 |
 
 These are graph/baseline measurements, not UF results. Half-rate yoke firing is
@@ -52,9 +51,8 @@ The latest review supplies these additional machine measurements. They motivate
 the experiment; the UF event summaries must be measured again using the actual
 implemented scheduler and its documented batch definition.
 
-| Arm | Mean defects/shot | MWPM batch-one median / p99 | All-zero floor |
+| Circuit | Mean defects/shot | MWPM batch-one median / p99 | All-zero floor |
 | --- | --- | --- | --- |
-| Unyoked | 511 | 180 / 412 microseconds | 3.4 microseconds |
 | 1D yoked | 767 | 712 / 1,553 microseconds | 4.4 microseconds |
 
 Each yoke has eight distinct edge weights, including 324 of its 696 edges at
@@ -71,9 +69,9 @@ starts as an odd singleton. Many equal-weight edges can complete together and
 join defects across patches in one event. Half of these large clusters may
 remain active, and later activity changes reschedule a large frontier. Internal
 edges are frozen and correction uses a merge forest, so growth and tie order
-determine most correction choices. The accuracy gate must distinguish a yoke
-penalty from UF's penalty on the unyoked control, while work counters expose
-the cost of rescheduling the yoke cluster.
+determine most correction choices. Compare UF's accuracy directly with joint
+MWPM and use cluster diagnostics to investigate correction choices. Work
+counters expose the cost of rescheduling the yoke cluster.
 
 A yoke is a stabilizer formed from patch-level logical operators, represented by
 an additional constrained detector. Its graph edges connect relevant patch-boundary
@@ -99,28 +97,29 @@ The [PyMatching import API](https://pymatching.readthedocs.io/en/stable/api.html
 documents its decomposition and parallel-edge behavior.
 
 Store immutable endpoints, CSR adjacency, float64 weights, and observable masks.
-Use counts from the DEM, including the zero-yoke circuit's isolated final detector
-and observable columns absent from all edges. Coordinates are diagnostic only.
+Use counts from the DEM, preserving isolated detectors and observable columns
+absent from all edges. Exercise these cases with synthetic fixtures.
+Coordinates are diagnostic only.
 Each one-detector edge gets a separate unconstrained virtual terminal. All real
 detectors, including yokes, keep their syndrome constraints. The checked yokes
 have detector-to-detector edges rather than virtual-boundary edges.
 
-For the 1D arm, audit every edge `e` using observable sets
+For the 1D circuit, audit every edge `e` using observable sets
 `X={0,2,...,10}` and `Z={1,3,...,11}`: the parity of `L_X(e)` must equal
 its incidence to the X yoke, and likewise for Z. Also verify that each labelled
 edge joins its matching yoke to the patch named by its sole observable; ordinary
 detector-to-detector edges stay within one patch and check sector. Obtain patch
 and check-sector metadata from the known generator and validate it against the
-graph. All observable-carrying edges in this arm are yoke edges. The control's
-observable edges are boundary edges. The 1D graph still has 1,392 unlabelled
-boundary edges away from its yokes; terminal contact must remain part of growth
+graph. All observable-carrying edges in this circuit are yoke edges.
+The 1D graph still has 1,392 unlabelled boundary edges away from its yokes;
+terminal contact must remain part of growth
 and diagnostics.
 
 Initially accept finite nonnegative weights. Preserve zero-cost edges and their
 labels during initial closure. Reject unsupported nonzero-probability hyperedges,
 nontrivial observable-only components, and negative/nonfinite weights explicitly.
 The Python representation can use arbitrary-width integers; the first native
-kernel uses a `uint64_t` mask for the pilot's 8 or 12 observables, with an explicit
+kernel uses a `uint64_t` mask for the pilot's 12 observables, with an explicit
 error above 64 until broader support is implemented.
 
 **Growth and correction contract.** Given syndrome `s`, choose edges `c` with
@@ -212,8 +211,9 @@ CMake/Ninja, using GCC toolset 14 at
 The Python 3.14.5 venv has headers and the GIL enabled, but no pip. Install the
 pinned optional requirements with `uv pip install --python .venv/bin/python -r
 requirements-uf-native.txt`; use `$TMPDIR` for uv and compiler caches. Build and
-import a binding smoke test at M1, then port the decoder after the accuracy
-gate. Use Release mode without fast-math and record compiler/build settings.
+import a binding smoke test at M1, then port the decoder after the correctness
+checks and paired pilot. Use Release mode without fast-math and record
+compiler/build settings.
 [pybind11 compatibility](https://pybind11.readthedocs.io/en/stable/changelog.html),
 [uv installation](https://docs.astral.sh/uv/pip/packages/).
 
@@ -240,31 +240,30 @@ Use `pytest.importorskip` for optional native tests when the extension is absent
 the explicit native validation run must first require a successful import, so
 missing builds cannot turn required native checks into a passing skipped suite.
 
-**Accuracy and latency measurements.** Use the 1D yoked arm and unyoked control
-at the fixed initial point, with **100,000 shared shots per arm** and native UF
-for the main comparison.
+**Accuracy and latency measurements.** Use the six-patch, two-yoke 1D circuit
+at the fixed initial point, with **100,000 shared shots** and native UF for the
+main comparison with joint MWPM.
 Sample each circuit batch once, including actual observables, and feed identical
 inputs to both decoders. Store seed, batch partition, actual shot totals, hashes,
 versions, source/backend identity, policy/tolerance settings, and raw counts in
 a manifest and tables. A simple fixed-seed paired tool is sufficient initially.
 
-For decoder `D` and arm `a`, retain the block failure probability `P_D,a` and
+For decoder `D`, retain the block failure probability `P_D` and
 report an effective per-patch-round rate using the exact [Sinter conversion](https://github.com/quantumlib/Stim/blob/main/glue/sample/src/sinter/_probability_util.py):
 
 ```python
-q_D_a = sinter.shot_error_rate_to_piece_error_rate(
-    P_D_a, pieces=patches * rounds, values=2 * (patches - yokes))
+q_D = sinter.shot_error_rate_to_piece_error_rate(
+    P_D, pieces=patches * rounds, values=2 * (patches - yokes))
 ```
 
 This matches [step3_plot](../step3_plot). `values` counts twice the encoded
 patches, not all tracked observable columns. Record the numeric arguments:
 
-| Arm | Pieces | Values | MWPM block probability | MWPM effective rate / patch-round |
+| Circuit | Pieces | Values | MWPM block probability | MWPM effective rate / patch-round |
 | --- | --- | --- | --- | --- |
-| Control, four patches | 112 | 8 | 0.4794 | 0.006066623185 |
 | 1D yoked, six patches | 168 | 8 | 0.3424 | 0.002560290509 |
 
-These rates are derived from the committed 10,000-shot probe. The review's
+This rate is derived from the committed 10,000-shot probe. The review's
 earlier 100,000-shot value `2.48e-3` is a separate reported estimate in the same
 unit; do not substitute it for this manifest's counts. This is an equivalent
 independent-piece normalization, not a direct measurement of independent patch
@@ -273,57 +272,47 @@ or its bootstrap interval reaches the independent-value saturation
 `P=1-2**(-values)`, flag the converted ratio as unresolved. Report the raw rates
 and the number of saturated replicates instead of forcing finite penalty bounds.
 
-Define `Q_a = q_UF,a / q_MWPM,a` and the primary yoke-specific excess
-`E = Q_2 / Q_0`. Report both `Q_0` and `Q_2`, `E`, the block ratios `R_0` and
-`R_2`, absolute differences in both units, all four paired outcome counts,
-discordance counts, and prediction disagreements. `E` measures excess relative
-to the chosen control; differing graph sizes prevent a pure causal attribution
-to yokes. A small `E` does not establish acceptable absolute UF accuracy.
+Report the direct UF/MWPM ratios `Q = q_UF / q_MWPM` in per-patch-round units
+and `R = P_UF / P_MWPM` in block units, alongside absolute rates and differences
+in both units. Also report all four paired outcome counts, discordance counts,
+and prediction disagreements. The objective is to measure UF's accuracy and
+speed relative to joint MWPM on this circuit.
 
 Use 10,000 paired bootstrap replicates with a recorded seed and 95% percentile
-intervals. Within each arm, resample whole `(UF_failure, MWPM_failure)` shot
-pairs; equivalently draw multinomial replicates of their four joint counts.
+intervals. Resample whole `(UF_failure, MWPM_failure)` shot pairs; equivalently
+draw multinomial replicates of their four joint counts.
 With count indices `(UF_failure, MWPM_failure)`, the block-rate difference is
 `(n_10-n_01)/N`, and the individual rates are `(n_10+n_11)/N` and
 `(n_01+n_11)/N`.
-Resample the two arms independently, then recompute the piece conversions,
-ratios, differences, and `E` in each replicate. Do not pair unrelated shots
-across arms or resample the two decoders independently. These are approximate
-bootstrap intervals, without the previous exact-coverage claim. Retain and
-report zero-denominator or saturated replicates; do not drop them or add
+Recompute the piece conversions, ratios, and differences in each replicate.
+Preserve the pairing between decoders. These are approximate bootstrap
+intervals. Retain and report zero-denominator or saturated replicates; do not drop them or add
 pseudocounts to force finite bounds. Zero observed failures/discordances can
 make the empirical bootstrap degenerate: report count-based one-sided bounds
-and mark ratio/gate evidence unresolved where needed. Shot count alone does
+and mark ratio evidence unresolved where needed. Shot count alone does
 not guarantee power.
 
-**Gate after M3.** First profile 50 fully checked, instrumented Python shots per
-arm. Use their elapsed time only to choose an outcome-independent gate size:
-`N=min(2000, floor(300 / (1.25 * max(t_0,t_2))))` per arm, where `t_a` is mean
-seconds per calibration shot. Record the 300-second per-arm budget and 25%
-timing margin. Calibration samples are separate from accuracy samples. If fewer
-than 200 shots per arm fit, mark the Python gate underpowered and use a minimal
-native port to finish the fixed 2,000-shot gate. A runtime stop or an interval
-crossing the threshold is also inconclusive, not a pass. Avoid repeated sampling
-until a favorable interval appears; reserve fresh seeds for the main experiment.
-For native resolution, rerun all 2,000 shots per arm with seed 4242 and bootstrap
-seed 4203, report that check separately, and do not combine Python/native
-outcomes into one estimate. Gate intervals are exploratory; the fixed M6 run
-provides the main accuracy evidence. If the native gate remains inconclusive,
-retain that status rather than declaring a pass.
+**Paired pilot after M3.** First profile 50 fully checked, instrumented Python
+shots on the same 1D circuit. Use elapsed time only to choose a pilot size:
+`N=min(2000, floor(300 / (1.25 * t)))`, where `t` is mean seconds per checked
+paired calibration shot. Record the 300-second budget and 25% timing margin.
+Calibration samples are separate from pilot accuracy samples. Freeze N before
+decoding them, and record actual completed shots if the runtime cap is reached.
+Keep a short or imprecise pilot labelled preliminary and proceed to native work
+once correction-validity and behavioral checks pass; do not extend Python runs
+just to obtain a narrow accuracy interval. Reserve fresh seeds for M6.
 
-Use `E*=2` as the preregistered investigation threshold: it now means an
-additional factor-of-two penalty beyond UF's unyoked penalty. This is a work
-ordering choice, not a demonstrated accuracy target. An interval wholly above
-2 triggers diagnosis of tied-yoke events before benchmark expansion; one wholly
-below 2 permits M4, with absolute accuracy still reported. An unresolved gate
-may use the minimal native port for the predeclared 2,000-shot check. Report
-rescheduled edges/passes per shot, yoke-cluster activity toggles, and heap work
-at this stage so the port is informed by the dominant cost.
+The pilot checks correctness, estimates runtime, and provides an early direct
+UF/MWPM accuracy comparison. There is no numerical accuracy threshold for
+continuing: worse UF accuracy is still a result of this experiment. Fix invalid
+corrections and unexplained implementation mismatches before the main run.
+Report rescheduled edges/passes per shot, yoke-cluster activity toggles, and heap
+work so the native port is informed by the dominant cost.
 
 Count edge/frontier visits, heap operations, DSU operations, maximum sizes, and
 yoke-related activity from the first growth implementation. Record instrumentation
-settings and overhead. Python is limited to the gate and at most 256 additional
-profiled shots per arm, including the 50-shot calibration; it is not the backend
+settings and overhead. Python is limited to the pilot and at most 256 additional
+profiled shots, including the 50-shot calibration; it is not the backend
 for the full timing experiment. Validate every Python correction. Verify the
 100,000-shot native accuracy run in native code or by sparse-matrix operations
 per batch, without a Python loop over shots. Time verification separately.
@@ -337,17 +326,19 @@ output work, report it beside real-shot times, and do not subtract it. Fix threa
 counts, alternate decoder order, and record CPU/build details. These are software
 latencies at d=7, not hardware timing estimates.
 
-Add a timing-only point at `p=0.001` for both arms, retaining d=7 and rounds=28.
-Regenerate circuits, samples, DEMs, and weights at that noise strength. A local
+Add a timing-only point at `p=0.001` for the same six-patch, two-yoke circuit,
+retaining d=7 and rounds=28. Regenerate circuits, samples, DEMs, and weights at
+that noise strength. A local
 audit found the same endpoint/observable topology at the two noise strengths,
 but weights differ; do not decode the lower-noise samples with p=0.003 weights.
 No extra accuracy campaign is required. Keep both noise points separate in plots
 and manifests. Commit the results note and small tables under
 `docs/decoder_comparison/`; bulky samples and traces may remain in ignored `out/`.
 
-**Preregistered follow-up.** If the gate finds a large yoke-specific excess,
-investigate `uf_weighted_passive_yoke_v1` as a separate policy. It uses the same
-graph, weights, constrained yokes, tie rule, and peeling; only ordinary detector
+**Preregistered follow-up.** After the direct comparison, an investigation of
+growth-policy changes may consider `uf_weighted_passive_yoke_v1` as a separate
+policy. This is outside the initial implementation and benchmark. It uses the
+same graph, weights, constrained yokes, tie rule, and peeling; only ordinary detector
 endpoints contribute growth. For a crossing edge, replace the endpoint rate by
 `active(root(u))*ordinary(u) + active(root(v))*ordinary(v)`, where `ordinary`
 excludes yokes and virtual terminals. A yoke endpoint contributes zero even after
@@ -361,7 +352,7 @@ needs a separately versioned completion rule before it can be a valid decoder.
 No MWPM fallback or silent discard is allowed. Establish validity before any
 performance comparison. Keep the original
 active-yoke results and separate policy IDs/digests, and use fresh confirmatory
-samples after diagnosis. This preregistration does not add a new initial arm.
+samples after diagnosis.
 
 **Deferred extensions.** Large-sweep collection and Sinter resume/pickling tests,
 manifest merge/compatibility frameworks, isolated peak-RSS measurement, larger
