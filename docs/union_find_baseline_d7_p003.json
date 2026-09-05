@@ -68,6 +68,14 @@
     }
   ],
   "description": "Vanilla PyMatching baseline only; this is not a UF accuracy or latency result.",
+  "active_comparison_scope": {
+    "code_family": "1D yoked surface code with unyoked control",
+    "yokes": [
+      0,
+      2
+    ],
+    "note": "The yokes=1 row is retained as historical probe evidence and is excluded from the current comparison."
+  },
   "circuit_parameters": {
     "style": "cz",
     "noise": "si1000",

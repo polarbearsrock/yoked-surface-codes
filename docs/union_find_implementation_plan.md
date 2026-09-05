@@ -1,10 +1,13 @@
-# Weighted Union Find implementation plan
+# Weighted Union Find implementation plan for 1D yoked surface codes
 
 Implement the [weighted UF design](union_find_design.md) on the complete joint
 detector graph. The initial operating point is **d=7, p=0.003, rounds=28,
-CZ gates, SI1000 noise**. Compare yokes 0, 1, and 2 with respectively 4, 5, and
-6 patches, preserving the four-encoded-qubit comparison. The primary baseline
-is vanilla `pymatching`; correlated matching is a later, separately labelled arm.
+CZ gates, SI1000 noise**. Compare the **1D yoked code with six patches and two
+yokes** against an **unyoked control with four patches**, preserving the
+four-encoded-qubit comparison. The two yokes are the logical X- and Z-parity
+checks on the same patch group. The single-Y-yoke variant and 2D Squareberg code
+are outside this implementation plan. The primary baseline is vanilla
+`pymatching`; correlated matching is a later, separately labelled arm.
 
 Status: implementation pending. This revision makes active-yoke behavior the
 main hypothesis, adds a heap scheduler and an accuracy gate after M3, and puts
@@ -19,11 +22,13 @@ Stim/Sinter 1.16.0, and PyMatching 2.4.0:
 | Yokes | Patches | Yoke degrees | Yoke firing fractions | MWPM block failures |
 | --- | --- | --- | --- | --- |
 | 0 | 4 | — | — | 4,794 / 10,000 |
-| 1 | 5 | 1,160 | 49.38% | 3,612 / 10,000 |
 | 2 | 6 | 696, 696 | 50.11%, 50.60% | 3,424 / 10,000 |
 
 The [probe manifest](union_find_baseline_d7_p003.json) records parameters,
-versions, and sample/DEM hashes. These are baseline measurements, not UF results.
+versions, and sample/DEM hashes. The table includes only the two arms in scope;
+the manifest retains the original single-yoke probe row as historical evidence
+and marks it excluded from the active comparison. These are baseline
+measurements, not UF results.
 The point provides many baseline failures, but paired power still depends on
 discordant outcomes. Block error rates are high: report absolute differences
 alongside failure ratios, whose maximum is bounded by `1 / P_fail(MWPM)`.
@@ -63,8 +68,10 @@ tests, `__init__.py`, and a native build skeleton under `native/uf/`.
   Preserve full DEM detector/observable counts. Give each one-detector edge its
   own virtual terminal. Every yoke remains constrained. Record graph digests
   and degree statistics.
-- [ ] Generate the three initial d=7, p=0.003 arms; keep synthetic graphs for
-  fast tests. Check isolated detectors, repeat/shift handling, boundary edges,
+- [ ] Generate the two initial d=7, p=0.003 arms with the 1D memory generator:
+  `yokes=2, patches=6` and the control `yokes=0, patches=4`. Limit benchmark
+  circuit selection to 1D memory and its unyoked control; keep synthetic graphs
+  for fast tests. Check isolated detectors, repeat/shift handling, boundary edges,
   labels, and baseline graph agreement. Supply yoke IDs as diagnostic metadata
   from the known generator (last IDs, X before Z); exclude the zero-yoke dummy.
   These tags must not change the generic parser or growth policy.
@@ -81,7 +88,7 @@ before decoder work depends on it.
 [Compatibility](https://pybind11.readthedocs.io/en/stable/changelog.html),
 [CMake integration](https://pybind11.readthedocs.io/en/stable/compiling.html).
 
-Acceptance: graph semantics match vanilla PyMatching on all three initial arms,
+Acceptance: graph semantics match vanilla PyMatching on both initial arms,
 unsupported models fail explicitly, and the pinned binding imports from `$TMPDIR`.
 
 **M2: heap growth and a scan oracle.** Add `_union_find.py`, `_growth_scan.py`,
@@ -131,7 +138,9 @@ become `tools/benchmark_decoders`.
   Raise `InvalidSyndromeError` on impossible syndromes, and reset correctly after
   errors. Keep correction edges available for independent validation.
 - [ ] Verify `H*c=s` on **every Python pilot shot**, and verify the reported mask
-  equals `L*c`. Check one-yoke and separate X/Z two-yoke observable identities.
+  equals `L*c`. Check the separate X- and Z-yoke observable identities of the
+  1D circuit. Use synthetic fixtures with one yoke vertex to exercise either
+  check locally.
   Exhaustively test tiny realizable syndromes and random heap/scan cases.
   MWPM fixture comparisons use well-separated, unambiguous weights because its
   internal quantization can change near-tie outcomes.
@@ -175,7 +184,7 @@ samples for the later 100,000-shot experiment.
   output directory on `PYTHONPATH`, avoiding source-package shadowing. Keep
   buffers alive and release the GIL around the native batch kernel. Return
   packed observables without per-shot Python callbacks.
-- [ ] Use `uint64_t` masks for the pilot's 8/10/12 observables; explicitly reject
+- [ ] Use `uint64_t` masks for the pilot's 8 or 12 observables; explicitly reject
   models above 64 until broader support is added. Test pilot byte padding,
   immutable inputs, empty batches, and error recovery. Retain both Python engines.
 - [ ] Require validity and observable reconstruction for both backends, and exact
@@ -198,10 +207,11 @@ There is no prerequisite long Python timing campaign.
   shared circuit samples. Save seed/batching, circuit/DEM/graph/sample hashes,
   actual shot totals, backend/source digest, versions, tolerances, and flags in
   a simple run manifest.
-- [ ] Report block failure probabilities, primary ratios `R_0/R_1/R_2` (UF/MWPM
-  within each yoke arm), absolute paired differences, discordant-pair counts,
-  and prediction disagreements. Break out failures by firing and cluster-yoke
-  tags. Save every failed shot's compact tags, with full traces for a small subset.
+- [ ] Report block failure probabilities and primary UF/MWPM ratios `R_0`
+  (unyoked control) and `R_2` (1D yoked code), absolute paired differences,
+  discordant-pair counts, and prediction disagreements. Break out failures by
+  firing and cluster-yoke tags. Save every failed shot's compact tags, with full
+  traces for a small subset.
 - [ ] Add binomial uncertainty and zero-count handling. From 97.5% exact marginal
   intervals, use `[UF_low/MWPM_high, UF_high/MWPM_low]` as a conservative ratio
   interval. For the difference, subtract 97.5% intervals for UF-only and MWPM-only
@@ -231,7 +241,7 @@ usage documentation after the commands exist.
   all-zero-syndrome latency on every graph. Fix pools/warm-up/repetitions/thread
   counts, alternate decoder order, and record CPU and build details. Python
   profiling remains capped at a few hundred shots per arm.
-- [ ] Plot `R_0/R_1/R_2` with intervals as a primary output, alongside absolute
+- [ ] Plot `R_0` and `R_2` with intervals as a primary output, alongside absolute
   block error rates/differences. Plot latency and throughput separately. Summarize
   yoke work, frontier/heap size, and failure tags to test the main hypothesis.
 - [ ] Write a results note with manifests, tables, plots, gate outcome, backend
@@ -245,9 +255,9 @@ the experiment to yield a complete result.
 
 **Deferred scope.** Large-sweep `collect` mode, Sinter resume/pickling tests,
 general manifest compatibility/merge guards, isolated-process peak-RSS,
-more-than-64-observable support/tests, Squareberg campaigns, and complementary
-gaps. Python may retain arbitrary-width masks without expanding the initial test
-matrix. Later noise sweeps may use `p in {0.001,0.002,0.003}`; the initial point
+more-than-64-observable support/tests, and complementary gaps. Python may retain
+arbitrary-width masks without expanding the initial test
+matrix. Later 1D noise sweeps may use `p in {0.001,0.002,0.003}`; the initial point
 remains p=0.003 throughout.
 
 **Commands for implementation sessions.** New tools below are specified
@@ -263,22 +273,22 @@ export CCACHE_DIR="$TMPDIR/uf-ccache"
 
 .venv/bin/python tools/gen_memory_circuit \
     --patch_diameter 7 --rounds 28 --noise_strength 0.003 \
-    --patches '4+yokes' --yokes 0 1 2 --gateset cz \
-    --out_dir out/decoder_comparison/d7_p003/circuits
+    --patches '4+yokes' --yokes 0 2 --gateset cz \
+    --out_dir out/decoder_comparison/1d_d7_p003/circuits
 
 # M3: verify every Python correction in the early accuracy gate.
 .venv/bin/python tools/benchmark_decoders \
     --mode paired --backend python \
-    --circuits out/decoder_comparison/d7_p003/circuits/*yokes=2,*.stim \
+    --circuits out/decoder_comparison/1d_d7_p003/circuits/*yokes=2,*.stim \
     --decoders pymatching uf_weighted --shots 2000 --batch_size 32 --seed 42 \
-    --verify_syndrome --out_dir out/decoder_comparison/d7_p003/gate
+    --verify_syndrome --out_dir out/decoder_comparison/1d_d7_p003/gate
 
 # Diagnostic profiling, capped at 256 Python shots per arm.
 .venv/bin/python tools/benchmark_decoders \
     --mode profile --backend python \
-    --circuits out/decoder_comparison/d7_p003/circuits/*.stim \
+    --circuits out/decoder_comparison/1d_d7_p003/circuits/*.stim \
     --decoders pymatching uf_weighted --shots 256 --batch_size 1 --seed 41 \
-    --verify_syndrome --out_dir out/decoder_comparison/d7_p003/python-profile
+    --verify_syndrome --out_dir out/decoder_comparison/1d_d7_p003/python-profile
 
 # Native dependencies, intermediates, and extension stay under TMPDIR.
 .venv/bin/python tools/build_uf_native \
@@ -288,21 +298,21 @@ export PYTHONPATH="$TMPDIR/yoked-uf-native:$PYTHONPATH"
 # M6: native accuracy comparison on fresh samples.
 .venv/bin/python tools/benchmark_decoders \
     --mode paired --backend native \
-    --circuits out/decoder_comparison/d7_p003/circuits/*.stim \
+    --circuits out/decoder_comparison/1d_d7_p003/circuits/*.stim \
     --decoders pymatching uf_weighted --shots 100000 --batch_size 256 --seed 4200 \
-    --verify_syndrome --out_dir out/decoder_comparison/d7_p003/native-accuracy
+    --verify_syndrome --out_dir out/decoder_comparison/1d_d7_p003/native-accuracy
 
 .venv/bin/python tools/benchmark_decoders \
     --mode timing --backend native \
-    --circuits out/decoder_comparison/d7_p003/circuits/*.stim \
+    --circuits out/decoder_comparison/1d_d7_p003/circuits/*.stim \
     --decoders pymatching uf_weighted --shots 10000 --batch_size 1 --seed 43 \
-    --empty_syndrome_floor --out_dir out/decoder_comparison/d7_p003/native-latency
+    --empty_syndrome_floor --out_dir out/decoder_comparison/1d_d7_p003/native-latency
 
 .venv/bin/python tools/benchmark_decoders \
     --mode timing --backend native \
-    --circuits out/decoder_comparison/d7_p003/circuits/*.stim \
+    --circuits out/decoder_comparison/1d_d7_p003/circuits/*.stim \
     --decoders pymatching uf_weighted --shots 10240 --batch_size 1024 --seed 43 \
-    --out_dir out/decoder_comparison/d7_p003/native-throughput
+    --out_dir out/decoder_comparison/1d_d7_p003/native-throughput
 ```
 
 Keep tests beside their modules in `src/yoked/decoders/`. Use `$TMPDIR` for

@@ -1,9 +1,12 @@
-# Weighted Union Find comparison design
+# Weighted Union Find comparison design for 1D yoked surface codes
 
 Implement weighted Union Find (UF) on the complete joint detector graph used by
 vanilla PyMatching. The initial operating point is **d=7, p=0.003, rounds=28,
-CZ gates, SI1000 noise**, with yokes 0/1/2 and respectively 4/5/6 patches. This
-retains the four-encoded-qubit comparison. The
+CZ gates, SI1000 noise**. Compare the **1D yoked code with six patches and two
+yokes** against an **unyoked control with four patches**. Both encode four
+logical qubits. The two yokes check the logical X and Z parities of the same
+patch group; `yokes=2` denotes this 1D code. The single-Y-yoke variant and 2D
+Squareberg code are outside the current implementation and benchmark scope. The
 [implementation plan](union_find_implementation_plan.md) defines the work order,
 accuracy gate, and native benchmark. Decoder implementation remains pending.
 
@@ -28,12 +31,13 @@ identical to the current public implementation. Record actual versions.
 **Measured initial graphs.** A fresh probe at the selected point used vanilla
 PyMatching, 10,000 circuit samples per arm, seed 42, and the versions above.
 Parameters and sample/DEM digests are in the
-[baseline evidence](union_find_baseline_d7_p003.json).
+[baseline evidence](union_find_baseline_d7_p003.json). The table includes only
+the two arms in scope; the manifest retains the original single-yoke probe row
+as historical evidence and marks it excluded from the active comparison.
 
 | Yokes | Patches | Detectors | Observables | Graph edges | Yoke degrees | Yoke fire fractions | MWPM block failures |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0 | 4 | 5,569 | 8 | 27,224 | — | — | 4,794 / 10,000 |
-| 1 | 5 | 6,961 | 10 | 34,315 | 1,160 | 49.38% | 3,612 / 10,000 |
 | 2 | 6 | 8,354 | 12 | 40,836 | 696, 696 | 50.11%, 50.60% | 3,424 / 10,000 |
 
 These are graph/baseline measurements, not UF results or decoder timing results.
@@ -84,7 +88,7 @@ Initially accept finite nonnegative weights. Preserve zero-cost edges and their
 labels during initial closure. Reject unsupported nonzero-probability hyperedges,
 nontrivial observable-only components, and negative/nonfinite weights explicitly.
 The Python representation can use arbitrary-width integers; the first native
-kernel uses a `uint64_t` mask for the pilot's 8/10/12 observables, with an explicit
+kernel uses a `uint64_t` mask for the pilot's 8 or 12 observables, with an explicit
 error above 64 until broader support is implemented.
 
 **Growth and correction contract.** Given syndrome `s`, choose edges `c` with
@@ -164,16 +168,18 @@ differences instead of requiring universal exact equality. Unexplained mismatche
 remain defects. PyMatching also quantizes weights internally, so near-tie
 prediction differences need not indicate a broken graph or decoder.
 
-**Accuracy and latency measurements.** Use three arms at the fixed initial point
-and **100,000 shared shots per arm** with native UF for the main comparison.
+**Accuracy and latency measurements.** Use the 1D yoked arm and unyoked control
+at the fixed initial point, with **100,000 shared shots per arm** and native UF
+for the main comparison.
 Sample each circuit batch once, including actual observables, and feed identical
 inputs to both decoders. Store seed, batch partition, actual shot totals, hashes,
 versions, source/backend identity, policy/tolerance settings, and raw counts in
 a manifest and tables. A simple fixed-seed paired tool is sufficient initially.
 
 Primary accuracy outputs are block failure probabilities, UF/MWPM ratios
-`R_0/R_1/R_2`, absolute paired differences, four paired outcome counts, discordant
-counts, and prediction disagreements, with uncertainty and zero-count handling.
+`R_0` (unyoked control) and `R_2` (1D yoked code), absolute paired differences,
+four paired outcome counts, discordant counts, and prediction disagreements,
+with uncertainty and zero-count handling.
 The fixed shot budget is not itself a guarantee of power. No baseline failures
 means the ratio is undefined or unbounded, rather than evidence of zero penalty.
 
@@ -200,8 +206,8 @@ latencies at d=7, not hardware timing estimates.
 
 **Deferred extensions.** Large-sweep collection and Sinter resume/pickling tests,
 manifest merge/compatibility frameworks, isolated peak-RSS measurement, larger
-observable masks, Squareberg campaigns, and extra operating points follow the
-first comparison. Later noise sweeps can use `p in {0.001,0.002,0.003}`. Broader
+observable masks, and extra 1D operating points follow the first comparison.
+Later noise sweeps can use `p in {0.001,0.002,0.003}`. Broader
 collection must eventually version task metadata to prevent incompatible resume.
 
 The existing [GapWorkHandler](../src/yoked/gap/_gap_worker_handler.py) subtracts
