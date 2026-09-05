@@ -67,15 +67,7 @@
       "dem_digest": "9b06141668bef9b334df78e4700853f60505a71f3c4185746d0261e7e3790e0a"
     }
   ],
-  "description": "Vanilla PyMatching baseline only; this is not a UF accuracy or latency result.",
-  "active_comparison_scope": {
-    "code_family": "1D yoked surface code",
-    "patches": 6,
-    "yokes": [
-      2
-    ],
-    "note": "Only the six-patch, yokes=2 row belongs to the current UF versus joint MWPM comparison. Rows with yokes=0 or yokes=1 are retained as historical probe evidence and are excluded."
-  },
+  "description": "Historical vanilla PyMatching probe, retained as evidence. Benchmarking is deferred until after decoder implementation and review; these measurements are not an active implementation requirement or a UF result.",
   "circuit_parameters": {
     "style": "cz",
     "noise": "si1000",
