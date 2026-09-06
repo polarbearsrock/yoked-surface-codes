@@ -8,8 +8,9 @@ observable labels. The same algorithm applies to supported graphs from 1D or
 
 The first integration target is the repository's 1D yoked surface code. The
 [implementation plan](union_find_implementation_plan.md) defines the delivery
-steps and correctness checks. Implementation is pending. Benchmarking will be
-planned after the decoder has been implemented and reviewed.
+steps and correctness checks. The [decoder package](../src/yoked/decoders/__init__.py)
+is implemented, with [working examples](union_find_usage.md). Benchmarking
+will be planned after implementation review.
 
 **Graph input.** `DecodingGraph` contains detector and observable counts, an
 ordered collection of edges, and adjacency lists. An edge is a tuple

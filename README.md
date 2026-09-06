@@ -29,6 +29,11 @@ sudo apt install parallel
 pip install -r requirements.txt
 ```
 
+## Union Find decoder
+
+The `yoked.decoders` package provides a graph-based weighted Union Find decoder
+and a Sinter adapter. See [usage and correctness tests](docs/union_find_usage.md).
+
 ## Directory structure
 
 - `.`: top level of repository, with this README and the generation scripts
