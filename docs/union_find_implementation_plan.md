@@ -39,10 +39,18 @@ state. Keep a small scan scheduler inside the tests as an oracle for the heap.
 - [ ] Validate endpoints, weights, and masks. Internally assign a distinct
   unconstrained terminal to each boundary edge. Keep every detector constrained.
 - [ ] Implement `DecodingGraph.from_dem` using the graph export described in
-  the design. Audit decomposed components and fail clearly on unsupported
-  inputs. Preserve the exporter's weights and parallel-edge labels.
+  the design. Reject nonzero-probability components with more than two
+  detectors, observables but no detectors, or repeated detector targets within
+  a component. Preserve export order for edge IDs and deterministic tie-breaking.
+- [ ] Reconcile the audit with the export: compare endpoint keys, retained
+  observable masks, and weights from independently combined parallel-component
+  probabilities, allowing numerical tolerance for weights. Keep the first
+  parallel component's label and raise on any mismatch. Endpoint sets alone
+  cannot detect a dropped contribution to an existing parallel edge.
 - [ ] Test direct graph construction, repeated/shifted DEM instructions,
-  observable labels, zero-cost and boundary edges, and rejected inputs.
+  export order, parallel weights and labels, zero-cost and boundary edges.
+  Include the three rejected component shapes above, including a repeated-target
+  component whose normalized endpoints coincide with an otherwise valid edge.
 
 Acceptance: both direct graph construction and DEM import produce the same
 documented graph representation. UF requires no circuit geometry or yoke tags.
@@ -52,16 +60,25 @@ documented graph representation. UF requires no circuit geometry or yoke tags.
 - [ ] Implement iterative DSU find/union, cluster parity and terminal state,
   frontier updates, and the merge forest separate from DSU parents.
 - [ ] Implement continuous weighted growth using a heap with generation
-  tokens. Preserve partial growth, make settlement idempotent, and
-  immediately publish deadlines when activity changes.
+  tokens. Store each edge's current rate and last-settled time. Preserve partial
+  growth and make repeated settlement at one timestamp idempotent.
 - [ ] Implement the design's complete tied-event batching and zero-cost
   closure. Re-check roots when processing each completed edge; record only
-  actual merges. Continue same-time closure after publishing new events.
+  actual merges. After all unions in each collected group, settle affected
+  edges using their stored rates, invalidate internal edges, and publish
+  deadlines for changed rates once per affected edge. Continue collecting
+  newly published same-time events until closure is complete.
 - [ ] Peel the forest iteratively, construct correction edge IDs, and XOR
-  observable masks. Raise `InvalidSyndromeError` for unsatisfiable syndromes.
+  observable masks. Choose the smallest terminal ID as root when present,
+  otherwise the smallest detector ID. Non-root terminals are leaves whose
+  edges are not selected. After same-time closure, raise `InvalidSyndromeError`
+  if active roots remain and the heap has no valid entry after stale entries
+  are discarded.
 - [ ] Add the focused fixtures below and small realizable random syndromes
   generated from edge sets. Independently verify `H c = s` and `prediction = L c`.
-  Cross-check the heap against the scan helper under the same tie rule.
+  For the random oracle cases, draw weights from `{1, 2, 3}` to exercise ties.
+  Require identical forest edge IDs and predictions from heap and scan under
+  the same edge order, tie rule, and peeling-root rule.
 
 | Fixture | Required behavior |
 | --- | --- |
@@ -76,9 +93,10 @@ documented graph representation. UF requires no circuit geometry or yoke tags.
 | Both endpoint activities change | Repeated settlement at one timestamp adds growth only once; newly published same-time completions are processed before time advances. |
 | Long chain | Find and peeling work beyond Python's recursion limit. |
 
-Acceptance: the core returns syndrome-valid corrections and their observable
-predictions on deterministic fixtures and realizable random inputs. High-degree
-hub behavior follows the same rules as every other vertex.
+Acceptance: the core passes the specified growth and pause behavior, agrees
+with the scan oracle on the small integer-weight cases, and returns valid
+corrections with matching observable reconstruction. High-degree hubs follow
+the same rules as every other vertex.
 
 **M3: usable interfaces and 1D integration.**
 
@@ -87,29 +105,38 @@ hub behavior follows the same rules as every other vertex.
   specified in the design. Reuse the single-shot implementation for batches.
 - [ ] Test input validation, input immutability, all-zero syndromes, empty
   batches, output dimensions, and state reset across successful and failed calls.
-- [ ] Add and export a thin `SinterUnionFindDecoder` implementing compile-for-DEM and
-  bit-packed batch decoding. Check little-endian packing, padding bits, and
+- [ ] Add and export a thin `SinterUnionFindDecoder` as a stateless top-level
+  class. Build its graph and core decoder only in `compile_decoder_for_dem`.
+  Check bit-packed batch decoding, little-endian packing, padding bits, and
   agreement with direct calls on the same inputs.
-- [ ] Generate the initial 1D circuit using
-  [the existing memory generator](../src/yoked/_yoked_memory_circuits.py), build
-  its decomposed DEM, and decode a fixed-seed sample of 16 syndromes at the
-  configuration above. Verify every correction and logical-mask reconstruction,
-  including the yoke detector constraints. This is a correctness check.
+- [ ] Use [the existing memory generator](../src/yoked/_yoked_memory_circuits.py)
+  with keyword arguments to build the initial 1D circuit and its decomposed DEM.
+  Decode 16 shots with seed 42 at the d=7 configuration above. Verify every
+  correction and logical-mask reconstruction, including the yoke detector
+  constraints. Assert that this fixture has no parallel components with
+  conflicting observable labels. This is a correctness check.
+- [ ] Add a smaller d=3, rounds=12 version with the same noise strength, six
+  patches, two yokes, and 16 shots for routine tests. Measure the d=7 test's
+  runtime once; if it exceeds about 30 seconds, make only that test opt-in
+  using `YOKED_UF_RUN_D7=1` and `pytest.skip`. The d=7 check must still run and
+  pass before implementation is considered complete.
 - [ ] Document a short working example of direct graph decoding, DEM import,
   and use of the Sinter adapter under the name `uf_weighted`.
 
 Acceptance: a caller can decode a supplied graph, and the repository's 1D
 yoked circuit runs through sampling, graph import, UF correction, and logical
 prediction using the public interfaces. The same immutable graph supports
-repeated calls. Deliver the implementation for review at this point.
+repeated calls, and the d=7 correctness check has passed. Deliver the
+implementation for review at this point.
 
-**Validation command after implementation.** Run from the repository root:
+**Validation command after implementation.** Run from the repository root.
+This includes the required d=7 check even if it is separated from routine tests:
 
 ```bash
 export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
 export PYTHONPYCACHEPREFIX="$TMPDIR/uf-pycache"
 export MPLCONFIGDIR="$TMPDIR/uf-mpl"
-.venv/bin/python -m pytest -q -p no:cacheprovider src/yoked/decoders
+YOKED_UF_RUN_D7=1 .venv/bin/python -m pytest -q -p no:cacheprovider src/yoked/decoders
 ```
 
 Use `$TMPDIR` for temporary files and caches. Keep integration fixtures
