@@ -31,8 +31,11 @@ pip install -r requirements.txt
 
 ## Union Find decoder
 
-The `yoked.decoders` package provides a graph-based weighted Union Find decoder
-and a Sinter adapter. See [usage and correctness tests](docs/union_find_usage.md).
+The `yoked.decoders` package uses the repository's weighted growth-and-peeling
+implementation as the default UF decoder (`UnionFindDecoder` and
+`SinterUnionFindDecoder`). Fusion Blossom's UF variant is available separately
+as an optional dependency and explicit decoder choice. See
+[usage and correctness tests](docs/union_find_usage.md).
 
 ## Directory structure
 

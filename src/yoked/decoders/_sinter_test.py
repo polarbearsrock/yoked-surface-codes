@@ -1,8 +1,13 @@
+import sys
+
 import numpy as np
 import pytest
 import stim
 
-from yoked.decoders import DecodingGraph, InvalidSyndromeError, SinterUnionFindDecoder, UnionFindDecoder
+from yoked.decoders import (
+    DecodingGraph, FusionBlossomUnionFindDecoder, InvalidSyndromeError,
+    SinterUnionFindDecoder, UnionFindDecoder,
+)
 
 
 def test_packed_batches_padding_and_direct_agreement():
@@ -11,6 +16,7 @@ def test_packed_batches_padding_and_direct_agreement():
     ))
     adapter = SinterUnionFindDecoder()
     compiled = adapter.compile_decoder_for_dem(dem=dem)
+    assert type(compiled.decoder) is UnionFindDecoder
     assert not vars(adapter)
     syndromes = np.random.default_rng(42).integers(0, 2, size=(7, 9), dtype=np.uint8)
     syndromes[0] = 0
@@ -29,6 +35,21 @@ def test_packed_batches_padding_and_direct_agreement():
     np.testing.assert_array_equal(packed, original)
     empty = compiled.decode_shots_bit_packed(bit_packed_detection_event_data=np.empty((0, 2), dtype=np.uint8))
     assert empty.shape == (0, 2)
+
+
+def test_default_uf_works_without_optional_fusion_blossom(monkeypatch):
+    monkeypatch.setitem(sys.modules, 'fusion_blossom', None)
+    dem = stim.DetectorErrorModel('error(0.1) D0 L0')
+    graph = DecodingGraph.from_dem(dem)
+    np.testing.assert_array_equal(UnionFindDecoder(graph).decode([1]), [True])
+    compiled = SinterUnionFindDecoder().compile_decoder_for_dem(dem=dem)
+    assert type(compiled.decoder) is UnionFindDecoder
+    np.testing.assert_array_equal(
+        compiled.decode_shots_bit_packed(bit_packed_detection_event_data=np.array([[1]], dtype=np.uint8)),
+        [[1]],
+    )
+    with pytest.raises(ImportError, match='Fusion Blossom UF is optional'):
+        FusionBlossomUnionFindDecoder(graph)
 
 
 @pytest.mark.parametrize('data', [

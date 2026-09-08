@@ -14,6 +14,15 @@ class InvalidSyndromeError(ValueError):
     """The syndrome cannot be produced by any edge set in the supplied graph."""
 
 
+def _validate_syndromes(syndromes: np.ndarray, num_detectors: int, ndim: int) -> np.ndarray:
+    data = np.asarray(syndromes)
+    if data.ndim != ndim or data.shape[-1] != num_detectors:
+        raise ValueError(f'Expected {ndim} dimensions with {num_detectors} detector bits')
+    if data.dtype.kind not in 'buif' or not np.all((data == 0) | (data == 1)):
+        raise ValueError('Syndromes must contain only binary values')
+    return data.astype(np.bool_, copy=False)
+
+
 @dataclass(frozen=True)
 class _Correction:
     forest_edges: tuple[int, ...]
@@ -22,7 +31,7 @@ class _Correction:
 
 
 class UnionFindDecoder:
-    """Weighted Union Find growth and peeling on a fixed decoding graph.
+    """Default UF decoder: repository growth and peeling on a fixed graph.
 
     All vertices use the same growth rule. Each call owns its working state,
     so the graph can be reused after either successful or failed decoding.
@@ -32,12 +41,7 @@ class UnionFindDecoder:
         self.graph = graph
 
     def _validate(self, syndromes: np.ndarray, ndim: int) -> np.ndarray:
-        data = np.asarray(syndromes)
-        if data.ndim != ndim or data.shape[-1] != self.graph.num_detectors:
-            raise ValueError(f'Expected {ndim} dimensions with {self.graph.num_detectors} detector bits')
-        if data.dtype.kind not in 'buif' or not np.all((data == 0) | (data == 1)):
-            raise ValueError('Syndromes must contain only binary values')
-        return data.astype(np.bool_, copy=False)
+        return _validate_syndromes(syndromes, self.graph.num_detectors, ndim)
 
     def _decode(self, syndrome: np.ndarray) -> _Correction:
         syndrome = self._validate(syndrome, 1)

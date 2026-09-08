@@ -3,6 +3,10 @@
 Run from the repository root with `PYTHONPATH=src`. The implementation uses
 the existing project dependencies and requires no native build.
 
+`UnionFindDecoder` and `SinterUnionFindDecoder` always use this repository's
+weighted growth and peeling implementation. This is the default UF for our
+experiments. Installing Fusion Blossom does not change that default.
+
 **Decode a graph.** Each edge is `(u, v, weight, observable_mask)`. Use `v=None`
 for a boundary edge. Weights must be finite and nonnegative; bit `k` of the
 mask indicates that selecting the edge flips observable `k`.
@@ -46,7 +50,8 @@ circuit = yoked_magic_memory_circuit(
 dem = circuit.detector_error_model(
     decompose_errors=True, approximate_disjoint_errors=True,
 )
-decoder = UnionFindDecoder(DecodingGraph.from_dem(dem))
+graph = DecodingGraph.from_dem(dem)
+decoder = UnionFindDecoder(graph)
 detectors = circuit.compile_detector_sampler(seed=42).sample(shots=1)
 predictions = decoder.decode_batch(detectors)
 assert predictions.shape == (1, circuit.num_observables)
@@ -75,6 +80,46 @@ np.testing.assert_array_equal(
 The same `custom_decoders` mapping registers the adapter with Sinter under
 the name `uf_weighted`.
 
+**Optional Fusion Blossom UF variant.** Install the optional package only if
+you want to select this backend (tested with version 0.2.13):
+
+```bash
+UV_CACHE_DIR="$TMPDIR/uv-cache" uv pip install --python .venv/bin/python 'fusion-blossom==0.2.13'
+```
+
+Select the variant explicitly, using the same graph and syndrome arrays:
+
+```python
+from yoked.decoders import FusionBlossomUnionFindDecoder
+
+optional_decoder = FusionBlossomUnionFindDecoder(graph)
+optional_predictions = optional_decoder.decode_batch(detectors)
+```
+
+For Sinter, register the variant under a separate name:
+
+```python
+from yoked.decoders import SinterFusionBlossomUnionFindDecoder, SinterUnionFindDecoder
+
+custom_decoders = {
+    'uf_weighted': SinterUnionFindDecoder(),                 # Default: repository UF.
+    'fusion_blossom_uf': SinterFusionBlossomUnionFindDecoder(),  # Explicit opt-in.
+}
+```
+
+Fusion Blossom is always constructed with `max_tree_size=0` by these optional
+classes. It uses blossom cluster contraction and shortest-path correction
+reconstruction, with weights `2 * round(weight * weight_scale)` and
+`weight_scale=1000` by default. It is a distinct UF variant; label its results
+as `fusion_blossom_uf`. Sinter's built-in `fusion_blossom` decoder selects MWPM
+and is a different decoder.
+
+The optional adapter rejects parallel detector edges and weights that exceed
+the native integer range. `DecodingGraph.from_dem` already merges parallel
+DEM components. Impossible syndromes raise `InvalidSyndromeError` before
+entering the native solver. Reuse an instance sequentially; create separate
+instances for concurrent workers. Sinter constructs an instance in each worker.
+
 **Run correctness tests.** Both d=3 and d=7 integration fixtures are included:
 
 ```bash
@@ -85,5 +130,6 @@ export MPLCONFIGDIR="$TMPDIR/uf-mpl"
 ```
 
 The tests verify growth behavior, scan-oracle agreement, syndrome validity,
-observable reconstruction, and the public interfaces. Accuracy and latency
-benchmarking are deferred until after implementation review.
+observable reconstruction, and the public interfaces. Optional Fusion Blossom
+tests are skipped when its package is absent. The default decoder is tested
+both with and without that optional dependency.
