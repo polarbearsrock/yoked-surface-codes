@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""Time UF and joint MWPM on the saved, paired comparison samples."""
+
+import argparse
+import gc
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import tempfile
+import time
+
+import numpy as np
+import pymatching
+import stim
+
+from yoked.decoders import DecodingGraph, UnionFindDecoder
+
+
+def timed_call(function, batch):
+    cpu_start = time.process_time_ns()
+    wall_start = time.perf_counter_ns()
+    result = function(batch)
+    wall_ns = time.perf_counter_ns() - wall_start
+    cpu_ns = time.process_time_ns() - cpu_start
+    return result, wall_ns, cpu_ns
+
+
+def statistics_ns(values):
+    values = np.asarray(values, dtype=np.float64) / 1e6
+    return dict(count=len(values), median_ms=float(np.median(values)),
+                p95_ms=float(np.percentile(values, 95)), p99_ms=float(np.percentile(values, 99)),
+                mean_ms=float(values.mean()), min_ms=float(values.min()), max_ms=float(values.max()))
+
+
+def write_json(path, value):
+    pending = path.with_suffix('.pending')
+    pending.write_text(json.dumps(value, indent=2) + '\n')
+    pending.replace(path)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('manifest', type=Path)
+    parser.add_argument('--cpu', type=int, required=True)
+    args = parser.parse_args()
+    if args.cpu not in os.sched_getaffinity(0):
+        raise ValueError('Requested CPU is outside the allowed affinity')
+    os.sched_setaffinity(0, {args.cpu})
+    started = time.monotonic()
+    manifest = json.loads(args.manifest.read_text())
+    source = Path(manifest['artifact_directory'])
+    out = Path(tempfile.mkdtemp(prefix='uf-mwpm-latency-', dir=os.environ['TMPDIR']))
+    print(f'Latency artifacts: {out}', flush=True)
+    with np.load(source / 'samples.npz') as samples, np.load(source / 'predictions.npz') as saved:
+        detectors = samples['detectors']
+        actual = samples['actual_observables']
+        expected = {name: saved[name] for name in ['uf', 'joint_mwpm']}
+    packed = np.packbits(detectors, axis=1, bitorder='little').tobytes()
+    packed += np.packbits(actual, axis=1, bitorder='little').tobytes()
+    assert hashlib.sha256(packed).hexdigest() == manifest['input_sha256']['packed_detectors_then_actual_observables']
+    dem = stim.DetectorErrorModel.from_file(source / 'model.dem')
+    assert hashlib.sha256(str(dem).encode()).hexdigest() == manifest['input_sha256']['dem']
+    graph = DecodingGraph.from_dem(dem)
+    graph_bytes = (json.dumps(dict(num_detectors=graph.num_detectors, num_observables=graph.num_observables,
+                                  edges=graph.edges), sort_keys=True, separators=(',', ':')) + '\n').encode()
+    assert hashlib.sha256(graph_bytes).hexdigest() == manifest['input_sha256']['graph']
+    decoders = dict(uf=UnionFindDecoder(graph), joint_mwpm=pymatching.Matching.from_detector_error_model(dem))
+    exported = [(u, v, data['weight'], sum(1 << k for k in data['fault_ids']))
+                for u, v, data in decoders['joint_mwpm'].edges()]
+    assert tuple(exported) == graph.edges
+    names = list(decoders)
+    functions = {name: decoder.decode_batch for name, decoder in decoders.items()}
+    for name in names:
+        digest = hashlib.sha256(np.packbits(expected[name], axis=1, bitorder='little').tobytes()).hexdigest()
+        assert digest == manifest['output_sha256'][name]
+
+    n = len(detectors)
+    assert n == manifest['parameters']['shots']
+    raw = {f'{name}_single_{clock}_ns': np.zeros(n, dtype=np.int64)
+           for name in names for clock in ['wall', 'cpu']}
+    metadata = dict(
+        parameters=manifest['parameters'], graph=manifest['graph'], code_commit=manifest['code_commit'],
+        versions=dict(python=platform.python_version(), numpy=np.__version__, pymatching=pymatching.__version__, stim=stim.__version__),
+        cpu_model=next(line.split(':', 1)[1].strip() for line in Path('/proc/cpuinfo').read_text().splitlines()
+                       if line.startswith('model name')),
+        cpu_affinity=sorted(os.sched_getaffinity(0)),
+        sibling_cpus=Path(f'/sys/devices/system/cpu/cpu{args.cpu}/topology/thread_siblings_list').read_text().strip(),
+        machine_architecture=platform.machine(), load_average_start=os.getloadavg(),
+        python_gc_enabled=gc.isenabled(), thread_limits={key: os.environ.get(key) for key in ['OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS']},
+        timer='time.perf_counter_ns', timer_resolution_seconds=time.get_clock_info('perf_counter').resolution,
+        cpu_timer='time.process_time_ns (includes timer instrumentation)',
+        single_shot_method='decode_batch on unpacked boolean (1, num_detectors) arrays; one process; alternating decoder order per shot',
+        warmup_shots_per_decoder=25, latency_shots_per_decoder=n,
+        timed_scope='Public decode_batch call including validation, allocation, growth/matching, and prediction output',
+        excluded_scope='Circuit/DEM/graph construction, sampling, warm-up, result verification, and disk I/O',
+        comparison_manifest=str(args.manifest.resolve()), input_sha256=manifest['input_sha256'],
+        expected_output_sha256=manifest['output_sha256'], artifact_directory=str(out),
+    )
+    write_json(out / 'manifest.json', metadata)
+    for name in names:
+        for shot in range(25):
+            result = functions[name](detectors[shot:shot+1])
+            np.testing.assert_array_equal(result, expected[name][shot:shot+1])
+
+    print(f'Timing {n} paired single-shot calls on CPU {args.cpu}.', flush=True)
+    for shot in range(n):
+        batch = detectors[shot:shot+1]
+        for name in (names if shot % 2 == 0 else names[::-1]):
+            result, wall_ns, cpu_ns = timed_call(functions[name], batch)
+            raw[f'{name}_single_wall_ns'][shot] = wall_ns
+            raw[f'{name}_single_cpu_ns'][shot] = cpu_ns
+            np.testing.assert_array_equal(result, expected[name][shot:shot+1])
+        if (shot + 1) % 500 == 0 or shot + 1 == n:
+            count = shot + 1
+            progress = dict(completed_shots=count, requested_shots=n, elapsed_seconds=time.monotonic()-started,
+                            median_ms={name: float(np.median(raw[f'{name}_single_wall_ns'][:count])) / 1e6 for name in names})
+            write_json(out / 'progress.json', progress)
+            np.savez_compressed(out / 'timings_partial.npz', **{key: value[:count] for key, value in raw.items()})
+            print(f"{count}/{n} pairs verified; median UF {progress['median_ms']['uf']:.3f} ms, "
+                  f"MWPM {progress['median_ms']['joint_mwpm']:.3f} ms; elapsed {progress['elapsed_seconds']:.1f} s", flush=True)
+
+    batch_size, batch_repeats = min(256, n), 3
+    batch = detectors[:batch_size]
+    for name in names:
+        raw[f'{name}_batch_wall_ns'] = np.zeros(batch_repeats, dtype=np.int64)
+    print(f'Timing batch throughput: {batch_repeats} batches of {batch_size} per decoder.', flush=True)
+    for repeat in range(batch_repeats):
+        for name in (names if repeat % 2 == 0 else names[::-1]):
+            result, wall_ns, _ = timed_call(functions[name], batch)
+            raw[f'{name}_batch_wall_ns'][repeat] = wall_ns
+            np.testing.assert_array_equal(result, expected[name][:batch_size])
+        print(f'Batch repeat {repeat+1}/{batch_repeats} verified.', flush=True)
+
+    zero = np.zeros((1, graph.num_detectors), dtype=np.bool_)
+    floor_repeats = 200
+    for name in names:
+        raw[f'{name}_empty_wall_ns'] = np.zeros(floor_repeats, dtype=np.int64)
+        for _ in range(5):
+            assert not np.any(functions[name](zero))
+    for repeat in range(floor_repeats):
+        for name in (names if repeat % 2 == 0 else names[::-1]):
+            result, wall_ns, _ = timed_call(functions[name], zero)
+            raw[f'{name}_empty_wall_ns'][repeat] = wall_ns
+            assert not np.any(result)
+
+    np.savez_compressed(out / 'timings.npz', **raw)
+    rows = {}
+    for name in names:
+        batch_ns = float(np.median(raw[f'{name}_batch_wall_ns']))
+        rows[name] = dict(single_shot_wall=statistics_ns(raw[f'{name}_single_wall_ns']),
+                          single_shot_cpu=statistics_ns(raw[f'{name}_single_cpu_ns']),
+                          empty_syndrome_wall=statistics_ns(raw[f'{name}_empty_wall_ns']),
+                          throughput=dict(batch_size=batch_size, repeats=batch_repeats,
+                                          median_batch_seconds=batch_ns / 1e9,
+                                          amortized_ms_per_shot=batch_ns / 1e6 / batch_size,
+                                          shots_per_second=batch_size * 1e9 / batch_ns))
+    summary = dict(**metadata, decoders=rows, all_timed_predictions_verified=True,
+                   uf_over_mwpm_median_latency=rows['uf']['single_shot_wall']['median_ms'] / rows['joint_mwpm']['single_shot_wall']['median_ms'],
+                   uf_over_mwpm_p99_latency=rows['uf']['single_shot_wall']['p99_ms'] / rows['joint_mwpm']['single_shot_wall']['p99_ms'],
+                   load_average_end=os.getloadavg(), total_elapsed_seconds=time.monotonic()-started)
+    write_json(out / 'summary.json', summary)
+    print(json.dumps(summary, indent=2), flush=True)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Regenerate and verify the inputs recorded by a UF/MWPM comparison."""
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import tempfile
+
+import numpy as np
+
+import gen
+from yoked._yoked_memory_circuits import yoked_magic_memory_circuit
+from yoked.decoders import DecodingGraph
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('manifest', type=Path)
+    args = parser.parse_args()
+    manifest = json.loads(args.manifest.read_text())
+    parameters = manifest['parameters']
+    sampling = manifest['sampling']
+    if sampling['sample_calls'] != 1 or sampling['bit_packed'] or not sampling['separate_observables']:
+        raise ValueError('Expected one unpacked sample call with separate observables')
+    if sampling['shots_per_call'] != parameters['shots'] or sampling['seed'] != parameters['seed']:
+        raise ValueError('Sampling parameters disagree with circuit experiment parameters')
+    if parameters['noise'] != 'si1000':
+        raise ValueError('This reproduction script expects SI1000 noise')
+
+    circuit = yoked_magic_memory_circuit(
+        patch_diameter=parameters['distance'], rounds=parameters['rounds'],
+        noise=gen.NoiseModel.si1000(parameters['p']), style=parameters['gates'],
+        yokes=parameters['yokes'], num_patches=parameters['patches'],
+    )
+    dem = circuit.detector_error_model(decompose_errors=True, approximate_disjoint_errors=True)
+    graph = DecodingGraph.from_dem(dem)
+    detectors, actual = circuit.compile_detector_sampler(seed=sampling['seed']).sample(
+        shots=sampling['shots_per_call'], separate_observables=True, bit_packed=False,
+    )
+    graph_data = dict(num_detectors=graph.num_detectors, num_observables=graph.num_observables, edges=graph.edges)
+    graph_bytes = (json.dumps(graph_data, sort_keys=True, separators=(',', ':')) + '\n').encode()
+    packed_detectors = np.packbits(detectors, axis=1, bitorder='little').tobytes()
+    packed_actual = np.packbits(actual, axis=1, bitorder='little').tobytes()
+    inputs = dict(
+        circuit=str(circuit).encode(), dem=str(dem).encode(), graph=graph_bytes,
+        packed_detectors=packed_detectors, packed_actual_observables=packed_actual,
+        packed_detectors_then_actual_observables=packed_detectors + packed_actual,
+    )
+    hashes = {key: hashlib.sha256(value).hexdigest() for key, value in inputs.items()}
+    if hashes != manifest['input_sha256']:
+        differences = [key for key in hashes if hashes[key] != manifest['input_sha256'].get(key)]
+        raise ValueError(
+            f'Input hashes differ: {differences}. Use the recorded repository revision, package versions, '
+            'and Stim SIMD implementation; the saved samples remain the exact replay inputs.'
+        )
+
+    out = Path(tempfile.mkdtemp(prefix='uf-comparison-reproduced-', dir=os.environ['TMPDIR']))
+    (out / 'circuit.stim').write_bytes(inputs['circuit'])
+    (out / 'model.dem').write_bytes(inputs['dem'])
+    (out / 'graph.json').write_bytes(graph_bytes)
+    np.savez_compressed(out / 'samples.npz', detectors=detectors, actual_observables=actual)
+    verification = dict(input_sha256=hashes, all_inputs_match=True, artifact_directory=str(out))
+    (out / 'verification.json').write_text(json.dumps(verification, indent=2) + '\n')
+    print(f'All input hashes match: circuit, DEM, ordered graph, and {len(detectors)} shots.')
+    print(f'Reproduced inputs: {out}')
+
+
+if __name__ == '__main__':
+    main()

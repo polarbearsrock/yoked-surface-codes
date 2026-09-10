@@ -33,8 +33,9 @@ pip install -r requirements.txt
 
 The `yoked.decoders` package uses the repository's weighted growth-and-peeling
 implementation as the default UF decoder (`UnionFindDecoder` and
-`SinterUnionFindDecoder`). Fusion Blossom's UF variant is available separately
-as an optional dependency and explicit decoder choice. See
+`SinterUnionFindDecoder`). An optional `CorrelatedUnionFindDecoder` uses two UF
+passes with correlation information from the DEM. Fusion Blossom's UF variant
+is available separately as an optional dependency and explicit decoder choice. See
 [usage and correctness tests](docs/union_find_usage.md).
 
 ## Directory structure

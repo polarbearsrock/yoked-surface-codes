@@ -4,7 +4,10 @@ import scipy.sparse
 
 import gen
 from yoked._yoked_memory_circuits import yoked_magic_memory_circuit
-from yoked.decoders import DecodingGraph, SinterUnionFindDecoder, UnionFindDecoder
+from yoked.decoders import (
+    CorrelatedUnionFindDecoder, DecodingGraph, SinterCorrelatedUnionFindDecoder,
+    SinterUnionFindDecoder, UnionFindDecoder,
+)
 
 
 def _check_parallel_labels(dem):
@@ -29,7 +32,8 @@ def _check_parallel_labels(dem):
 
 
 @pytest.mark.parametrize('distance', [3, 7])
-def test_yoked_circuit_corrections_and_public_interfaces(distance):
+@pytest.mark.parametrize('correlated', [False, True])
+def test_yoked_circuit_corrections_and_public_interfaces(distance, correlated):
     circuit = yoked_magic_memory_circuit(
         patch_diameter=distance,
         rounds=4 * distance,
@@ -40,9 +44,10 @@ def test_yoked_circuit_corrections_and_public_interfaces(distance):
     )
     dem = circuit.detector_error_model(decompose_errors=True, approximate_disjoint_errors=True)
     _check_parallel_labels(dem)
-    graph = DecodingGraph.from_dem(dem)
+    decoder = (CorrelatedUnionFindDecoder.from_dem(dem) if correlated else
+               UnionFindDecoder(DecodingGraph.from_dem(dem)))
+    graph = decoder.graph
     assert (graph.num_detectors, graph.num_observables) == (circuit.num_detectors, circuit.num_observables)
-    decoder = UnionFindDecoder(graph)
     syndromes = circuit.compile_detector_sampler(seed=42).sample(shots=16)
     assert syndromes[:, -2:].any(axis=0).all()  # Both yokes are exercised.
 
@@ -76,7 +81,8 @@ def test_yoked_circuit_corrections_and_public_interfaces(distance):
 
     # Check the public batch and Sinter paths on the same first two shots.
     np.testing.assert_array_equal(decoder.decode_batch(syndromes[:2]), predictions[:2])
-    compiled = SinterUnionFindDecoder().compile_decoder_for_dem(dem=dem)
+    adapter = SinterCorrelatedUnionFindDecoder() if correlated else SinterUnionFindDecoder()
+    compiled = adapter.compile_decoder_for_dem(dem=dem)
     packed = np.packbits(syndromes[:2], axis=1, bitorder='little')
     actual = compiled.decode_shots_bit_packed(bit_packed_detection_event_data=packed)
     expected = np.packbits(np.array(predictions[:2]), axis=1, bitorder='little')

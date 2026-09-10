@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+"""Probe Fusion Blossom UF on the saved six-patch, two-yoke comparison.
+
+This experimental adapter accepts the probe's validated samples. It is not
+registered with Sinter and does not implement the public decoder contract.
+"""
+import argparse
+import hashlib
+import importlib.metadata
+import itertools
+import json
+import os
+import platform
+import tempfile
+from pathlib import Path
+import time
+
+import fusion_blossom as fb
+import numpy as np
+import pymatching
+import sinter
+import stim
+
+from yoked.decoders import DecodingGraph, UnionFindDecoder
+
+
+class FusionDecoder:
+    def __init__(self, graph, scale=1000, max_tree_size=0):
+        if scale <= 0 or graph.num_observables > 64:
+            raise ValueError('This probe needs a positive scale and at most 64 observables')
+        self.graph = graph
+        self.scale = scale
+        self.weights = [2 * round(w * scale) for _, _, w, _ in graph.edges]
+        # The published wheel uses i32_weight. Bound all simple correction
+        # weights and paths with additional headroom for intermediate sums.
+        if 2 * sum(self.weights) >= 2**31:
+            raise ValueError('Scale is too large for this wheel and graph')
+        weighted_edges = [(u, v, w) for (u, v), w in zip(graph.endpoints, self.weights)]
+        self.initializer = fb.SolverInitializer(
+            len(graph.adjacency), weighted_edges,
+            list(range(graph.num_detectors, len(graph.adjacency))),
+        )
+        self.solver = fb.SolverSerial(self.initializer, max_tree_size=max_tree_size)
+        self.masks = np.array([mask for _, _, _, mask in graph.edges], dtype=np.uint64)
+        self.bits = np.arange(graph.num_observables, dtype=np.uint64)
+        self.endpoints = np.asarray(graph.endpoints, dtype=np.int64)
+        self.last_edges = []
+
+    def decode_batch(self, batch):
+        result = np.empty((len(batch), self.graph.num_observables), dtype=np.bool_)
+        for k, syndrome in enumerate(batch):
+            self.solver.clear()
+            pattern = fb.SyndromePattern(np.flatnonzero(syndrome).tolist())
+            self.solver.solve(pattern)
+            self.last_edges = self.solver.subgraph()
+            mask = np.bitwise_xor.reduce(self.masks[self.last_edges], initial=np.uint64(0))
+            result[k] = (mask >> self.bits) & 1
+        return result
+
+
+def validate(graph, syndrome, edges, endpoints=None):
+    assert len(set(edges)) == len(edges)
+    if endpoints is None:
+        endpoints = np.asarray(graph.endpoints, dtype=np.int64)
+    rebuilt = np.bincount(endpoints[edges].ravel(), minlength=len(graph.adjacency))[:graph.num_detectors] % 2
+    np.testing.assert_array_equal(rebuilt, syndrome)
+
+
+def fixtures():
+    cases = [
+        ('competition', DecodingGraph(4, 3, [(0, 1, 1, 1), (0, 2, 4, 2), (2, 3, 1, 4)]), [1]*4),
+        ('even_cluster', DecodingGraph(4, 3, [(1, 2, 1, 1), (0, 1, 3, 2), (2, 3, 6, 4)]), [1]*4),
+        ('boundary', DecodingGraph(1, 1, [(0, None, 1, 1)]), [1]),
+    ]
+    for hub, k in itertools.product([0, 1], [32, 33]):
+        graph = DecodingGraph(k+1, 6, [(0, v, 1, 1 << (v % 6)) for v in range(1, k+1)] + [(0, None, 10, 0)])
+        cases.append((f'star_{hub}_{k}', graph, [hub]+[1]*k))
+    for k, m in itertools.product([32, 33], [1, 2]):
+        edges = [(0, v, 1, 1) for v in range(1, k+1)]
+        edges += [(v+1, k+v+1, 1, 2) for v in range(m)]
+        np.random.default_rng(42).shuffle(edges)
+        edges.append((0, None, 10, 0))
+        cases.append((f'partners_{k}_{m}', DecodingGraph(k+m+1, 2, edges), [1]*(k+m+1)))
+    records = []
+    for name, graph, syndrome in cases:
+        decoder = FusionDecoder(graph)
+        batch = np.asarray([syndrome], dtype=np.bool_)
+        pred = decoder.decode_batch(batch)
+        validate(graph, syndrome, decoder.last_edges)
+        ref = UnionFindDecoder(graph).decode_batch(batch)
+        records.append(dict(name=name, valid=True, prediction_matches_python=bool(np.array_equal(pred, ref)), edges=decoder.last_edges))
+        np.testing.assert_array_equal(decoder.decode_batch(np.zeros_like(batch)), np.zeros_like(pred))
+        np.testing.assert_array_equal(decoder.decode_batch(batch), pred)
+    return records
+
+
+def stats(ns):
+    ms = np.asarray(ns) / 1e6
+    return dict(median_ms=float(np.median(ms)), p95_ms=float(np.percentile(ms, 95)), p99_ms=float(np.percentile(ms, 99)), mean_ms=float(np.mean(ms)))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--manifest', type=Path, default=Path('docs/union_find_comparison_d7_p003.json'))
+    parser.add_argument('--cpu', type=int, default=127)
+    parser.add_argument('--shots', type=int, default=50)
+    parser.add_argument('--scale', type=int, default=1000)
+    parser.add_argument('--full-mwpm', action='store_true')
+    args = parser.parse_args()
+    if args.cpu not in os.sched_getaffinity(0):
+        raise ValueError('Requested CPU is outside the allowed affinity')
+    os.sched_setaffinity(0, {args.cpu})
+    out = Path(tempfile.mkdtemp(prefix='fusion-blossom-probe-', dir=os.environ['TMPDIR']))
+    print('Artifacts:', out, flush=True)
+    fixture_results = fixtures()
+    print('Passed fixtures:', len(fixture_results), flush=True)
+    manifest = json.loads(args.manifest.read_text())
+    source = Path(manifest['artifact_directory'])
+    graph_content = (source / 'graph.json').read_bytes()
+    assert hashlib.sha256(graph_content).hexdigest() == manifest['input_sha256']['graph']
+    graph = DecodingGraph(**json.loads(graph_content))
+    assert manifest['parameters']['patches'] == 6 and manifest['parameters']['yokes'] == 2
+    assert manifest['normalization'] == dict(pieces=168, values=8)
+    with np.load(source / 'samples.npz') as data, np.load(source / 'predictions.npz') as saved:
+        syndromes = data['detectors']
+        actual = data['actual_observables']
+        expected = {name: saved[name] for name in ['uf', 'joint_mwpm']}
+    packed = np.packbits(syndromes, axis=1, bitorder='little').tobytes() + np.packbits(actual, axis=1, bitorder='little').tobytes()
+    assert hashlib.sha256(packed).hexdigest() == manifest['input_sha256']['packed_detectors_then_actual_observables']
+    assert 0 < args.shots <= len(syndromes)
+    dem = stim.DetectorErrorModel.from_file(source / 'model.dem')
+    assert hashlib.sha256(str(dem).encode()).hexdigest() == manifest['input_sha256']['dem']
+    for name, prediction in expected.items():
+        assert hashlib.sha256(np.packbits(prediction, axis=1, bitorder='little').tobytes()).hexdigest() == manifest['output_sha256'][name]
+    matching = pymatching.Matching.from_detector_error_model(dem)
+    exported = [(u, v, data['weight'], sum(1 << k for k in data['fault_ids'])) for u, v, data in matching.edges()]
+    assert tuple(exported) == graph.edges
+    for offset, yoke in enumerate(range(graph.num_detectors-2, graph.num_detectors)):
+        for (u, v, _, mask) in graph.edges:
+            assert sum((mask >> k) & 1 for k in range(offset, graph.num_observables, 2)) % 2 == int(u == yoke or v == yoke)
+    started = time.perf_counter()
+    decoders = {'fusion_uf': FusionDecoder(graph, args.scale), 'joint_mwpm': matching}
+    if args.full_mwpm:
+        decoders['fusion_mwpm'] = FusionDecoder(graph, args.scale, None)
+    compilation_seconds = time.perf_counter() - started
+    initializer_bytes = (decoders['fusion_uf'].initializer.to_json() + '\n').encode()
+    (out / 'fusion_initializer.json').write_bytes(initializer_bytes)
+    print('Graph and solver setup:', compilation_seconds, flush=True)
+    n = args.shots
+    predictions = {name: np.empty((n, graph.num_observables), dtype=np.bool_) for name in decoders}
+    timings = {name: [] for name in decoders}
+    edge_weights = {name: [] for name in decoders if name.startswith('fusion')}
+    for decoder in decoders.values():
+        for shot in range(10):
+            decoder.decode_batch(syndromes[shot:shot+1])
+    started = time.monotonic()
+    names = list(decoders)
+    for shot in range(n):
+        batch = syndromes[shot:shot+1]
+        for name in (names if shot % 2 == 0 else names[::-1]):
+            decoder = decoders[name]
+            begin = time.perf_counter_ns()
+            pred = decoder.decode_batch(batch)
+            elapsed = time.perf_counter_ns() - begin
+            timings[name].append(elapsed)
+            predictions[name][shot] = pred[0]
+            if name.startswith('fusion'):
+                validate(graph, batch[0], decoder.last_edges, decoder.endpoints)
+                edge_weights[name].append(sum(graph.edges[e][2] for e in decoder.last_edges))
+                for offset, yoke in enumerate(range(graph.num_detectors-2, graph.num_detectors)):
+                    assert int(pred[0, offset::2].sum()) % 2 == int(batch[0, yoke])
+            else:
+                np.testing.assert_array_equal(pred, expected[name][shot:shot+1])
+        if (shot+1) % 500 == 0 or shot+1 == n:
+            print(json.dumps(dict(shots=shot+1, seconds=time.monotonic()-started, latency={name: stats(values) for name, values in timings.items()})), flush=True)
+    report = dict(shots=n, scale=args.scale, weights='2 * round(float_weight * scale)', integer_weight_sum=sum(decoders['fusion_uf'].weights), fixtures=fixture_results, versions={p: importlib.metadata.version(p) for p in ['fusion-blossom', 'pymatching', 'stim', 'numpy', 'sinter']}, cpu=args.cpu, compilation_seconds=compilation_seconds, decoders={})
+    report.update(parameters=manifest['parameters'], normalization=manifest['normalization'],
+                  input_sha256=manifest['input_sha256'], artifact_directory=str(out),
+                  python=platform.python_version(),
+                  cpu_model=next(line.split(':', 1)[1].strip() for line in Path('/proc/cpuinfo').read_text().splitlines() if line.startswith('model name')),
+                  script_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                  backend_sha256=hashlib.sha256(Path(fb.fusion_blossom.__file__).read_bytes()).hexdigest(),
+                  initializer_sha256=hashlib.sha256(initializer_bytes).hexdigest(),
+                  output_sha256={name: hashlib.sha256(np.packbits(pred, axis=1, bitorder='little').tobytes()).hexdigest() for name, pred in predictions.items()},
+                  validation='Every Fusion Blossom correction reconstructs the syndrome; predictions satisfy both yokes',
+                  timing='decode_batch of one unpacked shot; alternating decoder order; 10 warm-up shots; construction, sampling and validation excluded; shared host')
+    float_weights = np.array([e[2] for e in graph.edges])
+    report['max_weight_rounding_error'] = float(np.max(np.abs(np.array(decoders['fusion_uf'].weights)/(2*args.scale) - float_weights)))
+    for name, pred in {**{k: v[:n] for k, v in expected.items()}, **predictions}.items():
+        failures = np.any(pred != actual[:n], axis=1)
+        report['decoders'][name] = dict(block_failures=int(failures.sum()), per_patch_per_round=sinter.shot_error_rate_to_piece_error_rate(float(failures.mean()), pieces=168, values=8), prediction_mismatches_vs_python_uf=int(np.count_nonzero(np.any(pred != expected['uf'][:n], axis=1))))
+        if name in timings:
+            report['decoders'][name]['latency'] = stats(timings[name])
+    (out / 'summary.json').write_text(json.dumps(report, indent=2)+'\n')
+    np.savez_compressed(out / 'predictions.npz', **predictions)
+    np.savez_compressed(out / 'timings.npz', **timings)
+    np.savez_compressed(out / 'correction_weights.npz', **edge_weights)
+    print(json.dumps(report['decoders'], indent=2), flush=True)
+    print('Results:', out, flush=True)
+
+
+if __name__ == '__main__':
+    main()

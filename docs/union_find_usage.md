@@ -80,6 +80,44 @@ np.testing.assert_array_equal(
 The same `custom_decoders` mapping registers the adapter with Sinter under
 the name `uf_weighted`.
 
+**Optional correlated UF.** This variant uses two passes of the repository UF
+decoder. The first correction supplies evidence about shared DEM error
+mechanisms. That evidence lowers related edge weights, then a fresh UF pass
+decodes the original syndrome and supplies the final prediction.
+
+```python
+from yoked.decoders import (
+    CorrelatedUnionFindDecoder, SinterCorrelatedUnionFindDecoder, SinterUnionFindDecoder,
+)
+
+correlated_decoder = CorrelatedUnionFindDecoder.from_dem(dem)
+correlated_predictions = correlated_decoder.decode_batch(detectors)
+
+custom_decoders = {
+    'uf_weighted': SinterUnionFindDecoder(),
+    'uf_correlated': SinterCorrelatedUnionFindDecoder(),
+}
+```
+
+The correlation rules are compiled once from the decomposed DEM, using the
+pairwise implied-weight approximation used by PyMatching. Several mechanisms
+can contribute to an edge or an edge pair; their probabilities combine by
+parity. Implied probabilities are capped at 0.5 to keep weights nonnegative.
+Both decoding passes use UF, with no MWPM solve or new dependency.
+
+For a graph with externally supplied correlation information, construct
+`CorrelatedUnionFindDecoder(graph, correlation_rules=rules)`. Each rule is
+`(source_edge_id, target_edge_id, implied_weight)`, where IDs index
+`graph.edges`. A source must be selected in the first correction to lower its
+target's weight. Multiple sources use the lowest weight. Marginal graph weights
+alone do not determine these relationships.
+
+Each shot starts from the original graph weights, and the decoder leaves the
+graph and syndrome unchanged. Rules may connect any graph edges; there are no
+geometry or yoke-specific parameters. DEM errors that repeat an edge across
+decomposed components are rejected. The plain `UnionFindDecoder` remains the
+default, and correlated UF is an explicit decoder choice.
+
 **Optional Fusion Blossom UF variant.** Install the optional package only if
 you want to select this backend (tested with version 0.2.13):
 
@@ -130,6 +168,6 @@ export MPLCONFIGDIR="$TMPDIR/uf-mpl"
 ```
 
 The tests verify growth behavior, scan-oracle agreement, syndrome validity,
-observable reconstruction, and the public interfaces. Optional Fusion Blossom
-tests are skipped when its package is absent. The default decoder is tested
-both with and without that optional dependency.
+observable reconstruction, correlation reweighting, and the public interfaces.
+Optional Fusion Blossom tests are skipped when its package is absent. The
+default decoder is tested both with and without that optional dependency.

@@ -2,6 +2,7 @@ import numpy as np
 import sinter
 import stim
 
+from yoked.decoders._correlated_union_find import CorrelatedUnionFindDecoder
 from yoked.decoders._fusion_blossom import FusionBlossomUnionFindDecoder
 from yoked.decoders._graph import DecodingGraph
 from yoked.decoders._union_find import UnionFindDecoder
@@ -12,6 +13,13 @@ class SinterUnionFindDecoder(sinter.Decoder):
 
     def compile_decoder_for_dem(self, *, dem: stim.DetectorErrorModel) -> sinter.CompiledDecoder:
         return _CompiledUnionFindDecoder(UnionFindDecoder(DecodingGraph.from_dem(dem)))
+
+
+class SinterCorrelatedUnionFindDecoder(sinter.Decoder):
+    """Optional two-pass UF; compile the graph and correlations per worker."""
+
+    def compile_decoder_for_dem(self, *, dem: stim.DetectorErrorModel) -> sinter.CompiledDecoder:
+        return _CompiledUnionFindDecoder(CorrelatedUnionFindDecoder.from_dem(dem))
 
 
 class SinterFusionBlossomUnionFindDecoder(sinter.Decoder):
