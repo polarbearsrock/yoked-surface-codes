@@ -1,6 +1,7 @@
 # Hierarchical L1/L2 decoding experiment design
 
-**Status:** approved design, 2026-09-14. Implementation plan to follow.
+**Status:** approved design, revised after review on 2026-09-14.
+Implementation plan to follow.
 
 **Goal.** Split decoding of the 1D yoked surface code into a patch-local
 layer (L1) that emits a reference correction and a confidence score per
@@ -11,8 +12,10 @@ for refined confidences from only a few patches.
 
 **Question.** With L1 reference corrections held fixed, how much of the
 improvement from replacing every patch's initial confidence with a refined
-one is recovered when only k of six patches are refined, and does an
-informed choice of those k patches beat a random choice?
+one is recovered when only k of six patches per sector are selected for
+refinement, and does an informed choice beat a random choice with the same
+trigger and selection budget? Report both the patch-sector selections and
+the distinct patches and matching calls needed to provide them.
 
 This document fixes the definitions, data, code structure, metrics, and
 acceptance tests. It does not add asynchronous message arrival, streaming
@@ -30,29 +33,36 @@ and on the saved seed-42 100,000-shot sample on 2026-09-14.
   end-of-block parity check: on every sampled shot the X yoke bit equals
   the XOR of the six X observables (even observable indices), and the Z
   yoke bit equals the XOR of the six Z observables (odd indices).
-- Each yoke detector has degree 14,556 in the decoding graph. The median
-  detector has degree 70 and no other detector exceeds 82. The yoke is a
-  hub, and UF growth from a fired hub reaches every patch at once.
+- Each yoke detector has degree 1,110 in the imported decoding graph. The
+  median detector degree is 11 and no non-yoke detector exceeds 12. These
+  are degrees after parallel-edge merging by the audited importer. The
+  counts 14,556, 70, and 82 are repeated detector-target occurrences in the
+  flattened DEM, not graph degrees. The yoke remains a hub: UF growth from
+  a fired hub can spread into every patch.
 - With the two yoke detectors removed, the DEM has 12 connected
   components, one per patch and sector, each with 1,480 detectors and
-  exactly one observable. No component has more than two detectors, no
-  component loses its last detector when the yoke is removed, and every
-  component's yoke membership matches its observable's sector.
+  exactly one observable. Each decomposed error component has at most two
+  detectors, retains a physical detector when the yoke is removed, and has
+  yoke membership matching its observable's sector.
 - Every observable-flipping component has exactly one physical detector.
   In the yoke-free view such components are boundary edges.
-- Joint MWPM on the hub graph equals patch-local MWPM plus "flip the
-  patch with the smallest complementary gap when the yoke fires". On the
-  saved sample it is wrong on 0.03% of sectors with no patch-local failure
-  and on 99.6% of sectors with two or more.
+- Up to matching ties, joint MWPM on the hub graph equals patch-local
+  MWPM plus "flip the patch with the smallest complementary gap when the
+  frame-adjusted yoke fires". On the saved sample joint MWPM is wrong on
+  0.03% of sectors with no patch-local failure and on 99.6% of sectors with
+  two or more.
 - Patch-local uncorrelated MWPM fails on 6.3% of patch-sectors. Per sector,
   27.2% of shots have exactly one failed patch and 5.1% have two or more.
   Joint MWPM misattributes 32.2% of the exactly-one cases.
 
-Consequences: L1 operates on 12 independent graphs per shot; the yoke is
-the only coupling; the multi-failure floor is large at this operating
-point, so the primary metric must condition on exactly one residual
-failure; and the MWPM-reference pipeline has a known exact answer, which
-becomes the end-to-end validation test.
+Consequences: the check-free graphs have 12 disconnected sectors per
+shot, with DEM correlations still relating X and Z edges within a patch.
+The yokes supply the outer parity constraints. Single-failure
+misattribution is the primary diagnostic, accompanied by overall block
+failure and outcomes stratified by zero, one, and multiple reference
+failures. Multiple failures are not an irreducible floor for the general
+L2 in section 7. The MWPM-reference pipeline has a known answer up to
+matching ties, which becomes the end-to-end validation test.
 
 ## 2. Notation
 
@@ -70,6 +80,10 @@ becomes the end-to-end validation test.
 - `q0[i, s]`: initial calibrated residual-error probability.
   `q1[i, s]`: refined calibrated residual-error probability.
 - L2 output `x[i, s] in {0, 1}`; final prediction `f = r XOR x`.
+- `M[i, s]`: the policy requests the refined score for this patch-sector;
+  only these scores replace `q0`. `U[i] = M[i, X] OR M[i, Z]`: the patch
+  requires refinement work. A touched patch computes both sector gaps,
+  but an unrequested score is not substituted into L2.
 - A shot succeeds when `f == a` on all 12 observables. This is the scoring
   used by the existing four-decoder comparison and is kept unchanged.
 - All weights, gaps, and scores are in nats: edge weight `ln((1 - p) / p)`.
@@ -85,13 +99,34 @@ comparison docs do.
 |---|---:|---:|---|
 | Evaluation | 42 | 100,000 | The saved four-decoder sample. Exploratory comparisons and policy development. |
 | Calibration | 142 | 50,000 | Fitting calibrators only. Never used for evaluation. |
-| Confirmation | 242 | 100,000 | Run once, after calibrators and policies are frozen. Reported beside the evaluation numbers. |
+| Confirmation | 242 | 100,000 | Sample, collect, and evaluate once, only after the analysis is frozen. Reported beside the evaluation numbers. |
 
 The saved seed-42 arrays are reused from the recorded run directory after
-verifying their hash. Calibration has 50,000 x 6 patch outcomes per sector
-with roughly 6% to 9% positives, so each calibrator sees more than 18,000
-residual-error events. Distance 7 is a replication after distance 9 is
-complete, using the saved d=7 seed-42 sample with the same three-set plan.
+verifying their hash. First run a small d=9 pilot on the first 2,000 shots
+of this saved sample and the first 2,000 shots of the calibration sample.
+Generate the calibration sample in its single full 50,000-shot call, but
+initially decode only the pilot subset. Fit pilot calibrators only on the
+calibration subset and assess endpoints only on the evaluation subset.
+Pilot records retain their parent sample hash and row indices; do not
+resample with a smaller call or treat these subsets as independent sets.
+
+The pilot precedes full L1 collection and tests whether initial-only and
+all-refined separate enough to justify the full experiment. It is
+exploratory, and its shots remain part of their respective full sets. If
+the pilot supports proceeding, reuse its L1 outputs when graph, decoder,
+and collection provenance still match, and collect the remaining
+calibration and evaluation rows. Otherwise invalidate and recollect the
+affected pilot outputs. At full size, calibration has
+50,000 x 6 patch outcomes per sector, with roughly 6% to 9% positives
+(about 18,000 to 27,000 residual-error events per sector).
+
+After policy development, freeze the calibrators, estimator definitions,
+policy configurations, tie rules, work accounting, reliability bins,
+metrics, and analysis code in a manifest with source and artifact hashes.
+Only then sample and collect confirmation. Confirmation results cannot be
+used to revise these choices while retaining the same set as confirmation.
+Distance 7 is a replication after distance 9 is complete, using its saved
+seed-42 sample and the same pilot, three-set, and freeze procedure.
 
 ## 4. Patch graphs: splitting the hub
 
@@ -145,10 +180,12 @@ local = patches.local_syndromes(global_syndromes)   # shape (shots, 6, 2960)
 
 ## 5. L1: reference decoders and soft outputs
 
-L1 runs once per patch on the check-free graph and reports, per sector, a
-reference bit and one or more scores. Nothing in L1 sees a yoke or check
-bit. Scores are defined so that a larger score means more confidence that
-the reference bit is right, and calibration in section 6 maps them to
+L1 reference decoding runs once per patch on the check-free graph and
+reports a reference bit per sector. The score calculations use only local
+physical syndromes; they never receive a sampled yoke bit. Matching gaps
+use synthetic check bits to force each class as defined in section 5.2.
+Scores are defined so that a larger score means more confidence that the
+reference bit is right, and calibration in section 6 maps them to
 residual-error probabilities.
 
 ### 5.1 UF reference and the cluster gap
@@ -157,9 +194,10 @@ The reference decoder is the repository `UnionFindDecoder` on
 `patch.graph`. Its correction is validated as in the existing tests:
 `H c = s` over GF(2) and `L c = r`.
 
-The initial score is the cluster gap of Meister, Pattison, and Preskill
-(arXiv:2405.07433, Definition 9), evaluated on the terminated growth state
-of the repository's weighted UF:
+The initial score uses the cluster-gap construction of
+[Meister, Pattison, and Preskill](https://arxiv.org/html/2405.07433)
+(Definition 9), evaluated on the terminated growth state of the
+repository's weighted UF with the following edge-length convention:
 
 - Settle all edges at the final growth time. For edge `e` with weight
   `w_e` and accumulated growth `g_e`: if both endpoints are in one cluster
@@ -174,13 +212,21 @@ of the repository's weighted UF:
   component never toggle this parity, so they lie on no shortest odd walk;
   the implementation restricts the search to the sector's component.
 
-For a planar patch every odd-parity closed walk must use the boundary, so
-this equals Meister's shortest path between inequivalent boundaries with
-cluster interiors free. Charging partially grown edges only their remaining
-growth is the one deviation from the unweighted original; it matches the
-extra-cluster-growth view of Kishi et al. (arXiv:2602.03336) and reduces to
-the original when no partial growth exists. The number of settled Dijkstra
-states is recorded per patch-sector as the cost proxy.
+For this patch graph every odd-parity closed walk must use the boundary,
+because observable-flipping edges are boundary edges. The parity search
+therefore implements the shortest path between inequivalent boundaries
+with cluster interiors free. Remaining edge growth is the explicit metric
+used for this weighted UF state; with no partial growth it reduces to
+zero cost inside clusters and full edge weight outside. The small-graph
+tests verify this convention, including partial growth. Record the number
+of settled Dijkstra states per patch-sector as the initial soft-output
+work proxy.
+
+This count describes the initial soft-output work, which is incurred on
+all patches. A small refinement count alone does not establish a latency
+or throughput improvement; cluster-gap extraction itself has overhead, as
+discussed by [Kishi et al.](https://arxiv.org/html/2602.03336). Latency
+measurement remains outside this experiment.
 
 ```python
 decoder = ClusterGapUnionFindDecoder(patch.graph)
@@ -226,6 +272,13 @@ DEMs, so that adjusted weights can be supplied. The construction disallows
 merging of parallel edges; the audited importer already guarantees there
 are none.
 
+Both sector gaps are produced by each four-class calculation. Refining
+either sector therefore incurs the patch-level work; refining the other
+sector of that same patch does not repeat it. The unforced correlated
+second pass is collected for validation, not required to produce a gap.
+The full offline collection computes both variants for replay; section 8
+separately counts the calls each replay configuration would require.
+
 ```python
 gaps = MatchingGaps(patch)                      # builds the matchers once
 forced = gaps.forced_weights(local_syndrome)    # ForcedWeights
@@ -249,6 +302,9 @@ downstream stages need. Nothing downstream re-runs a decoder.
 | `mwpm_reference` | (shots, 12) | plain patch-local MWPM prediction, the unforced first pass |
 | `correlated_prediction` | (shots, 12) | unforced second pass under the reweighted model |
 | `joint_mwpm` | (shots, 12) | joint PyMatching on the hub DEM, for validation test 6 |
+| `joint_uf` | (shots, 12), optional | saved joint UF baseline on matching evaluation rows |
+| `joint_correlated_uf` | (shots, 12), optional | saved joint correlated UF baseline on matching evaluation rows |
+| `joint_correlated_mwpm` | (shots, 12), optional | saved built-in correlated PyMatching baseline on matching evaluation rows |
 | `cluster_gap` | (shots, 12) | nats |
 | `dijkstra_states` | (shots, 12) | cost proxy |
 | `forced_plain` | (shots, 6, 2, 2) | `W(c_X, c_Z)` |
@@ -258,26 +314,69 @@ Column `2i + s` holds patch `i`, sector `s`. The record is saved as one
 `.npz` beside a JSON manifest holding the circuit parameters, seed, shot
 count, sample hash, package versions, source hashes, and timing.
 
+Import the optional historical baselines only after verifying their sample
+identity, prediction hashes, row mapping, and recorded implementation
+provenance. They are absent on calibration and confirmation records;
+historical evaluation results are never presented as confirmation
+measurements. The built-in correlated MWPM baseline is distinct from the
+fixed-reweighting gap estimator in section 5.2.
+
 ## 6. Calibration
 
-An estimator is a pair (reference decoder, score). Each estimator gets its
-own calibrator that maps its score to `P(e[i, s] = 1)`, fit on the
-calibration set only. Fitting uses isotonic regression with the
-pool-adjacent-violators algorithm implemented in NumPy, with the monotone
-direction fixed by definition: decreasing in the cluster gap, decreasing
+An estimator is a pair (reference decoder, score). Each estimator gets a
+calibrator for each sector, pooling the six patches, that maps its score
+to `P(e[i, s] = 1)`, fit on the calibration set only. Fitting uses isotonic
+regression with the pool-adjacent-violators algorithm implemented in NumPy,
+with the monotone direction fixed by definition: decreasing in the cluster gap, decreasing
 in a signed matching gap. Between adjacent PAV block centres the map is
-linear, so it is strictly monotone inside the fitted range and flat
-beyond it. Outputs are clipped to `[1e-6, 1 - 1e-6]` so that log-odds stay
-finite.
+linear and non-increasing, with constant extrapolation beyond the fitted
+range. Strict monotonicity is not assumed; flat regions and clipping can
+introduce ties. Outputs are clipped to `[1e-6, 1 - 1e-6]` so that log-odds
+stay finite. Probabilities above one half are allowed: a refined signed
+gap can favor reversing the fixed reference.
 
-Two properties matter for interpretation and are stated in the report.
-First, within one estimator, L2's choice under a fired yoke is an argmax
-over probabilities, which any strictly monotone map leaves unchanged; so
-the initial-only and all-refined endpoints do not depend on calibration
-except through ties. Second, the selective cells compare a refined
-probability against initial probabilities of other patches, so they do
-depend on the two calibrators agreeing on a common scale. Reliability
-diagrams for every estimator are part of the report.
+Calibration can affect both the initial-only and all-refined endpoints,
+as well as selective refinement. Only in the restricted regime where
+every probability is below one half does L2 make no flips for `sigma = 0`
+and one flip at the largest probability for `sigma = 1`. A shared strictly
+monotone transformation preserving that regime leaves this ranking
+unchanged, apart from ties. In the general model, transformations can
+change which probabilities exceed one half and which bit has the smallest
+absolute log-odds, changing L2's answer even when rankings are unchanged.
+The mixed cells also require the two calibrators to agree on a common
+probability scale. Report the frequency of probabilities above one half
+and calibration-induced ties for each estimator.
+
+Reliability diagrams for every estimator are required on evaluation and,
+after freezing, confirmation. In addition to overall reliability, report
+refined-score reliability on the patch-sectors actually queried by each
+policy, with sample counts, mean predicted probabilities, and observed
+error frequencies. Break this out by initial-confidence bins where sample
+counts permit. For random controls, use their exact selection weights.
+Freeze the bin definitions before confirmation.
+
+Interpret the queried-population diagrams in light of the policy trigger:
+conditioning on `sigma` can change error prevalence even for exact local
+probabilities. Alongside the raw-score diagnostic, compare observed errors
+with the residual marginals of the L2 distribution after conditioning on
+the observed parity. These marginals are obtained by summing the weights
+of parity-compatible patterns with `x_i = 1` and normalizing by the total
+compatible weight. They are diagnostic probabilities, not a change to
+the MAP decision rule. Do not fit yoke-conditioned probabilities and then
+feed them to L2 as independent local inputs, conditioning on the same
+yoke twice.
+
+Selection on `q0` supplies information that a marginal calibration of the
+refined score alone may discard: `P(e = 1 | score1, selected)` need not
+equal `P(e = 1 | score1)`. If the queried population shows systematic
+miscalibration beyond the modeled parity conditioning, diagnose this
+during exploration and consider a combined estimate using both initial
+and refined scores. Any such extension must specify its model and fitting
+procedure before confirmation, fit its
+parameters on calibration data only, and retain the univariate estimator
+as a baseline. It is not silently substituted for the specified estimator,
+and satisfactory overall reliability alone is not evidence that the
+selected population is calibrated.
 
 ```python
 calibrator = IsotonicCalibrator.fit(scores, outcomes, direction='decreasing')
@@ -295,17 +394,38 @@ not `sigma[s]`, and returns the pattern of maximum weight. Enumeration over
 with the lowest binary value, bit `i` being patch `i`, and are counted. The final prediction is
 `f = r XOR x`, and by construction its sector parity equals the yoke bit.
 
+There is an independent analytic characterization. Let
+`b_i = 1[q_i > 1/2]` and `lambda_i = ln((1 - q_i) / q_i)`. If `b` already
+has parity `sigma`, it is an optimum. Otherwise toggle a bit with minimum
+`abs(lambda_i)`. Starting from `b`, every changed bit costs
+`abs(lambda_i)` in log weight, so the cheapest parity change suffices.
+Handle equal costs and `q_i = 1/2` explicitly to return the lowest binary
+optimum and count ties. This rule validates enumeration without repeating
+the same brute-force algorithm.
+
+Multiple flips relative to the reference are allowed, even for an unfired
+frame-adjusted yoke. For example, with
+`q = [0.9, 0.8, 0.1, 0.1, 0.1, 0.1]` and `sigma = 0`, L2 returns
+`x = [1, 1, 0, 0, 0, 0]`, repairing a reference with those two residual
+errors. The experiment therefore has no presumed floor at two failures.
+
 The maximum is over patterns, not over outer logical classes, because
 success is scored per observable. The complement of a correct pattern
 flips all six observables and is scored as six errors, so marginalizing
-over classes would be inconsistent with the scoring. The two rules differ
-only when both a pattern and its complement are plausible, which requires
-several probabilities near one half.
+over classes would be inconsistent with the scoring.
 
 A second rule, the candidate-restricted L2, is the same maximization with
 unrefined patches fixed to `x_i = 0`. It never compares a refined
 probability against an initial one and therefore isolates the selection
 policy from cross-estimator calibration error.
+
+It still depends on the refined probabilities and imposes a different
+feasible set from mixed L2. In particular, with one candidate and
+`sigma = 1`, parity forces that candidate to flip regardless of its refined
+score. That cell measures selection alone, not the value of refinement.
+With no candidates, `sigma = 0` returns the all-zero pattern; `sigma = 1`
+is infeasible and raises explicitly. The listed selective policies always
+provide at least one candidate when `sigma = 1`.
 
 ```python
 x, tied = exact_outer_map(q, parity, candidates=None)   # candidates: bool mask or None
@@ -316,19 +436,44 @@ x, tied = exact_outer_map(q, parity, candidates=None)   # candidates: bool mask 
 Replay reads the stored record and calibrators, builds `q0` from the
 initial estimator and `q1` from the refined estimator, and for each shot
 and sector lets a policy choose the set of patches whose `q1` replaces
-`q0`. L2 then runs on the mixed vector. A policy sees only `q0`, the
-frame-adjusted syndrome, and its own random state; never `q1`, the actual
-flips, or the outcome.
+`q0`, recorded as `M`. L2 then runs on the mixed vector. A policy sees only
+`q0` and the frame-adjusted syndrome; never `q1`, the actual flips, or the
+outcome. Deterministic policies break selection ties by increasing patch
+index. Random controls specify a uniform distribution over eligible
+subsets, integrated exactly during replay.
 
 Configurations, all on the same shots and the same reference bits:
 
 | Name | Refined set per sector | Purpose |
 |---|---|---|
 | `initial_only` | none | baseline hierarchy |
-| `all_refined` | all six | available benefit |
+| `all_refined` | all six, regardless of `sigma[s]` | full-refinement comparator |
 | `top_k_given_yoke` | the k largest `q0` when `sigma[s] = 1`, none otherwise; k in {1, 2, 3, 6} | primary selective policy |
-| `top_k_uncertain` | the k smallest absolute log-odds of `q0`, regardless of `sigma[s]` | the unconditioned policy from the proposal |
-| `random_k` | k patches uniformly at random, policy seed 1234 recorded in the manifest | selection control |
+| `top_k_uncertain` | the k smallest absolute log-odds of `q0`, regardless of `sigma[s]`; same k values | unconditioned selective policy |
+| `random_k_given_yoke` | a uniform k-subset when `sigma[s] = 1`, none otherwise | control for `top_k_given_yoke` |
+| `random_k_unconditional` | a uniform k-subset regardless of `sigma[s]` | control for `top_k_uncertain` |
+
+`top_k_given_yoke(k=6)` equals `all_refined` on the exactly-one-failure
+stratum, where `sigma = 1`, but need not equal it overall. It leaves
+`sigma = 0` sectors unrefined and can miss multiple-error rescues there.
+Keep this gated endpoint distinct in tables and plots.
+
+**Exact random controls.** At each active sector, average over all
+`binomial(6, k)` subsets with equal weights (at most 20); an inactive gated
+sector has only the empty subset. The distribution is fixed without
+access to refined scores or outcomes. Evaluating every branch computes
+the policy's expectation, not an informed choice among the branches.
+Subset choices are independent between X and Z. Store per-shot expected
+sector and block failures, coverage, ties, and work. For example, if the
+conditional sector failure probabilities on one shot are `h_X` and `h_Z`,
+its expected block failure is `1 - (1 - h_X) * (1 - h_Z)`. These
+expectations replace a single seed-dependent random realization in all
+reported comparisons and are bootstrapped by whole shot.
+
+The controls match eligibility and requested patch-sector counts. Their
+distinct-patch costs can still differ from an informed policy because X/Z
+selection overlap can differ; report these costs instead of assuming they
+are equal.
 
 Each selective configuration is run with both the mixed L2 and the
 candidate-restricted L2. The primary estimator pair is UF reference,
@@ -336,57 +481,150 @@ cluster gap initial, correlated gap refined. The control pair is MWPM
 reference, plain gap initial, correlated gap refined. The plain gap is also
 run as a refined estimator for the UF reference as a secondary cell.
 
+**Work accounting.** Keep separate counts for requested patch-sectors
+`sum(M)` and distinct patches refined `sum(U)`. Refining a patch computes
+both sector gaps once; L2 consumes only the scores marked in `M`. For
+random controls, if the selection probabilities of a patch are `p_X` and
+`p_Z`, its refinement probability is
+`1 - (1 - p_X) * (1 - p_Z)`. This accounts for shared work exactly.
+
+Count matching calls for the specified four-class procedure, separating
+fixed initial work from incremental refinement work:
+
+| Estimator configuration | Fixed initial work per patch | Incremental work per distinct patch refined |
+|---|---|---|
+| UF reference, cluster gap to plain gap | one UF decode and two cluster-gap searches | four plain forced matching calls |
+| UF reference, cluster gap to correlated gap | one UF decode and two cluster-gap searches | one unforced plain matching call, one reweighting pass, four correlated forced matching calls |
+| MWPM reference, plain gap to correlated gap | one unforced plain matching call and four plain forced matching calls | one reweighting pass using the retained first-pass edges, four correlated forced matching calls |
+
+The four forced calls provide both sector gaps. Compiling graphs and
+correlation rules is setup work. Offline collection additionally computes
+validation predictions and all scores for every patch; record that actual
+collection work separately from the work implied by each replay. These
+counts characterize the specified procedure, not elapsed time or a claim
+of minimal matching work. Any later optimization must update the frozen
+accounting and avoid charging X and Z twice for shared work.
+
 ```python
 config = ReplayConfig(reference='uf', initial='cluster_gap', refined='gap_correlated',
                       policy=TopKGivenYoke(k=2), outer='mixed')
 result = replay(record, calibrators, config)
-result.final          # (shots, 12) bool
-result.refined        # (shots, 12) bool, which patch-sectors were refined
-result.ties           # (shots, 2) bool
+result.final            # (shots, 12) bool
+result.refined          # (shots, 12) bool, M: scores requested and consumed
+result.refined_patches  # (shots, 6) bool, U: patches requiring matching work
+result.work             # per-shot call counts, with initial and incremental work separate
+result.ties             # (shots, 2) bool
 ```
+
+For an averaged random control, replay returns an `ExpectedReplayResult`
+with per-shot expectations and weighted subset outcomes sufficient to
+compute the metrics and transitions. It has no single `final` prediction
+array. JSON summaries identify expected counts, which may be fractional;
+the per-shot arrays retain the pairing needed for bootstrap comparisons.
 
 ## 9. Metrics and report
 
 **Primary.** Misattribution rate: among sectors with exactly one residual
 reference failure, the fraction where the final prediction is wrong. It is
-reported per configuration with a paired bootstrap interval, resampling
-whole shots, 10,000 replicates, RNG seed 43.
+reported per configuration with a paired 95% bootstrap interval,
+resampling whole shots, 10,000 replicates, RNG seed 43. All configurations
+within an estimator pair use the same reference and eligible sectors.
+Different reference decoders define different eligible populations, so
+their misattribution rates alone do not rank overall decoder quality.
+For random controls, bootstrap their per-shot expected outcomes; do not
+draw fresh subsets inside each bootstrap replicate.
+
+Every headline primary result is accompanied by overall block failure
+and its paired comparison to the relevant baseline, together with
+refinement call counts. Improvement on the single-failure stratum alone is not
+presented as an overall accuracy improvement.
 
 **Recovery fraction.** For policy P at budget k,
 `eta(k) = (m_initial - m_P(k)) / (m_initial - m_all)` on the primary
-metric, with a paired bootstrap interval.
+metric, with a paired bootstrap interval. Report the absolute differences
+and denominator interval as well. If the initial-to-all-refined benefit
+is nonpositive or its paired interval includes zero, label the recovery
+fraction unresolved instead of quoting a stable percentage. Do not clip
+values to `[0, 1]`: selective use can harm performance or outperform the
+all-refined comparator. Identify any zero-denominator bootstrap samples
+explicitly instead of silently dropping them.
 
-**Floor.** Fraction of sectors with two or more residual reference
-failures, per reference decoder. Soft information cannot repair these.
+**Reference-failure strata.** For zero, exactly one, and two or more
+residual reference failures, report the number and fraction of eligible
+sectors, final sector failures, and rescued/harmed outcomes relative to
+initial-only, separately for each reference decoder. Report outcomes on
+`sigma = 0` sectors as well, since yoke-gated policies skip refinement
+there. These are measured strata, not an assumed multi-failure floor.
+
+**Selection coverage.** Among sectors with exactly one residual reference
+failure, report the probability that its failed patch is in the selected
+set `M`, and the final success rate conditional on inclusion. This
+separates selection failures from failures to exploit the refined score.
+Uniform random k-subsets have coverage exactly `k / 6` on this stratum.
+Candidate-restricted success cannot exceed coverage, and at `k = 1` it
+equals coverage. Coverage is not an upper bound for mixed L2, which can
+still flip an unselected patch using its initial probability.
 
 **Secondary.** Sector and block failure counts; normalized LER per patch
 per round via `sinter.shot_error_rate_to_piece_error_rate` with
 `pieces = patches * rounds` (216 at d=9) and `values = 8`, so the numbers
-sit beside the four-decoder table; fraction of patch-sectors refined, the cost proxy;
-mean and 99th percentile of `dijkstra_states`; tie counts.
+sit beside the four-decoder table; tie counts and frequencies of calibrated
+probabilities above one half. Expected random-control failure counts are
+labeled as such; normalization is applied to their mean block failure
+rate, not separately to each subset's normalized LER.
+
+**Work.** Report requested patch-sector counts and fractions, distinct
+patches refined per shot and their fraction of the six patches, and the
+initial and incremental matching calls and reweighting passes from
+section 8. Include the mean and 99th percentile of `dijkstra_states` for
+the initial cluster-gap calculation. Plot primary and block failure
+against distinct-patch and matching-call costs as well as nominal `k`.
+Random-control work is the exact expectation under the specified subset
+distribution. Keep offline collection work and timing in a separate
+table; replay work counts do not imply measured speedups.
 
 **Transitions.** For each pair of configurations, per sector, counts of
 rescued, harmed, both-fail, and both-succeed shots. Rescues are split into
 magnitude-only rescues, where every refined patch has a nonnegative signed
 gap, and reversal rescues, where at least one refined patch's gap is
-negative.
+negative, for comparisons against initial-only. Also tabulate transitions
+within the reference-failure strata. Transitions involving random controls
+are exact weighted expectations; different random controls use independent
+subset draws conditional on the same shot. Label their potentially
+fractional counts explicitly.
 
 **Validation numbers.** Agreement rate of the MWPM-reference pipeline with
-joint PyMatching, additivity error of the plain forced weights, and check
-parity agreement, all reported.
+joint PyMatching, additivity errors of the plain and correlated forced
+weights, check parity agreement, and imported graph degrees, all reported.
+
+**Connection to the UF experiments.** The evaluation report includes the
+saved joint UF, joint correlated UF, joint MWPM, and built-in correlated
+MWPM baselines alongside local UF plus initial-only L2, all-refined L2,
+and selective L2. Report block failure and normalized LER on the same
+evaluation shots. This distinguishes gains from treating the yokes in a
+separate layer, gains from refined information, and the benefit retained
+by selective use. Historical baselines appear only in the evaluation
+column; newly collected joint MWPM and the frozen hierarchy configurations
+also have confirmation measurements.
 
 The report is a markdown file under `docs/results/`, in the style of the
 existing four-decoder comparison: configuration table, results tables,
-transitions, reliability diagrams and the recovery curve as PNG files
-beside it, reproduction details, and links to the run directory. The
-evaluation-set and confirmation-set numbers appear side by side.
+transitions, overall and queried-population reliability diagrams, coverage
+and recovery curves, and accuracy-versus-work plots as PNG files beside
+it, reproduction details, and links to the run directory. The
+evaluation-set and confirmation-set numbers appear side by side, with
+pilot and exploratory results clearly identified and the freeze manifest
+linked. Missing or ineligible strata are labeled, not assigned a zero
+failure rate.
 
 ## 10. Validation and acceptance tests
 
 Unit tests live beside their modules. The end-to-end tests run on a
 distance-3 circuit with a few hundred shots so that they finish in
-seconds; the same checks are repeated on the full distance-9 record by the
-collect stage and their outcomes are written to the manifest.
+seconds. Repeat graph and correction invariants on the pilot and on each
+full distance-9 record during collection. Calibration and replay validate
+their own invariants when those stages run. Each stage writes its check
+results to its manifest; confirmation checks run only after the freeze.
 
 1. **Hub split is lossless.** Merging the six check graphs' check vertices
    into the two yoke vertices reproduces `DecodingGraph.from_dem` of the
@@ -400,24 +638,66 @@ collect stage and their outcomes are written to the manifest.
 4. **Plain forced weights are additive** across sectors to within `1e-9`,
    and `argmin` over each sector's forced weights equals the unforced plain
    prediction on every shot where the two weights differ by more than `1e-9`.
-5. **Correlated gap sign is consistent.** The class preferred by the
-   correlated forced weights equals the prediction of a two-pass correlated
-   matching with the same rules on at least 99.9% of patch-sectors.
+5. **Correlated gap sign is consistent.** Under the same frozen reweighted
+   model, sector forced weights are additive to within `1e-9`, and their
+   preferred class equals the unforced second-pass prediction whenever
+   the sector weights differ by more than `1e-9`. Report ties separately;
+   disagreement outside ties is a failure, not an allowed error fraction.
 6. **The MWPM-reference pipeline reproduces joint MWPM.** With the plain
    gap mapped through the uncalibrated logistic `1 / (1 + exp(delta))` and
-   the mixed L2, final predictions equal joint PyMatching's predictions on
-   the hub DEM, recomputed by the collect stage, on at least 99.9% of shots, and in every disagreement the two competing
-   patches' gaps differ by less than `1e-6` nats.
+   the mixed L2, final predictions reproduce a joint MWPM optimum on the
+   hub DEM. Compare with joint PyMatching recomputed by the collect stage.
+   Predictions must agree when the optimum observable pattern is unique.
+   In every disagreement, both predictions obey yoke parity and their
+   total forced costs, `sum_i W_i(f[i, X], f[i, Z])`, agree to within
+   `1e-6` nats. Report prediction agreement and tie-induced differences
+   without treating a fixed agreement percentage as a correctness test.
 7. **L2 is exact.** On random instances with up to 8 patches, enumeration
-   agrees with an independent brute-force implementation, including ties.
+   agrees with the analytic threshold-and-parity rule in section 7,
+   including equal-cost choices, probabilities equal to one half,
+   candidate restrictions, and the lowest-binary tie rule. Explicit
+   fixtures cover a two-error rescue with `sigma = 0` and a ranking-
+   preserving probability transformation that changes the MAP pattern.
 8. **Cluster gap is exact.** On small hand-built graphs, the Dijkstra
    value equals a brute-force minimum over all odd-parity closed walks
    through the boundary, both with and without partial growth.
 9. **Calibration is monotone and held out.** The fitted map is
-   non-increasing, and the driver refuses to evaluate on the set it
-   calibrated on.
+   non-increasing, including flat blocks and clipping, and the driver
+   refuses to evaluate on its calibration sample or any subset of that
+   parent sample. Queried-population reliability uses the exact policy
+   selection mask or selection weights and reports its eligible counts.
+   A small model with known probabilities checks the distinction between
+   local calibration and residual marginals conditioned on yoke parity.
 10. **Replay is deterministic.** Two replays with the same inputs and
-    seeds produce identical outputs.
+    configuration produce identical outputs, including exact expectations
+    for the random controls. Bootstrap reproducibility uses its recorded
+    seed.
+11. **Graph statistics describe imported edges.** On the recorded d=9
+    DEM, independently counted adjacency degrees give yoke degrees 1,110,
+    median detector degree 11, and maximum non-yoke degree 12. Raw DEM
+    target multiplicities are kept separate. Other distances derive their
+    statistics from their own graphs.
+12. **Coverage has the stated meaning.** On single-failure fixtures,
+    candidate-restricted success is bounded by coverage and equals it for
+    one candidate. Changing the sole candidate's refined probability does
+    not change that answer. No-candidate odd parity raises explicitly.
+13. **Shared work is counted once.** Fixtures querying X and Z on the
+    same patch incur one patch refinement, while queries on two patches
+    incur two. Unrequested scores remain at `q0` even when computed.
+    Call counts follow the estimator-specific table and exclude
+    collection-only validation work.
+14. **Random controls are exact and correctly gated.** Subset weights
+    sum to one, single-failure coverage is `k / 6`, and gated controls
+    request nothing for `sigma = 0`. Independent enumeration of X/Z
+    subset pairs agrees with expected block failure and shared work.
+    Verify that `top_k_given_yoke(k=6)` agrees with `all_refined` on
+    single-failure sectors without imposing agreement on `sigma = 0`.
+15. **Pilot, baselines, and confirmation preserve provenance.** Pilot
+    records identify parent samples and rows; resuming collection neither
+    drops nor duplicates them. Historical prediction imports reject hash
+    or row mismatches. Confirmation sampling, collection, and replay
+    require a freeze manifest and reject changed analysis artifacts or
+    configurations.
 
 ## 11. Code layout, interfaces, and documentation standards
 
@@ -432,9 +712,9 @@ src/yoked/hierarchical/
     _matching_gaps.py      MatchingGaps, ForcedWeights, signed_gap, matcher construction
     _calibration.py        IsotonicCalibrator (PAV + interpolation)
     _outer_decoder.py      exact_outer_map, frame adjustment
-    _policies.py           policy classes with one shared interface
-    _replay.py             ReplayConfig, replay, L1Record load/save
-    _metrics.py            primary metric, eta, floors, transitions, paired bootstrap
+    _policies.py           deterministic selections and uniform subset distributions
+    _replay.py             ReplayConfig, replay results, L1Record load/save, work counts
+    _metrics.py            primary metric, eta, strata, coverage, reliability, bootstrap
 src/yoked/decoders/
     _correlations.py       correlation_rules_from_dem, moved from the correlated UF module
 tools/hierarchical_experiment   collect | calibrate | replay | report
@@ -442,14 +722,22 @@ docs/hierarchical_decoding.md   usage, mirroring docs/union_find_usage.md
 docs/results/hierarchical_l1_l2_d9_p003.md   the report
 ```
 
-Stages of the driver, each reading only files the previous stage wrote:
+Stages of the driver, with explicit input artifacts and provenance:
 `collect` takes circuit parameters, a seed, and a shot count, or the path of
-a saved sample, and writes the L1 record and manifest of section 5.3;
-`calibrate` takes a record and writes one calibrator JSON per estimator;
+a saved sample, plus the dataset role and optional row selection, and writes
+the L1 record and manifest of section 5.3. It supports pilot collection and
+resuming the remaining rows, and imports verified historical baseline
+predictions for evaluation when supplied;
+`calibrate` takes a calibration record and writes one calibrator JSON per
+estimator and sector, including the source sample and fitted row indices;
 `replay` takes a record, the calibrators, and a list of configurations and
-writes per-configuration results JSON plus the final prediction arrays;
-`report` takes replay outputs for the evaluation and confirmation sets and
-writes the markdown report and its figures.
+writes per-configuration results JSON plus final prediction arrays for
+deterministic policies or per-shot expectations and weighted subset
+outcomes for random controls;
+`report` takes these outputs and writes the markdown report and figures,
+supporting an exploratory report before confirmation exists. Frozen
+analysis artifacts and configurations are recorded in the freeze manifest;
+confirmation sampling, collection, replay, and reporting verify it.
 
 Standards, applied to every module:
 
@@ -470,28 +758,57 @@ Standards, applied to every module:
 
 ## 12. Milestones
 
-**M1: graphs, L1, and the exact validation.** Sections 4, 5, and 7, the
-correlation-rule move, and the collect stage. Done when tests 1 to 8 pass
-on the distance-3 fixture and the collect stage has produced the d=9
-records for all three sample sets with tests 1 to 6 passing on them.
+**M1: graphs, validation, and a small d=9 pilot.** Implement the graph
+split, L1, exact L2, shared correlation rules, collection, and the
+calibration and endpoint replay needed for the pilot. Run applicable unit
+and distance-3 checks, then the 2,000-shot calibration and evaluation
+subsets from section 3. Report pilot initial-only versus all-refined for
+both estimator pairs, including primary and block failure intervals,
+reference-failure strata, and work counts. Check graph equivalence and
+corrections on these records. Record whether the endpoint separation
+justifies full collection; if no benefit is apparent, diagnose or stop
+with a pilot report before committing to the full run. Pilot conclusions
+are exploratory. Confirmation is not sampled or collected.
 
-**M2: calibration and the two endpoints.** Section 6, `replay` with
-`initial_only` and `all_refined`, the primary metric, floors, and bootstrap.
-Done when the report shows initial-only versus all-refined for both
-estimator pairs on the evaluation set with intervals. This is the decision
-point: if all-refined does not beat initial-only on the primary metric, M3
-is not started and the report says why.
+**M2: full calibration, evaluation, and endpoints.** If the pilot supports
+proceeding, collect the remaining calibration and evaluation rows, refit
+calibrators on the full calibration set, and replay `initial_only` and
+`all_refined`. Report both estimator pairs with paired intervals, block
+failures, strata, and the historical UF/MWPM baseline comparison. If
+all-refined does not beat initial-only on the primary UF-reference metric,
+do not start the primary selective experiment; report the absolute effects
+and uncertainty. Do not use an unstable recovery fraction as evidence of
+benefit. Confirmation remains untouched.
 
-**M3: selective refinement.** Section 8 policies, both L2 rules,
-transitions, the recovery curve, the confirmation run, and the final
-report.
+**M3: selective refinement and analysis freeze.** Implement all section 8
+policies, exact random controls, both L2 rules, shared-work accounting,
+coverage, transitions, and queried-population reliability. Develop and
+assess policies on evaluation only; any calibration parameters continue
+to be fit on calibration only. Complete the exploratory report, resolve
+or document calibration limitations, then write the freeze manifest from
+section 3. No policy or estimator is chosen using confirmation outcomes.
+
+**M4: confirmation and final report.** After verifying the freeze manifest,
+sample and collect the confirmation set once, apply the frozen analysis,
+and report its results beside evaluation. Include paired effects, coverage,
+strata, reliability, and accuracy-versus-work curves, and distinguish
+historical evaluation baselines from confirmation measurements.
 
 ## 13. Decisions recorded
 
 - Initial UF soft output is the cluster gap by Dijkstra, chosen over
   extra-cluster growth with a cap and over forced-complement UF.
-- Success is scored per observable, so L2 maximizes over patterns.
+- Success is scored per observable, so L2 maximizes over patterns and may
+  correct multiple residual reference errors. No multi-failure floor is
+  assumed, and calibration can change endpoint decisions.
 - The correlated matching gap is the primary refined estimate; the plain
   gap is secondary.
+- Nominal selection budgets are per sector; distinct-patch work and
+  matching calls are counted with X/Z reuse. Random controls match each
+  policy's trigger and are averaged exactly over uniform subsets.
+- A small pilot precedes full L1 collection. Confirmation begins only
+  after the estimator, policy, metric, and analysis artifacts are frozen.
+- Historical joint UF and correlated UF results are included as evaluation
+  baselines, alongside joint and built-in correlated MWPM.
 - Correlated UF as a reference decoder, joint four-Pauli messages, latency
   measurement, and any change to the operating point are out of scope.
