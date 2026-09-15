@@ -5,6 +5,8 @@ import hashlib
 import inspect
 import json
 import math
+import os
+import stat
 import subprocess
 
 import numpy as np
@@ -148,6 +150,31 @@ def test_read_json_rejects_nonstandard_nan_literals(tmp_path):
     path.write_text('{"rate": NaN}')
     with pytest.raises(ValueError):
         read_json(path)
+
+
+def default_file_mode(directory) -> int:
+    """The permission bits a plain ``open(path, 'w')`` produces under the current umask."""
+    reference = directory / 'reference-mode'
+    with open(reference, 'w'):
+        pass
+    mode = stat.S_IMODE(reference.stat().st_mode)
+    reference.unlink()
+    return mode
+
+
+def test_a_written_artifact_has_the_permissions_an_ordinary_write_would_give_it(tmp_path):
+    path = tmp_path / 'manifest.json'
+    write_json_atomic(path, {'status': 'complete'})
+    assert stat.S_IMODE(path.stat().st_mode) == default_file_mode(tmp_path)
+
+
+def test_rewriting_an_artifact_does_not_reduce_its_permissions(tmp_path):
+    path = tmp_path / 'manifest.json'
+    write_json_atomic(path, {'status': 'partial'})
+    os.chmod(path, 0o664)
+    write_json_atomic(path, {'status': 'complete'})
+    expected = default_file_mode(tmp_path)
+    assert stat.S_IMODE(path.stat().st_mode) & expected == expected
 
 
 def test_atomic_replacement_removes_its_temporary_file_when_the_caller_fails(tmp_path):

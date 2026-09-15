@@ -174,17 +174,32 @@ def atomic_replacement(path) -> Iterator[Path]:
 
     The sibling lives in the destination directory so that the replacement is a rename
     within one filesystem, and is removed if the caller raises, leaving either the old
-    complete file or the new one but never a partial artifact.
+    complete file or the new one but never a partial artifact. It is published with the
+    mode an ordinary write would produce, because ``os.replace`` carries the temporary
+    file's mode to the destination and ``mkstemp`` creates owner-only files: without
+    this, every published record and manifest would silently lose the group access that
+    a run directory is expected to have.
     """
     path = Path(path)
     handle, name = tempfile.mkstemp(dir=path.parent, prefix=path.name + '.', suffix='.partial')
     os.close(handle)
     temporary = Path(name)
     try:
+        os.chmod(temporary, _default_file_mode())
         yield temporary
         os.replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _default_file_mode() -> int:
+    """The permission bits a plain ``open(path, 'w')`` would produce here.
+
+    The umask is only readable by setting it, so it is set and immediately restored.
+    """
+    umask = os.umask(0)
+    os.umask(umask)
+    return 0o666 & ~umask
 
 
 # --- environment -------------------------------------------------------------

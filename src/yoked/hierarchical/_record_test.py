@@ -2,6 +2,7 @@
 checks that run before any dtype cast, the sector/column conversions, subsets, the
 plain-array boundary crossing, and the schema-checked array container."""
 import dataclasses
+import stat
 import types
 from pathlib import Path
 
@@ -365,6 +366,15 @@ def test_saving_replaces_atomically_and_leaves_no_temporary_files(tmp_path):
     _save_arrays(path, make_record(rows=np.array([1, 2, 3])).arrays(), schema=RECORD_SCHEMA)
     assert [entry.name for entry in tmp_path.iterdir()] == ['record.npz']
     np.testing.assert_array_equal(_load_arrays(path, schema=RECORD_SCHEMA)['rows'], [1, 2, 3])
+
+
+def test_a_saved_container_has_the_permissions_an_ordinary_write_would_give_it(tmp_path):
+    path = tmp_path / 'record.npz'
+    _save_arrays(path, make_record().arrays(), schema=RECORD_SCHEMA)
+    reference = tmp_path / 'reference-mode'
+    with open(reference, 'w'):
+        pass
+    assert stat.S_IMODE(path.stat().st_mode) == stat.S_IMODE(reference.stat().st_mode)
 
 
 def test_a_container_without_a_schema_entry_is_rejected(tmp_path):
