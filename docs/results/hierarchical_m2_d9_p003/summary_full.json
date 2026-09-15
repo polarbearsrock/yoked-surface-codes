@@ -1,0 +1,2314 @@
+{
+  "bootstrap": {
+    "replicates": 10000,
+    "seed": 43
+  },
+  "created_utc": "2026-09-15T22:12:50Z",
+  "records": [
+    {
+      "artifacts": {
+        "mwpm_gap_plain_to_gap_correlated_all_refined_mixed/arrays.npz": "41fdf7ee5cc5990685013882152304bd99b711e9bb0a73ef9c28640faa4258be",
+        "mwpm_gap_plain_to_gap_correlated_all_refined_mixed/results.json": "8c38d3e0c39512681b5d81645af9a399ecd7b87e29a74f572fc2e71196535ece",
+        "mwpm_gap_plain_to_gap_correlated_initial_only_mixed/arrays.npz": "e85102a8bdb86c01b47aff57ae17634cc1d3b150070b0134cae0a9b481c249ff",
+        "mwpm_gap_plain_to_gap_correlated_initial_only_mixed/results.json": "3badcd974393c9509631155e626463c8b904176b2d031336c71eff6916c8452b",
+        "uf_cluster_gap_to_gap_correlated_all_refined_mixed/arrays.npz": "372367bfd4d4c17970e82e7ad9e046517040b953edf4e995235aa96573c64db8",
+        "uf_cluster_gap_to_gap_correlated_all_refined_mixed/results.json": "835c84fb6a2d1c1cc267a50a68aadaf9ac4dbd3743156c052b427399a7b294fc",
+        "uf_cluster_gap_to_gap_correlated_initial_only_mixed/arrays.npz": "45756c3320c39c7f2bae74493dfcb11ed33110030fad18610904fc6c7465fd3e",
+        "uf_cluster_gap_to_gap_correlated_initial_only_mixed/results.json": "3af09e2773a5be9f568b4a000bd4cdb2b32ff66269cc53971ea7ef77f23d1613",
+        "uf_cluster_gap_to_gap_plain_all_refined_mixed/arrays.npz": "4693385f935523efd22d009cd72334bdae852a8be2bf1e1d52cf8f14b6697c63",
+        "uf_cluster_gap_to_gap_plain_all_refined_mixed/results.json": "f696581bb3e55a76caa77af3c5b75cc0fe61cdffbe877ddf67a6aa6d4987dd53",
+        "uf_cluster_gap_to_gap_plain_initial_only_mixed/arrays.npz": "45756c3320c39c7f2bae74493dfcb11ed33110030fad18610904fc6c7465fd3e",
+        "uf_cluster_gap_to_gap_plain_initial_only_mixed/results.json": "8b6171b893aa5b1de599545efc06719f1a19e989374261829479eeaee1de3a59"
+      },
+      "baselines": {
+        "comparator": "joint_mwpm_recorded",
+        "decoders": {
+          "joint_correlated_mwpm": {
+            "block_failure": {
+              "count": 6925,
+              "estimate": 0.06925,
+              "high": 0.07078024999999999,
+              "low": 0.06767,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "historical",
+            "normalized_ler": 0.00033368442101522344
+          },
+          "joint_correlated_uf": {
+            "block_failure": {
+              "count": 14247,
+              "estimate": 0.14247,
+              "high": 0.14462,
+              "low": 0.14031,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "historical",
+            "normalized_ler": 0.0007182492452078026
+          },
+          "joint_mwpm": {
+            "block_failure": {
+              "count": 25660,
+              "estimate": 0.2566,
+              "high": 0.25928025,
+              "low": 0.25395,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "collected",
+            "normalized_ler": 0.001398105601777555
+          },
+          "joint_mwpm_recorded": {
+            "block_failure": {
+              "count": 25660,
+              "estimate": 0.2566,
+              "high": 0.25928025,
+              "low": 0.25395,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "historical",
+            "normalized_ler": 0.001398105601777555
+          },
+          "joint_uf": {
+            "block_failure": {
+              "count": 39847,
+              "estimate": 0.39847,
+              "high": 0.4015,
+              "low": 0.39543,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "historical",
+            "normalized_ler": 0.002429672098555269
+          },
+          "mwpm:gap_plain->gap_correlated:all_refined:mixed": {
+            "block_failure": {
+              "count": 6782,
+              "estimate": 0.06782,
+              "high": 0.06935,
+              "low": 0.06626,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "hierarchical",
+            "normalized_ler": 0.0003265156743332831,
+            "paired_block_failure": {
+              "difference": -0.18878,
+              "estimate_a": 0.2566,
+              "estimate_b": 0.06782,
+              "high": -0.18609,
+              "high_a": 0.25928025,
+              "high_b": 0.06935,
+              "low": -0.19146999999999997,
+              "low_a": 0.25395,
+              "low_b": 0.06626,
+              "replicates": 10000,
+              "seed": 43,
+              "zero_denominator_replicates": 0
+            }
+          },
+          "mwpm:gap_plain->gap_correlated:initial_only:mixed": {
+            "block_failure": {
+              "count": 25660,
+              "estimate": 0.2566,
+              "high": 0.25926,
+              "low": 0.25396,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "hierarchical",
+            "normalized_ler": 0.001398105601777555,
+            "paired_block_failure": {
+              "difference": 0.0,
+              "estimate_a": 0.2566,
+              "estimate_b": 0.2566,
+              "high": 0.00012999999999996348,
+              "high_a": 0.25928025,
+              "high_b": 0.25926,
+              "low": -0.00012000000000000899,
+              "low_a": 0.25395,
+              "low_b": 0.25396,
+              "replicates": 10000,
+              "seed": 43,
+              "zero_denominator_replicates": 0
+            }
+          },
+          "uf:cluster_gap->gap_correlated:all_refined:mixed": {
+            "block_failure": {
+              "count": 6820,
+              "estimate": 0.0682,
+              "high": 0.06975,
+              "low": 0.06663,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "hierarchical",
+            "normalized_ler": 0.0003284194515928984,
+            "paired_block_failure": {
+              "difference": -0.1884,
+              "estimate_a": 0.2566,
+              "estimate_b": 0.0682,
+              "high": -0.18569000000000002,
+              "high_a": 0.25928025,
+              "high_b": 0.06975,
+              "low": -0.19110000000000002,
+              "low_a": 0.25395,
+              "low_b": 0.06663,
+              "replicates": 10000,
+              "seed": 43,
+              "zero_denominator_replicates": 0
+            }
+          },
+          "uf:cluster_gap->gap_correlated:initial_only:mixed": {
+            "block_failure": {
+              "count": 32809,
+              "estimate": 0.32809,
+              "high": 0.33096,
+              "low": 0.32521975000000003,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "hierarchical",
+            "normalized_ler": 0.0018870313198731115,
+            "paired_block_failure": {
+              "difference": 0.07149,
+              "estimate_a": 0.2566,
+              "estimate_b": 0.32809,
+              "high": 0.07397999999999999,
+              "high_a": 0.25928025,
+              "high_b": 0.33096,
+              "low": 0.06902974999999999,
+              "low_a": 0.25395,
+              "low_b": 0.32521975000000003,
+              "replicates": 10000,
+              "seed": 43,
+              "zero_denominator_replicates": 0
+            }
+          },
+          "uf:cluster_gap->gap_plain:all_refined:mixed": {
+            "block_failure": {
+              "count": 25612,
+              "estimate": 0.25612,
+              "high": 0.25878,
+              "low": 0.25345975000000004,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "hierarchical",
+            "normalized_ler": 0.0013950050434126116,
+            "paired_block_failure": {
+              "difference": -0.00047999999999998044,
+              "estimate_a": 0.2566,
+              "estimate_b": 0.25612,
+              "high": 0.00019000000000002348,
+              "high_a": 0.25928025,
+              "high_b": 0.25878,
+              "low": -0.0011499999999999844,
+              "low_a": 0.25395,
+              "low_b": 0.25345975000000004,
+              "replicates": 10000,
+              "seed": 43,
+              "zero_denominator_replicates": 0
+            }
+          },
+          "uf:cluster_gap->gap_plain:initial_only:mixed": {
+            "block_failure": {
+              "count": 32809,
+              "estimate": 0.32809,
+              "high": 0.33096,
+              "low": 0.32521975000000003,
+              "replicates": 10000,
+              "seed": 43,
+              "total": 100000
+            },
+            "kind": "hierarchical",
+            "normalized_ler": 0.0018870313198731115,
+            "paired_block_failure": {
+              "difference": 0.07149,
+              "estimate_a": 0.2566,
+              "estimate_b": 0.32809,
+              "high": 0.07397999999999999,
+              "high_a": 0.25928025,
+              "high_b": 0.33096,
+              "low": 0.06902974999999999,
+              "low_a": 0.25395,
+              "low_b": 0.32521975000000003,
+              "replicates": 10000,
+              "seed": 43,
+              "zero_denominator_replicates": 0
+            }
+          }
+        },
+        "order": [
+          "joint_mwpm_recorded",
+          "joint_uf",
+          "joint_correlated_mwpm",
+          "joint_correlated_uf",
+          "joint_mwpm",
+          "mwpm:gap_plain->gap_correlated:initial_only:mixed",
+          "mwpm:gap_plain->gap_correlated:all_refined:mixed",
+          "uf:cluster_gap->gap_correlated:initial_only:mixed",
+          "uf:cluster_gap->gap_correlated:all_refined:mixed",
+          "uf:cluster_gap->gap_plain:initial_only:mixed",
+          "uf:cluster_gap->gap_plain:all_refined:mixed"
+        ]
+      },
+      "calibrators": {
+        "identity": "ccdc1f68a1fa457a9dea4132bac0dae44eaa5340957358ba7400d057853b6d2e",
+        "path": "/data2/s2chitni/.tmp/hier-d9-p003-m2/calibrators_full.json",
+        "sha256": "382eaff951e5150cccdf09e2a6b17bbaf7d36e699bc9494f967f2927b4002ff3"
+      },
+      "groups": [
+        {
+          "baseline": "mwpm:gap_plain->gap_correlated:initial_only:mixed",
+          "cells": {
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed": {
+              "above_half": {
+                "count": 64559,
+                "total": 1200000,
+                "value": 0.05379916666666667
+              },
+              "block_failure": {
+                "count": 6782,
+                "total": 100000,
+                "value": 0.06782
+              },
+              "config": "mwpm:gap_plain->gap_correlated:all_refined:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 1816,
+                  "total": 27077,
+                  "value": 0.06706799128411567
+                },
+                "Z": {
+                  "count": 1855,
+                  "total": 27392,
+                  "value": 0.0677205023364486
+                },
+                "pooled": {
+                  "count": 3671,
+                  "total": 54469,
+                  "value": 0.06739613358056877
+                }
+              },
+              "normalized_ler": 0.0003265156743332831,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "mwpm",
+              "sector_failure": {
+                "X": {
+                  "count": 3455,
+                  "total": 100000,
+                  "value": 0.03455
+                },
+                "Z": {
+                  "count": 3478,
+                  "total": 100000,
+                  "value": 0.03478
+                }
+              },
+              "shots": 100000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 1316,
+                    "total": 5013,
+                    "value": 0.2625174546179932
+                  },
+                  "Z": {
+                    "count": 1307,
+                    "total": 4949,
+                    "value": 0.26409375631440696
+                  },
+                  "pooled": {
+                    "count": 2623,
+                    "total": 9962,
+                    "value": 0.26330054205982734
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 1816,
+                    "total": 27077,
+                    "value": 0.06706799128411567
+                  },
+                  "Z": {
+                    "count": 1855,
+                    "total": 27392,
+                    "value": 0.0677205023364486
+                  },
+                  "pooled": {
+                    "count": 3671,
+                    "total": 54469,
+                    "value": 0.06739613358056877
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 323,
+                    "total": 67910,
+                    "value": 0.004756295096451185
+                  },
+                  "Z": {
+                    "count": 316,
+                    "total": 67659,
+                    "value": 0.004670479906590402
+                  },
+                  "pooled": {
+                    "count": 639,
+                    "total": 135569,
+                    "value": 0.004713466943032699
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 1,
+                  "total": 100000,
+                  "value": 1e-05
+                },
+                "Z": {
+                  "count": 0,
+                  "total": 100000,
+                  "value": 0.0
+                },
+                "pooled": {
+                  "count": 1,
+                  "total": 200000,
+                  "value": 5e-06
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 6.0,
+                  "incremental_correlated_forced_calls": 24.0,
+                  "incremental_plain_forced_calls": 0.0,
+                  "incremental_reweight_passes": 6.0,
+                  "incremental_unforced_plain_calls": 0.0,
+                  "initial_dijkstra_searches": 0.0,
+                  "initial_dijkstra_states": 0.0,
+                  "initial_plain_forced_calls": 24.0,
+                  "initial_uf_calls": 0.0,
+                  "initial_unforced_plain_calls": 6.0,
+                  "requested_patch_sectors": 12.0
+                },
+                "shots": 100000,
+                "totals": {
+                  "distinct_patches": 600000,
+                  "incremental_correlated_forced_calls": 2400000,
+                  "incremental_plain_forced_calls": 0,
+                  "incremental_reweight_passes": 600000,
+                  "incremental_unforced_plain_calls": 0,
+                  "initial_dijkstra_searches": 0,
+                  "initial_dijkstra_states": 0,
+                  "initial_plain_forced_calls": 2400000,
+                  "initial_uf_calls": 0,
+                  "initial_unforced_plain_calls": 600000,
+                  "requested_patch_sectors": 1200000
+                }
+              }
+            },
+            "mwpm:gap_plain->gap_correlated:initial_only:mixed": {
+              "above_half": {
+                "count": 1899,
+                "total": 1200000,
+                "value": 0.0015825
+              },
+              "block_failure": {
+                "count": 25660,
+                "total": 100000,
+                "value": 0.2566
+              },
+              "config": "mwpm:gap_plain->gap_correlated:initial_only:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 8840,
+                  "total": 27077,
+                  "value": 0.32647634523765556
+                },
+                "Z": {
+                  "count": 8886,
+                  "total": 27392,
+                  "value": 0.324401285046729
+                },
+                "pooled": {
+                  "count": 17726,
+                  "total": 54469,
+                  "value": 0.3254328149956856
+                }
+              },
+              "normalized_ler": 0.001398105601777555,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "mwpm",
+              "sector_failure": {
+                "X": {
+                  "count": 13853,
+                  "total": 100000,
+                  "value": 0.13853
+                },
+                "Z": {
+                  "count": 13836,
+                  "total": 100000,
+                  "value": 0.13836
+                }
+              },
+              "shots": 100000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 5013,
+                    "total": 5013,
+                    "value": 1.0
+                  },
+                  "Z": {
+                    "count": 4932,
+                    "total": 4949,
+                    "value": 0.9965649626187109
+                  },
+                  "pooled": {
+                    "count": 9945,
+                    "total": 9962,
+                    "value": 0.9982935153583617
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 8840,
+                    "total": 27077,
+                    "value": 0.32647634523765556
+                  },
+                  "Z": {
+                    "count": 8886,
+                    "total": 27392,
+                    "value": 0.324401285046729
+                  },
+                  "pooled": {
+                    "count": 17726,
+                    "total": 54469,
+                    "value": 0.3254328149956856
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 0,
+                    "total": 67910,
+                    "value": 0.0
+                  },
+                  "Z": {
+                    "count": 18,
+                    "total": 67659,
+                    "value": 0.0002660399946792001
+                  },
+                  "pooled": {
+                    "count": 18,
+                    "total": 135569,
+                    "value": 0.00013277371670514647
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 7,
+                  "total": 100000,
+                  "value": 7e-05
+                },
+                "Z": {
+                  "count": 6,
+                  "total": 100000,
+                  "value": 6e-05
+                },
+                "pooled": {
+                  "count": 13,
+                  "total": 200000,
+                  "value": 6.5e-05
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 0.0,
+                  "incremental_correlated_forced_calls": 0.0,
+                  "incremental_plain_forced_calls": 0.0,
+                  "incremental_reweight_passes": 0.0,
+                  "incremental_unforced_plain_calls": 0.0,
+                  "initial_dijkstra_searches": 0.0,
+                  "initial_dijkstra_states": 0.0,
+                  "initial_plain_forced_calls": 24.0,
+                  "initial_uf_calls": 0.0,
+                  "initial_unforced_plain_calls": 6.0,
+                  "requested_patch_sectors": 0.0
+                },
+                "shots": 100000,
+                "totals": {
+                  "distinct_patches": 0,
+                  "incremental_correlated_forced_calls": 0,
+                  "incremental_plain_forced_calls": 0,
+                  "incremental_reweight_passes": 0,
+                  "incremental_unforced_plain_calls": 0,
+                  "initial_dijkstra_searches": 0,
+                  "initial_dijkstra_states": 0,
+                  "initial_plain_forced_calls": 2400000,
+                  "initial_uf_calls": 0,
+                  "initial_unforced_plain_calls": 600000,
+                  "requested_patch_sectors": 0
+                }
+              }
+            }
+          },
+          "comparisons": {
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed": {
+              "block_failure": {
+                "difference": -0.18878,
+                "estimate_a": 0.2566,
+                "estimate_b": 0.06782,
+                "high": -0.18609,
+                "high_a": 0.25926,
+                "high_b": 0.06935,
+                "low": -0.19148025000000002,
+                "low_a": 0.25396,
+                "low_b": 0.06626,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "initial": {
+                "above_half": {
+                  "count": 1899,
+                  "total": 1200000,
+                  "value": 0.0015825
+                },
+                "block_failure": {
+                  "count": 25660,
+                  "total": 100000,
+                  "value": 0.2566
+                },
+                "config": "mwpm:gap_plain->gap_correlated:initial_only:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 8840,
+                    "total": 27077,
+                    "value": 0.32647634523765556
+                  },
+                  "Z": {
+                    "count": 8886,
+                    "total": 27392,
+                    "value": 0.324401285046729
+                  },
+                  "pooled": {
+                    "count": 17726,
+                    "total": 54469,
+                    "value": 0.3254328149956856
+                  }
+                },
+                "normalized_ler": 0.001398105601777555,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "mwpm",
+                "sector_failure": {
+                  "X": {
+                    "count": 13853,
+                    "total": 100000,
+                    "value": 0.13853
+                  },
+                  "Z": {
+                    "count": 13836,
+                    "total": 100000,
+                    "value": 0.13836
+                  }
+                },
+                "shots": 100000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 5013,
+                      "total": 5013,
+                      "value": 1.0
+                    },
+                    "Z": {
+                      "count": 4932,
+                      "total": 4949,
+                      "value": 0.9965649626187109
+                    },
+                    "pooled": {
+                      "count": 9945,
+                      "total": 9962,
+                      "value": 0.9982935153583617
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 8840,
+                      "total": 27077,
+                      "value": 0.32647634523765556
+                    },
+                    "Z": {
+                      "count": 8886,
+                      "total": 27392,
+                      "value": 0.324401285046729
+                    },
+                    "pooled": {
+                      "count": 17726,
+                      "total": 54469,
+                      "value": 0.3254328149956856
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 0,
+                      "total": 67910,
+                      "value": 0.0
+                    },
+                    "Z": {
+                      "count": 18,
+                      "total": 67659,
+                      "value": 0.0002660399946792001
+                    },
+                    "pooled": {
+                      "count": 18,
+                      "total": 135569,
+                      "value": 0.00013277371670514647
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 7,
+                    "total": 100000,
+                    "value": 7e-05
+                  },
+                  "Z": {
+                    "count": 6,
+                    "total": 100000,
+                    "value": 6e-05
+                  },
+                  "pooled": {
+                    "count": 13,
+                    "total": 200000,
+                    "value": 6.5e-05
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 0.0,
+                    "incremental_correlated_forced_calls": 0.0,
+                    "incremental_plain_forced_calls": 0.0,
+                    "incremental_reweight_passes": 0.0,
+                    "incremental_unforced_plain_calls": 0.0,
+                    "initial_dijkstra_searches": 0.0,
+                    "initial_dijkstra_states": 0.0,
+                    "initial_plain_forced_calls": 24.0,
+                    "initial_uf_calls": 0.0,
+                    "initial_unforced_plain_calls": 6.0,
+                    "requested_patch_sectors": 0.0
+                  },
+                  "shots": 100000,
+                  "totals": {
+                    "distinct_patches": 0,
+                    "incremental_correlated_forced_calls": 0,
+                    "incremental_plain_forced_calls": 0,
+                    "incremental_reweight_passes": 0,
+                    "incremental_unforced_plain_calls": 0,
+                    "initial_dijkstra_searches": 0,
+                    "initial_dijkstra_states": 0,
+                    "initial_plain_forced_calls": 2400000,
+                    "initial_uf_calls": 0,
+                    "initial_unforced_plain_calls": 600000,
+                    "requested_patch_sectors": 0
+                  }
+                }
+              },
+              "misattribution_pooled": {
+                "difference": -0.2580366814151168,
+                "estimate_a": 0.3254328149956856,
+                "estimate_b": 0.06739613358056877,
+                "high": -0.25391071449080277,
+                "high_a": 0.32926020086720276,
+                "high_b": 0.06949567715015424,
+                "low": -0.26219529239312084,
+                "low_a": 0.32149347424757885,
+                "low_b": 0.06529118010610534,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "pieces": 216,
+              "reference": "mwpm",
+              "refined": {
+                "above_half": {
+                  "count": 64559,
+                  "total": 1200000,
+                  "value": 0.05379916666666667
+                },
+                "block_failure": {
+                  "count": 6782,
+                  "total": 100000,
+                  "value": 0.06782
+                },
+                "config": "mwpm:gap_plain->gap_correlated:all_refined:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 1816,
+                    "total": 27077,
+                    "value": 0.06706799128411567
+                  },
+                  "Z": {
+                    "count": 1855,
+                    "total": 27392,
+                    "value": 0.0677205023364486
+                  },
+                  "pooled": {
+                    "count": 3671,
+                    "total": 54469,
+                    "value": 0.06739613358056877
+                  }
+                },
+                "normalized_ler": 0.0003265156743332831,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "mwpm",
+                "sector_failure": {
+                  "X": {
+                    "count": 3455,
+                    "total": 100000,
+                    "value": 0.03455
+                  },
+                  "Z": {
+                    "count": 3478,
+                    "total": 100000,
+                    "value": 0.03478
+                  }
+                },
+                "shots": 100000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 1316,
+                      "total": 5013,
+                      "value": 0.2625174546179932
+                    },
+                    "Z": {
+                      "count": 1307,
+                      "total": 4949,
+                      "value": 0.26409375631440696
+                    },
+                    "pooled": {
+                      "count": 2623,
+                      "total": 9962,
+                      "value": 0.26330054205982734
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 1816,
+                      "total": 27077,
+                      "value": 0.06706799128411567
+                    },
+                    "Z": {
+                      "count": 1855,
+                      "total": 27392,
+                      "value": 0.0677205023364486
+                    },
+                    "pooled": {
+                      "count": 3671,
+                      "total": 54469,
+                      "value": 0.06739613358056877
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 323,
+                      "total": 67910,
+                      "value": 0.004756295096451185
+                    },
+                    "Z": {
+                      "count": 316,
+                      "total": 67659,
+                      "value": 0.004670479906590402
+                    },
+                    "pooled": {
+                      "count": 639,
+                      "total": 135569,
+                      "value": 0.004713466943032699
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 1,
+                    "total": 100000,
+                    "value": 1e-05
+                  },
+                  "Z": {
+                    "count": 0,
+                    "total": 100000,
+                    "value": 0.0
+                  },
+                  "pooled": {
+                    "count": 1,
+                    "total": 200000,
+                    "value": 5e-06
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 6.0,
+                    "incremental_correlated_forced_calls": 24.0,
+                    "incremental_plain_forced_calls": 0.0,
+                    "incremental_reweight_passes": 6.0,
+                    "incremental_unforced_plain_calls": 0.0,
+                    "initial_dijkstra_searches": 0.0,
+                    "initial_dijkstra_states": 0.0,
+                    "initial_plain_forced_calls": 24.0,
+                    "initial_uf_calls": 0.0,
+                    "initial_unforced_plain_calls": 6.0,
+                    "requested_patch_sectors": 12.0
+                  },
+                  "shots": 100000,
+                  "totals": {
+                    "distinct_patches": 600000,
+                    "incremental_correlated_forced_calls": 2400000,
+                    "incremental_plain_forced_calls": 0,
+                    "incremental_reweight_passes": 600000,
+                    "incremental_unforced_plain_calls": 0,
+                    "initial_dijkstra_searches": 0,
+                    "initial_dijkstra_states": 0,
+                    "initial_plain_forced_calls": 2400000,
+                    "initial_uf_calls": 0,
+                    "initial_unforced_plain_calls": 600000,
+                    "requested_patch_sectors": 1200000
+                  }
+                }
+              },
+              "shots": 100000
+            }
+          },
+          "initial_estimator": "mwpm:gap_plain",
+          "intervals": {
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed": {
+              "block_failure": [
+                0.06626,
+                0.06935
+              ],
+              "misattribution_pooled": [
+                0.06529118010610534,
+                0.06949567715015424
+              ]
+            },
+            "mwpm:gap_plain->gap_correlated:initial_only:mixed": {
+              "block_failure": [
+                0.25396,
+                0.25926
+              ],
+              "misattribution_pooled": [
+                0.32149347424757885,
+                0.32926020086720276
+              ]
+            }
+          },
+          "labels": {
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed": "all_refined:mixed",
+            "mwpm:gap_plain->gap_correlated:initial_only:mixed": "initial_only:mixed"
+          },
+          "order": [
+            "mwpm:gap_plain->gap_correlated:initial_only:mixed",
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed"
+          ],
+          "policies": {
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed": {
+              "outer": "mixed",
+              "policy": "all_refined"
+            },
+            "mwpm:gap_plain->gap_correlated:initial_only:mixed": {
+              "outer": "mixed",
+              "policy": "initial_only"
+            }
+          },
+          "refined_score": "gap_correlated"
+        },
+        {
+          "baseline": "uf:cluster_gap->gap_correlated:initial_only:mixed",
+          "cells": {
+            "uf:cluster_gap->gap_correlated:all_refined:mixed": {
+              "above_half": {
+                "count": 81160,
+                "total": 1200000,
+                "value": 0.06763333333333334
+              },
+              "block_failure": {
+                "count": 6820,
+                "total": 100000,
+                "value": 0.0682
+              },
+              "config": "uf:cluster_gap->gap_correlated:all_refined:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 1727,
+                  "total": 30665,
+                  "value": 0.0563182781672917
+                },
+                "Z": {
+                  "count": 1735,
+                  "total": 30630,
+                  "value": 0.05664381325497878
+                },
+                "pooled": {
+                  "count": 3462,
+                  "total": 61295,
+                  "value": 0.05648095276939392
+                }
+              },
+              "normalized_ler": 0.0003284194515928984,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "uf",
+              "sector_failure": {
+                "X": {
+                  "count": 3485,
+                  "total": 100000,
+                  "value": 0.03485
+                },
+                "Z": {
+                  "count": 3487,
+                  "total": 100000,
+                  "value": 0.03487
+                }
+              },
+              "shots": 100000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 1408,
+                    "total": 7019,
+                    "value": 0.20059837583701381
+                  },
+                  "Z": {
+                    "count": 1421,
+                    "total": 7066,
+                    "value": 0.20110387772431362
+                  },
+                  "pooled": {
+                    "count": 2829,
+                    "total": 14085,
+                    "value": 0.20085197018104367
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 1727,
+                    "total": 30665,
+                    "value": 0.0563182781672917
+                  },
+                  "Z": {
+                    "count": 1735,
+                    "total": 30630,
+                    "value": 0.05664381325497878
+                  },
+                  "pooled": {
+                    "count": 3462,
+                    "total": 61295,
+                    "value": 0.05648095276939392
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 350,
+                    "total": 62316,
+                    "value": 0.005616535079273381
+                  },
+                  "Z": {
+                    "count": 331,
+                    "total": 62304,
+                    "value": 0.005312660503338469
+                  },
+                  "pooled": {
+                    "count": 681,
+                    "total": 124620,
+                    "value": 0.005464612421762157
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 0,
+                  "total": 100000,
+                  "value": 0.0
+                },
+                "Z": {
+                  "count": 0,
+                  "total": 100000,
+                  "value": 0.0
+                },
+                "pooled": {
+                  "count": 0,
+                  "total": 200000,
+                  "value": 0.0
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 6.0,
+                  "incremental_correlated_forced_calls": 24.0,
+                  "incremental_plain_forced_calls": 0.0,
+                  "incremental_reweight_passes": 6.0,
+                  "incremental_unforced_plain_calls": 6.0,
+                  "initial_dijkstra_searches": 12.0,
+                  "initial_dijkstra_states": 9414.70103,
+                  "initial_plain_forced_calls": 0.0,
+                  "initial_uf_calls": 6.0,
+                  "initial_unforced_plain_calls": 0.0,
+                  "requested_patch_sectors": 12.0
+                },
+                "shots": 100000,
+                "totals": {
+                  "distinct_patches": 600000,
+                  "incremental_correlated_forced_calls": 2400000,
+                  "incremental_plain_forced_calls": 0,
+                  "incremental_reweight_passes": 600000,
+                  "incremental_unforced_plain_calls": 600000,
+                  "initial_dijkstra_searches": 1200000,
+                  "initial_dijkstra_states": 941470103,
+                  "initial_plain_forced_calls": 0,
+                  "initial_uf_calls": 600000,
+                  "initial_unforced_plain_calls": 0,
+                  "requested_patch_sectors": 1200000
+                }
+              }
+            },
+            "uf:cluster_gap->gap_correlated:initial_only:mixed": {
+              "above_half": {
+                "count": 1462,
+                "total": 1200000,
+                "value": 0.0012183333333333334
+              },
+              "block_failure": {
+                "count": 32809,
+                "total": 100000,
+                "value": 0.32809
+              },
+              "config": "uf:cluster_gap->gap_correlated:initial_only:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 11094,
+                  "total": 30665,
+                  "value": 0.3617805315506277
+                },
+                "Z": {
+                  "count": 11085,
+                  "total": 30630,
+                  "value": 0.36190009794319294
+                },
+                "pooled": {
+                  "count": 22179,
+                  "total": 61295,
+                  "value": 0.36184028061016393
+                }
+              },
+              "normalized_ler": 0.0018870313198731115,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "uf",
+              "sector_failure": {
+                "X": {
+                  "count": 18113,
+                  "total": 100000,
+                  "value": 0.18113
+                },
+                "Z": {
+                  "count": 18147,
+                  "total": 100000,
+                  "value": 0.18147
+                }
+              },
+              "shots": 100000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 7019,
+                    "total": 7019,
+                    "value": 1.0
+                  },
+                  "Z": {
+                    "count": 7043,
+                    "total": 7066,
+                    "value": 0.9967449759411265
+                  },
+                  "pooled": {
+                    "count": 14062,
+                    "total": 14085,
+                    "value": 0.9983670571529997
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 11094,
+                    "total": 30665,
+                    "value": 0.3617805315506277
+                  },
+                  "Z": {
+                    "count": 11085,
+                    "total": 30630,
+                    "value": 0.36190009794319294
+                  },
+                  "pooled": {
+                    "count": 22179,
+                    "total": 61295,
+                    "value": 0.36184028061016393
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 0,
+                    "total": 62316,
+                    "value": 0.0
+                  },
+                  "Z": {
+                    "count": 19,
+                    "total": 62304,
+                    "value": 0.0003049563430919363
+                  },
+                  "pooled": {
+                    "count": 19,
+                    "total": 124620,
+                    "value": 0.00015246348900658
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 8,
+                  "total": 100000,
+                  "value": 8e-05
+                },
+                "Z": {
+                  "count": 6,
+                  "total": 100000,
+                  "value": 6e-05
+                },
+                "pooled": {
+                  "count": 14,
+                  "total": 200000,
+                  "value": 7e-05
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 0.0,
+                  "incremental_correlated_forced_calls": 0.0,
+                  "incremental_plain_forced_calls": 0.0,
+                  "incremental_reweight_passes": 0.0,
+                  "incremental_unforced_plain_calls": 0.0,
+                  "initial_dijkstra_searches": 12.0,
+                  "initial_dijkstra_states": 9414.70103,
+                  "initial_plain_forced_calls": 0.0,
+                  "initial_uf_calls": 6.0,
+                  "initial_unforced_plain_calls": 0.0,
+                  "requested_patch_sectors": 0.0
+                },
+                "shots": 100000,
+                "totals": {
+                  "distinct_patches": 0,
+                  "incremental_correlated_forced_calls": 0,
+                  "incremental_plain_forced_calls": 0,
+                  "incremental_reweight_passes": 0,
+                  "incremental_unforced_plain_calls": 0,
+                  "initial_dijkstra_searches": 1200000,
+                  "initial_dijkstra_states": 941470103,
+                  "initial_plain_forced_calls": 0,
+                  "initial_uf_calls": 600000,
+                  "initial_unforced_plain_calls": 0,
+                  "requested_patch_sectors": 0
+                }
+              }
+            }
+          },
+          "comparisons": {
+            "uf:cluster_gap->gap_correlated:all_refined:mixed": {
+              "block_failure": {
+                "difference": -0.25989,
+                "estimate_a": 0.32809,
+                "estimate_b": 0.0682,
+                "high": -0.25699,
+                "high_a": 0.33096,
+                "high_b": 0.06975,
+                "low": -0.26281,
+                "low_a": 0.32521975000000003,
+                "low_b": 0.06663,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "initial": {
+                "above_half": {
+                  "count": 1462,
+                  "total": 1200000,
+                  "value": 0.0012183333333333334
+                },
+                "block_failure": {
+                  "count": 32809,
+                  "total": 100000,
+                  "value": 0.32809
+                },
+                "config": "uf:cluster_gap->gap_correlated:initial_only:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 11094,
+                    "total": 30665,
+                    "value": 0.3617805315506277
+                  },
+                  "Z": {
+                    "count": 11085,
+                    "total": 30630,
+                    "value": 0.36190009794319294
+                  },
+                  "pooled": {
+                    "count": 22179,
+                    "total": 61295,
+                    "value": 0.36184028061016393
+                  }
+                },
+                "normalized_ler": 0.0018870313198731115,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "uf",
+                "sector_failure": {
+                  "X": {
+                    "count": 18113,
+                    "total": 100000,
+                    "value": 0.18113
+                  },
+                  "Z": {
+                    "count": 18147,
+                    "total": 100000,
+                    "value": 0.18147
+                  }
+                },
+                "shots": 100000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 7019,
+                      "total": 7019,
+                      "value": 1.0
+                    },
+                    "Z": {
+                      "count": 7043,
+                      "total": 7066,
+                      "value": 0.9967449759411265
+                    },
+                    "pooled": {
+                      "count": 14062,
+                      "total": 14085,
+                      "value": 0.9983670571529997
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 11094,
+                      "total": 30665,
+                      "value": 0.3617805315506277
+                    },
+                    "Z": {
+                      "count": 11085,
+                      "total": 30630,
+                      "value": 0.36190009794319294
+                    },
+                    "pooled": {
+                      "count": 22179,
+                      "total": 61295,
+                      "value": 0.36184028061016393
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 0,
+                      "total": 62316,
+                      "value": 0.0
+                    },
+                    "Z": {
+                      "count": 19,
+                      "total": 62304,
+                      "value": 0.0003049563430919363
+                    },
+                    "pooled": {
+                      "count": 19,
+                      "total": 124620,
+                      "value": 0.00015246348900658
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 8,
+                    "total": 100000,
+                    "value": 8e-05
+                  },
+                  "Z": {
+                    "count": 6,
+                    "total": 100000,
+                    "value": 6e-05
+                  },
+                  "pooled": {
+                    "count": 14,
+                    "total": 200000,
+                    "value": 7e-05
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 0.0,
+                    "incremental_correlated_forced_calls": 0.0,
+                    "incremental_plain_forced_calls": 0.0,
+                    "incremental_reweight_passes": 0.0,
+                    "incremental_unforced_plain_calls": 0.0,
+                    "initial_dijkstra_searches": 12.0,
+                    "initial_dijkstra_states": 9414.70103,
+                    "initial_plain_forced_calls": 0.0,
+                    "initial_uf_calls": 6.0,
+                    "initial_unforced_plain_calls": 0.0,
+                    "requested_patch_sectors": 0.0
+                  },
+                  "shots": 100000,
+                  "totals": {
+                    "distinct_patches": 0,
+                    "incremental_correlated_forced_calls": 0,
+                    "incremental_plain_forced_calls": 0,
+                    "incremental_reweight_passes": 0,
+                    "incremental_unforced_plain_calls": 0,
+                    "initial_dijkstra_searches": 1200000,
+                    "initial_dijkstra_states": 941470103,
+                    "initial_plain_forced_calls": 0,
+                    "initial_uf_calls": 600000,
+                    "initial_unforced_plain_calls": 0,
+                    "requested_patch_sectors": 0
+                  }
+                }
+              },
+              "misattribution_pooled": {
+                "difference": -0.30535932784077,
+                "estimate_a": 0.36184028061016393,
+                "estimate_b": 0.05648095276939392,
+                "high": -0.30148509223419256,
+                "high_a": 0.36563909433392733,
+                "high_b": 0.05829446710677018,
+                "low": -0.3093840805077329,
+                "low_a": 0.35813198075705605,
+                "low_b": 0.05465842227014796,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "pieces": 216,
+              "reference": "uf",
+              "refined": {
+                "above_half": {
+                  "count": 81160,
+                  "total": 1200000,
+                  "value": 0.06763333333333334
+                },
+                "block_failure": {
+                  "count": 6820,
+                  "total": 100000,
+                  "value": 0.0682
+                },
+                "config": "uf:cluster_gap->gap_correlated:all_refined:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 1727,
+                    "total": 30665,
+                    "value": 0.0563182781672917
+                  },
+                  "Z": {
+                    "count": 1735,
+                    "total": 30630,
+                    "value": 0.05664381325497878
+                  },
+                  "pooled": {
+                    "count": 3462,
+                    "total": 61295,
+                    "value": 0.05648095276939392
+                  }
+                },
+                "normalized_ler": 0.0003284194515928984,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "uf",
+                "sector_failure": {
+                  "X": {
+                    "count": 3485,
+                    "total": 100000,
+                    "value": 0.03485
+                  },
+                  "Z": {
+                    "count": 3487,
+                    "total": 100000,
+                    "value": 0.03487
+                  }
+                },
+                "shots": 100000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 1408,
+                      "total": 7019,
+                      "value": 0.20059837583701381
+                    },
+                    "Z": {
+                      "count": 1421,
+                      "total": 7066,
+                      "value": 0.20110387772431362
+                    },
+                    "pooled": {
+                      "count": 2829,
+                      "total": 14085,
+                      "value": 0.20085197018104367
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 1727,
+                      "total": 30665,
+                      "value": 0.0563182781672917
+                    },
+                    "Z": {
+                      "count": 1735,
+                      "total": 30630,
+                      "value": 0.05664381325497878
+                    },
+                    "pooled": {
+                      "count": 3462,
+                      "total": 61295,
+                      "value": 0.05648095276939392
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 350,
+                      "total": 62316,
+                      "value": 0.005616535079273381
+                    },
+                    "Z": {
+                      "count": 331,
+                      "total": 62304,
+                      "value": 0.005312660503338469
+                    },
+                    "pooled": {
+                      "count": 681,
+                      "total": 124620,
+                      "value": 0.005464612421762157
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 0,
+                    "total": 100000,
+                    "value": 0.0
+                  },
+                  "Z": {
+                    "count": 0,
+                    "total": 100000,
+                    "value": 0.0
+                  },
+                  "pooled": {
+                    "count": 0,
+                    "total": 200000,
+                    "value": 0.0
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 6.0,
+                    "incremental_correlated_forced_calls": 24.0,
+                    "incremental_plain_forced_calls": 0.0,
+                    "incremental_reweight_passes": 6.0,
+                    "incremental_unforced_plain_calls": 6.0,
+                    "initial_dijkstra_searches": 12.0,
+                    "initial_dijkstra_states": 9414.70103,
+                    "initial_plain_forced_calls": 0.0,
+                    "initial_uf_calls": 6.0,
+                    "initial_unforced_plain_calls": 0.0,
+                    "requested_patch_sectors": 12.0
+                  },
+                  "shots": 100000,
+                  "totals": {
+                    "distinct_patches": 600000,
+                    "incremental_correlated_forced_calls": 2400000,
+                    "incremental_plain_forced_calls": 0,
+                    "incremental_reweight_passes": 600000,
+                    "incremental_unforced_plain_calls": 600000,
+                    "initial_dijkstra_searches": 1200000,
+                    "initial_dijkstra_states": 941470103,
+                    "initial_plain_forced_calls": 0,
+                    "initial_uf_calls": 600000,
+                    "initial_unforced_plain_calls": 0,
+                    "requested_patch_sectors": 1200000
+                  }
+                }
+              },
+              "shots": 100000
+            }
+          },
+          "initial_estimator": "uf:cluster_gap",
+          "intervals": {
+            "uf:cluster_gap->gap_correlated:all_refined:mixed": {
+              "block_failure": [
+                0.06663,
+                0.06975
+              ],
+              "misattribution_pooled": [
+                0.05465842227014796,
+                0.05829446710677018
+              ]
+            },
+            "uf:cluster_gap->gap_correlated:initial_only:mixed": {
+              "block_failure": [
+                0.32521975000000003,
+                0.33096
+              ],
+              "misattribution_pooled": [
+                0.35813198075705605,
+                0.36563909433392733
+              ]
+            }
+          },
+          "labels": {
+            "uf:cluster_gap->gap_correlated:all_refined:mixed": "all_refined:mixed",
+            "uf:cluster_gap->gap_correlated:initial_only:mixed": "initial_only:mixed"
+          },
+          "order": [
+            "uf:cluster_gap->gap_correlated:initial_only:mixed",
+            "uf:cluster_gap->gap_correlated:all_refined:mixed"
+          ],
+          "policies": {
+            "uf:cluster_gap->gap_correlated:all_refined:mixed": {
+              "outer": "mixed",
+              "policy": "all_refined"
+            },
+            "uf:cluster_gap->gap_correlated:initial_only:mixed": {
+              "outer": "mixed",
+              "policy": "initial_only"
+            }
+          },
+          "refined_score": "gap_correlated"
+        },
+        {
+          "baseline": "uf:cluster_gap->gap_plain:initial_only:mixed",
+          "cells": {
+            "uf:cluster_gap->gap_plain:all_refined:mixed": {
+              "above_half": {
+                "count": 38886,
+                "total": 1200000,
+                "value": 0.032405
+              },
+              "block_failure": {
+                "count": 25612,
+                "total": 100000,
+                "value": 0.25612
+              },
+              "config": "uf:cluster_gap->gap_plain:all_refined:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 7853,
+                  "total": 30665,
+                  "value": 0.2560900048915702
+                },
+                "Z": {
+                  "count": 7785,
+                  "total": 30630,
+                  "value": 0.2541625857002938
+                },
+                "pooled": {
+                  "count": 15638,
+                  "total": 61295,
+                  "value": 0.2551268455828371
+                }
+              },
+              "normalized_ler": 0.0013950050434126116,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "uf",
+              "sector_failure": {
+                "X": {
+                  "count": 13846,
+                  "total": 100000,
+                  "value": 0.13846
+                },
+                "Z": {
+                  "count": 13775,
+                  "total": 100000,
+                  "value": 0.13775
+                }
+              },
+              "shots": 100000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 5373,
+                    "total": 7019,
+                    "value": 0.7654936600655364
+                  },
+                  "Z": {
+                    "count": 5389,
+                    "total": 7066,
+                    "value": 0.7626662892725729
+                  },
+                  "pooled": {
+                    "count": 10762,
+                    "total": 14085,
+                    "value": 0.7640752573659922
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 7853,
+                    "total": 30665,
+                    "value": 0.2560900048915702
+                  },
+                  "Z": {
+                    "count": 7785,
+                    "total": 30630,
+                    "value": 0.2541625857002938
+                  },
+                  "pooled": {
+                    "count": 15638,
+                    "total": 61295,
+                    "value": 0.2551268455828371
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 620,
+                    "total": 62316,
+                    "value": 0.009949290711855702
+                  },
+                  "Z": {
+                    "count": 601,
+                    "total": 62304,
+                    "value": 0.009646250642013354
+                  },
+                  "pooled": {
+                    "count": 1221,
+                    "total": 124620,
+                    "value": 0.009797785267212325
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 5,
+                  "total": 100000,
+                  "value": 5e-05
+                },
+                "Z": {
+                  "count": 4,
+                  "total": 100000,
+                  "value": 4e-05
+                },
+                "pooled": {
+                  "count": 9,
+                  "total": 200000,
+                  "value": 4.5e-05
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 6.0,
+                  "incremental_correlated_forced_calls": 0.0,
+                  "incremental_plain_forced_calls": 24.0,
+                  "incremental_reweight_passes": 0.0,
+                  "incremental_unforced_plain_calls": 0.0,
+                  "initial_dijkstra_searches": 12.0,
+                  "initial_dijkstra_states": 9414.70103,
+                  "initial_plain_forced_calls": 0.0,
+                  "initial_uf_calls": 6.0,
+                  "initial_unforced_plain_calls": 0.0,
+                  "requested_patch_sectors": 12.0
+                },
+                "shots": 100000,
+                "totals": {
+                  "distinct_patches": 600000,
+                  "incremental_correlated_forced_calls": 0,
+                  "incremental_plain_forced_calls": 2400000,
+                  "incremental_reweight_passes": 0,
+                  "incremental_unforced_plain_calls": 0,
+                  "initial_dijkstra_searches": 1200000,
+                  "initial_dijkstra_states": 941470103,
+                  "initial_plain_forced_calls": 0,
+                  "initial_uf_calls": 600000,
+                  "initial_unforced_plain_calls": 0,
+                  "requested_patch_sectors": 1200000
+                }
+              }
+            },
+            "uf:cluster_gap->gap_plain:initial_only:mixed": {
+              "above_half": {
+                "count": 1462,
+                "total": 1200000,
+                "value": 0.0012183333333333334
+              },
+              "block_failure": {
+                "count": 32809,
+                "total": 100000,
+                "value": 0.32809
+              },
+              "config": "uf:cluster_gap->gap_plain:initial_only:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 11094,
+                  "total": 30665,
+                  "value": 0.3617805315506277
+                },
+                "Z": {
+                  "count": 11085,
+                  "total": 30630,
+                  "value": 0.36190009794319294
+                },
+                "pooled": {
+                  "count": 22179,
+                  "total": 61295,
+                  "value": 0.36184028061016393
+                }
+              },
+              "normalized_ler": 0.0018870313198731115,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "uf",
+              "sector_failure": {
+                "X": {
+                  "count": 18113,
+                  "total": 100000,
+                  "value": 0.18113
+                },
+                "Z": {
+                  "count": 18147,
+                  "total": 100000,
+                  "value": 0.18147
+                }
+              },
+              "shots": 100000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 7019,
+                    "total": 7019,
+                    "value": 1.0
+                  },
+                  "Z": {
+                    "count": 7043,
+                    "total": 7066,
+                    "value": 0.9967449759411265
+                  },
+                  "pooled": {
+                    "count": 14062,
+                    "total": 14085,
+                    "value": 0.9983670571529997
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 11094,
+                    "total": 30665,
+                    "value": 0.3617805315506277
+                  },
+                  "Z": {
+                    "count": 11085,
+                    "total": 30630,
+                    "value": 0.36190009794319294
+                  },
+                  "pooled": {
+                    "count": 22179,
+                    "total": 61295,
+                    "value": 0.36184028061016393
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 0,
+                    "total": 62316,
+                    "value": 0.0
+                  },
+                  "Z": {
+                    "count": 19,
+                    "total": 62304,
+                    "value": 0.0003049563430919363
+                  },
+                  "pooled": {
+                    "count": 19,
+                    "total": 124620,
+                    "value": 0.00015246348900658
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 8,
+                  "total": 100000,
+                  "value": 8e-05
+                },
+                "Z": {
+                  "count": 6,
+                  "total": 100000,
+                  "value": 6e-05
+                },
+                "pooled": {
+                  "count": 14,
+                  "total": 200000,
+                  "value": 7e-05
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 0.0,
+                  "incremental_correlated_forced_calls": 0.0,
+                  "incremental_plain_forced_calls": 0.0,
+                  "incremental_reweight_passes": 0.0,
+                  "incremental_unforced_plain_calls": 0.0,
+                  "initial_dijkstra_searches": 12.0,
+                  "initial_dijkstra_states": 9414.70103,
+                  "initial_plain_forced_calls": 0.0,
+                  "initial_uf_calls": 6.0,
+                  "initial_unforced_plain_calls": 0.0,
+                  "requested_patch_sectors": 0.0
+                },
+                "shots": 100000,
+                "totals": {
+                  "distinct_patches": 0,
+                  "incremental_correlated_forced_calls": 0,
+                  "incremental_plain_forced_calls": 0,
+                  "incremental_reweight_passes": 0,
+                  "incremental_unforced_plain_calls": 0,
+                  "initial_dijkstra_searches": 1200000,
+                  "initial_dijkstra_states": 941470103,
+                  "initial_plain_forced_calls": 0,
+                  "initial_uf_calls": 600000,
+                  "initial_unforced_plain_calls": 0,
+                  "requested_patch_sectors": 0
+                }
+              }
+            }
+          },
+          "comparisons": {
+            "uf:cluster_gap->gap_plain:all_refined:mixed": {
+              "block_failure": {
+                "difference": -0.07196999999999998,
+                "estimate_a": 0.32809,
+                "estimate_b": 0.25612,
+                "high": -0.06957999999999998,
+                "high_a": 0.33096,
+                "high_b": 0.25878,
+                "low": -0.07441000000000003,
+                "low_a": 0.32521975000000003,
+                "low_b": 0.25345975000000004,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "initial": {
+                "above_half": {
+                  "count": 1462,
+                  "total": 1200000,
+                  "value": 0.0012183333333333334
+                },
+                "block_failure": {
+                  "count": 32809,
+                  "total": 100000,
+                  "value": 0.32809
+                },
+                "config": "uf:cluster_gap->gap_plain:initial_only:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 11094,
+                    "total": 30665,
+                    "value": 0.3617805315506277
+                  },
+                  "Z": {
+                    "count": 11085,
+                    "total": 30630,
+                    "value": 0.36190009794319294
+                  },
+                  "pooled": {
+                    "count": 22179,
+                    "total": 61295,
+                    "value": 0.36184028061016393
+                  }
+                },
+                "normalized_ler": 0.0018870313198731115,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "uf",
+                "sector_failure": {
+                  "X": {
+                    "count": 18113,
+                    "total": 100000,
+                    "value": 0.18113
+                  },
+                  "Z": {
+                    "count": 18147,
+                    "total": 100000,
+                    "value": 0.18147
+                  }
+                },
+                "shots": 100000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 7019,
+                      "total": 7019,
+                      "value": 1.0
+                    },
+                    "Z": {
+                      "count": 7043,
+                      "total": 7066,
+                      "value": 0.9967449759411265
+                    },
+                    "pooled": {
+                      "count": 14062,
+                      "total": 14085,
+                      "value": 0.9983670571529997
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 11094,
+                      "total": 30665,
+                      "value": 0.3617805315506277
+                    },
+                    "Z": {
+                      "count": 11085,
+                      "total": 30630,
+                      "value": 0.36190009794319294
+                    },
+                    "pooled": {
+                      "count": 22179,
+                      "total": 61295,
+                      "value": 0.36184028061016393
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 0,
+                      "total": 62316,
+                      "value": 0.0
+                    },
+                    "Z": {
+                      "count": 19,
+                      "total": 62304,
+                      "value": 0.0003049563430919363
+                    },
+                    "pooled": {
+                      "count": 19,
+                      "total": 124620,
+                      "value": 0.00015246348900658
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 8,
+                    "total": 100000,
+                    "value": 8e-05
+                  },
+                  "Z": {
+                    "count": 6,
+                    "total": 100000,
+                    "value": 6e-05
+                  },
+                  "pooled": {
+                    "count": 14,
+                    "total": 200000,
+                    "value": 7e-05
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 0.0,
+                    "incremental_correlated_forced_calls": 0.0,
+                    "incremental_plain_forced_calls": 0.0,
+                    "incremental_reweight_passes": 0.0,
+                    "incremental_unforced_plain_calls": 0.0,
+                    "initial_dijkstra_searches": 12.0,
+                    "initial_dijkstra_states": 9414.70103,
+                    "initial_plain_forced_calls": 0.0,
+                    "initial_uf_calls": 6.0,
+                    "initial_unforced_plain_calls": 0.0,
+                    "requested_patch_sectors": 0.0
+                  },
+                  "shots": 100000,
+                  "totals": {
+                    "distinct_patches": 0,
+                    "incremental_correlated_forced_calls": 0,
+                    "incremental_plain_forced_calls": 0,
+                    "incremental_reweight_passes": 0,
+                    "incremental_unforced_plain_calls": 0,
+                    "initial_dijkstra_searches": 1200000,
+                    "initial_dijkstra_states": 941470103,
+                    "initial_plain_forced_calls": 0,
+                    "initial_uf_calls": 600000,
+                    "initial_unforced_plain_calls": 0,
+                    "requested_patch_sectors": 0
+                  }
+                }
+              },
+              "misattribution_pooled": {
+                "difference": -0.10671343502732683,
+                "estimate_a": 0.36184028061016393,
+                "estimate_b": 0.2551268455828371,
+                "high": -0.10300686390683805,
+                "high_a": 0.36563909433392733,
+                "high_b": 0.25855025560089984,
+                "low": -0.11048306248749434,
+                "low_a": 0.35813198075705605,
+                "low_b": 0.2516061279854687,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "pieces": 216,
+              "reference": "uf",
+              "refined": {
+                "above_half": {
+                  "count": 38886,
+                  "total": 1200000,
+                  "value": 0.032405
+                },
+                "block_failure": {
+                  "count": 25612,
+                  "total": 100000,
+                  "value": 0.25612
+                },
+                "config": "uf:cluster_gap->gap_plain:all_refined:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 7853,
+                    "total": 30665,
+                    "value": 0.2560900048915702
+                  },
+                  "Z": {
+                    "count": 7785,
+                    "total": 30630,
+                    "value": 0.2541625857002938
+                  },
+                  "pooled": {
+                    "count": 15638,
+                    "total": 61295,
+                    "value": 0.2551268455828371
+                  }
+                },
+                "normalized_ler": 0.0013950050434126116,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "uf",
+                "sector_failure": {
+                  "X": {
+                    "count": 13846,
+                    "total": 100000,
+                    "value": 0.13846
+                  },
+                  "Z": {
+                    "count": 13775,
+                    "total": 100000,
+                    "value": 0.13775
+                  }
+                },
+                "shots": 100000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 5373,
+                      "total": 7019,
+                      "value": 0.7654936600655364
+                    },
+                    "Z": {
+                      "count": 5389,
+                      "total": 7066,
+                      "value": 0.7626662892725729
+                    },
+                    "pooled": {
+                      "count": 10762,
+                      "total": 14085,
+                      "value": 0.7640752573659922
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 7853,
+                      "total": 30665,
+                      "value": 0.2560900048915702
+                    },
+                    "Z": {
+                      "count": 7785,
+                      "total": 30630,
+                      "value": 0.2541625857002938
+                    },
+                    "pooled": {
+                      "count": 15638,
+                      "total": 61295,
+                      "value": 0.2551268455828371
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 620,
+                      "total": 62316,
+                      "value": 0.009949290711855702
+                    },
+                    "Z": {
+                      "count": 601,
+                      "total": 62304,
+                      "value": 0.009646250642013354
+                    },
+                    "pooled": {
+                      "count": 1221,
+                      "total": 124620,
+                      "value": 0.009797785267212325
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 5,
+                    "total": 100000,
+                    "value": 5e-05
+                  },
+                  "Z": {
+                    "count": 4,
+                    "total": 100000,
+                    "value": 4e-05
+                  },
+                  "pooled": {
+                    "count": 9,
+                    "total": 200000,
+                    "value": 4.5e-05
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 6.0,
+                    "incremental_correlated_forced_calls": 0.0,
+                    "incremental_plain_forced_calls": 24.0,
+                    "incremental_reweight_passes": 0.0,
+                    "incremental_unforced_plain_calls": 0.0,
+                    "initial_dijkstra_searches": 12.0,
+                    "initial_dijkstra_states": 9414.70103,
+                    "initial_plain_forced_calls": 0.0,
+                    "initial_uf_calls": 6.0,
+                    "initial_unforced_plain_calls": 0.0,
+                    "requested_patch_sectors": 12.0
+                  },
+                  "shots": 100000,
+                  "totals": {
+                    "distinct_patches": 600000,
+                    "incremental_correlated_forced_calls": 0,
+                    "incremental_plain_forced_calls": 2400000,
+                    "incremental_reweight_passes": 0,
+                    "incremental_unforced_plain_calls": 0,
+                    "initial_dijkstra_searches": 1200000,
+                    "initial_dijkstra_states": 941470103,
+                    "initial_plain_forced_calls": 0,
+                    "initial_uf_calls": 600000,
+                    "initial_unforced_plain_calls": 0,
+                    "requested_patch_sectors": 1200000
+                  }
+                }
+              },
+              "shots": 100000
+            }
+          },
+          "initial_estimator": "uf:cluster_gap",
+          "intervals": {
+            "uf:cluster_gap->gap_plain:all_refined:mixed": {
+              "block_failure": [
+                0.25345975000000004,
+                0.25878
+              ],
+              "misattribution_pooled": [
+                0.2516061279854687,
+                0.25855025560089984
+              ]
+            },
+            "uf:cluster_gap->gap_plain:initial_only:mixed": {
+              "block_failure": [
+                0.32521975000000003,
+                0.33096
+              ],
+              "misattribution_pooled": [
+                0.35813198075705605,
+                0.36563909433392733
+              ]
+            }
+          },
+          "labels": {
+            "uf:cluster_gap->gap_plain:all_refined:mixed": "all_refined:mixed",
+            "uf:cluster_gap->gap_plain:initial_only:mixed": "initial_only:mixed"
+          },
+          "order": [
+            "uf:cluster_gap->gap_plain:initial_only:mixed",
+            "uf:cluster_gap->gap_plain:all_refined:mixed"
+          ],
+          "policies": {
+            "uf:cluster_gap->gap_plain:all_refined:mixed": {
+              "outer": "mixed",
+              "policy": "all_refined"
+            },
+            "uf:cluster_gap->gap_plain:initial_only:mixed": {
+              "outer": "mixed",
+              "policy": "initial_only"
+            }
+          },
+          "refined_score": "gap_plain"
+        }
+      ],
+      "pieces": 216,
+      "record": {
+        "directory": "/data2/s2chitni/.tmp/hier-d9-p003-m2/evaluation",
+        "identities": {
+          "collection": "2d0984a04c42896dc8c5f70f7100f9e191cbb35a841aaabad9d7cf8adb636543",
+          "decoder": "79fafa60cf62051e5132dc38d881e515b969bd703616ed3ddaac5a137ac2fa67",
+          "model": "73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d",
+          "parent_sample": "d1bc5fcf04da0c265f67b23637ee518f730cebc86700d04db09fec097a5130f1",
+          "sampling_family": "51918c6cd9505f780bd9ef6a6b029a52bb3f68ae81a6ea195f4dbe185668bf69"
+        },
+        "manifest_sha256": "f84a4231209af8f6ffb61d48e9ba10187efb339b8de8db14a5775865efa756be",
+        "patches": 6,
+        "record_sha256": "5f061fa6e81988b25e1f2cf926d45f21c68ce2e31ed6ad0fab8b9f4ea7e4a5c8",
+        "role": "evaluation",
+        "rows": {
+          "count": 100000,
+          "sha256": "baa5f49fbad78af4964d9ec7eaf2d6327b2d2ca1f4dcf54e2394dfff2e36d58e",
+          "start": 0,
+          "stop": 100000
+        },
+        "shots": 100000
+      },
+      "replay_directory": "/data2/s2chitni/.tmp/hier-d9-p003-m2/replay_full",
+      "replay_identity": "8ed8fddc0d1c50fe4144c94d712d33f5781654201d96304d74f8e24b9f72f68d",
+      "replay_manifest_sha256": "40cb996a9bbbb8f0e6c12b3856dc09f87d01c3fea53d9242ea94eb3fd5836863"
+    }
+  ],
+  "schema_version": "hierarchical-l1-l2/1",
+  "stage": "summarize"
+}

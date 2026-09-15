@@ -1,0 +1,125 @@
+{
+  "check": {
+    "arrays": [
+      "actual",
+      "yoke",
+      "uf_reference",
+      "mwpm_reference",
+      "correlated_prediction",
+      "joint_mwpm",
+      "cluster_gap",
+      "dijkstra_states",
+      "forced_plain",
+      "forced_correlated",
+      "reweighted_patches",
+      "rows"
+    ],
+    "comparison": "exact equality of every stored record array on the subset rows, located in the full record by parent row id; no tolerance; baselines not compared",
+    "equal": {
+      "actual": true,
+      "cluster_gap": true,
+      "correlated_prediction": true,
+      "dijkstra_states": true,
+      "forced_correlated": true,
+      "forced_plain": true,
+      "joint_mwpm": true,
+      "mwpm_reference": true,
+      "reweighted_patches": true,
+      "rows": true,
+      "uf_reference": true,
+      "yoke": true
+    },
+    "matched_rows": 2000,
+    "max_listed_rows": 8,
+    "mismatch_counts": {
+      "actual": 0,
+      "cluster_gap": 0,
+      "correlated_prediction": 0,
+      "dijkstra_states": 0,
+      "forced_correlated": 0,
+      "forced_plain": 0,
+      "joint_mwpm": 0,
+      "mwpm_reference": 0,
+      "reweighted_patches": 0,
+      "rows": 0,
+      "uf_reference": 0,
+      "yoke": 0
+    },
+    "mismatched_rows": {
+      "actual": [],
+      "cluster_gap": [],
+      "correlated_prediction": [],
+      "dijkstra_states": [],
+      "forced_correlated": [],
+      "forced_plain": [],
+      "joint_mwpm": [],
+      "mwpm_reference": [],
+      "reweighted_patches": [],
+      "rows": [],
+      "uf_reference": [],
+      "yoke": []
+    },
+    "passed": true,
+    "subset_rows": 2000
+  },
+  "checker": {
+    "check_identity": "728ed4b50714bbf3b9364b9323eed9a82395a0d545739cf4150c552ff2709a45",
+    "code_commit": "44c3bce9af4cc44e7e004f02a378a946529b7774",
+    "source_sha256": {
+      "src/yoked/hierarchical/_baselines.py": "ba0c5e9122b1ebebb1dcf8b4be261010d9dd609a8480bc1b2861bb97de95d642",
+      "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+      "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+      "src/yoked/hierarchical/_reproduction.py": "1e0125fad12424e954160447e40e4c1e25a42f7df190f1392d176f1f196180bd"
+    },
+    "versions": {
+      "numpy": "2.5.1",
+      "pymatching": "2.4.0"
+    }
+  },
+  "created_utc": "2026-09-15T22:05:46Z",
+  "full": {
+    "directory": "/data2/s2chitni/.tmp/hier-d9-p003-m2/calibration",
+    "identities": {
+      "collection": "3839df3b5248343d6dd1b0344e060eea6390c2a4baf71bb3164af3dd8bfe3255",
+      "decoder": "79fafa60cf62051e5132dc38d881e515b969bd703616ed3ddaac5a137ac2fa67",
+      "model": "73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d",
+      "parent_sample": "e9ace633bc9ff34b2dc228d63393f4daf58c4f4acbde3c678669b8b9645d8398",
+      "sampling_family": "060a8f93813c288d32cf5b8801cfd74c052df1c08092c1e07df152c4d5498933"
+    },
+    "manifest_sha256": "ac6410275c5a170980ffd97f41304688c05e7c13363624b1b825a294c9bae8dc",
+    "patches": 6,
+    "record_sha256": "ec042a53bf7a226ab3f8fef315878e4ac0c0e8f1dc0d8b4a56e0ce714ce335bf",
+    "role": "calibration",
+    "rows": {
+      "count": 50000,
+      "sha256": "33236cc6bd19fa6b89e06d441d3fcd8eb37dc8540f6a4f2b627b20af10894a41",
+      "start": 0,
+      "stop": 50000
+    },
+    "shots": 50000
+  },
+  "passed": true,
+  "schema_version": "hierarchical-l1-l2/1",
+  "stage": "verify-subset",
+  "subset": {
+    "directory": "/data2/s2chitni/.tmp/hier-d9-p003-m2/calibration_pilot_rows",
+    "identities": {
+      "collection": "68491e1f4eb6b68b0ac915f70fd2762d6b8c305527433e0ba837bd228a2990f9",
+      "decoder": "79fafa60cf62051e5132dc38d881e515b969bd703616ed3ddaac5a137ac2fa67",
+      "model": "73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d",
+      "parent_sample": "e9ace633bc9ff34b2dc228d63393f4daf58c4f4acbde3c678669b8b9645d8398",
+      "sampling_family": "060a8f93813c288d32cf5b8801cfd74c052df1c08092c1e07df152c4d5498933"
+    },
+    "manifest_sha256": "6317dd15f283fefdb863aab0525241972907fb14945ab861f2056af001c3e9ad",
+    "patches": 6,
+    "record_sha256": "9612c5f2b79b6834163cf3b3df259ae30356112d5236c8aee405326032668f05",
+    "role": "calibration",
+    "rows": {
+      "count": 2000,
+      "sha256": "55f385cf2332d9056aaed6f496e7bebd2df52c6a9547ce2144b309432d4b0290",
+      "start": 0,
+      "stop": 2000
+    },
+    "shots": 2000
+  }
+}
