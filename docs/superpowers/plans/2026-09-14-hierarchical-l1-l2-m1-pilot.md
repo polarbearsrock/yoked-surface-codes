@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.14 in `.venv`, NumPy, SciPy sparse, Stim 1.16, PyMatching 2.4 (edge-list construction through `from_check_matrix`), sinter for LER normalization, pytest. Run everything from the repository root with `PYTHONPATH=src`.
 
-**Spec:** `docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md`. This plan implements spec sections 4, 5, 6, 7, the `initial_only` and `all_refined` rows of section 8, the primary metric, strata, block failure and bootstrap of section 9, validation tests 1 to 9 of section 10, and milestone M1 of section 12. Sections 8 (selective policies, random controls, work accounting), the rest of 9, tests 10 to 15, and milestones M2 to M4 belong to a second plan written after the pilot decision.
+**Spec:** `docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md`. This plan implements spec sections 4, 5, 6, 7, the `initial_only` and `all_refined` rows of section 8, the primary metric, strata, block failure and bootstrap of section 9, validation tests 1 to 9 of section 10, and milestone M1 of section 12. M1 also includes endpoint work accounting, paired block-failure intervals, d=9 graph equivalence and imported-edge statistics, deterministic endpoint replay, and the applicable collection/provenance checks from tests 10, 11, 13, and 15. Selective policies, exact random controls, their diagnostics, and milestones M2 to M4 belong to a second plan written after the pilot decision. Confirmation is not an accepted dataset role in this plan.
 
 ## Global Constraints
 
@@ -17,10 +17,13 @@
 - All weights, gaps, and scores are in nats. Nothing converts to decibels.
 - L1 code never reads a sampled yoke bit. Forced decodes use synthetic check bits only.
 - Calibrators are fit on the calibration sample only; the driver refuses to calibrate and evaluate on the same sample or subset (spec test 9).
-- Every module starts with a docstring stating the object it computes in spec notation and naming the invariants its tests check. Records crossing module boundaries are frozen dataclasses with a docstring per field including units and shapes. Named constants carry a comment saying why they hold their value. Seeds are explicit parameters.
+- Every module starts with a docstring stating the object it computes in spec notation and naming the invariants its tests check. Records crossing module boundaries are frozen dataclasses with a docstring per field including units and shapes. Array fields own read-only storage; mappings are copied and made immutable. Validate values before casting. Mutable collection buffers stay inside the collector. Named constants carry a comment saying why they hold their value. Seeds are explicit parameters.
+- Keep interfaces narrow: one UF method returns the correction and settled edge costs; hierarchical code never accesses `_Growth`, `_peel`, or growth-engine storage. Re-export only intended public entry points, not every helper.
+- Collection identity covers the saved sample, model, rows, role, and decoder implementation. Calibration and replay have separate identities. Changing a policy or a report must not invalidate reusable L1 outputs.
+- Use small functions and concrete records. The stage contracts and failure tests below are requirements; no generic workflow engine, plugin registry, configurable serialization framework, or new service is needed.
 - Temporary and run outputs go under `$TMPDIR` (`/data2/s2chitni/.tmp`), never under the home directory or `/tmp`.
 - Tests run with `PYTHONPATH=src .venv/bin/pytest <path> -q`. The existing suite in `src/yoked/decoders` must keep passing after every task.
-- Commit after every task with the attribution lines from the session reminder.
+- Commit after each completed task using a description of the actual change. Attribution must reflect the people and tools that did the work; do not copy historical session metadata.
 
 ## File Structure
 
@@ -28,7 +31,9 @@
 |---|---|
 | `src/yoked/decoders/_correlations.py` | Correlation rules from a DEM, indexing by source, applying rules to weights. Moved out of the correlated UF module so matching and UF share one implementation. |
 | `src/yoked/decoders/_correlated_union_find.py` | Modified to import from `_correlations`. Behavior unchanged. |
-| `src/yoked/hierarchical/__init__.py` | Public names. |
+| `src/yoked/decoders/_union_find.py` | Shared growth-and-peeling path plus immutable `GrowthDecodeResult`; existing predictions unchanged. |
+| `src/yoked/hierarchical/__init__.py` | Public entry points only. |
+| `src/yoked/hierarchical/_arrays.py` | Small internal helper for owned, read-only arrays. |
 | `src/yoked/hierarchical/_patch_graphs.py` | `PatchGraph`, `PatchGraphs`: hub split into local DEMs, check-free and check graphs, local syndromes. |
 | `src/yoked/hierarchical/_fixtures.py` | Test support: a small six-patch yoked fixture (distance 3) shared by test modules. |
 | `src/yoked/hierarchical/_cluster_gap.py` | `ClusterGapUnionFindDecoder`: UF reference bits plus cluster gap by parity-augmented Dijkstra. |
@@ -41,11 +46,12 @@
 | `src/yoked/hierarchical/_policies.py` | `NoRefinement`, `RefineAll`, and the deterministic policy interface later policies implement. |
 | `src/yoked/hierarchical/_replay.py` | Estimator scores, `ReplayConfig`, `replay`, `ReplayResult`. |
 | `src/yoked/hierarchical/_metrics.py` | Residual errors, strata, sector and block failure, misattribution, paired bootstrap, normalized LER. |
+| `src/yoked/hierarchical/_stages.py` | Verified stage boundaries and publication; no decoder algorithms. |
 | `tools/hierarchical_experiment` | CLI: `collect`, `calibrate`, `replay`, `summarize`. |
 | `docs/hierarchical_decoding.md` | Usage, mirroring `docs/union_find_usage.md`. |
 | `docs/results/hierarchical_pilot_d9_p003.md` | Pilot report and go/no-go record. |
 
-Deviations from the spec's file list, all additive: `_fixtures.py` (test support), `_provenance.py` and `_record.py` (split out of `_replay.py` so that collection and replay share record I/O without importing each other), and `_collect.py` (stage logic the spec requires to be reachable without the CLI). The `report` subcommand of the spec is delivered as `summarize` here, producing the pilot tables; the full figure-producing `report` belongs to the second plan.
+Deviations from the spec's file list: `_fixtures.py` is test support; `_arrays.py` is a small internal ownership helper; `_provenance.py` and `_record.py` separate artifact and record I/O from replay; `_collect.py` owns collection and validation; `_stages.py` owns the stage boundaries. The existing UF module gains one immutable-result method. The `report` subcommand of the spec is delivered as `summarize` here, producing the pilot tables; the full figure-producing `report` belongs to the second plan.
 
 ---
 
@@ -345,10 +351,7 @@ Expected: all tests pass, including `_correlated_union_find_test.py` (its `_corr
 
 ```bash
 git add src/yoked/decoders/_correlations.py src/yoked/decoders/_correlations_test.py src/yoked/decoders/_correlated_union_find.py
-git commit -m "Move correlation rules into a shared decoders module
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
+git commit -m "Move correlation rules into a shared decoders module"
 ```
 
 ---
@@ -360,6 +363,7 @@ Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
 - Create: `src/yoked/hierarchical/_patch_graphs.py`
 - Create: `src/yoked/hierarchical/_patch_graphs_test.py`
 - Create: `src/yoked/hierarchical/_fixtures.py`
+- Create: `src/yoked/hierarchical/_arrays.py` and `_arrays_test.py`
 
 **Interfaces:**
 - Consumes: `DecodingGraph.from_dem`, `yoked_magic_memory_circuit`, `gen.NoiseModel.si1000`.
@@ -423,8 +427,12 @@ def test_two_patch_dem_splits_into_local_dems_and_graphs():
     plain_edges = {(u, v) for u, v, _, mask in patches[0].check_graph.edges if not mask}
     assert plain_edges == {(0, 1), (1, None), (2, 3), (3, None)}
     # The correlated mechanism of patch 1 survives as one two-component instruction.
-    text = str(patches[1].local_dem)
-    assert 'error(0.1) D0 D1 ^ D2 D3' in text
+    mechanism = next(inst for inst in patches[1].local_dem if inst.type == 'error')
+    assert mechanism.args_copy()[0] == pytest.approx(0.1)
+    assert mechanism.target_groups() == [
+        [stim.target_relative_detector_id(0), stim.target_relative_detector_id(1)],
+        [stim.target_relative_detector_id(2), stim.target_relative_detector_id(3)],
+    ]
 
 
 def test_local_syndromes_gather_by_global_detector_id():
@@ -461,19 +469,24 @@ def test_split_is_lossless_on_the_distance_3_fixture():
     fx = yoked_fixture(shots=1)
     joint = DecodingGraph.from_dem(fx.dem)
 
-    def key(u, v, weight, mask):
+    def key(u, v, mask):
         endpoints = (u, None) if v is None else (min(u, v), max(u, v))
-        return endpoints, round(weight, 9), mask
+        return endpoints, mask
 
-    expected = collections.Counter(key(*edge) for edge in joint.edges)
-    rebuilt = collections.Counter()
+    expected = collections.defaultdict(list)
+    for u, v, weight, mask in joint.edges:
+        expected[key(u, v, mask)].append(weight)
+    rebuilt = collections.defaultdict(list)
     for patch in fx.patches:
         to_global = dict(enumerate(patch.global_detector_ids))
         to_global.update(zip(patch.check_vertices, fx.patches.yoke_detector_ids))
         for u, v, weight, mask in patch.check_graph.edges:
             global_mask = sum(1 << patch.observable_ids[s] for s in range(NUM_SECTORS) if (mask >> s) & 1)
-            rebuilt[key(to_global[u], None if v is None else to_global[v], weight, global_mask)] += 1
-    assert rebuilt == expected
+            rebuilt[key(to_global[u], None if v is None else to_global[v], global_mask)].append(weight)
+    assert rebuilt.keys() == expected.keys()
+    for group, weights in expected.items():
+        assert len(rebuilt[group]) == len(weights)
+        np.testing.assert_allclose(sorted(rebuilt[group]), sorted(weights), atol=1e-9, rtol=0)
     assert len(fx.patches) == 6
     assert all(len(p.global_detector_ids) == (fx.dem.num_detectors - 2) // 6 for p in fx.patches)
 
@@ -504,6 +517,28 @@ from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraph, PatchGraph
 
 __all__ = ['NUM_SECTORS', 'PatchGraph', 'PatchGraphs']
 ```
+
+Create `src/yoked/hierarchical/_arrays.py`:
+
+```python
+"""Owned array storage for immutable mathematical results.
+
+Callers validate shapes and values before converting to the documented dtype.
+A frozen dataclass alone does not prevent changes through a NumPy alias.
+"""
+import numpy as np
+
+
+def readonly_array(value, *, dtype) -> np.ndarray:
+    result = np.array(value, dtype=dtype, order='C', copy=True)
+    result.setflags(write=False)
+    return result
+```
+
+Add `_arrays_test.py`: changing the input after construction must not change
+the result, assignment through the result raises, and the requested dtype and
+shape are preserved. Use this helper for result arrays throughout the package;
+keep it internal. Add both files to this task's checks and commit.
 
 Create `src/yoked/hierarchical/_fixtures.py`:
 
@@ -828,11 +863,8 @@ Expected: all pass. The `D1 D4` case is rejected by `_observable_of_label` becau
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/yoked/hierarchical/__init__.py src/yoked/hierarchical/_patch_graphs.py src/yoked/hierarchical/_patch_graphs_test.py src/yoked/hierarchical/_fixtures.py
-git commit -m "Add per-patch graph split for hierarchical decoding
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
+git add src/yoked/hierarchical/_arrays.py src/yoked/hierarchical/_arrays_test.py src/yoked/hierarchical/__init__.py src/yoked/hierarchical/_patch_graphs.py src/yoked/hierarchical/_patch_graphs_test.py src/yoked/hierarchical/_fixtures.py
+git commit -m "Add per-patch graph split for hierarchical decoding"
 ```
 
 ---
@@ -840,12 +872,13 @@ Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
 ### Task 3: UF reference with the cluster gap
 
 **Files:**
+- Modify: `src/yoked/decoders/_union_find.py` and its tests (one shared decode path and immutable growth-cost result)
 - Create: `src/yoked/hierarchical/_cluster_gap.py`
 - Create: `src/yoked/hierarchical/_cluster_gap_test.py`
 - Modify: `src/yoked/hierarchical/__init__.py` (export `ClusterGapUnionFindDecoder`, `ClusterGapResult`)
 
 **Interfaces:**
-- Consumes: `DecodingGraph`, and from `yoked.decoders._union_find` the private `_Growth`, `_peel`, `_validate_syndromes` (already used by the decoder tests; this is the growth engine the spec says to reuse).
+- Consumes: `DecodingGraph` and `UnionFindDecoder.decode_with_growth_costs(syndrome) -> GrowthDecodeResult`. Growth-engine state stays in the existing decoder module.
 - Produces:
   - `ClusterGapResult` frozen dataclass: `prediction (num_observables,) bool`, `cluster_gap (num_observables,) float64`, `dijkstra_states (num_observables,) int64`, `selected_edges tuple[int, ...]`.
   - `ClusterGapUnionFindDecoder(graph).decode_with_gaps(syndrome) -> ClusterGapResult`.
@@ -862,8 +895,7 @@ import numpy as np
 import pytest
 
 from yoked.decoders import DecodingGraph, UnionFindDecoder
-from yoked.hierarchical._cluster_gap import ClusterGapUnionFindDecoder, _remaining_costs
-from yoked.decoders._union_find import _Growth
+from yoked.hierarchical._cluster_gap import ClusterGapUnionFindDecoder
 from yoked.hierarchical._fixtures import yoked_fixture
 
 
@@ -934,9 +966,7 @@ def test_cluster_spanning_both_boundaries_has_zero_gap():
 def test_partially_grown_edges_are_charged_their_remaining_growth():
     graph = _path_graph(boundary_weights=(3.0, 0.5))
     syndrome = np.array([1, 0, 0], dtype=bool)
-    growth = _Growth(graph, syndrome)
-    growth.run()
-    costs = _remaining_costs(graph, growth)
+    costs = UnionFindDecoder(graph).decode_with_growth_costs(syndrome).remaining_costs
     # Growth from detector 0: edges 0-1 (t=1) and 1-2 (t=2) complete, then the
     # cheap boundary at 2 (t=2.5) stops the cluster. The flipping boundary edge at 0
     # has grown 2.5 of its weight 3, leaving 0.5; internal edges cost nothing.
@@ -959,9 +989,7 @@ def test_dijkstra_agrees_with_brute_force_on_random_small_graphs(seed):
     decoder = ClusterGapUnionFindDecoder(graph)
     for _ in range(4):
         syndrome = rng.random(n) < 0.4
-        growth = _Growth(graph, syndrome)
-        growth.run()
-        costs = _remaining_costs(graph, growth)
+        costs = UnionFindDecoder(graph).decode_with_growth_costs(syndrome).remaining_costs
         result = decoder.decode_with_gaps(syndrome)
         _assert_valid_correction(graph, syndrome, result)
         assert result.cluster_gap[0] == pytest.approx(_brute_force_odd_walk(graph, costs, 0))
@@ -992,6 +1020,46 @@ Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_cluster_gap_test.p
 Expected: FAIL with `ModuleNotFoundError: No module named 'yoked.hierarchical._cluster_gap'`
 
 - [ ] **Step 3: Implement the decoder**
+
+First add the following result to `src/yoked/decoders/_union_find.py`:
+
+```python
+@dataclass(frozen=True)
+class GrowthDecodeResult:
+    """UF correction and the settled costs needed by a soft-output consumer.
+
+    selected_edges: correction edge ids in graph order.
+    observable_mask: XOR of selected edge masks, an integer bit mask.
+    remaining_costs: one cost per graph edge in nats, zero within a cluster.
+    """
+    selected_edges: tuple[int, ...]
+    observable_mask: int
+    remaining_costs: tuple[float, ...]
+```
+
+Factor the current `_decode` body into `_decode_state`, returning its existing
+`_Correction` and the per-call `_Growth` inside this module. `_decode` returns
+only the correction, preserving the existing public API and avoiding an edge
+scan for plain UF. Add this method to `UnionFindDecoder`:
+
+```python
+def decode_with_growth_costs(self, syndrome: np.ndarray) -> GrowthDecodeResult:
+    correction, growth = self._decode_state(syndrome)
+    costs = []
+    for edge_id, (u, v) in enumerate(self.graph.endpoints):
+        growth._settle(edge_id)
+        cost = (0.0 if growth.find(u) == growth.find(v)
+                else max(0.0, self.graph.edges[edge_id][2] - growth.grown[edge_id]))
+        costs.append(cost)
+    return GrowthDecodeResult(correction.selected_edges, correction.observable_mask, tuple(costs))
+```
+
+The two entry points share validation, growth, and peeling exactly once. Keep
+`_Growth` and `_decode_state` private; no mutable state escapes. Existing UF,
+correlated UF, and adapter tests must pass. Add tests that both entry points
+choose identical corrections, returned tuples survive another decode unchanged,
+and malformed syndromes fail identically. The partial-growth fixture in Step 1
+checks the new method's cost semantics against hand-computed values.
 
 Create `src/yoked/hierarchical/_cluster_gap.py`:
 
@@ -1030,7 +1098,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from yoked.decoders._graph import DecodingGraph
-from yoked.decoders._union_find import _Growth, _peel, _validate_syndromes
+from yoked.decoders._union_find import UnionFindDecoder
+from yoked.hierarchical._arrays import readonly_array
 
 
 @dataclass(frozen=True)
@@ -1047,12 +1116,17 @@ class ClusterGapResult:
     dijkstra_states: np.ndarray
     selected_edges: tuple[int, ...]
 
+    def __post_init__(self) -> None:
+        for name, dtype in (('prediction', bool), ('cluster_gap', np.float64), ('dijkstra_states', np.int64)):
+            object.__setattr__(self, name, readonly_array(getattr(self, name), dtype=dtype))
+
 
 class ClusterGapUnionFindDecoder:
     """Repository UF plus the cluster gap of every observable of the graph."""
 
     def __init__(self, graph: DecodingGraph):
         self.graph = graph
+        self._uf = UnionFindDecoder(graph)
         # One extra vertex id stands for every boundary terminal at once.
         self._boundary = graph.num_detectors
         self._adjacency = tuple(self._sector_adjacency(k) for k in range(graph.num_observables))
@@ -1084,11 +1158,9 @@ class ClusterGapUnionFindDecoder:
         return tuple(tuple(neighbours) for neighbours in adjacency)
 
     def decode_with_gaps(self, syndrome: np.ndarray) -> ClusterGapResult:
-        syndrome = _validate_syndromes(syndrome, self.graph.num_detectors, 1)
-        growth = _Growth(self.graph, syndrome)
-        growth.run()
-        selected, mask = _peel(self.graph, syndrome, growth.forest)
-        costs = _remaining_costs(self.graph, growth)
+        decoded = self._uf.decode_with_growth_costs(syndrome)
+        selected, mask = decoded.selected_edges, decoded.observable_mask
+        costs = decoded.remaining_costs
         gaps, states = [], []
         for observable in range(self.graph.num_observables):
             gap, settled = self._shortest_odd_walk(costs, observable)
@@ -1122,19 +1194,6 @@ class ClusterGapUnionFindDecoder:
                     heapq.heappush(heap, (candidate, next_state))
         return math.inf, settled
 
-
-def _remaining_costs(graph: DecodingGraph, growth: _Growth) -> np.ndarray:
-    """Edge costs on the terminated growth state: 0 inside a cluster, else remaining growth."""
-    costs = np.empty(len(graph.edges), dtype=np.float64)
-    for e, (u, terminal) in enumerate(graph.endpoints):
-        # At termination every rate is zero, so settling adds nothing; it keeps
-        # this function correct if the growth engine ever stops early.
-        growth._settle(e)
-        if growth.find(u) == growth.find(terminal):
-            costs[e] = 0.0
-        else:
-            costs[e] = max(0.0, graph.edges[e][2] - growth.grown[e])
-    return costs
 ```
 
 Add to `src/yoked/hierarchical/__init__.py`:
@@ -1148,16 +1207,13 @@ and extend `__all__` with `'ClusterGapResult', 'ClusterGapUnionFindDecoder'`.
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_cluster_gap_test.py -q`
-Expected: all pass. If `test_partially_grown_edges_are_charged_their_remaining_growth` reports a cost other than 0.5 on the flipping boundary edge, print `growth.grown` and `growth.time`; the growth engine's batch tolerance can settle the edge at the batch time, so a mismatch indicates a misunderstanding of the fixture rather than of the cost rule, and the fixture weights should be adjusted so that the boundary at 2 completes strictly before the boundary at 0.
+Expected: all pass, including existing decoder regressions. If the partial-growth cost differs from the hand-computed 0.5, investigate settling and batch timing inside the UF module. Preserve the asserted cost convention; do not adjust the fixture merely to make an unexpected result pass.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/yoked/hierarchical/_cluster_gap.py src/yoked/hierarchical/_cluster_gap_test.py src/yoked/hierarchical/__init__.py
-git commit -m "Add UF reference decoding with the cluster-gap soft output
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
+git add src/yoked/decoders/_union_find.py src/yoked/decoders/_union_find_test.py src/yoked/hierarchical/_cluster_gap.py src/yoked/hierarchical/_cluster_gap_test.py src/yoked/hierarchical/__init__.py
+git commit -m "Add UF reference decoding with the cluster-gap soft output"
 ```
 
 ---
@@ -1320,6 +1376,7 @@ import scipy.sparse
 from yoked.decoders._correlations import CorrelationRule, apply_correlation_rules, index_rules_by_source
 from yoked.decoders._graph import DecodingGraph
 from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraph
+from yoked.hierarchical._arrays import readonly_array
 
 CHECK_PATTERNS = np.array([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=np.uint8)
 """Rows are (c_X, c_Z) in the order that reshapes to an array indexed [c_X, c_Z]."""
@@ -1341,6 +1398,11 @@ class ForcedWeights:
     first_pass: np.ndarray
     correlated_prediction: np.ndarray
     rules_fired: bool
+
+    def __post_init__(self) -> None:
+        for name, dtype in (('plain', np.float64), ('correlated', np.float64),
+                            ('first_pass', bool), ('correlated_prediction', bool)):
+            object.__setattr__(self, name, readonly_array(getattr(self, name), dtype=dtype))
 
 
 class _CheckMatrixGraph:
@@ -1396,9 +1458,12 @@ class MatchingGaps:
         self._plain_check = self._check.matcher()
 
     def forced_weights(self, local_syndrome: np.ndarray) -> ForcedWeights:
-        syndrome = np.asarray(local_syndrome, dtype=np.uint8)
+        syndrome = np.asarray(local_syndrome)
         if syndrome.shape != (self.patch.num_detectors,):
             raise ValueError(f'Expected {self.patch.num_detectors} detector bits, got shape {syndrome.shape}')
+        if syndrome.dtype.kind not in 'buif' or not np.isin(syndrome, (0, 1)).all():
+            raise ValueError('Expected binary detector bits')
+        syndrome = syndrome.astype(np.uint8, copy=False)
         selected = self._free.edge_ids_of(self._plain_free.decode_to_edges_array(syndrome))
         first_pass = self._prediction_of(selected)
         plain = self._forced(self._plain_check, syndrome)
@@ -1444,10 +1509,10 @@ def signed_gaps(forced: np.ndarray, reference: np.ndarray) -> np.ndarray:
 Add to `src/yoked/hierarchical/__init__.py`:
 
 ```python
-from yoked.hierarchical._matching_gaps import CHECK_PATTERNS, ForcedWeights, MatchingGaps, signed_gaps
+from yoked.hierarchical._matching_gaps import ForcedWeights, MatchingGaps, signed_gaps
 ```
 
-and extend `__all__` with `'CHECK_PATTERNS', 'ForcedWeights', 'MatchingGaps', 'signed_gaps'`.
+and extend `__all__` with `'ForcedWeights', 'MatchingGaps', 'signed_gaps'`. Keep `CHECK_PATTERNS` internal.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -1458,10 +1523,7 @@ Expected: all pass.
 
 ```bash
 git add src/yoked/hierarchical/_matching_gaps.py src/yoked/hierarchical/_matching_gaps_test.py src/yoked/hierarchical/__init__.py
-git commit -m "Add forced matching weights and signed gaps for patch graphs
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
+git commit -m "Add forced matching weights and signed gaps for patch graphs"
 ```
 
 ---
@@ -1478,7 +1540,7 @@ Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
 - Produces:
   - `OuterDecision(pattern: np.ndarray (n,) bool, tied: bool)`.
   - `exact_outer_map(q, parity, candidates=None) -> OuterDecision`.
-  - `exact_outer_map_batch(q (shots, n), parity (shots,), candidates (shots, n) | None) -> tuple[patterns (shots, n) bool, tied (shots,) bool]`.
+  - `exact_outer_map_batch(q (shots, n), parity (shots,), candidates (shots, n) | None) -> BatchOuterDecision`, with read-only `patterns (shots, n) bool` and `tied (shots,) bool` fields.
   - `frame_adjusted_syndrome(yoke (..., 2) bool, reference (..., 2 * patches) bool) -> (..., 2) bool`.
   - `TIE_TOLERANCE = 1e-9`.
 
@@ -1496,27 +1558,47 @@ from yoked.hierarchical._outer_decoder import (
 
 
 def _analytic_rule(q, parity, candidates=None):
-    """Spec section 7: threshold at one half, then the cheapest single toggle fixes parity."""
+    """Threshold/parity minima, with conditional minima resolving absolute-tolerance ties.
+
+    No patterns are enumerated. Fixing some bits leaves the same analytic
+    problem: take the preferred free bits and, if needed, the cheapest toggle.
+    """
     q = np.asarray(q, dtype=float)
     n = len(q)
     candidates = np.ones(n, dtype=bool) if candidates is None else np.asarray(candidates, dtype=bool)
-    lam = np.log((1 - q) / q)
     b = (q > 0.5) & candidates
-    cost = np.where(candidates, np.abs(lam), np.inf)
-    zero_cost = candidates & np.isclose(lam, 0.0, atol=1e-12)
-    if b.sum() % 2 == parity:
-        # Toggling a zero-cost (q = 1/2) bit yields an equal-weight pattern of higher binary value.
-        return b, bool(zero_cost.any())
-    if not np.isfinite(cost).any():
+    cost = np.abs(np.log1p(-q) - np.log(q))
+
+    def minimum_with(fixed):
+        if np.any((fixed == 1) & ~candidates):
+            return np.inf
+        assigned = fixed >= 0
+        preferred = b.copy()
+        preferred[assigned] = fixed[assigned].astype(bool)
+        result = cost[assigned & (preferred != b)].sum()
+        free = ~assigned & candidates
+        if preferred.sum() % 2 != parity:
+            result += cost[free].min(initial=np.inf)
+        return result
+
+    fixed = np.full(n, -1, dtype=np.int8)
+    best = minimum_with(fixed)
+    if not np.isfinite(best):
         raise ValueError('no candidate')
-    best = cost[np.isfinite(cost)].min()
-    tied_bits = np.flatnonzero(np.isclose(cost, best, atol=TIE_TOLERANCE))
-    set_bits = [i for i in tied_bits if b[i]]
-    # Lowest binary value: clearing the largest set bit beats setting any clear bit.
-    i = max(set_bits) if set_bits else int(tied_bits.min())
-    x = b.copy()
-    x[i] ^= True
-    return x, len(tied_bits) > 1
+    limit = best + TIE_TOLERANCE
+    # Highest bit first: prefer zero whenever an admissible completion exists.
+    for bit in reversed(range(n)):
+        fixed[bit] = 0
+        if minimum_with(fixed) > limit:
+            fixed[bit] = 1
+    pattern = fixed.astype(bool)
+    # Another admissible pattern must differ at at least one candidate bit.
+    tied = False
+    for bit in np.flatnonzero(candidates):
+        alternative = np.full(n, -1, dtype=np.int8)
+        alternative[bit] = 1 - fixed[bit]
+        tied |= minimum_with(alternative) <= limit
+    return pattern, bool(tied)
 
 
 GRID = np.array([0.02, 0.1, 0.3, 0.5, 0.7, 0.9, 0.98])
@@ -1538,6 +1620,30 @@ def test_enumeration_matches_the_analytic_rule(seed):
             decision = exact_outer_map(q, parity, candidates)
             np.testing.assert_array_equal(decision.pattern, expected)
             assert decision.tied == expected_tie
+
+
+def test_one_half_bit_does_not_create_a_parity_preserving_tie():
+    for parity in (0, 1):
+        result = exact_outer_map([0.5], parity)
+        assert result.pattern.tolist() == [bool(parity)] and not result.tied
+        expected, tied = _analytic_rule([0.5], parity)
+        np.testing.assert_array_equal(result.pattern, expected)
+        assert result.tied == tied
+
+
+def test_tie_tolerance_is_absolute_and_allows_multiple_small_toggles():
+    q = 1 / (1 + np.exp(np.array([1.0, 1.0 + 5e-7])))
+    result = exact_outer_map(q, 1)
+    assert result.pattern.tolist() == [True, False] and not result.tied
+    expected, tied = _analytic_rule(q, 1)
+    np.testing.assert_array_equal(result.pattern, expected)
+    assert result.tied == tied
+    q = np.full(3, 1 / (1 + np.exp(-0.2 * TIE_TOLERANCE)))
+    result = exact_outer_map(q, 0)
+    assert result.pattern.tolist() == [False, False, False] and result.tied
+    expected, tied = _analytic_rule(q, 0)
+    np.testing.assert_array_equal(result.pattern, expected)
+    assert result.tied == tied
 
 
 def test_two_error_rescue_with_unfired_yoke():
@@ -1578,7 +1684,8 @@ def test_batch_and_single_agree_and_validate_probabilities():
     parity = rng.integers(2, size=40)
     candidates = rng.random((40, 6)) < 0.7
     candidates[parity == 1, 0] = True
-    patterns, tied = exact_outer_map_batch(q, parity, candidates)
+    batch = exact_outer_map_batch(q, parity, candidates)
+    patterns, tied = batch.patterns, batch.tied
     for shot in range(40):
         single = exact_outer_map(q[shot], parity[shot], candidates[shot])
         np.testing.assert_array_equal(patterns[shot], single.pattern)
@@ -1635,6 +1742,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from yoked.hierarchical._arrays import readonly_array
+
 TIE_TOLERANCE = 1e-9
 """Log-weight differences below this are ties: far below any calibrated probability's resolution."""
 
@@ -1648,28 +1757,51 @@ class OuterDecision:
     pattern: np.ndarray
     tied: bool
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'pattern', readonly_array(self.pattern, dtype=bool))
+
+
+@dataclass(frozen=True)
+class BatchOuterDecision:
+    """Read-only L2 outputs: patterns (shots, n) bool and tied (shots,) bool."""
+    patterns: np.ndarray
+    tied: np.ndarray
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'patterns', readonly_array(self.patterns, dtype=bool))
+        object.__setattr__(self, 'tied', readonly_array(self.tied, dtype=bool))
+
 
 def frame_adjusted_syndrome(yoke: np.ndarray, reference: np.ndarray) -> np.ndarray:
     """sigma[s] = y[s] XOR parity of r over patches, for yoke (..., 2) and reference (..., 2 * patches)."""
-    yoke = np.asarray(yoke, dtype=bool)
-    reference = np.asarray(reference, dtype=bool)
+    yoke, reference = np.asarray(yoke), np.asarray(reference)
+    if (yoke.ndim < 1 or reference.ndim < 1 or yoke.shape[-1] != 2
+            or reference.shape[-1] % 2 or yoke.shape[:-1] != reference.shape[:-1]):
+        raise ValueError('Expected matching leading shapes, two yoke bits, and two bits per patch')
+    for values in (yoke, reference):
+        if values.dtype.kind not in 'buif' or not np.isin(values, (0, 1)).all():
+            raise ValueError('Expected binary values')
+    yoke, reference = yoke.astype(bool), reference.astype(bool)
     by_patch = reference.reshape(reference.shape[:-1] + (-1, 2))   # (..., patches, sectors)
     return yoke ^ (by_patch.sum(axis=-2) % 2).astype(bool)
 
 
 def exact_outer_map(q: np.ndarray, parity: int, candidates: np.ndarray | None = None) -> OuterDecision:
     """Maximum-weight residual pattern of the required parity for one sector."""
-    batch_candidates = None if candidates is None else np.asarray(candidates, dtype=bool)[None]
-    patterns, tied = exact_outer_map_batch(np.asarray(q, dtype=np.float64)[None], np.asarray([parity]), batch_candidates)
-    return OuterDecision(patterns[0], bool(tied[0]))
+    batch_candidates = None if candidates is None else np.asarray(candidates)[None]
+    result = exact_outer_map_batch(np.asarray(q, dtype=np.float64)[None], np.asarray([parity]), batch_candidates)
+    return OuterDecision(result.patterns[0], bool(result.tied[0]))
 
 
 def exact_outer_map_batch(
         q: np.ndarray, parity: np.ndarray, candidates: np.ndarray | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> BatchOuterDecision:
     """Vectorized ``exact_outer_map``: q (shots, n), parity (shots,), candidates (shots, n) or None."""
     q = np.asarray(q, dtype=np.float64)
-    parity = np.asarray(parity).astype(bool)
+    parity = np.asarray(parity)
+    if parity.dtype.kind not in 'buif' or not np.isin(parity, (0, 1)).all():
+        raise ValueError('Parity must contain binary values')
+    parity = parity.astype(bool, copy=False)
     if q.ndim != 2 or parity.shape != (q.shape[0],):
         raise ValueError('Expected q of shape (shots, patches) and parity of shape (shots,)')
     if q.shape[1] > MAX_PATCHES:
@@ -1680,9 +1812,12 @@ def exact_outer_map_batch(
     log_weight = np.log(q) @ patterns.T.astype(np.float64) + np.log1p(-q) @ (~patterns).T.astype(np.float64)
     feasible = ((patterns.sum(axis=1) % 2) == 1)[None, :] == parity[:, None]     # (shots, P)
     if candidates is not None:
-        candidates = np.asarray(candidates, dtype=bool)
+        candidates = np.asarray(candidates)
         if candidates.shape != q.shape:
             raise ValueError('candidates must have the same shape as q')
+        if candidates.dtype.kind not in 'buif' or not np.isin(candidates, (0, 1)).all():
+            raise ValueError('Candidates must contain binary values')
+        candidates = candidates.astype(bool, copy=False)
         feasible &= ~(patterns[None, :, :] & ~candidates[:, None, :]).any(axis=2)
     if not feasible.any(axis=1).all():
         raise ValueError('Odd parity with no candidate patch: no feasible pattern')
@@ -1690,7 +1825,7 @@ def exact_outer_map_batch(
     best = log_weight.max(axis=1, keepdims=True)
     near = log_weight >= best - TIE_TOLERANCE
     chosen = near.argmax(axis=1)   # the first tie in pattern order has the lowest binary value
-    return patterns[chosen], near.sum(axis=1) > 1
+    return BatchOuterDecision(patterns[chosen], near.sum(axis=1) > 1)
 
 
 @functools.lru_cache(maxsize=None)
@@ -1703,7 +1838,7 @@ Add to `src/yoked/hierarchical/__init__.py`:
 
 ```python
 from yoked.hierarchical._outer_decoder import (
-    TIE_TOLERANCE, OuterDecision, exact_outer_map, exact_outer_map_batch, frame_adjusted_syndrome,
+    TIE_TOLERANCE, OuterDecision, BatchOuterDecision, exact_outer_map, exact_outer_map_batch, frame_adjusted_syndrome,
 )
 ```
 
@@ -1718,15 +1853,20 @@ Expected: all pass.
 
 ```bash
 git add src/yoked/hierarchical/_outer_decoder.py src/yoked/hierarchical/_outer_decoder_test.py src/yoked/hierarchical/__init__.py
-git commit -m "Add exact L2 outer decoder for the factorized patch model
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
+git commit -m "Add exact L2 outer decoder for the factorized patch model"
 ```
 
 ---
 
 ### Task 6: Isotonic calibration
+
+**Knot convention:** pool repeated input scores before PAV. Merge adjacent
+blocks only for a strict monotonicity violation. Equal-valued adjacent blocks
+remain separate interpolation knots; do not coalesce them after fitting.
+Each knot is its block's count-weighted mean score and fitted error rate.
+Interpolate linearly through those knots, with constant extrapolation and
+clipping. This fixes one deterministic interpretation of the spec's block
+centres; merging equal plateaus would define a different estimator.
 
 **Files:**
 - Create: `src/yoked/hierarchical/_calibration.py`
@@ -1767,8 +1907,9 @@ def test_recovers_a_decreasing_step_function():
 
 def test_decreasing_fit_interpolates_between_block_centres():
     calibrator = IsotonicCalibrator.fit([1, 2, 3, 4], [1, 1, 0, 0], direction='decreasing')
-    np.testing.assert_allclose(calibrator.centers, [1.5, 3.5])
-    np.testing.assert_allclose(calibrator.probabilities, [1 - CLIP, CLIP])
+    np.testing.assert_allclose(calibrator.centers, [1, 2, 3, 4])
+    np.testing.assert_allclose(calibrator.probabilities, [1 - CLIP, 1 - CLIP, CLIP, CLIP])
+    np.testing.assert_allclose(calibrator.probability([1.5, 2, 3, 3.5]), [1 - CLIP, 1 - CLIP, CLIP, CLIP])
     assert calibrator.probability([2.5]) == pytest.approx(0.5, abs=1e-6)
     assert calibrator.probability([0.0]) == pytest.approx(1 - CLIP)
     assert calibrator.probability([9.0]) == pytest.approx(CLIP)
@@ -1834,7 +1975,8 @@ A calibrator maps a score to P(e = 1 | score) with a monotone map fit by
 pool-adjacent-violators (PAV) on the calibration sample only. The direction
 is fixed by the score's definition: 'decreasing' for gaps, since a larger
 gap means a smaller error probability. Equal scores are pooled before the
-fit. Between block centres the map is linear; beyond the fitted range it is
+fit. PAV merges strict violations only; equal-valued adjacent blocks stay as
+separate knots. Between block centres the map is linear; beyond the fitted range it is
 constant. Outputs are clipped to [CLIP, 1 - CLIP] so that log-odds stay
 finite. Probabilities above one half are allowed: a refined signed gap can
 favor reversing the fixed reference.
@@ -1849,6 +1991,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+
+from yoked.hierarchical._arrays import readonly_array
 
 CLIP = 1e-6
 """Keeps log-odds finite; far below any residual-error rate this experiment can resolve."""
@@ -1869,6 +2013,27 @@ class IsotonicCalibrator:
     centers: np.ndarray
     probabilities: np.ndarray
     num_samples: int
+
+    def __post_init__(self) -> None:
+        centers = readonly_array(self.centers, dtype=np.float64)
+        probabilities = readonly_array(self.probabilities, dtype=np.float64)
+        if self.direction not in DIRECTIONS:
+            raise ValueError('Invalid direction')
+        if centers.ndim != 1 or not len(centers) or probabilities.shape != centers.shape:
+            raise ValueError('Expected nonempty, equally sized knot arrays')
+        if not np.isfinite(centers).all() or not (np.diff(centers) > 0).all():
+            raise ValueError('Knot centers must be finite and strictly increasing')
+        if not ((probabilities >= CLIP) & (probabilities <= 1 - CLIP)).all():
+            raise ValueError('Probabilities must be finite and inside the clipping range')
+        differences = np.diff(probabilities)
+        violates_order = (differences < 0).any() if self.direction == 'increasing' else (differences > 0).any()
+        if violates_order:
+            raise ValueError('Probabilities must be monotone')
+        if (isinstance(self.num_samples, (bool, np.bool_))
+                or not isinstance(self.num_samples, (int, np.integer)) or self.num_samples < 1):
+            raise ValueError('num_samples must be a positive integer')
+        object.__setattr__(self, 'centers', centers)
+        object.__setattr__(self, 'probabilities', probabilities)
 
     @classmethod
     def fit(cls, scores, outcomes, *, direction: str) -> IsotonicCalibrator:
@@ -1904,7 +2069,7 @@ class IsotonicCalibrator:
     @classmethod
     def from_json(cls, data: dict) -> IsotonicCalibrator:
         return cls(data['direction'], np.asarray(data['centers'], dtype=np.float64),
-                   np.asarray(data['probabilities'], dtype=np.float64), int(data['num_samples']))
+                   np.asarray(data['probabilities'], dtype=np.float64), data['num_samples'])
 
 
 def _pool_adjacent_violators(x: np.ndarray, y: np.ndarray, w: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -1946,2389 +2111,731 @@ Expected: all pass.
 
 ```bash
 git add src/yoked/hierarchical/_calibration.py src/yoked/hierarchical/_calibration_test.py src/yoked/hierarchical/__init__.py
-git commit -m "Add isotonic calibration for soft-output scores
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
+git commit -m "Add isotonic calibration for soft-output scores"
 ```
 
 ---
 
-### Task 7: Provenance helpers and the L1 record
-
-**Files:**
-- Create: `src/yoked/hierarchical/_provenance.py`
-- Create: `src/yoked/hierarchical/_record.py`
-- Create: `src/yoked/hierarchical/_record_test.py`
-- Modify: `src/yoked/hierarchical/__init__.py` (export `L1Record`, `by_sector`, `to_columns`)
-
-**Interfaces:**
-- Consumes: NumPy, `importlib.metadata`, `hashlib`, `subprocess` (git).
-- Produces, in `_provenance.py`:
-  - `REPO_ROOT: Path`, `SOURCE_FILES: tuple[str, ...]` (repo-relative paths hashed into manifests).
-  - `sha256_bytes(data: bytes) -> str`, `sha256_file(path) -> str`.
-  - `sample_hash(detectors: np.ndarray, actual: np.ndarray) -> str` (SHA-256 of little-endian packed detector bytes followed by packed observable bytes, the convention of the recorded runs).
-  - `write_json_atomic(path, value) -> None`, `read_json(path) -> dict`.
-  - `package_versions() -> dict[str, str]`, `source_hashes() -> dict[str, str]`, `git_commit() -> str | None`, `utc_now() -> str`.
-- Produces, in `_record.py`:
-  - `L1Record` frozen dataclass with fields `actual (shots, 2P) bool`, `yoke (shots, 2) bool`, `uf_reference`, `mwpm_reference`, `correlated_prediction`, `joint_mwpm` (each `(shots, 2P) bool`), `cluster_gap (shots, 2P) float64`, `dijkstra_states (shots, 2P) int64`, `forced_plain (shots, P, 2, 2) float64`, `forced_correlated (shots, P, 2, 2) float64`, `rows (shots,) int64`, `baselines: dict[str, np.ndarray]`; properties `shots`, `num_patches`; methods `reference(name) -> np.ndarray` for `'uf' | 'mwpm'`, `save(path)`, `load(path)` (classmethod), `subset(indices) -> L1Record`, `concatenate(records) -> L1Record` (staticmethod, sorted by `rows`, disjoint rows required).
-  - `by_sector(columns (..., 2P)) -> (..., 2, P)` and `to_columns(sector_major (..., 2, P)) -> (..., 2P)`.
-
-- [ ] **Step 1: Write the failing tests**
-
-Create `src/yoked/hierarchical/_record_test.py`:
-
-```python
-import json
-
-import numpy as np
-import pytest
-
-from yoked.hierarchical._provenance import sample_hash, sha256_bytes, write_json_atomic, read_json
-from yoked.hierarchical._record import L1Record, by_sector, to_columns
-
-
-def _synthetic_record(shots=5, patches=6, seed=0, rows=None):
-    rng = np.random.default_rng(seed)
-    columns = 2 * patches
-    bits = lambda: rng.random((shots, columns)) < 0.3
-    return L1Record(
-        actual=bits(), yoke=rng.random((shots, 2)) < 0.5,
-        uf_reference=bits(), mwpm_reference=bits(), correlated_prediction=bits(), joint_mwpm=bits(),
-        cluster_gap=rng.uniform(0, 5, (shots, columns)),
-        dijkstra_states=rng.integers(1, 100, (shots, columns)),
-        forced_plain=rng.uniform(0, 5, (shots, patches, 2, 2)),
-        forced_correlated=rng.uniform(0, 5, (shots, patches, 2, 2)),
-        rows=np.arange(shots) if rows is None else np.asarray(rows),
-    )
-
-
-def test_sector_views_round_trip_and_follow_the_column_convention():
-    columns = np.arange(24).reshape(2, 12)
-    sectors = by_sector(columns)
-    assert sectors.shape == (2, 2, 6)
-    np.testing.assert_array_equal(sectors[0, 0], [0, 2, 4, 6, 8, 10])   # X sector: even columns 2i
-    np.testing.assert_array_equal(sectors[0, 1], [1, 3, 5, 7, 9, 11])   # Z sector: odd columns 2i + 1
-    np.testing.assert_array_equal(to_columns(sectors), columns)
-
-
-def test_record_validates_shapes_and_dtypes():
-    record = _synthetic_record()
-    assert record.shots == 5 and record.num_patches == 6
-    np.testing.assert_array_equal(record.reference('uf'), record.uf_reference)
-    with pytest.raises(ValueError, match='reference'):
-        record.reference('joint')
-    bad = dict(record.__dict__)
-    bad['yoke'] = np.zeros((5, 3), dtype=bool)
-    with pytest.raises(ValueError, match='yoke'):
-        L1Record(**bad)
-    bad = dict(record.__dict__)
-    bad['forced_plain'] = np.zeros((5, 6, 2), dtype=float)
-    with pytest.raises(ValueError, match='forced_plain'):
-        L1Record(**bad)
-
-
-def test_record_save_load_subset_and_concatenate(tmp_path):
-    record = _synthetic_record(rows=[10, 11, 12, 13, 14])
-    record.baselines['joint_uf'] = np.zeros((5, 12), dtype=bool)
-    record.save(tmp_path / 'record.npz')
-    loaded = L1Record.load(tmp_path / 'record.npz')
-    for name, value in record.__dict__.items():
-        if name == 'baselines':
-            np.testing.assert_array_equal(loaded.baselines['joint_uf'], value['joint_uf'])
-        else:
-            np.testing.assert_array_equal(getattr(loaded, name), value)
-    first, second = record.subset([0, 1]), record.subset([2, 3, 4])
-    merged = L1Record.concatenate([second, first])
-    np.testing.assert_array_equal(merged.rows, record.rows)
-    np.testing.assert_array_equal(merged.cluster_gap, record.cluster_gap)
-    with pytest.raises(ValueError, match='disjoint'):
-        L1Record.concatenate([first, first])
-
-
-def test_sample_hash_follows_the_recorded_run_convention():
-    detectors = np.array([[1, 0, 1, 1, 0, 0, 0, 0, 1]], dtype=bool)
-    actual = np.array([[0, 1]], dtype=bool)
-    packed = np.packbits(detectors, axis=1, bitorder='little').tobytes()
-    packed += np.packbits(actual, axis=1, bitorder='little').tobytes()
-    assert sample_hash(detectors, actual) == sha256_bytes(packed)
-
-
-def test_json_is_written_atomically(tmp_path):
-    path = tmp_path / 'manifest.json'
-    write_json_atomic(path, dict(a=1))
-    assert read_json(path) == dict(a=1)
-    assert not (tmp_path / 'manifest.pending').exists()
-```
-
-- [ ] **Step 2: Run the tests to verify they fail**
-
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_record_test.py -q`
-Expected: FAIL with `ModuleNotFoundError: No module named 'yoked.hierarchical._provenance'`
-
-- [ ] **Step 3: Implement the two modules**
-
-Create `src/yoked/hierarchical/_provenance.py`:
-
-```python
-"""Provenance helpers: hashes, atomic JSON, versions, source snapshots.
-
-Every stage writes a manifest naming its inputs by SHA-256 so that later
-stages can verify what they read (spec sections 3 and 5.3). Sample hashes
-follow the recorded comparison runs: the SHA-256 of the little-endian
-bit-packed detector bytes followed by the packed observable bytes.
-"""
-from __future__ import annotations
-
-import hashlib
-import importlib.metadata
-import json
-import subprocess
-import time
-from pathlib import Path
-
-import numpy as np
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
-"""src/yoked/hierarchical/_provenance.py sits three levels below the repository root."""
-
-SOURCE_FILES = (
-    'src/yoked/decoders/_graph.py',
-    'src/yoked/decoders/_union_find.py',
-    'src/yoked/decoders/_correlations.py',
-    'src/yoked/decoders/_correlated_union_find.py',
-    'src/yoked/hierarchical/_patch_graphs.py',
-    'src/yoked/hierarchical/_cluster_gap.py',
-    'src/yoked/hierarchical/_matching_gaps.py',
-    'src/yoked/hierarchical/_outer_decoder.py',
-    'src/yoked/hierarchical/_calibration.py',
-    'src/yoked/hierarchical/_record.py',
-    'src/yoked/hierarchical/_collect.py',
-    'src/yoked/hierarchical/_policies.py',
-    'src/yoked/hierarchical/_replay.py',
-    'src/yoked/hierarchical/_metrics.py',
-)
-"""Modules whose content determines a record, a calibrator, or a replay result."""
-
-PACKAGES = ('stim', 'numpy', 'pymatching', 'sinter', 'scipy')
-
-
-def sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def sha256_file(path: Path) -> str:
-    return sha256_bytes(Path(path).read_bytes())
-
-
-def sample_hash(detectors: np.ndarray, actual: np.ndarray) -> str:
-    """SHA-256 of packed detectors then packed observables, as in the recorded runs."""
-    digest = hashlib.sha256(np.packbits(np.asarray(detectors, dtype=bool), axis=1, bitorder='little').tobytes())
-    digest.update(np.packbits(np.asarray(actual, dtype=bool), axis=1, bitorder='little').tobytes())
-    return digest.hexdigest()
-
-
-def write_json_atomic(path: Path, value) -> None:
-    """Write to a sibling .pending file and rename, so readers never see a partial file."""
-    path = Path(path)
-    pending = path.with_suffix('.pending')
-    pending.write_text(json.dumps(value, indent=2, sort_keys=True) + '\n')
-    pending.replace(path)
-
-
-def read_json(path: Path) -> dict:
-    return json.loads(Path(path).read_text())
-
-
-def package_versions() -> dict[str, str]:
-    return {name: importlib.metadata.version(name) for name in PACKAGES}
-
-
-def source_hashes() -> dict[str, str]:
-    return {name: sha256_file(REPO_ROOT / name) for name in SOURCE_FILES if (REPO_ROOT / name).exists()}
-
-
-def git_commit() -> str | None:
-    try:
-        return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO_ROOT, text=True).strip()
-    except (OSError, subprocess.CalledProcessError):
-        return None
-
-
-def utc_now() -> str:
-    return time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-```
-
-Create `src/yoked/hierarchical/_record.py`:
-
-```python
-"""The stored L1 outputs of one sample set.
-
-Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, section 5.3.
-
-Column 2i + s of a (shots, 2P) array holds patch i, sector s (0 = X, 1 = Z).
-Forced-weight arrays are patch-major, (shots, P, 2, 2), indexed [c_X, c_Z].
-``rows`` are the indices of the record's shots inside their parent sample,
-so that pilot subsets and resumed collections keep their provenance.
-``by_sector`` and ``to_columns`` convert between the column layout and the
-sector-major (shots, 2, P) layout used by replay.
-
-``_record_test.py`` checks the layout convention, shape validation, and
-that save, load, subset, and concatenate preserve every array.
-"""
-from __future__ import annotations
-
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Sequence
-
-import numpy as np
-
-REFERENCE_NAMES = ('uf', 'mwpm')
-BASELINE_PREFIX = 'baseline_'
-
-
-def by_sector(columns: np.ndarray) -> np.ndarray:
-    """(..., 2P) columns 2i + s  ->  (..., 2, P) indexed [sector, patch]."""
-    columns = np.asarray(columns)
-    return columns.reshape(columns.shape[:-1] + (-1, 2)).swapaxes(-1, -2)
-
-
-def to_columns(sector_major: np.ndarray) -> np.ndarray:
-    """(..., 2, P) indexed [sector, patch]  ->  (..., 2P) columns 2i + s."""
-    sector_major = np.asarray(sector_major)
-    return sector_major.swapaxes(-1, -2).reshape(sector_major.shape[:-2] + (-1,))
-
-
-@dataclass(frozen=True)
-class L1Record:
-    """Everything the offline stages need, evaluated once per shot.
-
-    Fields (shots = number of collected shots, P = patches):
-      actual: (shots, 2P) bool, sampled observable flips a[i, s].
-      yoke: (shots, 2) bool, sampled yoke bits y[s], X then Z.
-      uf_reference, mwpm_reference: (shots, 2P) bool reference bits r[i, s].
-      correlated_prediction: (shots, 2P) bool, unforced second pass under the
-        reweighted model, validation only.
-      joint_mwpm: (shots, 2P) bool, joint PyMatching on the hub DEM, validation only.
-      cluster_gap: (shots, 2P) float64, nats.
-      dijkstra_states: (shots, 2P) int64, cluster-gap work proxy.
-      forced_plain, forced_correlated: (shots, P, 2, 2) float64, W(c_X, c_Z) in nats.
-      rows: (shots,) int64, row index of each shot in its parent sample.
-      baselines: optional historical predictions, name -> (shots, 2P) bool.
-    """
-    actual: np.ndarray
-    yoke: np.ndarray
-    uf_reference: np.ndarray
-    mwpm_reference: np.ndarray
-    correlated_prediction: np.ndarray
-    joint_mwpm: np.ndarray
-    cluster_gap: np.ndarray
-    dijkstra_states: np.ndarray
-    forced_plain: np.ndarray
-    forced_correlated: np.ndarray
-    rows: np.ndarray
-    baselines: dict[str, np.ndarray] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        shots, columns = np.asarray(self.actual).shape
-        patches = columns // 2
-        expected = dict(
-            actual=((shots, columns), bool), yoke=((shots, 2), bool),
-            uf_reference=((shots, columns), bool), mwpm_reference=((shots, columns), bool),
-            correlated_prediction=((shots, columns), bool), joint_mwpm=((shots, columns), bool),
-            cluster_gap=((shots, columns), np.float64), dijkstra_states=((shots, columns), np.int64),
-            forced_plain=((shots, patches, 2, 2), np.float64), forced_correlated=((shots, patches, 2, 2), np.float64),
-            rows=((shots,), np.int64),
-        )
-        if columns % 2:
-            raise ValueError('actual must have an even number of columns (two sectors per patch)')
-        for name, (shape, dtype) in expected.items():
-            value = np.ascontiguousarray(np.asarray(getattr(self, name)).astype(dtype, copy=False))
-            if value.shape != shape:
-                raise ValueError(f'{name} must have shape {shape}, got {value.shape}')
-            object.__setattr__(self, name, value)
-        for name, value in self.baselines.items():
-            value = np.asarray(value, dtype=bool)
-            if value.shape != (shots, columns):
-                raise ValueError(f'baseline {name} must have shape {(shots, columns)}, got {value.shape}')
-            self.baselines[name] = value
-
-    @property
-    def shots(self) -> int:
-        return self.actual.shape[0]
-
-    @property
-    def num_patches(self) -> int:
-        return self.actual.shape[1] // 2
-
-    def reference(self, name: str) -> np.ndarray:
-        if name not in REFERENCE_NAMES:
-            raise ValueError(f'reference must be one of {REFERENCE_NAMES}, got {name!r}')
-        return self.uf_reference if name == 'uf' else self.mwpm_reference
-
-    def _arrays(self) -> dict[str, np.ndarray]:
-        arrays = {name: getattr(self, name) for name in ARRAY_FIELDS}
-        arrays.update({BASELINE_PREFIX + name: value for name, value in self.baselines.items()})
-        return arrays
-
-    def save(self, path: Path) -> None:
-        path = Path(path)
-        pending = path.with_suffix('.pending.npz')
-        np.savez_compressed(pending, **self._arrays())
-        pending.replace(path)
-
-    @classmethod
-    def load(cls, path: Path) -> L1Record:
-        with np.load(path) as data:
-            arrays = {name: data[name] for name in data.files}
-        baselines = {name[len(BASELINE_PREFIX):]: arrays.pop(name)
-                     for name in list(arrays) if name.startswith(BASELINE_PREFIX)}
-        return cls(**arrays, baselines=baselines)
-
-    def subset(self, indices: Sequence[int]) -> L1Record:
-        indices = np.asarray(indices)
-        return L1Record(**{name: value[indices] for name, value in self._arrays().items()
-                           if not name.startswith(BASELINE_PREFIX)},
-                        baselines={name: value[indices] for name, value in self.baselines.items()})
-
-    @staticmethod
-    def concatenate(records: Sequence[L1Record]) -> L1Record:
-        """Merge records of one parent sample, ordered by row; rows must be disjoint."""
-        rows = np.concatenate([record.rows for record in records])
-        if len(np.unique(rows)) != len(rows):
-            raise ValueError('Records to concatenate must have disjoint rows')
-        order = np.argsort(rows, kind='stable')
-        names = set.intersection(*(set(record.baselines) for record in records)) if records else set()
-        merged = {name: np.concatenate([getattr(record, name) for record in records])[order] for name in ARRAY_FIELDS}
-        baselines = {name: np.concatenate([record.baselines[name] for record in records])[order] for name in names}
-        return L1Record(**merged, baselines=baselines)
-
-
-ARRAY_FIELDS = (
-    'actual', 'yoke', 'uf_reference', 'mwpm_reference', 'correlated_prediction', 'joint_mwpm',
-    'cluster_gap', 'dijkstra_states', 'forced_plain', 'forced_correlated', 'rows',
-)
-```
-
-Add to `src/yoked/hierarchical/__init__.py`:
-
-```python
-from yoked.hierarchical._record import L1Record, by_sector, to_columns
-```
-
-and extend `__all__` with `'L1Record', 'by_sector', 'to_columns'`.
-
-- [ ] **Step 4: Run the tests to verify they pass**
-
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_record_test.py -q`
-Expected: all pass.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/yoked/hierarchical/_provenance.py src/yoked/hierarchical/_record.py src/yoked/hierarchical/_record_test.py src/yoked/hierarchical/__init__.py
-git commit -m "Add the L1 record format and provenance helpers
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
-```
+### Task 7: Immutable records, artifact identities, and small I/O helpers
+
+**Files:** create `_record.py`, `_record_test.py`, `_provenance.py`, and
+`_provenance_test.py` under `src/yoked/hierarchical/`.
+
+**Deliverable:** implement the contracts below as concrete records and small
+functions. Tasks 7 to 11 specify interfaces, invariants, and failure tests
+instead of prescribing complete module bodies. Every requirement is exercised
+by a test; avoid duplicate validation logic in the CLI.
+
+- [ ] **Step 1: Define ownership and the record schema.**
+
+`L1Record` is a frozen dataclass containing the arrays in spec section 5.3,
+plus `rows (shots,) int64` and `reweighted_patches (shots, P) bool` recording
+`ForcedWeights.rules_fired` for actual collection-work accounting. Use column
+`2i + s`, forced-weight layout `(shots, P, 2, 2)`, and units of nats. Optional
+historical baselines are a `Mapping[str, np.ndarray]`, copied into an immutable
+mapping; each value is an owned, read-only `(shots, 2P)` boolean array.
+
+All array fields use `_arrays.readonly_array` **after** shape/value checks.
+Reject nonbinary bits, fractional/negative row indices, duplicate rows,
+negative state counts, malformed shapes, and invalid numeric values before
+casting. A complete pilot record requires finite nonnegative gaps and weights.
+Do not allow `astype(bool)` or `astype(int64)` to conceal invalid input.
+
+Expose `shots`, `num_patches`, `reference(name)`, `subset(positions)`,
+`by_sector(columns)`, and `to_columns(sectors)`. Record construction and subset
+creation preserve ownership. Attach baselines at construction or with
+`dataclasses.replace`, never by mutating an existing record. Add a small
+`LoadedRecord` frozen dataclass carrying the record and its verified identity.
+Low-level array serialization is private; downstream stages use only
+`load_record(record_dir) -> LoadedRecord`, the verified loader from Task 9.
+
+Keep raw-buffer allocation private to collection. A worker returns an immutable
+chunk result; because immutable mapping wrappers need not be pickleable, send
+plain array payloads across a process queue and reconstruct the checked result
+at the receiving boundary. Do not add a generic serialization registry.
+
+Full-set concatenation is used in M2. When provided, it must consume verified
+`LoadedRecord` values, require equal parent sample/model/decoder/role identities
+and identical baseline columns, reject overlapping rows, and preserve sorted
+parent row ids. It must not silently take the intersection of baseline names.
+
+- [ ] **Step 2: Define identities independently of filesystem locations.**
+
+Use canonical JSON and SHA-256, with explicit schema/layout versions. Keep the
+historical payload hash convention: packed detector bytes followed by packed
+observable bytes, little bit order; this differs from hashing `.npy` files.
+Record both payload and file hashes with unambiguous names. Provide
+`packed_sample_hash(detectors_packed, actual_packed)`, `sha256_bytes`,
+`sha256_file`, and `write_json_atomic` for these concrete operations. Stream
+packed payload bytes in detector-then-observable order, without `.npy` headers.
+
+| Identity | Inputs that determine it |
+|---|---|
+| Model | Circuit parameters, exact saved `circuit.stim` and `model.dem` hashes, detector/observable counts, and bit/layout conventions |
+| Parent sample | Model identity, sampling seed, full sampling-call shot count, sampling versions, and complete packed payload hash; row subsets retain this identity |
+| Sampling family | Circuit hash, seed, and sampling versions; prevents fitting/evaluating on separate same-seed calls with potentially overlapping streams |
+| Decoder | Graph import, UF, correlation compiler, splitter, cluster-gap, matching-gap, array/record conventions, and their relevant package versions |
+| Collection | Parent sample, decoder, dataset role, and exact ordered row ids |
+| Calibration | Verified calibration record and rows, model/decoder identities, estimator definitions, knot convention, calibration sources and versions |
+| Replay | Verified record and calibrator artifacts, configurations, tie rule, work-count convention, replay/metric sources and versions |
+
+Implement explicit source groups, not one global `SOURCE_FILES` list. Policy,
+plotting, reporting, and calibration changes do not change the decoder identity.
+Changes to an L1 algorithm or its dependencies do. Validation sources, including
+the outer decoder, have a separate recorded check identity: changed validation
+can recheck an existing record without rerunning L1. Record `_stages.py`, the
+CLI, circuit-generation sources, package versions, and the git commit for
+auditability; the saved circuit and DEM bytes determine the model actually used.
+Required source files must exist; never silently omit missing files from a hash.
+
+Calibration compatibility requires equal model and decoder identities and
+identical score/reference conventions. It does not require equal sample ids.
+Held-out checks reject equal parent sample ids **or** equal sampling families,
+regardless of path or dataset-role labels. A subset cannot acquire a new parent
+identity merely by being saved to another directory.
+
+- [ ] **Step 3: Implement narrowly scoped atomic I/O helpers.**
+
+Use temporary sibling files beneath the run directory in `$TMPDIR`, close the
+file, and replace its destination atomically. Use `allow_pickle=False` on
+loads. Provide helpers for canonical JSON, file/payload hashing, JSON writes,
+and array-container writes. A stage publishes its completion manifest last.
+It never overwrites a completed stage with different inputs: require a new
+output directory. Missing completion manifests mean incomplete work, even when
+some final-looking arrays exist.
+
+A completed collection manifest includes `schema_version`, `status='complete'`, `role`,
+`parameters`, `seed`, `parent_shots`, `shots`, the row summary (count, start,
+stop, and hash of the exact ids stored in the record), `parent_payload_sha256`,
+`identities` (model, parent_sample, sampling_family, decoder, collection),
+`artifacts` (relative filename to hash), check identity/results, versions,
+source hashes, `collection_work`, and timing (`seconds_this_run` plus cumulative
+collection time across resumptions). `checks` has `passed`, `graph`, and `record`
+entries; the last two serialize the concrete check records. A complete sample
+manifest identifies all four input files and uses the same named model/parent
+identities and payload-hash convention. Loaders verify the fields relevant
+to their stage,
+including `checks.passed is True`, before exposing data. JSON serialization
+represents undefined statistics as `null` with their counts, not nonstandard
+`NaN` literals.
+
+- [ ] **Step 4: Verify ownership, identity, and persistence.**
+
+Test input-alias mutation, attempted writes through every record field and
+baseline, save/load/subset ownership, and all invalid-value cases above. Test
+that a policy/report change leaves collection identity unchanged, a decoder
+change changes it, a changed DEM with unchanged parameters changes model
+identity, and rows/roles alter collection identity. Verify the historical hash
+convention against a hand-packed example. Test missing required source files,
+corrupt files, failed checks, missing completion markers, and schema mismatch.
+Run the new tests and the existing decoder suite; commit the completed task.
 
 ---
 
-### Task 8: Single-process collection and record validation
+### Task 8: Verified samples, single-process collection, and graph/record checks
 
-**Files:**
-- Create: `src/yoked/hierarchical/_collect.py`
-- Create: `src/yoked/hierarchical/_collect_test.py`
+**Files:** create `_collect.py` and `_collect_test.py`; use the Task 7 helpers.
 
 **Interfaces:**
-- Consumes: `PatchGraphs`, `ClusterGapUnionFindDecoder`, `MatchingGaps`, `correlation_rules_from_dem`, `signed_gaps`, `exact_outer_map_batch`, `frame_adjusted_syndrome`, `L1Record`, `by_sector`, `to_columns`, `sample_hash`, `yoked_magic_memory_circuit`, `gen.NoiseModel`.
-- Produces:
-  - `CircuitParameters(distance, rounds, p, patches=6, yokes=2, style='cz', noise='si1000')` with `circuit()`, `dem()`, `to_json()`, `from_json(data)`.
-  - `SampleSet(parameters, seed, detectors (shots, n_d) bool, actual (shots, 2P) bool)` with `shots`, `hash`, `sample(parameters, *, seed, shots)` (classmethod, one Stim call), `save(directory)`, `load(directory)` (classmethod), `load_recorded_run(directory)` (classmethod, the four-decoder run layout).
-  - `L1Context(dem, num_patches)` with `patches`, `uf`, `gaps`, `joint`; `from_dem_text(text, num_patches)` (classmethod).
-  - `collect_rows(context, detectors, actual, rows) -> L1Record`.
-  - `RecordChecks` frozen dataclass and `check_record(record) -> RecordChecks` with `passed` and `to_json()`; constants `WEIGHT_TOLERANCE = 1e-9`, `COST_TOLERANCE = 1e-6`.
-
-- [ ] **Step 1: Write the failing tests**
-
-Create `src/yoked/hierarchical/_collect_test.py`:
-
-```python
-import numpy as np
-import pytest
-
-from yoked.hierarchical._collect import (
-    CircuitParameters, L1Context, RecordChecks, SampleSet, check_record, collect_rows,
-)
-from yoked.hierarchical._fixtures import yoked_fixture
-from yoked.hierarchical._record import by_sector
-
-PARAMETERS = CircuitParameters(distance=3, rounds=12, p=0.003)
-
-
-def test_sample_set_is_one_stim_call_with_a_stable_hash(tmp_path):
-    sample = SampleSet.sample(PARAMETERS, seed=5, shots=20)
-    assert sample.shots == 20 and sample.detectors.dtype == bool and sample.actual.shape == (20, 12)
-    again = SampleSet.sample(PARAMETERS, seed=5, shots=20)
-    assert sample.hash == again.hash
-    sample.save(tmp_path)
-    loaded = SampleSet.load(tmp_path)
-    assert loaded.hash == sample.hash and loaded.parameters == PARAMETERS and loaded.seed == 5
-    np.testing.assert_array_equal(loaded.detectors, sample.detectors)
-
-
-def test_recorded_run_layout_is_loaded_and_hash_verified(tmp_path):
-    sample = SampleSet.sample(PARAMETERS, seed=5, shots=8)
-    np.save(tmp_path / 'detectors_packed.npy', np.packbits(sample.detectors, axis=1, bitorder='little'))
-    np.save(tmp_path / 'actual_observables_packed.npy', np.packbits(sample.actual, axis=1, bitorder='little'))
-    manifest = dict(parameters=dict(distance=3, rounds=12, p=0.003, patches=6, yokes=2, style='cz',
-                                    noise='si1000', shots=8, seed=5),
-                    input_sha256=dict(packed_detectors_then_observables_payload=sample.hash))
-    (tmp_path / 'manifest.json').write_text(__import__('json').dumps(manifest))
-    loaded = SampleSet.load_recorded_run(tmp_path)
-    assert loaded.hash == sample.hash and loaded.parameters == PARAMETERS
-    manifest['input_sha256']['packed_detectors_then_observables_payload'] = '0' * 64
-    (tmp_path / 'manifest.json').write_text(__import__('json').dumps(manifest))
-    with pytest.raises(ValueError, match='hash'):
-        SampleSet.load_recorded_run(tmp_path)
-
-
-def test_collect_rows_fills_a_valid_record_that_passes_the_checks():
-    fx = yoked_fixture(shots=40, seed=11)
-    context = L1Context(fx.dem, num_patches=6)
-    record = collect_rows(context, fx.detectors, fx.actual, rows=np.arange(40))
-    assert record.shots == 40 and record.num_patches == 6
-    np.testing.assert_array_equal(record.actual, fx.actual)
-    np.testing.assert_array_equal(record.yoke, fx.detectors[:, -2:])
-    assert (record.cluster_gap >= 0).all() and np.isfinite(record.cluster_gap).all()
-    assert (record.dijkstra_states > 0).all()
-    # Every reference satisfies the yoke parity? No: patch-local references need not. Joint MWPM does.
-    joint_parity = by_sector(record.joint_mwpm).sum(axis=2) % 2
-    np.testing.assert_array_equal(joint_parity.astype(bool), record.yoke)
-    checks = check_record(record)
-    assert isinstance(checks, RecordChecks)
-    assert checks.passed, checks.to_json()
-    assert checks.check_parity_agreement == 1.0
-    assert checks.plain_additivity_max_error <= 1e-9
-    assert checks.joint_agreement_fraction > 0.5   # ties are common at distance 3; the next line is the real test
-    assert checks.joint_disagreements_unexplained == 0
-
-
-def test_context_from_dem_text_matches_direct_construction():
-    fx = yoked_fixture(shots=4, seed=2)
-    direct = L1Context(fx.dem, num_patches=6)
-    from_text = L1Context.from_dem_text(str(fx.dem), num_patches=6)
-    a = collect_rows(direct, fx.detectors, fx.actual, rows=np.arange(4))
-    b = collect_rows(from_text, fx.detectors, fx.actual, rows=np.arange(4))
-    np.testing.assert_array_equal(a.forced_correlated, b.forced_correlated)
-    np.testing.assert_array_equal(a.uf_reference, b.uf_reference)
-```
-
-- [ ] **Step 2: Run the tests to verify they fail**
-
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_collect_test.py -q`
-Expected: FAIL with `ModuleNotFoundError: No module named 'yoked.hierarchical._collect'`
-
-- [ ] **Step 3: Implement the module**
-
-Create `src/yoked/hierarchical/_collect.py`:
-
-```python
-"""Collect L1 outputs for a sample set into an L1Record, and validate them.
-
-Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md,
-sections 3, 5.3, and 10 (tests 2 to 6).
-
-Per shot and patch, collection records the UF reference bits and cluster
-gaps (ClusterGapUnionFindDecoder), the plain and correlated forced weights
-with their unforced predictions (MatchingGaps), and joint PyMatching on
-the hub DEM for validation. A sample set is one Stim sampling call. This
-module holds the single-process building blocks; chunked parallel
-collection with resume lives in the same module under ``collect_sample``
-(Task 9).
-
-``check_record`` evaluates the spec's record-level invariants:
-  2. per-patch actual flips XOR to the yoke bit;
-  3. every UF correction satisfied H c = s and L c = r (enforced during
-     collection, so a record can only exist if it held);
-  4. plain forced weights are additive across sectors and their argmin is
-     the unforced prediction wherever the class weights differ;
-  5. the same two properties under the correlated model;
-  6. the MWPM-reference pipeline with the uncalibrated logistic map
-     reproduces joint PyMatching, up to ties of equal total cost.
-"""
-from __future__ import annotations
-
-from dataclasses import asdict, dataclass
-from pathlib import Path
-
-import numpy as np
-import pymatching
-import stim
-
-import gen
-from yoked._yoked_memory_circuits import yoked_magic_memory_circuit
-from yoked.decoders._correlations import correlation_rules_from_dem
-from yoked.hierarchical._cluster_gap import ClusterGapUnionFindDecoder
-from yoked.hierarchical._matching_gaps import MatchingGaps, signed_gaps
-from yoked.hierarchical._outer_decoder import exact_outer_map_batch, frame_adjusted_syndrome
-from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraphs
-from yoked.hierarchical._provenance import read_json, sample_hash, write_json_atomic
-from yoked.hierarchical._record import L1Record, by_sector, to_columns
-
-WEIGHT_TOLERANCE = 1e-9
-"""Sector weights add exactly; 1e-9 nats absorbs float summation order."""
-
-COST_TOLERANCE = 1e-6
-"""Two joint predictions with total forced cost within this are one tie (spec test 6)."""
-
-LOGISTIC_FLOOR = 1e-300
-"""The uncalibrated logistic map 1 / (1 + exp(gap)) is clipped here only to keep logs finite."""
-
-
-@dataclass(frozen=True)
-class CircuitParameters:
-    """The yoked memory circuit of one experiment cell."""
-    distance: int
-    rounds: int
-    p: float
-    patches: int = 6
-    yokes: int = 2
-    style: str = 'cz'
-    noise: str = 'si1000'
-
-    def circuit(self) -> stim.Circuit:
-        if self.noise != 'si1000':
-            raise ValueError('Only SI1000 noise is supported')
-        return yoked_magic_memory_circuit(
-            patch_diameter=self.distance, rounds=self.rounds, noise=gen.NoiseModel.si1000(self.p),
-            style=self.style, yokes=self.yokes, num_patches=self.patches)
-
-    def dem(self) -> stim.DetectorErrorModel:
-        return self.circuit().detector_error_model(decompose_errors=True, approximate_disjoint_errors=True)
-
-    def to_json(self) -> dict:
-        return asdict(self)
-
-    @classmethod
-    def from_json(cls, data: dict) -> CircuitParameters:
-        return cls(**{name: data[name] for name in cls.__dataclass_fields__})
-
-
-@dataclass(frozen=True)
-class SampleSet:
-    """One Stim sampling call: ``detectors`` (shots, n_d) bool and ``actual`` (shots, 2P) bool."""
-    parameters: CircuitParameters
-    seed: int
-    detectors: np.ndarray
-    actual: np.ndarray
-
-    @property
-    def shots(self) -> int:
-        return self.detectors.shape[0]
-
-    @property
-    def hash(self) -> str:
-        return sample_hash(self.detectors, self.actual)
-
-    @classmethod
-    def sample(cls, parameters: CircuitParameters, *, seed: int, shots: int) -> SampleSet:
-        # One call fixes the sampling schedule; the packed bytes are what the hash covers.
-        sampler = parameters.circuit().compile_detector_sampler(seed=seed)
-        detectors, actual = sampler.sample(shots=shots, separate_observables=True, bit_packed=True)
-        num_detectors = parameters.circuit().num_detectors
-        return cls(parameters, seed,
-                   np.unpackbits(detectors, axis=1, count=num_detectors, bitorder='little').astype(bool),
-                   np.unpackbits(actual, axis=1, count=2 * parameters.patches, bitorder='little').astype(bool))
-
-    def save(self, directory: Path) -> None:
-        directory = Path(directory)
-        directory.mkdir(parents=True, exist_ok=True)
-        np.save(directory / 'detectors_packed.npy', np.packbits(self.detectors, axis=1, bitorder='little'))
-        np.save(directory / 'actual_observables_packed.npy', np.packbits(self.actual, axis=1, bitorder='little'))
-        write_json_atomic(directory / 'sample.json', dict(
-            parameters=self.parameters.to_json(), seed=self.seed, shots=self.shots,
-            num_detectors=self.detectors.shape[1], hash=self.hash))
-
-    @classmethod
-    def load(cls, directory: Path) -> SampleSet:
-        directory = Path(directory)
-        info = read_json(directory / 'sample.json')
-        sample = cls._from_packed(CircuitParameters.from_json(info['parameters']), info['seed'], directory,
-                                  info['num_detectors'], info['shots'])
-        if sample.hash != info['hash']:
-            raise ValueError('Sample hash does not match sample.json')
-        return sample
-
-    @classmethod
-    def load_recorded_run(cls, directory: Path) -> SampleSet:
-        """Load the layout of the recorded four-decoder runs and verify their payload hash."""
-        directory = Path(directory)
-        manifest = read_json(directory / 'manifest.json')
-        parameters = CircuitParameters.from_json(manifest['parameters'])
-        num_detectors = parameters.circuit().num_detectors
-        sample = cls._from_packed(parameters, manifest['parameters']['seed'], directory, num_detectors,
-                                  manifest['parameters']['shots'])
-        if sample.hash != manifest['input_sha256']['packed_detectors_then_observables_payload']:
-            raise ValueError('Recorded sample hash does not match its manifest')
-        return sample
-
-    @classmethod
-    def _from_packed(cls, parameters, seed, directory, num_detectors, shots) -> SampleSet:
-        detectors = np.load(directory / 'detectors_packed.npy')
-        actual = np.load(directory / 'actual_observables_packed.npy')
-        sample = cls(parameters, int(seed),
-                     np.unpackbits(detectors, axis=1, count=num_detectors, bitorder='little').astype(bool),
-                     np.unpackbits(actual, axis=1, count=2 * parameters.patches, bitorder='little').astype(bool))
-        if sample.shots != shots:
-            raise ValueError(f'Expected {shots} shots, found {sample.shots}')
-        return sample
-
-
-class L1Context:
-    """Per-process decoders for every patch, plus joint PyMatching for validation."""
-
-    def __init__(self, dem: stim.DetectorErrorModel, num_patches: int):
-        self.patches = PatchGraphs.from_yoked_dem(dem, num_patches=num_patches)
-        self.uf = [ClusterGapUnionFindDecoder(patch.graph) for patch in self.patches]
-        self.gaps = [MatchingGaps(patch, correlation_rules_from_dem(patch.graph, patch.local_dem))
-                     for patch in self.patches]
-        self.joint = pymatching.Matching.from_detector_error_model(dem)
-
-    @classmethod
-    def from_dem_text(cls, text: str, num_patches: int) -> L1Context:
-        return cls(stim.DetectorErrorModel(text), num_patches)
-
-
-def collect_rows(context: L1Context, detectors: np.ndarray, actual: np.ndarray, rows: np.ndarray) -> L1Record:
-    """Evaluate L1 on the given shots; raises if any UF correction is invalid."""
-    detectors = np.asarray(detectors, dtype=bool)
-    actual = np.asarray(actual, dtype=bool)
-    shots, patches = detectors.shape[0], len(context.patches)
-    columns = NUM_SECTORS * patches
-    uf_reference = np.zeros((shots, columns), dtype=bool)
-    mwpm_reference = np.zeros((shots, columns), dtype=bool)
-    correlated_prediction = np.zeros((shots, columns), dtype=bool)
-    cluster_gap = np.zeros((shots, columns), dtype=np.float64)
-    dijkstra_states = np.zeros((shots, columns), dtype=np.int64)
-    forced_plain = np.zeros((shots, patches, 2, 2), dtype=np.float64)
-    forced_correlated = np.zeros((shots, patches, 2, 2), dtype=np.float64)
-    local = context.patches.local_syndromes(detectors)   # (shots, patches, n_local)
-    for shot in range(shots):
-        for i, patch in enumerate(context.patches):
-            syndrome = local[shot, i]
-            uf = context.uf[i].decode_with_gaps(syndrome)
-            _assert_valid_correction(patch.graph, syndrome, uf.selected_edges, uf.prediction, rows[shot], i)
-            forced = context.gaps[i].forced_weights(syndrome)
-            span = slice(NUM_SECTORS * i, NUM_SECTORS * i + NUM_SECTORS)
-            uf_reference[shot, span] = uf.prediction
-            cluster_gap[shot, span] = uf.cluster_gap
-            dijkstra_states[shot, span] = uf.dijkstra_states
-            mwpm_reference[shot, span] = forced.first_pass
-            correlated_prediction[shot, span] = forced.correlated_prediction
-            forced_plain[shot, i] = forced.plain
-            forced_correlated[shot, i] = forced.correlated
-    joint_mwpm = context.joint.decode_batch(detectors.astype(np.uint8)).astype(bool)
-    return L1Record(
-        actual=actual, yoke=detectors[:, list(context.patches.yoke_detector_ids)],
-        uf_reference=uf_reference, mwpm_reference=mwpm_reference,
-        correlated_prediction=correlated_prediction, joint_mwpm=joint_mwpm,
-        cluster_gap=cluster_gap, dijkstra_states=dijkstra_states,
-        forced_plain=forced_plain, forced_correlated=forced_correlated, rows=np.asarray(rows, dtype=np.int64),
-    )
-
-
-def _assert_valid_correction(graph, syndrome, selected_edges, prediction, row, patch_index) -> None:
-    """Spec test 3: H c = s over GF(2) and L c = r, checked on every collected shot."""
-    reconstructed = np.zeros(len(graph.adjacency), dtype=np.int64)
-    mask = 0
-    for e in selected_edges:
-        u, terminal = graph.endpoints[e]
-        reconstructed[u] ^= 1
-        reconstructed[terminal] ^= 1
-        mask ^= graph.edges[e][3]
-    if not np.array_equal(reconstructed[:graph.num_detectors].astype(bool), np.asarray(syndrome, dtype=bool)):
-        raise AssertionError(f'UF correction violates H c = s at row {row}, patch {patch_index}')
-    if [(mask >> k) & 1 for k in range(graph.num_observables)] != list(prediction.astype(int)):
-        raise AssertionError(f'UF prediction differs from L c at row {row}, patch {patch_index}')
-
-
-@dataclass(frozen=True)
-class RecordChecks:
-    """Outcome of the record-level invariants of spec section 10."""
-    shots: int
-    check_parity_agreement: float
-    plain_additivity_max_error: float
-    plain_argmin_disagreements: int
-    correlated_additivity_max_error: float
-    correlated_sign_disagreements: int
-    joint_agreement_fraction: float
-    joint_disagreements: int
-    joint_disagreements_unexplained: int
-
-    @property
-    def passed(self) -> bool:
-        return (self.check_parity_agreement == 1.0
-                and self.plain_additivity_max_error <= WEIGHT_TOLERANCE
-                and self.plain_argmin_disagreements == 0
-                and self.correlated_additivity_max_error <= WEIGHT_TOLERANCE
-                and self.correlated_sign_disagreements == 0
-                and self.joint_disagreements_unexplained == 0)
-
-    def to_json(self) -> dict:
-        return dict(asdict(self), passed=self.passed)
-
-
-def check_record(record: L1Record) -> RecordChecks:
-    patches = record.num_patches
-    # Test 2: per-patch actual flips XOR to the yoke bit.
-    parity = (by_sector(record.actual).sum(axis=2) % 2).astype(bool)
-    parity_agreement = float(np.mean((parity == record.yoke).all(axis=1)))
-    # Tests 4 and 5: additivity and argmin consistency under both models.
-    plain_error, plain_disagreements = _model_consistency(record.forced_plain, record.mwpm_reference)
-    correlated_error, correlated_disagreements = _model_consistency(
-        record.forced_correlated, record.correlated_prediction)
-    # Test 6: MWPM reference plus plain gaps through the logistic map reproduces joint MWPM.
-    reference = record.mwpm_reference
-    gaps = to_columns(signed_gaps(record.forced_plain, reference.reshape(record.shots, patches, 2)).swapaxes(1, 2))
-    q = np.clip(1.0 / (1.0 + np.exp(by_sector(gaps))), LOGISTIC_FLOOR, 1 - 1e-16)   # (shots, 2, P)
-    sigma = frame_adjusted_syndrome(record.yoke, reference)
-    x = np.stack([exact_outer_map_batch(q[:, s], sigma[:, s])[0] for s in range(NUM_SECTORS)], axis=1)
-    final = reference ^ to_columns(x)
-    disagree = (final != record.joint_mwpm).any(axis=1)
-    cost_final = _total_forced_cost(record.forced_plain, final)
-    cost_joint = _total_forced_cost(record.forced_plain, record.joint_mwpm)
-    unexplained = int(np.sum(disagree & (np.abs(cost_final - cost_joint) > COST_TOLERANCE)))
-    return RecordChecks(
-        shots=record.shots, check_parity_agreement=parity_agreement,
-        plain_additivity_max_error=plain_error, plain_argmin_disagreements=plain_disagreements,
-        correlated_additivity_max_error=correlated_error, correlated_sign_disagreements=correlated_disagreements,
-        joint_agreement_fraction=float(1 - disagree.mean()), joint_disagreements=int(disagree.sum()),
-        joint_disagreements_unexplained=unexplained,
-    )
-
-
-def _model_consistency(forced: np.ndarray, prediction: np.ndarray) -> tuple[float, int]:
-    """Max additivity error and count of sectors whose forced argmin contradicts the prediction."""
-    additivity = np.abs(forced[:, :, 0, 0] + forced[:, :, 1, 1] - forced[:, :, 0, 1] - forced[:, :, 1, 0])
-    patches = forced.shape[1]
-    gaps = signed_gaps(forced, prediction.reshape(-1, patches, 2))   # (shots, P, 2), >= 0 when consistent
-    disagreements = int(np.sum(gaps < -WEIGHT_TOLERANCE))
-    return float(additivity.max(initial=0.0)), disagreements
-
-
-def _total_forced_cost(forced: np.ndarray, prediction: np.ndarray) -> np.ndarray:
-    """sum_i W_i(f[i, X], f[i, Z]) per shot, the joint matching cost of a full prediction."""
-    patches = forced.shape[1]
-    bits = prediction.reshape(-1, patches, 2).astype(np.intp)
-    shots = np.arange(forced.shape[0])[:, None]
-    return forced[shots, np.arange(patches)[None, :], bits[:, :, 0], bits[:, :, 1]].sum(axis=1)
-```
-
-Note on the gap layout in `check_record`: `signed_gaps` returns `(shots, P, 2)` for patch-major input; `.swapaxes(1, 2)` gives `(shots, 2, P)` which `to_columns` turns into columns `2i + s`, and `by_sector` returns to `(shots, 2, P)` for L2. Keep both calls so the intent reads as "columns in, sectors out".
-
-- [ ] **Step 4: Run the tests to verify they pass**
-
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_collect_test.py -q`
-Expected: all pass. `joint_disagreements_unexplained == 0` is the assertion that matters; the agreement fraction is only a floor because equal-weight ties are common at distance 3.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/yoked/hierarchical/_collect.py src/yoked/hierarchical/_collect_test.py
-git commit -m "Add single-process L1 collection and record validation
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
-```
+
+- `CircuitParameters(distance, rounds, p, patches=6, yokes=2, style='cz', noise='si1000')`.
+- `SampleSet.sample(parameters, *, seed, shots)` creates one full packed sample
+  plus its exact circuit and DEM; `save(directory)` publishes its sample manifest.
+- `SampleSet.load(directory)` verifies and opens the saved sample;
+  `load_recorded_run(directory)` imports the existing benchmark format.
+- `L1Context.from_dem_text(text, num_patches)` owns reusable per-process decoders.
+- `collect_rows(context, detectors, actual, rows)` returns a checked `L1Record`.
+- `check_graphs(dem, patches) -> GraphChecks` and
+  `check_record(record) -> RecordChecks`, both frozen result records.
+
+- [ ] **Step 1: Preserve the actual sampling model.**
+
+A sample directory contains `circuit.stim`, `model.dem`,
+`detectors_packed.npy`, `actual_observables_packed.npy`, and `sample.json`.
+Generate the circuit once and derive the DEM from it with the exact options
+in the design. Sample once with explicit seed/full shot count; unpack only
+requested chunks during collection. Store sampling versions, hashes, dimensions,
+parameters, parent sample id, and sampling-family id. Retain read-only packed
+memory maps; do not unpack an entire 50,000- or 100,000-shot sample just to use
+its first 2,000 rows.
+
+Import the saved benchmark's **original** circuit and DEM. Verify their hashes
+against `manifest.json['input_sha256']` along with the saved packed payloads,
+array shapes, counts, and conventions before copying/referencing them. Never
+regenerate the decoding model from today's circuit generator for imported
+shots. Check the declared circuit/model dimensions and parameters for consistency.
+
+Verify actual saved bytes on first use and on resume, once per parent process,
+not once per chunk. Workers read the verified saved DEM and read-only sample
+arrays. A changed dependency version or decoder source cannot silently join an
+existing partial collection.
+
+- [ ] **Step 2: Make graph validation a collection prerequisite.**
+
+Build the imported joint `DecodingGraph` and the patch graphs. Remap patch check
+vertices to the two global yokes, detector ids to global ids, and observable
+masks to global masks. Compare edge multiplicities grouped by endpoint/mask;
+within each group sort weights and compare with absolute tolerance `1e-9`,
+`rtol=0`. Rounding weights into dictionary keys is not a tolerance comparison.
+Reject missing/extra edges, changed labels, or out-of-tolerance weights.
+
+Run this check on every distinct sample/model, including the saved d=9 model,
+before launching workers. Record imported-edge counts and adjacency degrees.
+For the recorded d=9 fixture verify two yoke degrees of 1,110, median detector
+degree 11, and maximum non-yoke degree 12. Derive statistics for other distances;
+never substitute raw DEM target multiplicities for graph degrees.
+
+Test equivalent graphs and deliberately changed edge multiplicity, mask, and
+weight. Include a near-rounding-boundary weight difference smaller than `1e-9`
+that passes, and a larger difference that fails.
+
+- [ ] **Step 3: Collect each row through one implementation path.**
+
+For each patch, run the shared UF result method through the cluster-gap decoder,
+validate its selected correction against `H c = s` and `L c = r`, and collect
+plain/correlated forced weights and the two unforced validation predictions.
+Persist `rules_fired` in `reweighted_patches`. Joint plain MWPM runs on the full
+saved DEM for validation. L1 never reads sampled yoke bits; only record assembly
+and validation use them.
+
+Use the same `collect_rows` function for serial and parallel collection.
+A `workers=1` run calls it directly, with no process pool, so failures are easy
+to reproduce. Validate binary values and row ids before narrowing dtypes.
+
+Record actual collection work separately from replay work. For the Task 4
+implementation, per row there are `P` UF decodes, `2P` Dijkstra searches, `P`
+unforced plain calls, `4P` plain forced calls, and `P` reweight attempts. If `R`
+patches have `rules_fired=True`, there are `4R` correlated forced calls and `R`
+unforced correlated validation calls; unchanged weights reuse the plain results.
+There is also one joint MWPM validation decode per row. A matching count means
+one decoded syndrome: a four-row `decode_batch` contributes four forced decodes.
+Include settled Dijkstra states and setup work. Retained-row counts can be
+reconstructed from the record; retries and repeated setup are recorded separately.
+If interruption loses attempted-work telemetry, label that telemetry incomplete
+instead of claiming that retained-row counts cover every attempted decode. Test these counts with instrumented decoder calls so an
+implementation change cannot silently make the formulas stale.
+
+- [ ] **Step 4: Enforce every applicable record invariant.**
+
+`RecordChecks.passed` requires check parity on every row; valid correction
+checks on every patch; finite/nonnegative collected values; plain and correlated
+additivity and preferred-class consistency within `1e-9`; and zero unexplained
+joint-MWPM disagreements. Do not encode an agreement-percentage acceptance floor.
+
+For the joint comparison, take signed plain gaps relative to the MWPM reference,
+apply the uncalibrated logistic, compute the frame-adjusted syndrome, and use
+`BatchOuterDecision.patterns`. Convert patch-major gaps to sector-major once;
+avoid round trips through column layout. Both the reconstructed final prediction
+and joint MWPM must obey yoke parity, including on disagreements. Compare total
+forced costs on every disagreement within `1e-6` nats. Record tie differences.
+
+A failing graph, correction, or record invariant raises and prevents publication.
+Keep diagnostics with row/patch identifiers; diagnosing a failed collection
+never requires accepting it as completed data.
+
+- [ ] **Step 5: Run the distance-3 integration checks.**
+
+Use a few hundred shared shots to exercise both correlation branches, graph
+checks, valid corrections, matching additivity, and joint-optimum equivalence.
+Deliberately corrupt a yoke bit, reference, forced cost, final parity, and graph
+edge; verify each appropriate gate fails. Compare single-call and partitioned
+serial collection by every array and parent row id. Test a fresh sample round
+trip and the imported benchmark format with small fixtures. Run the decoder
+suite and commit.
 
 ---
 
-### Task 9: Chunked parallel collection with resume and manifests
+### Task 9: Atomic checkpointing, resume, and validated completion
 
-**Files:**
-- Modify: `src/yoked/hierarchical/_collect.py` (append the section below)
-- Modify: `src/yoked/hierarchical/_collect_test.py` (append tests)
-
-**Interfaces:**
-- Consumes: Task 8's `SampleSet`, `L1Context`, `collect_rows`, `check_record`; `L1Record`, `ARRAY_FIELDS` from `_record`; `_provenance` helpers.
-- Produces:
-  - `ROLES = ('evaluation', 'calibration', 'confirmation')`.
-  - `CollectionSettings(role, rows, workers=1, chunk_size=64, max_chunks=None)` with `rows_summary() -> dict`.
-  - `collect_sample(sample_dir, out_dir, settings) -> L1Record | None`: writes `collection.json`, `partial.npz`, `completed.npy`, `progress.json` while running, and `record.npz` plus `manifest.json` when every row is done; returns `None` when stopped by `max_chunks`; is idempotent once complete; refuses a directory whose recorded sample, rows, role, or source hashes differ.
-
-- [ ] **Step 1: Write the failing tests**
-
-Append to `src/yoked/hierarchical/_collect_test.py`:
-
-```python
-from dataclasses import replace
-
-from yoked.hierarchical._collect import CollectionSettings, collect_sample
-from yoked.hierarchical._provenance import read_json
-from yoked.hierarchical._record import L1Record
-
-
-def test_settings_validate_and_summarize_rows():
-    settings = CollectionSettings(role='evaluation', rows=[5, 3, 3, 9])
-    np.testing.assert_array_equal(settings.rows, [3, 5, 9])
-    summary = settings.rows_summary()
-    assert (summary['start'], summary['stop'], summary['count']) == (3, 10, 3) and len(summary['sha256']) == 64
-    with pytest.raises(ValueError, match='role'):
-        CollectionSettings(role='training', rows=[0])
-    with pytest.raises(ValueError, match='empty'):
-        CollectionSettings(role='evaluation', rows=[])
-
-
-def test_parallel_collection_matches_single_process_and_resumes(tmp_path):
-    sample = SampleSet.sample(PARAMETERS, seed=9, shots=48)
-    sample.save(tmp_path / 'sample')
-    settings = CollectionSettings(role='calibration', rows=np.arange(48), workers=2, chunk_size=8, max_chunks=3)
-    assert collect_sample(tmp_path / 'sample', tmp_path / 'out', settings) is None
-    assert np.load(tmp_path / 'out' / 'completed.npy').sum() == 24
-    assert not (tmp_path / 'out' / 'record.npz').exists()
-
-    record = collect_sample(tmp_path / 'sample', tmp_path / 'out', replace(settings, max_chunks=None))
-    expected = collect_rows(L1Context(PARAMETERS.dem(), num_patches=6), sample.detectors, sample.actual, np.arange(48))
-    for name in ('uf_reference', 'mwpm_reference', 'cluster_gap', 'dijkstra_states',
-                 'forced_plain', 'forced_correlated', 'joint_mwpm', 'rows', 'actual', 'yoke'):
-        np.testing.assert_array_equal(getattr(record, name), getattr(expected, name), err_msg=name)
-    manifest = read_json(tmp_path / 'out' / 'manifest.json')
-    assert manifest['role'] == 'calibration' and manifest['checks']['passed'] and manifest['shots'] == 48
-    assert manifest['sample_hash'] == sample.hash and manifest['rows']['count'] == 48
-    assert not (tmp_path / 'out' / 'partial.npz').exists()
-    reloaded = L1Record.load(tmp_path / 'out' / 'record.npz')
-    np.testing.assert_array_equal(reloaded.cluster_gap, record.cluster_gap)
-
-    # Complete directories are idempotent, and a different row selection is refused.
-    again = collect_sample(tmp_path / 'sample', tmp_path / 'out', replace(settings, max_chunks=None))
-    np.testing.assert_array_equal(again.rows, record.rows)
-    with pytest.raises(ValueError, match='rows'):
-        collect_sample(tmp_path / 'sample', tmp_path / 'out', CollectionSettings(role='calibration', rows=np.arange(10)))
-
-
-def test_row_subset_collects_only_those_rows(tmp_path):
-    sample = SampleSet.sample(PARAMETERS, seed=9, shots=20)
-    sample.save(tmp_path / 'sample')
-    settings = CollectionSettings(role='evaluation', rows=np.arange(5, 13), workers=1, chunk_size=3)
-    record = collect_sample(tmp_path / 'sample', tmp_path / 'out', settings)
-    np.testing.assert_array_equal(record.rows, np.arange(5, 13))
-    np.testing.assert_array_equal(record.actual, sample.actual[5:13])
-    with pytest.raises(ValueError, match='exceed'):
-        collect_sample(tmp_path / 'sample', tmp_path / 'out2', CollectionSettings(role='evaluation', rows=[25]))
-```
-
-- [ ] **Step 2: Run the tests to verify they fail**
-
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_collect_test.py -q -k "settings or parallel or subset"`
-Expected: FAIL with `ImportError: cannot import name 'CollectionSettings'`
-
-- [ ] **Step 3: Append the parallel collection to `_collect.py`**
-
-Add these imports at the top of `src/yoked/hierarchical/_collect.py`:
-
-```python
-import multiprocessing
-import time
-from yoked.hierarchical._provenance import (
-    git_commit, package_versions, sha256_bytes, sha256_file, source_hashes, utc_now,
-)
-from yoked.hierarchical._record import ARRAY_FIELDS
-```
-
-and append:
-
-```python
-ROLES = ('evaluation', 'calibration', 'confirmation')
-
-SAVE_INTERVAL_SECONDS = 60.0
-"""Partial results are flushed at most this often: a lost minute is cheap, a large write per chunk is not."""
-
-
-@dataclass(frozen=True)
-class CollectionSettings:
-    """Which rows of a sample to collect, and how.
-
-    Fields: ``role`` in ROLES, the dataset role recorded in the manifest;
-    ``rows`` sorted unique indices into the parent sample; ``workers``
-    processes; ``chunk_size`` rows per work item; ``max_chunks`` stops after
-    that many chunks (controlled runs and tests), leaving a resumable state.
-    """
-    role: str
-    rows: np.ndarray
-    workers: int = 1
-    chunk_size: int = 64
-    max_chunks: int | None = None
-
-    def __post_init__(self) -> None:
-        if self.role not in ROLES:
-            raise ValueError(f'role must be one of {ROLES}, got {self.role!r}')
-        rows = np.unique(np.asarray(self.rows, dtype=np.int64))
-        if len(rows) == 0:
-            raise ValueError('rows must not be empty')
-        if self.workers < 1 or self.chunk_size < 1:
-            raise ValueError('workers and chunk_size must be positive')
-        object.__setattr__(self, 'rows', rows)
-
-    def rows_summary(self) -> dict:
-        return dict(start=int(self.rows[0]), stop=int(self.rows[-1]) + 1, count=int(len(self.rows)),
-                    sha256=sha256_bytes(self.rows.tobytes()))
-
-
-def collect_sample(sample_dir: Path, out_dir: Path, settings: CollectionSettings) -> L1Record | None:
-    """Collect, or resume collecting, ``settings.rows`` of the saved sample into ``out_dir``."""
-    sample_dir, out_dir = Path(sample_dir), Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    info = read_json(sample_dir / 'sample.json')
-    parameters = CircuitParameters.from_json(info['parameters'])
-    if settings.rows[-1] >= info['shots']:
-        raise ValueError(f'rows exceed the sample of {info["shots"]} shots')
-    _verify_or_create_collection(out_dir, info, settings)
-    if (out_dir / 'record.npz').exists():
-        return L1Record.load(out_dir / 'record.npz')
-    arrays, completed = _load_or_create_partial(out_dir, settings, parameters.patches)
-
-    pending = np.flatnonzero(~completed)
-    chunks = [pending[k:k + settings.chunk_size] for k in range(0, len(pending), settings.chunk_size)]
-    if settings.max_chunks is not None:
-        chunks = chunks[:settings.max_chunks]
-    started = last_save = time.monotonic()
-    if chunks:
-        dem_text = str(parameters.dem())
-        initargs = (dem_text, parameters.patches, str(sample_dir), info['num_detectors'])
-        with multiprocessing.get_context('forkserver').Pool(settings.workers, _init_worker, initargs) as pool:
-            jobs = [(positions, settings.rows[positions]) for positions in chunks]
-            for positions, record in pool.imap_unordered(_collect_positions, jobs):
-                for name in ARRAY_FIELDS:
-                    if name != 'rows':
-                        arrays[name][positions] = getattr(record, name)
-                completed[positions] = True
-                _write_progress(out_dir, completed, started)
-                if time.monotonic() - last_save > SAVE_INTERVAL_SECONDS:
-                    _save_partial(out_dir, arrays, completed)
-                    last_save = time.monotonic()
-    _save_partial(out_dir, arrays, completed)
-    if not completed.all():
-        return None
-
-    record = L1Record(**arrays)
-    record.save(out_dir / 'record.npz')
-    checks = check_record(record)
-    write_json_atomic(out_dir / 'manifest.json', dict(
-        stage='collect', role=settings.role, parameters=parameters.to_json(), seed=info['seed'],
-        shots=record.shots, rows=settings.rows_summary(), sample_hash=info['hash'],
-        sample_directory=str(sample_dir.resolve()), workers=settings.workers, chunk_size=settings.chunk_size,
-        versions=package_versions(), source_sha256=source_hashes(), code_commit=git_commit(),
-        checks=checks.to_json(), record_sha256=sha256_file(out_dir / 'record.npz'),
-        seconds_this_run=time.monotonic() - started, created_utc=utc_now(),
-    ))
-    (out_dir / 'partial.npz').unlink(missing_ok=True)
-    return record
-
-
-def _verify_or_create_collection(out_dir: Path, info: dict, settings: CollectionSettings) -> None:
-    """Pin the directory to one sample, row set, role, and source snapshot."""
-    expected = dict(sample_hash=info['hash'], parameters=info['parameters'], seed=info['seed'],
-                    role=settings.role, rows=settings.rows_summary(), source_sha256=source_hashes())
-    path = out_dir / 'collection.json'
-    if not path.exists():
-        write_json_atomic(path, dict(expected, created_utc=utc_now()))
-        return
-    recorded = read_json(path)
-    for key, value in expected.items():
-        if recorded.get(key) != value:
-            raise ValueError(f'Existing collection in {out_dir} differs in {key}; use a new output directory')
-
-
-def _load_or_create_partial(out_dir: Path, settings: CollectionSettings, patches: int):
-    if (out_dir / 'partial.npz').exists():
-        with np.load(out_dir / 'partial.npz') as data:
-            arrays = {name: data[name] for name in data.files}
-        return arrays, np.load(out_dir / 'completed.npy')
-    shots, columns = len(settings.rows), NUM_SECTORS * patches
-    arrays = dict(
-        actual=np.zeros((shots, columns), dtype=bool), yoke=np.zeros((shots, 2), dtype=bool),
-        uf_reference=np.zeros((shots, columns), dtype=bool), mwpm_reference=np.zeros((shots, columns), dtype=bool),
-        correlated_prediction=np.zeros((shots, columns), dtype=bool), joint_mwpm=np.zeros((shots, columns), dtype=bool),
-        cluster_gap=np.zeros((shots, columns), dtype=np.float64), dijkstra_states=np.zeros((shots, columns), dtype=np.int64),
-        forced_plain=np.zeros((shots, patches, 2, 2), dtype=np.float64),
-        forced_correlated=np.zeros((shots, patches, 2, 2), dtype=np.float64),
-        rows=settings.rows.copy(),
-    )
-    return arrays, np.zeros(shots, dtype=bool)
-
-
-def _save_partial(out_dir: Path, arrays: dict, completed: np.ndarray) -> None:
-    pending = out_dir / 'partial.pending.npz'
-    np.savez_compressed(pending, **arrays)
-    pending.replace(out_dir / 'partial.npz')
-    np.save(out_dir / 'completed.pending.npy', completed)
-    (out_dir / 'completed.pending.npy').replace(out_dir / 'completed.npy')
-
-
-def _write_progress(out_dir: Path, completed: np.ndarray, started: float) -> None:
-    done, total = int(completed.sum()), int(len(completed))
-    elapsed = time.monotonic() - started
-    write_json_atomic(out_dir / 'progress.json', dict(completed=done, total=total, seconds=elapsed))
-    print(f'collected {done}/{total} rows in {elapsed:.0f} s', flush=True)
-
-
-_WORKER: dict = {}
-"""Per-process state filled by ``_init_worker``: decoders and memory-mapped sample arrays."""
-
-
-def _init_worker(dem_text: str, num_patches: int, sample_dir: str, num_detectors: int) -> None:
-    _WORKER['context'] = L1Context.from_dem_text(dem_text, num_patches)
-    _WORKER['detectors'] = np.load(Path(sample_dir) / 'detectors_packed.npy', mmap_mode='r')
-    _WORKER['actual'] = np.load(Path(sample_dir) / 'actual_observables_packed.npy', mmap_mode='r')
-    _WORKER['num_detectors'] = num_detectors
-    _WORKER['num_observables'] = NUM_SECTORS * num_patches
-
-
-def _collect_positions(job: tuple[np.ndarray, np.ndarray]) -> tuple[np.ndarray, L1Record]:
-    positions, rows = job
-    worker = _WORKER
-    detectors = np.unpackbits(worker['detectors'][rows], axis=1, count=worker['num_detectors'], bitorder='little')
-    actual = np.unpackbits(worker['actual'][rows], axis=1, count=worker['num_observables'], bitorder='little')
-    return positions, collect_rows(worker['context'], detectors.astype(bool), actual.astype(bool), rows)
-```
-
-- [ ] **Step 4: Run the tests to verify they pass**
-
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_collect_test.py -q`
-Expected: all pass. The parallel test takes a few seconds because each worker rebuilds the distance-3 context. If workers fail to import `yoked`, confirm `PYTHONPATH=src` is exported in the environment rather than only prefixed, since `forkserver` children inherit the environment but not the parent's `sys.path` edits.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/yoked/hierarchical/_collect.py src/yoked/hierarchical/_collect_test.py
-git commit -m "Add resumable parallel L1 collection with manifests
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
-```
-
----
-
-### Task 10: Policies, replay, and core metrics
-
-**Files:**
-- Create: `src/yoked/hierarchical/_policies.py`
-- Create: `src/yoked/hierarchical/_replay.py`
-- Create: `src/yoked/hierarchical/_replay_test.py`
-- Create: `src/yoked/hierarchical/_metrics.py`
-- Create: `src/yoked/hierarchical/_metrics_test.py`
-- Modify: `src/yoked/hierarchical/__init__.py` (export the public names below)
+**Files:** extend `_collect.py` and `_collect_test.py`; put shared verified record
+loading in `_record.py` using `_provenance.py` helpers.
 
 **Interfaces:**
-- Consumes: `L1Record`, `by_sector`, `to_columns` (Task 7); `signed_gaps` (Task 4); `IsotonicCalibrator` (Task 6); `exact_outer_map_batch`, `frame_adjusted_syndrome` (Task 5); `sinter.shot_error_rate_to_piece_error_rate`.
-- Produces, in `_policies.py`: `DeterministicPolicy` protocol with `name: str` and `select(q0 (shots, 2, P), sigma (shots, 2)) -> M (shots, 2, P) bool`; `NoRefinement` (name `initial_only`), `RefineAll` (name `all_refined`); `policy_from_name(name)`.
-- Produces, in `_replay.py`: `REFERENCES`, `SCORES`, `OUTER_RULES`; `Estimator(reference, score)` with `name`, `direction`, `parse(text)`; `estimator_scores(record, estimator) -> (shots, 2P)`; `residual_errors(record, reference) -> (shots, 2P) bool`; `Calibrators = dict[str, tuple[IsotonicCalibrator, IsotonicCalibrator]]`; `fit_calibrators(record, estimators) -> Calibrators`; `calibrated_probabilities(record, estimator, calibrators) -> (shots, 2, P)`; `ReplayConfig(initial, refined, policy, outer='mixed')` with `name`; `ReplayResult(config, final, refined, refined_patches, ties, above_half)`; `replay(record, calibrators, config, *, chunk_size=20000) -> ReplayResult`.
-- Produces, in `_metrics.py`: `Rate(count, total)` with `value`, `to_json()`; `sector_failures`, `block_failures`, `residual_failure_counts`, `misattribution`, `sector_failure_by_stratum`, `PairedDifference`, `paired_bootstrap(...)`, `normalized_ler(rate, *, pieces, values=8)`, `summarize_result(record, result, reference, *, pieces) -> dict`.
 
-- [ ] **Step 1: Write the failing tests**
-
-Create `src/yoked/hierarchical/_replay_test.py`:
-
-```python
-import numpy as np
-import pytest
-
-from yoked.hierarchical._calibration import IsotonicCalibrator
-from yoked.hierarchical._matching_gaps import signed_gaps
-from yoked.hierarchical._policies import NoRefinement, RefineAll, policy_from_name
-from yoked.hierarchical._record import L1Record, by_sector
-from yoked.hierarchical._replay import (
-    Estimator, ReplayConfig, calibrated_probabilities, estimator_scores, fit_calibrators, replay, residual_errors,
-)
-
-
-def _linear_calibrator():
-    # Score 0 -> 0.9, score 10 -> 0.05, linear in between, constant outside.
-    return IsotonicCalibrator('decreasing', np.array([0.0, 10.0]), np.array([0.9, 0.05]), 100)
-
-
-def _additive_forced(delta_x, delta_z):
-    """W[c_X, c_Z] = delta_x * c_X + delta_z * c_Z: gaps relative to reference (0, 0) are the deltas."""
-    return np.array([[0.0, delta_z], [delta_x, delta_x + delta_z]])
-
-
-def _two_patch_record():
-    # Two patches, columns (0X, 0Z, 1X, 1Z). Shot 0: X yoke fires; shot 1: nothing fires.
-    shots = 2
-    zeros = np.zeros((shots, 4), dtype=bool)
-    actual = zeros.copy()
-    actual[0, 0] = True                      # patch 0's X observable really flipped in shot 0
-    yoke = np.array([[1, 0], [0, 0]], dtype=bool)
-    cluster_gap = np.array([[8.0, 9.0, 1.0, 9.0], [9.0, 9.0, 9.0, 9.0]])   # patch 1 looks uncertain in shot 0
-    forced_correlated = np.array([
-        [_additive_forced(0.5, 9.0), _additive_forced(9.0, 9.0)],          # shot 0: patch 0 now looks uncertain
-        [_additive_forced(9.0, 9.0), _additive_forced(9.0, 9.0)],
-    ])
-    forced_plain = np.array([[_additive_forced(6.0, 9.0), _additive_forced(6.0, 9.0)]] * shots)
-    return L1Record(
-        actual=actual, yoke=yoke, uf_reference=zeros.copy(), mwpm_reference=zeros.copy(),
-        correlated_prediction=zeros.copy(), joint_mwpm=zeros.copy(), cluster_gap=cluster_gap,
-        dijkstra_states=np.ones((shots, 4), dtype=np.int64), forced_plain=forced_plain,
-        forced_correlated=forced_correlated, rows=np.arange(shots),
-    )
-
-
-def test_estimator_parsing_and_validation():
-    assert Estimator.parse('uf:gap_correlated') == Estimator('uf', 'gap_correlated')
-    assert Estimator('uf', 'cluster_gap').name == 'uf:cluster_gap'
-    assert Estimator('mwpm', 'gap_plain').direction == 'decreasing'
-    with pytest.raises(ValueError, match='cluster_gap'):
-        Estimator('mwpm', 'cluster_gap')
-    with pytest.raises(ValueError, match='reference'):
-        Estimator('joint', 'gap_plain')
-    with pytest.raises(ValueError, match='score'):
-        Estimator.parse('uf:entropy')
-
-
-def test_estimator_scores_are_gaps_relative_to_the_chosen_reference():
-    record = _two_patch_record()
-    np.testing.assert_array_equal(estimator_scores(record, Estimator('uf', 'cluster_gap')), record.cluster_gap)
-    expected = signed_gaps(record.forced_correlated, record.uf_reference.reshape(2, 2, 2)).reshape(2, 4)
-    np.testing.assert_allclose(estimator_scores(record, Estimator('uf', 'gap_correlated')), expected)
-    np.testing.assert_allclose(estimator_scores(record, Estimator('uf', 'gap_correlated'))[0], [0.5, 9.0, 9.0, 9.0])
-    np.testing.assert_array_equal(residual_errors(record, 'uf'), record.actual)
-
-
-def test_fit_calibrators_pools_patches_per_sector():
-    record = _two_patch_record()
-    calibrators = fit_calibrators(record, [Estimator('uf', 'cluster_gap')])
-    x_calibrator, z_calibrator = calibrators['uf:cluster_gap']
-    assert x_calibrator.num_samples == 4 and z_calibrator.num_samples == 4   # 2 shots x 2 patches per sector
-    assert x_calibrator.direction == 'decreasing'
-
-
-def test_replay_endpoints_follow_the_hand_worked_decisions():
-    record = _two_patch_record()
-    calibrator = _linear_calibrator()
-    calibrators = {'uf:cluster_gap': (calibrator, calibrator), 'uf:gap_correlated': (calibrator, calibrator)}
-    initial, refined = Estimator('uf', 'cluster_gap'), Estimator('uf', 'gap_correlated')
-    q0 = calibrated_probabilities(record, initial, calibrators)
-    np.testing.assert_allclose(q0[0, 0], np.interp([8.0, 1.0], [0, 10], [0.9, 0.05]))
-
-    initial_only = replay(record, calibrators, ReplayConfig(initial, refined, NoRefinement()))
-    # Shot 0, X sector fires: the least confident initial patch is patch 1, so it is flipped.
-    np.testing.assert_array_equal(initial_only.final, [[0, 0, 1, 0], [0, 0, 0, 0]])
-    assert not initial_only.refined.any() and not initial_only.refined_patches.any() and not initial_only.ties.any()
-
-    all_refined = replay(record, calibrators, ReplayConfig(initial, refined, RefineAll()))
-    # With refined scores patch 0 is the uncertain one, which is also the true failure.
-    np.testing.assert_array_equal(all_refined.final, [[1, 0, 0, 0], [0, 0, 0, 0]])
-    assert all_refined.refined.all() and all_refined.refined_patches.all()
-    assert all_refined.config == 'uf:cluster_gap->gap_correlated:all_refined:mixed'
-    np.testing.assert_array_equal(all_refined.above_half[0, 0], [True, False])
-
-    restricted = replay(record, calibrators, ReplayConfig(initial, refined, RefineAll(), outer='restricted'))
-    np.testing.assert_array_equal(restricted.final, all_refined.final)
-    with pytest.raises(ValueError, match='no candidate'):
-        replay(record, calibrators, ReplayConfig(initial, refined, NoRefinement(), outer='restricted'))
-
-
-def test_replay_config_validation_and_policy_names():
-    with pytest.raises(ValueError, match='same reference'):
-        ReplayConfig(Estimator('uf', 'cluster_gap'), Estimator('mwpm', 'gap_plain'), NoRefinement())
-    with pytest.raises(ValueError, match='outer'):
-        ReplayConfig(Estimator('uf', 'cluster_gap'), Estimator('uf', 'gap_plain'), NoRefinement(), outer='loose')
-    assert policy_from_name('initial_only').name == 'initial_only'
-    assert policy_from_name('all_refined').name == 'all_refined'
-    with pytest.raises(ValueError, match='Unknown policy'):
-        policy_from_name('top_k_given_yoke:2')
-```
-
-Create `src/yoked/hierarchical/_metrics_test.py`:
-
-```python
-import numpy as np
-import pytest
-import sinter
-
-from yoked.hierarchical._metrics import (
-    Rate, block_failures, misattribution, normalized_ler, paired_bootstrap, residual_failure_counts,
-    sector_failure_by_stratum, sector_failures,
-)
-
-
-def test_rates_and_strata_on_a_small_example():
-    actual = np.array([[1, 0, 0, 0], [1, 0, 1, 0], [0, 0, 0, 0], [0, 1, 0, 0]], dtype=bool)
-    reference = np.zeros_like(actual)
-    final = np.array([[1, 0, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]], dtype=bool)
-    counts = residual_failure_counts(reference, actual)
-    np.testing.assert_array_equal(counts, [[1, 0], [2, 0], [0, 0], [0, 1]])
-    np.testing.assert_array_equal(sector_failures(final, actual), [[0, 0], [1, 0], [1, 0], [0, 1]])
-    np.testing.assert_array_equal(block_failures(final, actual), [0, 1, 1, 1])
-    rates = misattribution(sector_failures(final, actual), counts)
-    assert rates['X'] == Rate(0, 1) and rates['Z'] == Rate(1, 1) and rates['pooled'] == Rate(1, 2)
-    by_stratum = sector_failure_by_stratum(sector_failures(final, actual), counts)
-    assert by_stratum['multiple']['X'] == Rate(1, 1) and by_stratum['zero']['X'] == Rate(1, 2)
-    assert Rate(0, 0).value != Rate(0, 0).value   # nan for an empty stratum, never zero
-    assert Rate(1, 4).to_json() == dict(count=1, total=4, value=0.25)
-
-
-def test_paired_bootstrap_is_deterministic_and_brackets_a_known_difference():
-    rng = np.random.default_rng(1)
-    denominator = np.ones(5000)
-    a = (rng.random(5000) < 0.30).astype(float)
-    b = a.copy()
-    b[:500] = 0.0                       # b fails on 500 fewer shots
-    first = paired_bootstrap(a, b, denominator, denominator, replicates=2000, seed=43)
-    second = paired_bootstrap(a, b, denominator, denominator, replicates=2000, seed=43)
-    assert first == second
-    assert first.estimate_a == pytest.approx(a.mean()) and first.estimate_b == pytest.approx(b.mean())
-    assert first.low < first.difference < first.high < 0
-    assert first.zero_denominator_replicates == 0
-    empty = paired_bootstrap(a, b, np.zeros(5000), np.zeros(5000), replicates=10, seed=1)
-    assert empty.zero_denominator_replicates == 10 and np.isnan(empty.difference)
-
-
-def test_normalized_ler_uses_the_sinter_piece_conversion():
-    assert normalized_ler(0.2566, pieces=216) == pytest.approx(
-        sinter.shot_error_rate_to_piece_error_rate(0.2566, pieces=216, values=8))
-```
-
-- [ ] **Step 2: Run the tests to verify they fail**
-
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_replay_test.py src/yoked/hierarchical/_metrics_test.py -q`
-Expected: FAIL with `ModuleNotFoundError` for `_policies`, `_replay`, and `_metrics`.
-
-- [ ] **Step 3: Implement the three modules**
-
-Create `src/yoked/hierarchical/_policies.py`:
-
-```python
-"""Refinement policies: which patch-sectors receive refined scores.
-
-Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, section 8.
-
-A policy sees only the initial probabilities q0, shape (shots, 2, P), and
-the frame-adjusted syndromes sigma, shape (shots, 2); never q1, the actual
-flips, or outcomes. It returns the request mask M, shape (shots, 2, P):
-the refined probability replaces the initial one exactly where M is set.
-
-This plan ships the two endpoints. Selective policies and exact random
-controls follow in the next plan and implement the same ``select`` method.
-"""
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Protocol
-
-import numpy as np
-
-
-class DeterministicPolicy(Protocol):
-    name: str
-
-    def select(self, q0: np.ndarray, sigma: np.ndarray) -> np.ndarray: ...
-
-
-@dataclass(frozen=True)
-class NoRefinement:
-    """The initial-only endpoint: no refined score is ever requested."""
-    name: str = 'initial_only'
-
-    def select(self, q0: np.ndarray, sigma: np.ndarray) -> np.ndarray:
-        return np.zeros(np.shape(q0), dtype=bool)
-
-
-@dataclass(frozen=True)
-class RefineAll:
-    """The all-refined endpoint: every patch-sector is requested, whatever sigma is."""
-    name: str = 'all_refined'
-
-    def select(self, q0: np.ndarray, sigma: np.ndarray) -> np.ndarray:
-        return np.ones(np.shape(q0), dtype=bool)
-
-
-def policy_from_name(name: str) -> DeterministicPolicy:
-    if name == 'initial_only':
-        return NoRefinement()
-    if name == 'all_refined':
-        return RefineAll()
-    raise ValueError(f'Unknown policy {name!r}; available: initial_only, all_refined')
-```
-
-Create `src/yoked/hierarchical/_replay.py`:
-
-```python
-"""Offline replay: estimators, calibrated probabilities, policy selection, L2.
-
-Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md,
-sections 6 and 8.
-
-An estimator is a pair (reference, score). Reference bits r come from the
-record; a score is the cluster gap, or a signed matching gap relative to r.
-All three scores grow with confidence in r, so every calibrator is
-'decreasing'. Calibrators are fit per sector, pooling the six patches.
-
-Replay builds q0 from the initial estimator and q1 from the refined one,
-asks the policy for the request mask M, substitutes q1 where M is set, and
-runs the exact L2 per sector: 'mixed' lets every patch flip, 'restricted'
-lets only requested patches flip. The final prediction is r XOR x.
-
-``_replay_test.py`` checks scores against hand-computed gaps, calibrator
-pooling, and hand-worked L2 decisions for both endpoints and both rules.
-"""
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Sequence
-
-import numpy as np
-
-from yoked.hierarchical._calibration import IsotonicCalibrator
-from yoked.hierarchical._matching_gaps import signed_gaps
-from yoked.hierarchical._outer_decoder import exact_outer_map_batch, frame_adjusted_syndrome
-from yoked.hierarchical._patch_graphs import NUM_SECTORS
-from yoked.hierarchical._policies import DeterministicPolicy
-from yoked.hierarchical._record import REFERENCE_NAMES, L1Record, by_sector, to_columns
-
-REFERENCES = REFERENCE_NAMES
-SCORES = ('cluster_gap', 'gap_plain', 'gap_correlated')
-OUTER_RULES = ('mixed', 'restricted')
-
-Calibrators = dict[str, tuple[IsotonicCalibrator, IsotonicCalibrator]]
-"""Estimator name -> (X-sector calibrator, Z-sector calibrator)."""
-
-
-@dataclass(frozen=True)
-class Estimator:
-    """A reference decoder and a confidence score defined relative to it."""
-    reference: str
-    score: str
-
-    def __post_init__(self) -> None:
-        if self.reference not in REFERENCES:
-            raise ValueError(f'reference must be one of {REFERENCES}, got {self.reference!r}')
-        if self.score not in SCORES:
-            raise ValueError(f'score must be one of {SCORES}, got {self.score!r}')
-        if self.score == 'cluster_gap' and self.reference != 'uf':
-            raise ValueError('cluster_gap is defined for the uf reference only')
-
-    @property
-    def name(self) -> str:
-        return f'{self.reference}:{self.score}'
-
-    @property
-    def direction(self) -> str:
-        return 'decreasing'   # every score grows with confidence in the reference bit
-
-    @classmethod
-    def parse(cls, text: str) -> Estimator:
-        reference, _, score = text.partition(':')
-        return cls(reference, score)
-
-
-def residual_errors(record: L1Record, reference: str) -> np.ndarray:
-    """e[i, s] = a[i, s] XOR r[i, s], in column layout."""
-    return record.actual ^ record.reference(reference)
-
-
-def estimator_scores(record: L1Record, estimator: Estimator) -> np.ndarray:
-    """Scores in column layout (shots, 2P)."""
-    if estimator.score == 'cluster_gap':
-        return record.cluster_gap
-    forced = record.forced_plain if estimator.score == 'gap_plain' else record.forced_correlated
-    reference = record.reference(estimator.reference).reshape(record.shots, record.num_patches, NUM_SECTORS)
-    return signed_gaps(forced, reference).reshape(record.shots, -1)   # patch-major (i, s) is the column order
-
-
-def fit_calibrators(record: L1Record, estimators: Sequence[Estimator]) -> Calibrators:
-    calibrators: Calibrators = {}
-    for estimator in estimators:
-        scores = by_sector(estimator_scores(record, estimator))
-        outcomes = by_sector(residual_errors(record, estimator.reference))
-        calibrators[estimator.name] = tuple(
-            IsotonicCalibrator.fit(scores[:, s].ravel(), outcomes[:, s].ravel(), direction=estimator.direction)
-            for s in range(NUM_SECTORS)
-        )
-    return calibrators
-
-
-def calibrated_probabilities(record: L1Record, estimator: Estimator, calibrators: Calibrators) -> np.ndarray:
-    """Residual-error probabilities, sector-major (shots, 2, P)."""
-    scores = by_sector(estimator_scores(record, estimator))
-    x_calibrator, z_calibrator = calibrators[estimator.name]
-    return np.stack([x_calibrator.probability(scores[:, 0]), z_calibrator.probability(scores[:, 1])], axis=1)
-
-
-@dataclass(frozen=True)
-class ReplayConfig:
-    """One replay cell: initial and refined estimators, the policy, and the L2 rule."""
-    initial: Estimator
-    refined: Estimator
-    policy: DeterministicPolicy
-    outer: str = 'mixed'
-
-    def __post_init__(self) -> None:
-        if self.initial.reference != self.refined.reference:
-            raise ValueError('initial and refined estimators must share the same reference decoder')
-        if self.outer not in OUTER_RULES:
-            raise ValueError(f'outer must be one of {OUTER_RULES}, got {self.outer!r}')
-
-    @property
-    def name(self) -> str:
-        return f'{self.initial.name}->{self.refined.score}:{self.policy.name}:{self.outer}'
-
-
-@dataclass(frozen=True)
-class ReplayResult:
-    """Per-shot outputs of one replay cell.
-
-    Fields: ``config`` name; ``final`` (shots, 2P) bool predictions f = r XOR x;
-    ``refined`` (shots, 2P) bool, the request mask M in column layout;
-    ``refined_patches`` (shots, P) bool, U[i] = M[i, X] or M[i, Z];
-    ``ties`` (shots, 2) bool, L2 ties per sector; ``above_half`` (shots, 2, P)
-    bool, which mixed probabilities exceeded one half.
-    """
-    config: str
-    final: np.ndarray
-    refined: np.ndarray
-    refined_patches: np.ndarray
-    ties: np.ndarray
-    above_half: np.ndarray
-
-
-def replay(record: L1Record, calibrators: Calibrators, config: ReplayConfig, *, chunk_size: int = 20000) -> ReplayResult:
-    reference = record.reference(config.initial.reference)
-    sigma = frame_adjusted_syndrome(record.yoke, reference)                         # (shots, 2)
-    q0 = calibrated_probabilities(record, config.initial, calibrators)             # (shots, 2, P)
-    q1 = calibrated_probabilities(record, config.refined, calibrators)
-    requested = config.policy.select(q0, sigma)                                     # M
-    q = np.where(requested, q1, q0)
-    patterns = np.zeros(q.shape, dtype=bool)
-    ties = np.zeros(sigma.shape, dtype=bool)
-    for s in range(NUM_SECTORS):
-        for start in range(0, record.shots, chunk_size):
-            block = slice(start, start + chunk_size)
-            candidates = requested[block, s] if config.outer == 'restricted' else None
-            patterns[block, s], ties[block, s] = exact_outer_map_batch(q[block, s], sigma[block, s], candidates)
-    return ReplayResult(
-        config=config.name, final=reference ^ to_columns(patterns), refined=to_columns(requested),
-        refined_patches=requested.any(axis=1), ties=ties, above_half=q > 0.5,
-    )
-```
-
-Create `src/yoked/hierarchical/_metrics.py`:
-
-```python
-"""Accuracy metrics for replay results.
-
-Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md,
-section 9: the primary misattribution metric, reference-failure strata,
-sector and block failure, paired bootstrap over whole shots, and the
-normalized logical error rate. Every per-shot array is aligned to the
-record's rows, so two configurations on one record are paired by position.
-
-``_metrics_test.py`` checks each rate on a hand-built example, bootstrap
-determinism and interval placement, and the sinter conversion.
-"""
-from __future__ import annotations
-
-import math
-from dataclasses import asdict, dataclass
-
-import numpy as np
-import sinter
-
-from yoked.hierarchical._record import L1Record, by_sector
-
-SECTOR_NAMES = ('X', 'Z')
-STRATA = dict(zero=lambda counts: counts == 0, one=lambda counts: counts == 1, multiple=lambda counts: counts >= 2)
-"""Reference-failure strata by number of residual reference failures in a sector."""
-
-DEFAULT_REPLICATES = 10000
-DEFAULT_SEED = 43
-"""The bootstrap replicate count and RNG seed of the existing four-decoder comparison."""
-
-DEFAULT_VALUES = 8
-"""Logical values per shot for the [[6, 4, 2]] outer code: 2 sectors x (6 - 2) logical qubits."""
-
-
-@dataclass(frozen=True)
-class Rate:
-    count: int
-    total: int
-
-    @property
-    def value(self) -> float:
-        return self.count / self.total if self.total else math.nan
-
-    def to_json(self) -> dict:
-        return dict(count=self.count, total=self.total, value=self.value)
-
-
-def sector_failures(final: np.ndarray, actual: np.ndarray) -> np.ndarray:
-    """(shots, 2) bool: a sector fails when any of its patch predictions is wrong."""
-    return (by_sector(final) != by_sector(actual)).any(axis=2)
-
-
-def block_failures(final: np.ndarray, actual: np.ndarray) -> np.ndarray:
-    """(shots,) bool: the existing comparison's block failure, any observable wrong."""
-    return (np.asarray(final) != np.asarray(actual)).any(axis=1)
-
-
-def residual_failure_counts(reference: np.ndarray, actual: np.ndarray) -> np.ndarray:
-    """(shots, 2) int: number of patches with a residual reference failure per sector."""
-    return by_sector(np.asarray(reference) != np.asarray(actual)).sum(axis=2)
-
-
-def _rate(mask_numerator: np.ndarray, mask_denominator: np.ndarray) -> Rate:
-    return Rate(int(np.sum(mask_numerator & mask_denominator)), int(np.sum(mask_denominator)))
-
-
-def misattribution(sector_failure: np.ndarray, counts: np.ndarray) -> dict[str, Rate]:
-    """Failure rate among sectors with exactly one residual reference failure."""
-    eligible = counts == 1
-    rates = {name: _rate(sector_failure[:, s], eligible[:, s]) for s, name in enumerate(SECTOR_NAMES)}
-    rates['pooled'] = _rate(sector_failure, eligible)
-    return rates
-
-
-def sector_failure_by_stratum(sector_failure: np.ndarray, counts: np.ndarray) -> dict[str, dict[str, Rate]]:
-    result = {}
-    for stratum, predicate in STRATA.items():
-        eligible = predicate(counts)
-        result[stratum] = {name: _rate(sector_failure[:, s], eligible[:, s]) for s, name in enumerate(SECTOR_NAMES)}
-        result[stratum]['pooled'] = _rate(sector_failure, eligible)
-    return result
-
-
-@dataclass(frozen=True)
-class PairedDifference:
-    """Bootstrap of statistic(b) - statistic(a), resampling whole shots with replacement."""
-    estimate_a: float
-    estimate_b: float
-    difference: float
-    low: float
-    high: float
-    replicates: int
-    seed: int
-    zero_denominator_replicates: int
-
-    def to_json(self) -> dict:
-        return asdict(self)
-
-
-def paired_bootstrap(
-        numerator_a: np.ndarray, numerator_b: np.ndarray,
-        denominator_a: np.ndarray, denominator_b: np.ndarray,
-        *, replicates: int = DEFAULT_REPLICATES, seed: int = DEFAULT_SEED,
-) -> PairedDifference:
-    """Per-shot numerators and denominators (shots,); the statistic is sum(num) / sum(den)."""
-    arrays = [np.asarray(a, dtype=np.float64) for a in (numerator_a, numerator_b, denominator_a, denominator_b)]
-    shots = len(arrays[0])
-    rng = np.random.default_rng(seed)
-    differences = np.full(replicates, np.nan)
-    for k in range(replicates):
-        weights = np.bincount(rng.integers(0, shots, shots), minlength=shots).astype(np.float64)
-        den_a, den_b = weights @ arrays[2], weights @ arrays[3]
-        if den_a > 0 and den_b > 0:
-            differences[k] = (weights @ arrays[1]) / den_b - (weights @ arrays[0]) / den_a
-    valid = differences[np.isfinite(differences)]
-    estimate_a = arrays[0].sum() / arrays[2].sum() if arrays[2].sum() else math.nan
-    estimate_b = arrays[1].sum() / arrays[3].sum() if arrays[3].sum() else math.nan
-    low, high = (np.percentile(valid, [2.5, 97.5]) if len(valid) else (math.nan, math.nan))
-    return PairedDifference(float(estimate_a), float(estimate_b), float(estimate_b - estimate_a),
-                            float(low), float(high), replicates, seed, int(replicates - len(valid)))
-
-
-def normalized_ler(block_failure_rate: float, *, pieces: int, values: int = DEFAULT_VALUES) -> float:
-    """LER per patch per round by the repository's sinter piece conversion."""
-    return float(sinter.shot_error_rate_to_piece_error_rate(block_failure_rate, pieces=pieces, values=values))
-
-
-def summarize_result(record: L1Record, final: np.ndarray, reference: str, *, pieces: int,
-                     ties: np.ndarray | None = None, above_half: np.ndarray | None = None) -> dict:
-    """The per-configuration numbers of the pilot tables, as JSON-ready values."""
-    counts = residual_failure_counts(record.reference(reference), record.actual)
-    failures = sector_failures(final, record.actual)
-    block = block_failures(final, record.actual)
-    summary = dict(
-        shots=record.shots,
-        block_failure=Rate(int(block.sum()), record.shots).to_json(),
-        normalized_ler=normalized_ler(block.mean(), pieces=pieces),
-        sector_failure={name: Rate(int(failures[:, s].sum()), record.shots).to_json()
-                        for s, name in enumerate(SECTOR_NAMES)},
-        misattribution={name: rate.to_json() for name, rate in misattribution(failures, counts).items()},
-        by_stratum={stratum: {name: rate.to_json() for name, rate in rates.items()}
-                    for stratum, rates in sector_failure_by_stratum(failures, counts).items()},
-        stratum_counts={stratum: int(predicate(counts).sum()) for stratum, predicate in STRATA.items()},
-    )
-    if ties is not None:
-        summary['ties'] = int(np.sum(ties))
-    if above_half is not None:
-        summary['above_half_fraction'] = float(np.mean(above_half))
-    return summary
-```
-
-Add to `src/yoked/hierarchical/__init__.py`:
-
-```python
-from yoked.hierarchical._metrics import (
-    PairedDifference, Rate, block_failures, misattribution, normalized_ler, paired_bootstrap,
-    residual_failure_counts, sector_failure_by_stratum, sector_failures, summarize_result,
-)
-from yoked.hierarchical._policies import DeterministicPolicy, NoRefinement, RefineAll, policy_from_name
-from yoked.hierarchical._replay import (
-    Calibrators, Estimator, ReplayConfig, ReplayResult, calibrated_probabilities, estimator_scores,
-    fit_calibrators, replay, residual_errors,
-)
-```
-
-and extend `__all__` with every imported name.
-
-- [ ] **Step 4: Run the tests to verify they pass**
-
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical -q`
-Expected: all pass across the package.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/yoked/hierarchical/_policies.py src/yoked/hierarchical/_replay.py src/yoked/hierarchical/_replay_test.py src/yoked/hierarchical/_metrics.py src/yoked/hierarchical/_metrics_test.py src/yoked/hierarchical/__init__.py
-git commit -m "Add endpoint policies, offline replay, and core metrics
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
-```
-
----
-
-### Task 11: Stages, the CLI, and the usage doc
-
-**Files:**
-- Create: `src/yoked/hierarchical/_stages.py`
-- Create: `src/yoked/hierarchical/_stages_test.py`
-- Create: `tools/hierarchical_experiment` (executable)
-- Create: `docs/hierarchical_decoding.md`
-- Modify: `README.md` (one paragraph pointing at the usage doc, after the "Union Find decoder" section)
-
-**Interfaces:**
-- Consumes: everything from Tasks 7 to 10.
-- Produces, in `_stages.py`:
-  - `CollectRequest(out_dir, role, rows=None, workers=1, chunk_size=64, max_chunks=None, recorded_run=None, parameters=None, seed=None, shots=None)`.
-  - `stage_collect(request) -> L1Record | None`: writes `out_dir/sample/` on first use, then delegates to `collect_sample`.
-  - `stage_calibrate(record_dir, out_path, estimators) -> Calibrators`: requires role `calibration`, writes a calibrators JSON with provenance.
-  - `load_calibrators(path) -> tuple[Calibrators, dict]`.
-  - `parse_config(text) -> ReplayConfig` for `initial=uf:cluster_gap,refined=gap_correlated,policy=all_refined,outer=mixed`.
-  - `config_directory_name(config) -> str`.
-  - `stage_replay(record_dir, calibrators_path, out_dir, configs) -> dict[str, ReplayResult]`: refuses when the calibration sample hash equals the record's sample hash; writes per-config `results.json` and `final.npy`, and `replay_manifest.json`.
-  - `stage_summarize(replay_dirs, out_path, *, replicates=10000, seed=43) -> str`: markdown tables with paired differences against each estimator pair's `initial_only` cell.
-
-- [ ] **Step 1: Write the failing tests**
-
-Create `src/yoked/hierarchical/_stages_test.py`:
-
-```python
-import subprocess
-import sys
-from pathlib import Path
-
-import numpy as np
-import pytest
-
-from yoked.hierarchical._collect import CircuitParameters
-from yoked.hierarchical._provenance import REPO_ROOT, read_json
-from yoked.hierarchical._replay import Estimator
-from yoked.hierarchical._stages import (
-    CollectRequest, config_directory_name, load_calibrators, parse_config, stage_calibrate, stage_collect,
-    stage_replay, stage_summarize,
-)
-
-PARAMETERS = CircuitParameters(distance=3, rounds=12, p=0.003)
-ESTIMATORS = [Estimator('uf', 'cluster_gap'), Estimator('uf', 'gap_correlated'), Estimator('mwpm', 'gap_plain'),
-              Estimator('mwpm', 'gap_correlated')]
-CONFIGS = [
-    'initial=uf:cluster_gap,refined=gap_correlated,policy=initial_only,outer=mixed',
-    'initial=uf:cluster_gap,refined=gap_correlated,policy=all_refined,outer=mixed',
-    'initial=mwpm:gap_plain,refined=gap_correlated,policy=initial_only,outer=mixed',
-    'initial=mwpm:gap_plain,refined=gap_correlated,policy=all_refined,outer=mixed',
-]
-
-
-def test_parse_config_and_directory_names():
-    config = parse_config(CONFIGS[1])
-    assert config.name == 'uf:cluster_gap->gap_correlated:all_refined:mixed'
-    assert config_directory_name(config) == 'uf_cluster_gap_to_gap_correlated_all_refined_mixed'
-    with pytest.raises(ValueError, match='initial'):
-        parse_config('refined=gap_plain,policy=all_refined')
-
-
-def test_stages_run_end_to_end_and_refuse_to_evaluate_on_the_calibration_sample(tmp_path):
-    calibration = stage_collect(CollectRequest(
-        tmp_path / 'calibration', role='calibration', parameters=PARAMETERS, seed=1, shots=64, workers=2, chunk_size=16))
-    evaluation = stage_collect(CollectRequest(
-        tmp_path / 'evaluation', role='evaluation', parameters=PARAMETERS, seed=2, shots=64, workers=2, chunk_size=16))
-    assert calibration.shots == 64 and evaluation.shots == 64
-    assert (tmp_path / 'calibration' / 'sample' / 'sample.json').exists()
-
-    stage_calibrate(tmp_path / 'calibration', tmp_path / 'calibrators.json', ESTIMATORS)
-    calibrators, provenance = load_calibrators(tmp_path / 'calibrators.json')
-    assert set(calibrators) == {e.name for e in ESTIMATORS}
-    assert provenance['sample_hash'] == read_json(tmp_path / 'calibration' / 'manifest.json')['sample_hash']
-    with pytest.raises(ValueError, match='calibration'):
-        stage_calibrate(tmp_path / 'evaluation', tmp_path / 'wrong.json', ESTIMATORS)
-
-    with pytest.raises(ValueError, match='calibration sample'):
-        stage_replay(tmp_path / 'calibration', tmp_path / 'calibrators.json', tmp_path / 'bad', [parse_config(CONFIGS[0])])
-    results = stage_replay(tmp_path / 'evaluation', tmp_path / 'calibrators.json', tmp_path / 'replay',
-                           [parse_config(text) for text in CONFIGS])
-    assert len(results) == 4
-    for config in CONFIGS:
-        directory = tmp_path / 'replay' / config_directory_name(parse_config(config))
-        assert (directory / 'results.json').exists() and (directory / 'final.npy').exists()
-        assert np.load(directory / 'final.npy').shape == (64, 12)
-    manifest = read_json(tmp_path / 'replay' / 'replay_manifest.json')
-    assert manifest['record']['role'] == 'evaluation' and len(manifest['configs']) == 4
-
-    text = stage_summarize([tmp_path / 'replay'], tmp_path / 'summary.md', replicates=200, seed=43)
-    assert 'uf:cluster_gap' in text and 'all_refined' in text and 'misattribution' in text.lower()
-    assert (tmp_path / 'summary.md').read_text() == text
-
-
-def test_cli_runs_the_pipeline(tmp_path):
-    tool = REPO_ROOT / 'tools' / 'hierarchical_experiment'
-    env = dict(PYTHONPATH=str(REPO_ROOT / 'src'), TMPDIR=str(tmp_path), PATH='/usr/bin:/bin')
-
-    def run(*args):
-        subprocess.run([sys.executable, str(tool), *args], check=True, env=env, cwd=REPO_ROOT)
-
-    common = ['--distance', '3', '--rounds', '12', '--p', '0.003', '--shots', '32', '--workers', '1', '--chunk-size', '8']
-    run('collect', '--out', str(tmp_path / 'cal'), '--role', 'calibration', '--seed', '1', *common)
-    run('collect', '--out', str(tmp_path / 'eva'), '--role', 'evaluation', '--seed', '2', '--rows', '0:16', *common)
-    run('calibrate', '--record', str(tmp_path / 'cal'), '--out', str(tmp_path / 'cal.json'),
-        '--estimators', 'uf:cluster_gap', 'uf:gap_correlated')
-    run('replay', '--record', str(tmp_path / 'eva'), '--calibrators', str(tmp_path / 'cal.json'),
-        '--out', str(tmp_path / 'rep'), '--config', CONFIGS[0], '--config', CONFIGS[1])
-    run('summarize', '--replays', str(tmp_path / 'rep'), '--out', str(tmp_path / 'summary.md'), '--replicates', '100')
-    assert (tmp_path / 'summary.md').exists()
-    assert read_json(tmp_path / 'eva' / 'manifest.json')['shots'] == 16
-```
-
-- [ ] **Step 2: Run the tests to verify they fail**
-
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_stages_test.py -q`
-Expected: FAIL with `ModuleNotFoundError: No module named 'yoked.hierarchical._stages'`
-
-- [ ] **Step 3: Implement the stages**
-
-Create `src/yoked/hierarchical/_stages.py`:
-
-```python
-"""Driver stages: collect, calibrate, replay, summarize.
-
-Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, section 11.
-
-Each stage reads only files that earlier stages wrote, verifies their
-manifests, and writes its own outputs atomically. The command-line tool
-``tools/hierarchical_experiment`` is a thin argparse layer over these
-functions, so every behavior here is reachable from tests without it.
-
-Directory layout produced by the stages:
-
-    <collect out>/sample/           packed sample arrays and sample.json
-    <collect out>/record.npz        the L1Record
-    <collect out>/manifest.json     provenance and record checks
-    <calibrators path>              one JSON file, estimators -> per-sector calibrators
-    <replay out>/<config>/          results.json, final.npy, refined.npy, ties.npy
-    <replay out>/replay_manifest.json
-
-``_stages_test.py`` runs the stages end to end on the distance-3 fixture
-and checks the held-out rule: a record cannot be evaluated with calibrators
-fit on the same sample.
-"""
-from __future__ import annotations
-
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Sequence
-
-import numpy as np
-
-from yoked.hierarchical._calibration import IsotonicCalibrator
-from yoked.hierarchical._collect import CircuitParameters, CollectionSettings, SampleSet, collect_sample
-from yoked.hierarchical._metrics import paired_bootstrap, residual_failure_counts, sector_failures, summarize_result
-from yoked.hierarchical._policies import policy_from_name
-from yoked.hierarchical._provenance import (
-    git_commit, package_versions, read_json, sha256_file, source_hashes, utc_now, write_json_atomic,
-)
-from yoked.hierarchical._record import L1Record
-from yoked.hierarchical._replay import Calibrators, Estimator, ReplayConfig, ReplayResult, fit_calibrators, replay
-
-
-@dataclass(frozen=True)
-class CollectRequest:
-    """Inputs of the collect stage: where to write, which rows, and where the sample comes from."""
-    out_dir: Path
-    role: str
-    rows: np.ndarray | None = None
-    workers: int = 1
-    chunk_size: int = 64
-    max_chunks: int | None = None
-    recorded_run: Path | None = None
-    parameters: CircuitParameters | None = None
-    seed: int | None = None
-    shots: int | None = None
-
-
-def stage_collect(request: CollectRequest) -> L1Record | None:
-    out_dir = Path(request.out_dir)
-    sample_dir = out_dir / 'sample'
-    if not (sample_dir / 'sample.json').exists():
-        if request.recorded_run is not None:
-            sample = SampleSet.load_recorded_run(request.recorded_run)
-        elif request.parameters is not None and request.seed is not None and request.shots is not None:
-            sample = SampleSet.sample(request.parameters, seed=request.seed, shots=request.shots)
-        else:
-            raise ValueError('Provide either recorded_run or parameters, seed, and shots')
-        sample.save(sample_dir)
-    info = read_json(sample_dir / 'sample.json')
-    rows = np.arange(info['shots']) if request.rows is None else np.asarray(request.rows)
-    settings = CollectionSettings(request.role, rows, request.workers, request.chunk_size, request.max_chunks)
-    return collect_sample(sample_dir, out_dir, settings)
-
-
-def _load_record(record_dir: Path) -> tuple[L1Record, dict]:
-    record_dir = Path(record_dir)
-    manifest = read_json(record_dir / 'manifest.json')
-    if sha256_file(record_dir / 'record.npz') != manifest['record_sha256']:
-        raise ValueError(f'record.npz in {record_dir} does not match its manifest')
-    return L1Record.load(record_dir / 'record.npz'), manifest
-
-
-def stage_calibrate(record_dir: Path, out_path: Path, estimators: Sequence[Estimator]) -> Calibrators:
-    record, manifest = _load_record(record_dir)
-    if manifest['role'] != 'calibration':
-        raise ValueError(f'Calibrators must be fit on a calibration record, not {manifest["role"]!r}')
-    calibrators = fit_calibrators(record, estimators)
-    write_json_atomic(Path(out_path), dict(
-        stage='calibrate', sample_hash=manifest['sample_hash'], record_sha256=manifest['record_sha256'],
-        record_directory=str(Path(record_dir).resolve()), rows=manifest['rows'], shots=record.shots,
-        estimators={name: dict(X=x.to_json(), Z=z.to_json()) for name, (x, z) in calibrators.items()},
-        versions=package_versions(), source_sha256=source_hashes(), code_commit=git_commit(), created_utc=utc_now(),
-    ))
-    return calibrators
-
-
-def load_calibrators(path: Path) -> tuple[Calibrators, dict]:
-    data = read_json(path)
-    calibrators = {name: (IsotonicCalibrator.from_json(entry['X']), IsotonicCalibrator.from_json(entry['Z']))
-                   for name, entry in data['estimators'].items()}
-    return calibrators, data
-
-
-def parse_config(text: str) -> ReplayConfig:
-    """``initial=uf:cluster_gap,refined=gap_correlated,policy=all_refined,outer=mixed``."""
-    fields = dict(part.split('=', 1) for part in text.split(',') if part)
-    for key in ('initial', 'refined', 'policy'):
-        if key not in fields:
-            raise ValueError(f'config needs {key}=...: {text!r}')
-    initial = Estimator.parse(fields['initial'])
-    return ReplayConfig(initial, Estimator(initial.reference, fields['refined']),
-                        policy_from_name(fields['policy']), fields.get('outer', 'mixed'))
-
-
-def config_directory_name(config: ReplayConfig) -> str:
-    return config.name.replace('->', '_to_').replace(':', '_')
-
-
-def stage_replay(record_dir: Path, calibrators_path: Path, out_dir: Path,
-                 configs: Sequence[ReplayConfig]) -> dict[str, ReplayResult]:
-    record, manifest = _load_record(record_dir)
-    calibrators, calibration = load_calibrators(calibrators_path)
-    if calibration['sample_hash'] == manifest['sample_hash']:
-        raise ValueError('Refusing to evaluate on the calibration sample or a subset of it (spec test 9)')
-    out_dir = Path(out_dir)
-    pieces = manifest['parameters']['patches'] * manifest['parameters']['rounds']
-    results = {}
-    for config in configs:
-        result = replay(record, calibrators, config)
-        directory = out_dir / config_directory_name(config)
-        directory.mkdir(parents=True, exist_ok=True)
-        np.save(directory / 'final.npy', result.final)
-        np.save(directory / 'refined.npy', result.refined)
-        np.save(directory / 'ties.npy', result.ties)
-        summary = summarize_result(record, result.final, config.initial.reference, pieces=pieces,
-                                   ties=result.ties, above_half=result.above_half)
-        write_json_atomic(directory / 'results.json', dict(
-            config=config.name, initial=config.initial.name, refined=config.refined.name,
-            policy=config.policy.name, outer=config.outer, reference=config.initial.reference,
-            pieces=pieces, summary=summary))
-        results[config.name] = result
-    write_json_atomic(out_dir / 'replay_manifest.json', dict(
-        stage='replay', record=dict(directory=str(Path(record_dir).resolve()), role=manifest['role'],
-                                    sample_hash=manifest['sample_hash'], record_sha256=manifest['record_sha256'],
-                                    rows=manifest['rows'], parameters=manifest['parameters']),
-        calibrators=dict(path=str(Path(calibrators_path).resolve()), sample_hash=calibration['sample_hash'],
-                         record_sha256=calibration['record_sha256']),
-        configs=[config.name for config in configs], versions=package_versions(), source_sha256=source_hashes(),
-        code_commit=git_commit(), created_utc=utc_now(),
-    ))
-    return results
-
-
-def stage_summarize(replay_dirs: Sequence[Path], out_path: Path, *, replicates: int = 10000, seed: int = 43) -> str:
-    """Markdown tables per estimator pair, with paired differences against its initial_only cell."""
-    lines = ['# Hierarchical replay summary', '']
-    for replay_dir in replay_dirs:
-        replay_dir = Path(replay_dir)
-        manifest = read_json(replay_dir / 'replay_manifest.json')
-        record = L1Record.load(Path(manifest['record']['directory']) / 'record.npz')
-        cells = {name: _load_cell(replay_dir / config_directory_name(parse_config(_config_text(name))))
-                 for name in manifest['configs']}
-        lines += [f'## Record: {manifest["record"]["directory"]}',
-                  f'Role {manifest["record"]["role"]}, shots {record.shots}, rows {manifest["record"]["rows"]["start"]}'
-                  f' to {manifest["record"]["rows"]["stop"]}.', '']
-        for pair in sorted({(cell['initial'], cell['refined']) for cell in cells.values()}):
-            group = {name: cell for name, cell in cells.items() if (cell['initial'], cell['refined']) == pair}
-            baseline = next((cell for cell in group.values() if cell['policy'] == 'initial_only'), None)
-            lines += [f'### Initial {pair[0]}, refined {pair[1]}', '',
-                      '| Configuration | Block failure | Normalized LER | Misattribution (pooled) '
-                      '| Difference vs initial_only [95% CI] | Sectors zero / one / multiple | Ties |',
-                      '|---|---:|---:|---:|---:|---:|---:|']
-            for name, cell in group.items():
-                lines.append(_row(record, cell, baseline, replicates, seed))
-            lines.append('')
-    text = '\n'.join(lines) + '\n'
-    Path(out_path).write_text(text)
-    return text
-
-
-def _config_text(name: str) -> str:
-    initial, rest = name.split('->')
-    refined, policy, outer = rest.split(':')
-    return f'initial={initial},refined={refined},policy={policy},outer={outer}'
-
-
-def _load_cell(directory: Path) -> dict:
-    cell = read_json(directory / 'results.json')
-    cell['final'] = np.load(directory / 'final.npy')
-    return cell
-
-
-def _row(record: L1Record, cell: dict, baseline: dict | None, replicates: int, seed: int) -> str:
-    summary = cell['summary']
-    counts = residual_failure_counts(record.reference(cell['reference']), record.actual)
-    eligible = (counts == 1).astype(float)
-    failures = sector_failures(cell['final'], record.actual).astype(float)
-    if baseline is None or baseline is cell:
-        difference = 'reference cell' if baseline is cell else 'no initial_only cell'
-    else:
-        base_failures = sector_failures(baseline['final'], record.actual).astype(float)
-        paired = paired_bootstrap((base_failures * eligible).sum(axis=1), (failures * eligible).sum(axis=1),
-                                  eligible.sum(axis=1), eligible.sum(axis=1), replicates=replicates, seed=seed)
-        difference = f'{paired.difference:+.4f} [{paired.low:+.4f}, {paired.high:+.4f}]'
-    block, mis, strata = summary['block_failure'], summary['misattribution']['pooled'], summary['stratum_counts']
-    return (f'| {cell["policy"]} ({cell["outer"]}) | {block["count"]}/{block["total"]} = {block["value"]:.4f} '
-            f'| {summary["normalized_ler"]:.3e} | {mis["count"]}/{mis["total"]} = {mis["value"]:.4f} '
-            f'| {difference} | {strata["zero"]} / {strata["one"]} / {strata["multiple"]} | {summary.get("ties", 0)} |')
-```
-
-- [ ] **Step 4: Create the CLI**
-
-Create `tools/hierarchical_experiment` and make it executable (`chmod +x`):
-
-```python
-#!/usr/bin/env python3
-"""Hierarchical L1/L2 experiment driver: collect | calibrate | replay | summarize.
-
-Run from the repository root. Every subcommand is a thin wrapper over
-yoked.hierarchical._stages; see docs/hierarchical_decoding.md for the
-workflow and docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md
-for the definitions.
-"""
-import argparse
-import pathlib
-import sys
-
-import numpy as np
-
-src_path = pathlib.Path(__file__).parent.parent / 'src'
-assert src_path.exists()
-sys.path.append(str(src_path))
-
-from yoked.hierarchical._collect import ROLES, CircuitParameters  # noqa: E402
-from yoked.hierarchical._replay import Estimator  # noqa: E402
-from yoked.hierarchical._stages import (  # noqa: E402
-    CollectRequest, parse_config, stage_calibrate, stage_collect, stage_replay, stage_summarize,
-)
-
-
-def parse_rows(text):
-    """'START:STOP' -> row indices START..STOP-1; None means every row."""
-    if text is None:
-        return None
-    start, _, stop = text.partition(':')
-    return np.arange(int(start or 0), int(stop))
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    commands = parser.add_subparsers(dest='command', required=True)
-
-    collect = commands.add_parser('collect', help='evaluate L1 on a sample set and write an L1 record')
-    collect.add_argument('--out', type=pathlib.Path, required=True)
-    collect.add_argument('--role', choices=ROLES, required=True)
-    collect.add_argument('--recorded-run', type=pathlib.Path, help='directory of a saved four-decoder run')
-    collect.add_argument('--distance', type=int)
-    collect.add_argument('--rounds', type=int)
-    collect.add_argument('--p', type=float)
-    collect.add_argument('--patches', type=int, default=6)
-    collect.add_argument('--seed', type=int)
-    collect.add_argument('--shots', type=int)
-    collect.add_argument('--rows', type=str, help='START:STOP subset of the sample, e.g. 0:2000')
-    collect.add_argument('--workers', type=int, default=1)
-    collect.add_argument('--chunk-size', type=int, default=64)
-    collect.add_argument('--max-chunks', type=int)
-
-    calibrate = commands.add_parser('calibrate', help='fit per-sector calibrators on a calibration record')
-    calibrate.add_argument('--record', type=pathlib.Path, required=True)
-    calibrate.add_argument('--out', type=pathlib.Path, required=True)
-    calibrate.add_argument('--estimators', nargs='+', required=True, help='e.g. uf:cluster_gap uf:gap_correlated')
-
-    replay = commands.add_parser('replay', help='replay configurations on a record with fitted calibrators')
-    replay.add_argument('--record', type=pathlib.Path, required=True)
-    replay.add_argument('--calibrators', type=pathlib.Path, required=True)
-    replay.add_argument('--out', type=pathlib.Path, required=True)
-    replay.add_argument('--config', action='append', required=True,
-                        help='initial=uf:cluster_gap,refined=gap_correlated,policy=all_refined,outer=mixed')
-
-    summarize = commands.add_parser('summarize', help='write markdown tables for replay directories')
-    summarize.add_argument('--replays', nargs='+', type=pathlib.Path, required=True)
-    summarize.add_argument('--out', type=pathlib.Path, required=True)
-    summarize.add_argument('--replicates', type=int, default=10000)
-    summarize.add_argument('--seed', type=int, default=43)
-
-    args = parser.parse_args()
-    if args.command == 'collect':
-        parameters = None
-        if args.recorded_run is None:
-            parameters = CircuitParameters(distance=args.distance, rounds=args.rounds, p=args.p, patches=args.patches)
-        record = stage_collect(CollectRequest(
-            out_dir=args.out, role=args.role, rows=parse_rows(args.rows), workers=args.workers,
-            chunk_size=args.chunk_size, max_chunks=args.max_chunks, recorded_run=args.recorded_run,
-            parameters=parameters, seed=args.seed, shots=args.shots))
-        print('collection complete' if record is not None else 'collection paused; rerun to resume')
-    elif args.command == 'calibrate':
-        stage_calibrate(args.record, args.out, [Estimator.parse(text) for text in args.estimators])
-        print(f'calibrators written to {args.out}')
-    elif args.command == 'replay':
-        results = stage_replay(args.record, args.calibrators, args.out, [parse_config(text) for text in args.config])
-        print(f'{len(results)} configurations replayed into {args.out}')
-    elif args.command == 'summarize':
-        stage_summarize(args.replays, args.out, replicates=args.replicates, seed=args.seed)
-        print(f'summary written to {args.out}')
-
-
-if __name__ == '__main__':
-    main()
-```
-
-- [ ] **Step 5: Run the tests to verify they pass**
-
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/hierarchical/_stages_test.py -q`
-Expected: all pass. The CLI test takes up to a minute because it runs four collections through the forkserver pool.
-
-- [ ] **Step 6: Write the usage doc and the README pointer**
-
-Create `docs/hierarchical_decoding.md`:
-
-```markdown
-# Hierarchical L1/L2 decoding
-
-Run from the repository root with `PYTHONPATH=src`. Definitions and the
-experiment design live in
-[the spec](superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md);
-this page shows the code paths.
-
-**Split a yoked DEM into patch graphs.** The two yoke detectors are the last
-two detectors. Removing them leaves one component per patch and sector.
-
-```python
-import gen
-from yoked._yoked_memory_circuits import yoked_magic_memory_circuit
-from yoked.hierarchical import PatchGraphs
-
-circuit = yoked_magic_memory_circuit(
-    patch_diameter=9, rounds=36, noise=gen.NoiseModel.si1000(0.003),
-    style='cz', yokes=2, num_patches=6,
-)
-dem = circuit.detector_error_model(decompose_errors=True, approximate_disjoint_errors=True)
-patches = PatchGraphs.from_yoked_dem(dem, num_patches=6)
-patch = patches[0]
-patch.graph            # check-free DecodingGraph, two components (X, Z)
-patch.check_graph      # the same edges, observable-flipping boundary edges routed to check vertices
-patch.local_dem        # the patch's mechanisms with local ids, for correlation rules
-```
-
-**L1: UF reference bits and cluster gaps.** The decoder never sees a yoke bit.
-
-```python
-from yoked.hierarchical import ClusterGapUnionFindDecoder
-
-detectors = circuit.compile_detector_sampler(seed=42).sample(shots=1)[0]
-result = ClusterGapUnionFindDecoder(patch.graph).decode_with_gaps(patch.local_syndromes(detectors))
-result.prediction, result.cluster_gap, result.dijkstra_states
-```
-
-**L1: forced matching weights.** `W[c_X, c_Z]` for all four check patterns,
-plain and under the correlated reweighting; `signed_gaps` turns them into
-gaps relative to any reference bits.
-
-```python
-from yoked.decoders._correlations import correlation_rules_from_dem
-from yoked.hierarchical import MatchingGaps, signed_gaps
-
-gaps = MatchingGaps(patch, correlation_rules_from_dem(patch.graph, patch.local_dem))
-forced = gaps.forced_weights(patch.local_syndromes(detectors))
-signed_gaps(forced.correlated, reference=result.prediction)   # (delta_X, delta_Z) in nats
-```
-
-**L2: exact outer decoder.** Probabilities strictly inside (0, 1), one
-sector at a time; `candidates` restricts which patches may flip.
-
-```python
-from yoked.hierarchical import exact_outer_map
-
-exact_outer_map([0.9, 0.8, 0.1, 0.1, 0.1, 0.1], parity=0).pattern   # [1, 1, 0, 0, 0, 0]
-```
-
-**Stages.** Collect once per sample set, calibrate on the calibration
-record only, replay on another record, summarize.
-
-```bash
-OUT=$TMPDIR/hier-d9-p003
-tools/hierarchical_experiment collect --out $OUT/calibration --role calibration \
-    --distance 9 --rounds 36 --p 0.003 --seed 142 --shots 50000 --rows 0:2000 --workers 16 --chunk-size 50
-tools/hierarchical_experiment collect --out $OUT/evaluation --role evaluation \
-    --recorded-run /data2/s2chitni/.tmp/ysc-four-decoders-d9-p003-100k-7efr23ha --rows 0:2000 --workers 16 --chunk-size 50
-tools/hierarchical_experiment calibrate --record $OUT/calibration --out $OUT/calibrators.json \
-    --estimators uf:cluster_gap uf:gap_plain uf:gap_correlated mwpm:gap_plain mwpm:gap_correlated
-tools/hierarchical_experiment replay --record $OUT/evaluation --calibrators $OUT/calibrators.json --out $OUT/replay \
-    --config initial=uf:cluster_gap,refined=gap_correlated,policy=initial_only,outer=mixed \
-    --config initial=uf:cluster_gap,refined=gap_correlated,policy=all_refined,outer=mixed
-tools/hierarchical_experiment summarize --replays $OUT/replay --out $OUT/summary.md
-```
-
-A collection can be stopped with `--max-chunks` or by interrupting it, and
-resumes when rerun with the same arguments. Every stage writes a manifest
-naming its inputs by SHA-256, and replay refuses a record whose sample is
-the one the calibrators were fit on.
-
-**Output layout.**
+- `CollectionSettings(role, rows, workers=1, chunk_size=64, max_chunks=None)`;
+  roles are only `('calibration', 'evaluation')` in M1.
+- `collect_sample(sample_dir, out_dir, settings) -> LoadedRecord | None`.
+- `load_record(record_dir) -> LoadedRecord`, the only public completed-record loader.
+
+- [ ] **Step 1: Validate requests and establish collection identity.**
+
+Require a nonempty one-dimensional integer row array with unique indices in
+`[0, parent_shots)`. Reject duplicates, negative values, floats, and booleans;
+normalize valid rows into increasing order and hash those exact ids. Validate
+worker/chunk counts and an explicitly supplied `max_chunks` as positive integers.
+
+Verify the parent sample and saved model, then compare collection identity with
+`collection.json`. Changing rows, role, model, parent, or decoder identity
+requires a separate collection directory. Worker/chunk settings may change on
+resume; they do not affect the decoded result. M2 can collect remaining rows
+separately and concatenate verified disjoint records with the pilot.
+
+- [ ] **Step 2: Use one checkpoint file for data and progress.**
+
+`checkpoint.npz` contains all in-progress array buffers, exact row ids,
+`completed (shots,) bool`, schema, and collection identity encoded without
+pickle. Write one temporary sibling file and atomically replace the checkpoint.
+There is no separate `completed.npy`. Validate the checkpoint identity, keys,
+dtypes/shapes, row ids, and completion mask before resuming.
+
+Only the coordinator changes buffers. A row becomes completed after all its
+arrays and collection-work metadata are installed. Dispatch only unfinished
+rows; key results by their original positions, reject unexpected/duplicate
+positions, and make final output independent of worker completion order.
+`max_chunks` stops scheduling after that many chunks and writes a checkpoint.
+An interrupted decode may lose work since the last successful checkpoint but
+cannot report an unfinished row as completed. Document a named flush interval.
+
+- [ ] **Step 3: Publish only validated complete data.**
+
+Follow this order:
 
 ```text
-<collect out>/sample/            detectors_packed.npy, actual_observables_packed.npy, sample.json
-<collect out>/record.npz         the L1 record (spec section 5.3)
-<collect out>/manifest.json      parameters, rows, hashes, record checks
-<calibrators>.json               estimators -> per-sector calibrators, with provenance
-<replay out>/<config>/           results.json, final.npy, refined.npy, ties.npy
-<replay out>/replay_manifest.json
-```
-```
-
-Add to `README.md`, after the "Union Find decoder" section:
-
-```markdown
-## Hierarchical L1/L2 decoding
-
-The `yoked.hierarchical` package splits the six-patch yoked decoding graph
-into per-patch graphs, decodes them with soft outputs, and recombines the
-patches with an exact outer decoder over the yoke syndrome. See
-[hierarchical decoding](docs/hierarchical_decoding.md) for the code paths
-and the driver, and the
-[design spec](docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md)
-for definitions.
+verify input bytes + model + request + existing collection identity
+if completion manifest exists:
+    require complete status, passing checks, correct identities and artifact hashes
+    load the validated record (or revalidate if only check-code identity changed)
+else:
+    load a valid checkpoint or allocate private buffers
+    compute pending chunks and atomically checkpoint
+    if rows remain: return None
+    construct immutable record and run all graph/correction/record checks
+    if any check fails: retain checkpoint + diagnostics, raise; publish no completion marker
+    atomically write record.npz and its artifact hash
+    atomically publish manifest.json with status='complete' and checks.passed=true
+    remove the checkpoint only after successful publication
 ```
 
-- [ ] **Step 7: Run the whole suite and commit**
+The manifest is the commit point. An orphan `record.npz` never means completion;
+resume from the checkpoint, revalidate, and replace the orphan as necessary.
+If a completion manifest exists but a hash/check/identity fails, raise instead
+of silently treating the damaged result as either valid or a new run. A change
+to validation code can explicitly revalidate verified stored arrays and publish
+a new check identity without redoing L1. A decoder mismatch cannot take this path.
 
-Run: `PYTHONPATH=src .venv/bin/pytest src/yoked/decoders src/yoked/hierarchical -q`
-Expected: all pass.
+- [ ] **Step 4: Add failure-injection and resume tests.**
 
-```bash
-chmod +x tools/hierarchical_experiment
-git add src/yoked/hierarchical/_stages.py src/yoked/hierarchical/_stages_test.py tools/hierarchical_experiment docs/hierarchical_decoding.md README.md
-git commit -m "Add hierarchical experiment stages, CLI, and usage doc
+Compare uninterrupted serial, partitioned serial, parallel, and resumed runs on
+the same distance-3 sample, including retained-row work counts and row ids. Inject interruption
+before checkpoint replacement, after replacement, after final record replacement,
+and before completion-manifest publication. Each restart either uses the previous
+complete checkpoint or the new complete checkpoint and produces the same result.
+Test failed `RecordChecks`, missing/corrupt manifests, corrupt records/checkpoints,
+changed sample bytes despite unchanged JSON, dependency/model changes, and altered
+rows/roles. Verify downstream loading rejects failed and incomplete collections.
+Run the new tests and decoder regressions; commit.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
+---
+
+### Task 10: Endpoint replay, paired metrics, and work accounting
+
+**Files:** create `_policies.py`, `_replay.py`, `_metrics.py`, and adjacent tests.
+
+**Interfaces:**
+
+- `Estimator(reference, score)`: references `uf`/`mwpm`; scores `cluster_gap`,
+  `gap_plain`, `gap_correlated`; cluster gap requires UF. All maps decrease.
+- `NoRefinement` and `RefineAll`, implementing
+  `select(q0 (shots, 2, P), sigma (shots, 2)) -> request_mask`.
+- `ReplayConfig(initial, refined, policy, outer='mixed')`, requiring one reference.
+- `fit_calibrators(record, estimators)` and
+  `calibrated_probabilities(record, estimator, calibrators)`.
+- `replay(record, calibrators, config) -> ReplayResult`, with immutable final bits,
+  request mask `M`, distinct-patch mask `U`, ties, probabilities-above-half flags,
+  and a named per-shot `WorkCounts` record.
+- `Rate`, `PairedDifference`, rate/stratum functions, `paired_bootstrap`, and
+  `summarize_result`. Arrays and mappings crossing boundaries follow Task 7.
+
+- [ ] **Step 1: Implement the fixed-reference replay.**
+
+Fit one calibrator per estimator/sector on calibration rows, pooling patches.
+Scores are cluster gaps or signed forced-weight differences relative to the
+chosen reference; outcomes are `actual XOR reference`. Build `q0`, `q1`, and
+`sigma = yoke XOR parity(reference)`. Policies see only `q0` and `sigma`.
+Set `q = where(M, q1, q0)`; `U = M.any(axis=1)`. Use exact L2 per sector and
+return `final = reference XOR pattern`. Validate final yoke parity on every row.
+
+Implement mixed and candidate-restricted L2 for the two endpoints. Restricted
+odd parity with no requested candidate raises explicitly. Selective policy names
+remain unsupported until M3; do not add stubs that silently act like endpoints.
+Calibrators and records must remain unchanged by replay; use a bounded batch
+size for enumeration. Do not rerun a decoder downstream of collection.
+
+- [ ] **Step 2: Implement endpoint work counts now.**
+
+`WorkCounts` contains per-shot integer counts with explicit units: requested
+patch-sectors, distinct patches refined, initial UF calls, initial Dijkstra
+searches and settled states, initial unforced/forced plain matching calls, and
+incremental unforced plain calls, plain forced calls, reweight passes, and
+correlated forced calls. Every returned array is read-only. Derive the counts
+from `M`, `U`, the estimator pair, and stored Dijkstra states.
+
+| Estimator pair | Initial work per patch | Increment per distinct requested patch |
+|---|---|---|
+| UF cluster gap -> plain gap | 1 UF, 2 Dijkstra searches | 4 plain forced calls |
+| UF cluster gap -> correlated gap | 1 UF, 2 Dijkstra searches | 1 unforced plain call, 1 reweight pass, 4 correlated forced calls |
+| MWPM plain gap -> correlated gap | 1 unforced plain call, 4 plain forced calls | 1 reweight pass, 4 correlated forced calls |
+
+For six patches, `initial_only` has `sum(M)=sum(U)=0`; `all_refined` has
+`sum(M)=12`, `sum(U)=6`. Both sector requests share one patch refinement.
+These are counts for the specified replay procedure, separately labeled from
+actual collection calls, validation calls, graph setup, and wall time. Offline
+reuse of already collected forced weights does not make replay work zero.
+Report initial and incremental totals separately; do not claim speedups.
+
+- [ ] **Step 3: Implement accuracy and paired intervals.**
+
+Compute sector/block failures; X/Z/pooled single-failure misattribution;
+zero/one/multiple-reference-failure strata with denominators; tie counts;
+above-half frequencies; and the existing sinter normalized LER conversion
+(`pieces=patches*rounds`, `values=8` for this six-patch experiment).
+
+Bootstrap paired whole shots with 10,000 replicates and explicit seed 43.
+Pooled misattribution resamples each shot's eligible-sector count and its
+misattributed eligible-sector count together. Block failure uses per-shot
+failure indicators and denominator one. Report per-endpoint rate intervals
+and paired `all_refined - initial_only` differences/95% intervals for **both**
+primary misattribution and block failure. Retain cross-sector dependence.
+Report zero-denominator replicate counts and undefined rates as unavailable;
+do not substitute zero or require a fixed agreement fraction.
+
+The pilot does not estimate recovery fraction eta, selective coverage, or
+random-policy expectations; those belong to M3.
+
+- [ ] **Step 4: Test behavior with hand-worked examples.**
+
+Verify signed score indexing, patch pooling, endpoint final bits, mixed versus
+restricted behavior, `q > 1/2` reversals, deterministic ties, and unchanged
+inputs. Test each estimator pair's counts at no/all refinement, and use a small
+request-mask fixture to show X and Z on one patch cost one refinement while
+requests on two patches cost two. Verify unrequested `q1` values are ignored.
+Check actual collection counts separately against Task 8's instrumentation.
+
+Use explicit per-shot numerator/denominator fixtures for both bootstrap metrics,
+including empty strata and cross-sector dependence. Check reproducibility and
+a hand-computed paired point estimate. Run replay twice and compare all results.
+Run the package and decoder suites; commit.
+
+---
+
+### Task 11: Verified stages, thin CLI, and usage documentation
+
+**Files:** create `_stages.py`, `_stages_test.py`, `tools/hierarchical_experiment`,
+and `docs/hierarchical_decoding.md`; add a short README pointer.
+
+**Interfaces:**
+
+- `CollectRequest(out_dir, role, rows=None, workers=1, chunk_size=64,
+  max_chunks=None, recorded_run=None, parameters=None, seed=None, shots=None)`.
+- `stage_collect(request) -> LoadedRecord | None`.
+- `stage_calibrate(record_dir, out_path, estimators)` and verified calibrator loading.
+- `parse_config(text) -> ReplayConfig` and a deterministic directory-name helper.
+- `stage_replay(record_dir, calibrators_path, out_dir, configs)`.
+- `stage_summarize(replay_dirs, out_path, *, replicates, seed)`.
+
+- [ ] **Step 1: Enforce collection requests even when outputs already exist.**
+
+A request supplies either a recorded run or the complete parameters/seed/full
+shot-count triple, not both. Validate it before reading existing outputs. If a
+sample already exists, compare the supplied request with its verified identity:
+parameters, seed, full shot count, and exact circuit/DEM/payload for an imported
+run. Compare a generated request's model to the saved model; a changed generator
+must not silently choose a new model for old shots. Paths alone are not identities.
+A mismatch raises a diagnostic naming the changed field. Never ignore new
+arguments just because `sample.json` exists. Then call Task 9's collector.
+
+- [ ] **Step 2: Enforce calibration and replay compatibility.**
+
+Calibration uses only a completed, passing calibration record. Store the exact
+input record and manifest hashes, parent/family ids, fitted row ids, model and
+decoder identities, estimator names/directions, knot convention, clip constant,
+and calibration sources/versions with the fitted knots.
+
+Replay uses a completed, passing evaluation record and validated calibrators.
+Reject calibration-role evaluation, equal parent sample or sampling-family ids,
+changed/missing estimators, incompatible model or decoder identities, unsupported
+schemas, nonmonotone/invalid knots, and incorrect declared conventions. Verify
+artifacts before decoding. Confirmation is unavailable until freeze verification
+is implemented in the later plan.
+
+For each configuration, write final predictions, request/distinct-patch masks,
+ties, work arrays, and results JSON. Hash these actual output files and the exact
+calibrator artifact in `replay_manifest.json`; an input record hash alone does
+not identify the fitted calibration. Publish the completed replay manifest last,
+after parity and result checks pass. Reusing an output directory requires the
+same verified inputs/configurations and valid output hashes; otherwise require
+a new directory. Interrupted publication can be resumed without accepting
+partially replaced artifacts as completed results.
+
+- [ ] **Step 3: Summarize only verified artifacts.**
+
+The summary loader verifies the replay completion manifest, every consumed
+array/JSON hash, and the referenced record/manifest identity and exact row order.
+It must reject a record replaced after replay or altered prediction files. Pair
+configurations only on identical sample/row ids and reference strata. Persist
+bootstrap inputs/settings and results with the summary's provenance.
+
+Produce endpoint tables with both rate intervals and both paired differences,
+stratum denominators, ties/above-half frequencies, and a separate work table
+with initial/incremental counts. Undefined intervals are displayed explicitly
+with eligible counts. Write the report and its completion manifest atomically.
+
+- [ ] **Step 4: Add the CLI and user documentation.**
+
+Keep argparse parsing in the executable and all behavior in library functions.
+Subcommands are `collect`, `calibrate`, `replay`, and `summarize`. Preserve the
+configuration syntax used in Task 12. Accept only calibration/evaluation roles.
+Validate `START:STOP` row ranges and mutually exclusive sample sources.
+`summarize` records `--replicates 10000 --seed 43` explicitly in the pilot commands.
+
+Document the fixed-reference model, read-only records, verified saved model,
+serial/debug path, full-call sampling versus subset collection, checkpoint and
+completion semantics, and separate actual/replay work counts. Show the existing
+decoder examples with named results, including `BatchOuterDecision.patterns`.
+Document these outputs under `$TMPDIR`:
+
+```text
+<collect out>/sample/       circuit.stim, model.dem, packed arrays, sample.json
+<collect out>/collection.json
+<collect out>/checkpoint.npz        only while incomplete
+<collect out>/record.npz
+<collect out>/manifest.json         completion marker, hashes, graph/record checks
+<calibrators>.json                  knots, verified parents and compatibility
+<replay out>/<config>/              prediction/mask/tie/work arrays, results.json
+<replay out>/replay_manifest.json    completion marker and all artifact hashes
+<summary>.md and <summary>.manifest.json
 ```
+
+- [ ] **Step 5: Exercise the stage boundaries end to end.**
+
+Run a small distance-3 calibration/evaluation pipeline both through functions
+and through the CLI. Verify valid resume and reject changed seed, shot count,
+parameters, recorded-run identity, raw data, decoder version, or model; reusing
+the same output path cannot suppress those checks. Test calibration reuse on
+its own parent/subset and same sampling family, incompatible calibration from
+another distance/noise setting, failed collection checks, invalid knots, altered
+calibrator/prediction files, mismatched rows, and a missing completion manifest.
+Inject interrupted replay publication and verify clean recovery. Reject
+confirmation requests. Verify that reporting/policy changes preserve collection
+reuse. Avoid duplicating each mathematical unit test through every CLI command.
+
+Run `PYTHONPATH=src .venv/bin/pytest src/yoked/decoders src/yoked/hierarchical -q`.
+Commit the stages, CLI, and documentation after the relevant checks pass.
 
 ---
 
 ### Task 12: The d=9 pilot and its report
 
-This task runs code, not writes it. It produces the pilot records, the endpoint replays, and `docs/results/hierarchical_pilot_d9_p003.md`, and it records the go/no-go decision of spec section 12, milestone M1.
+This task runs the implemented pipeline after its checks pass. It produces
+`docs/results/hierarchical_pilot_d9_p003.md` and the M1 decision. All run data
+stays under `$TMPDIR`; confirmation is neither sampled nor collected.
 
-**Files:**
-- Create: `docs/results/hierarchical_pilot_d9_p003.md`
-- Run outputs (not committed): `$TMPDIR/hier-d9-p003/...`
-
-**Interfaces:**
-- Consumes: the CLI from Task 11 and the saved d=9 run at `/data2/s2chitni/.tmp/ysc-four-decoders-d9-p003-100k-7efr23ha`.
-- Produces: the pilot report and the decision on whether M2 starts.
-
-- [ ] **Step 1: Preflight 50 rows of the saved evaluation sample and read the record checks**
+- [ ] **Step 1: Preflight 50 saved evaluation rows.**
 
 ```bash
 cd /data2/s2chitni/yoked-surface-codes
 export PYTHONPATH=src
-OUT=$TMPDIR/hier-d9-p003
-RUN=/data2/s2chitni/.tmp/ysc-four-decoders-d9-p003-100k-7efr23ha
-time tools/hierarchical_experiment collect --out $OUT/preflight_evaluation --role evaluation \
-    --recorded-run $RUN --rows 0:50 --workers 2 --chunk-size 25
-python -c "import json; m=json.load(open('$OUT/preflight_evaluation/manifest.json')); print(json.dumps(m['checks'], indent=1)); print('seconds', m['seconds_this_run'])"
+export OUT="$TMPDIR/hier-d9-p003"
+export RUN=/data2/s2chitni/.tmp/ysc-four-decoders-d9-p003-100k-7efr23ha
+.venv/bin/python tools/hierarchical_experiment collect --out "$OUT/preflight_evaluation" --role evaluation \
+    --recorded-run "$RUN" --rows 0:50 --workers 2 --chunk-size 25
+.venv/bin/python - <<'PY'
+import json
+import os
+from pathlib import Path
+manifest = json.loads((Path(os.environ['OUT']) / 'preflight_evaluation/manifest.json').read_text())
+print(json.dumps(manifest['checks'], indent=2))
+print(json.dumps(manifest['collection_work'], indent=2))
+print('seconds', manifest['seconds_this_run'])
+assert manifest['status'] == 'complete' and manifest['checks']['passed']
+PY
 ```
 
-Expected: `checks.passed` is `true`, `joint_disagreements_unexplained` is 0, `check_parity_agreement` is 1.0. Note the wall time: two workers on 50 rows gives the per-row cost; the 2,000-row collections below run 16 workers, so estimate their duration as `seconds * (2000 / 50) / 8` and the full 100,000-row collection as 50 times that. Write both estimates into the report. If any check fails, stop here and debug the failing invariant on the preflight record before collecting more; the record and manifest are in `$OUT/preflight_evaluation`.
+Require d=9 graph equivalence and the imported-edge statistics, perfect check
+and final parity, valid corrections, and zero unexplained joint disagreements.
+If any invariant fails, collection raises, leaves its checkpoint/diagnostics,
+and publishes no completed manifest. Diagnose the failing row/graph before
+collecting more. Do not turn a failing invariant into a percentage threshold.
 
-- [ ] **Step 2: Sample the calibration set and collect the two 2,000-row pilot subsets**
+Use the measured preflight time for a preliminary full-run estimate, explicitly
+labeling any assumed worker scaling. Update the estimate using the actual
+16-worker pilot throughput; initialization and I/O need not scale linearly.
 
-The calibration sample is one 50,000-shot call at seed 142; only rows 0 to 1,999 are decoded now. The evaluation pilot is rows 0 to 1,999 of the saved seed-42 sample.
+- [ ] **Step 2: Collect the two 2,000-row pilot subsets.**
+
+The calibration sample is one 50,000-shot call at seed 142; only rows 0 to 1,999
+are decoded. Evaluation uses those rows from the saved 100,000-shot seed-42
+sample and its saved circuit/DEM. Both pilots retain their full parent ids.
 
 ```bash
-tools/hierarchical_experiment collect --out $OUT/calibration --role calibration \
+.venv/bin/python tools/hierarchical_experiment collect --out "$OUT/calibration" --role calibration \
     --distance 9 --rounds 36 --p 0.003 --seed 142 --shots 50000 --rows 0:2000 --workers 16 --chunk-size 25
-tools/hierarchical_experiment collect --out $OUT/evaluation --role evaluation \
-    --recorded-run $RUN --rows 0:2000 --workers 16 --chunk-size 25
-for role in calibration evaluation; do
-  python -c "import json; m=json.load(open('$OUT/$role/manifest.json')); print('$role', m['checks']['passed'], m['shots'], m['sample_hash'][:12], round(m['seconds_this_run']))"
-done
+.venv/bin/python tools/hierarchical_experiment collect --out "$OUT/evaluation" --role evaluation \
+    --recorded-run "$RUN" --rows 0:2000 --workers 16 --chunk-size 25
+.venv/bin/python - <<'PY'
+import json
+import os
+from pathlib import Path
+root = Path(os.environ['OUT'])
+for role in ('calibration', 'evaluation'):
+    m = json.loads((root / role / 'manifest.json').read_text())
+    assert m['status'] == 'complete' and m['checks']['passed'] and m['shots'] == 2000
+    print(role, m['parent_payload_sha256'], m['seconds_this_run'])
+    if role == 'evaluation':
+        assert m['parent_payload_sha256'] == 'd55da8f4c9b8287fa0af64f8382de755a243a774030499e108c348b665e102f5'
+PY
 ```
 
-Expected: both manifests report `passed` true and 2,000 shots. The evaluation sample hash must equal `d55da8f4c9b8287fa0af64f8382de755a243a774030499e108c348b665e102f5`, the recorded run's payload hash.
+A resume with a changed seed, parameter, parent, or decoder must raise. Use a
+new directory for a different experiment; do not relabel an existing sample.
 
-- [ ] **Step 3: Calibrate on the calibration pilot only, then replay the endpoints on the evaluation pilot**
+- [ ] **Step 3: Calibrate and replay all pilot endpoint pairs.**
 
 ```bash
-tools/hierarchical_experiment calibrate --record $OUT/calibration --out $OUT/calibrators_pilot.json \
+.venv/bin/python tools/hierarchical_experiment calibrate --record "$OUT/calibration" --out "$OUT/calibrators_pilot.json" \
     --estimators uf:cluster_gap uf:gap_plain uf:gap_correlated mwpm:gap_plain mwpm:gap_correlated
-tools/hierarchical_experiment replay --record $OUT/evaluation --calibrators $OUT/calibrators_pilot.json \
-    --out $OUT/replay_pilot \
+.venv/bin/python tools/hierarchical_experiment replay --record "$OUT/evaluation" --calibrators "$OUT/calibrators_pilot.json" \
+    --out "$OUT/replay_pilot" \
     --config initial=uf:cluster_gap,refined=gap_correlated,policy=initial_only,outer=mixed \
     --config initial=uf:cluster_gap,refined=gap_correlated,policy=all_refined,outer=mixed \
     --config initial=uf:cluster_gap,refined=gap_plain,policy=initial_only,outer=mixed \
     --config initial=uf:cluster_gap,refined=gap_plain,policy=all_refined,outer=mixed \
     --config initial=mwpm:gap_plain,refined=gap_correlated,policy=initial_only,outer=mixed \
     --config initial=mwpm:gap_plain,refined=gap_correlated,policy=all_refined,outer=mixed
-tools/hierarchical_experiment summarize --replays $OUT/replay_pilot --out $OUT/summary_pilot.md
-cat $OUT/summary_pilot.md
+.venv/bin/python tools/hierarchical_experiment summarize --replays "$OUT/replay_pilot" \
+    --out "$OUT/summary_pilot.md" --replicates 10000 --seed 43
 ```
 
-Expected: three tables, one per estimator pair, each with an `initial_only` reference row and an `all_refined` row carrying a paired difference with a 95% interval. If replay raises about the calibration sample, the two collections point at the same sample directory and Step 2 must be redone with distinct output directories.
+Require three endpoint-pair tables with rate intervals and paired differences
+for both pooled misattribution and block failure, strata/denominators, ties,
+above-half frequencies, and the work table. The primary comparison is UF cluster
+gap to correlated gap; UF to plain gap is secondary and MWPM is the control.
 
-- [ ] **Step 4: Compute the saved joint-decoder baselines on the same 2,000 rows**
+- [ ] **Step 4: Verify historical baseline inputs before quoting them.**
 
-The full baseline import is part of the next plan; for the pilot, quote the saved predictions directly so the tables have the joint decoders beside them. Save the snippet as `$OUT/baselines_pilot.py` and run it with `python $OUT/baselines_pilot.py`:
+Full baseline integration into records remains in M2. For M1, save this small
+analysis script as `$OUT/baselines_pilot.py` and run it using `.venv/bin/python`.
+It uses the same parent rows and verifies the historical prediction **packed
+payload** hashes from `results.json`, not just the current `.npy` file hashes.
 
 ```python
+import json
+import os
+from pathlib import Path
+
 import numpy as np
 import sinter
 
-RUN = '/data2/s2chitni/.tmp/ysc-four-decoders-d9-p003-100k-7efr23ha'
-actual = np.unpackbits(np.load(f'{RUN}/actual_observables_packed.npy'), axis=1, bitorder='little')[:2000, :12].astype(bool)
-for name in ['mwpm', 'uf', 'correlated_mwpm', 'correlated_uf']:
-    predicted = np.load(f'{RUN}/{name}_predictions.npy')[:2000].astype(bool)
-    block = (predicted != actual).any(axis=1).mean()
-    ler = sinter.shot_error_rate_to_piece_error_rate(block, pieces=216, values=8)
-    print(f'{name:16s} block failure {block:.4f}  normalized LER {ler:.3e}')
+from yoked.hierarchical._provenance import (
+    packed_sample_hash, sha256_bytes, sha256_file, write_json_atomic,
+)
+from yoked.hierarchical._record import load_record
+
+root, run = Path(os.environ['OUT']), Path(os.environ['RUN'])
+record = load_record(root / 'evaluation').record
+collection = json.loads((root / 'evaluation/manifest.json').read_text())
+history = json.loads((run / 'manifest.json').read_text())
+results = json.loads((run / 'results.json').read_text())
+for name in ('circuit.stim', 'model.dem'):
+    assert sha256_file(run / name) == history['input_sha256'][name]
+    assert sha256_file(root / 'evaluation/sample' / name) == history['input_sha256'][name]
+detectors = np.load(run / 'detectors_packed.npy', mmap_mode='r', allow_pickle=False)
+actual_packed = np.load(run / 'actual_observables_packed.npy', mmap_mode='r', allow_pickle=False)
+payload_hash = packed_sample_hash(detectors, actual_packed)
+assert payload_hash == history['input_sha256']['packed_detectors_then_observables_payload']
+assert payload_hash == collection['parent_payload_sha256']
+actual = np.unpackbits(actual_packed[record.rows], axis=1, bitorder='little')[:, :12].astype(bool)
+np.testing.assert_array_equal(actual, record.actual)
+audit = dict(parent_payload_sha256=payload_hash, rows=record.rows.tolist(),
+             source_sha256=history['source_sha256'], versions=history['versions'],
+             code_commit=history['code_commit'], results_sha256=sha256_file(run / 'results.json'), decoders={})
+for name in ('mwpm', 'uf', 'correlated_mwpm', 'correlated_uf'):
+    path = run / f'{name}_predictions.npy'
+    predicted = np.load(path, mmap_mode='r', allow_pickle=False)
+    assert predicted.shape == (history['parameters']['shots'], 12)
+    assert np.isin(predicted, (0, 1)).all()
+    prediction_hash = sha256_bytes(np.packbits(predicted, axis=1, bitorder='little').tobytes())
+    assert prediction_hash == results['decoders'][name]['prediction_packed_sha256']
+    failures = (predicted[record.rows] != actual).any(axis=1)
+    block = float(failures.mean())
+    audit['decoders'][name] = dict(prediction_packed_sha256=prediction_hash,
+        file_sha256=sha256_file(path), errors=int(failures.sum()), shots=record.shots,
+        block_failure=block,
+        normalized_ler=float(sinter.shot_error_rate_to_piece_error_rate(block, pieces=216, values=8)))
+write_json_atomic(root / 'baselines_pilot.json', audit)
+print(json.dumps(audit['decoders'], indent=2))
 ```
 
-- [ ] **Step 5: Write the pilot report**
+- [ ] **Step 5: Write the pilot report from verified outputs.**
 
-Create `docs/results/hierarchical_pilot_d9_p003.md` in the style of `docs/results/decoder_comparison_d9_p003_100k.md`: tables and reproduction details, no interpretation prose beyond the decision. Fill every `<...>` from the outputs above.
+Use the style of `docs/results/decoder_comparison_d9_p003_100k.md`. Include:
 
-```markdown
-# Hierarchical L1/L2 pilot at d=9, p=0.003: 2,000-shot endpoints
+1. **Configuration/provenance:** d=9, 36 rounds, six patches, two ideal yokes,
+   CZ, SI1000 p=0.003; parent samples/seeds and exact row ids; model/decoder ids;
+   original circuit/DEM hashes; calibration artifact/knot convention; code and
+   package versions. Label every result exploratory, not confirmation.
+2. **Graph and record checks:** original/rebuilt edge counts, maximum weight
+   discrepancy, graph equivalence, yoke and non-yoke degree statistics;
+   correction/check/final parity checks; plain and correlated additivity/sign
+   checks; joint agreement, tie differences, and unexplained disagreements.
+3. **Endpoint tables:** X/Z/pooled primary rates and block rates with 95% intervals;
+   paired all-refined minus initial-only differences/intervals for both pooled
+   misattribution and block failure; normalized LER, stratum denominators,
+   ties/above-half frequencies, and any undefined bootstrap results.
+4. **Replay work:** requested patch-sectors and distinct patches; initial UF,
+   Dijkstra/search-state and plain-matching counts; incremental plain matching,
+   reweighting and correlated matching counts. Show per-shot means and totals.
+5. **Actual collection work:** measured calls, validation/setup work, wall time,
+   rows/workers, and measured throughput. Identify retries or incomplete
+   attempted-work telemetry after interruptions. Keep this separate from the replay
+   procedure counts. No latency or speedup claim follows from these counts.
+6. **Historical baselines:** block failure and normalized LER on the same rows,
+   citing the verified `baselines_pilot.json` and prediction hashes.
+7. **Projected full collection cost and decision:** Proceed to M2, Diagnose, or
+   Stop. The plan's proceed criterion is a negative paired primary UF-reference
+   misattribution difference with its 95% interval excluding zero; also report
+   the block-failure effect and work. Otherwise record the effect, interval,
+   eligible counts, and planned diagnosis. The pilot remains exploratory.
+8. **Reproduction:** exact commands, all artifact paths and manifests, bootstrap
+   replicate count/seed, and any resumptions. Use the actual pilot throughput
+   for full evaluation and remaining-calibration time estimates.
 
-Exploratory pilot of spec milestone M1. The evaluation rows are the first
-2,000 shots of the saved seed-42 sample; the calibration rows are the first
-2,000 shots of a fresh 50,000-shot seed-142 sample. Both remain part of
-their full sets. Nothing here is a confirmation measurement.
+Do not hand-edit rates after copying them from verified summaries. Keep the
+machine-readable summaries and baseline audit with the report's provenance.
 
-**Configuration.**
+- [ ] **Step 6: Commit the report and decision.**
 
-| Parameter | Value |
-|---|---|
-| Circuit | 1D yoked magic-memory circuit, CZ style, d=9, 36 rounds, six patches, two yokes |
-| Physical noise | SI1000, p=0.003 |
-| Evaluation rows | 0 to 1,999 of seed 42 (payload hash d55da8f4...) |
-| Calibration rows | 0 to 1,999 of seed 142 (payload hash <from manifest>) |
-| L1 reference | repository UF on check-free patch graphs; patch-local MWPM as control |
-| Initial score | cluster gap (UF); plain gap (MWPM control) |
-| Refined score | correlated gap; plain gap as a secondary cell |
-| L2 | exact factorized MAP, mixed rule |
-| Code commit | <git rev-parse HEAD> |
-
-**Record checks (spec section 10).**
-
-| Record | Check parity | Plain additivity max error | Plain argmin disagreements | Correlated sign disagreements | Joint agreement | Unexplained joint disagreements |
-|---|---:|---:|---:|---:|---:|---:|
-| evaluation | <...> | <...> | <...> | <...> | <...> | <...> |
-| calibration | <...> | <...> | <...> | <...> | <...> | <...> |
-
-**Endpoints on the evaluation pilot.** Paste the three tables from
-`summary_pilot.md` here unchanged.
-
-**Saved joint decoders on the same 2,000 rows.**
-
-| Decoder | Block failure | Normalized LER |
-|---|---:|---:|
-| Joint MWPM | <...> | <...> |
-| Repository UF | <...> | <...> |
-| Correlated MWPM | <...> | <...> |
-| Correlated UF | <...> | <...> |
-
-**Collection cost.**
-
-| Run | Rows | Workers | Wall seconds | Rows per worker-second |
-|---|---:|---:|---:|---:|
-| preflight | 50 | 2 | <...> | <...> |
-| calibration pilot | 2,000 | 16 | <...> | <...> |
-| evaluation pilot | 2,000 | 16 | <...> | <...> |
-
-Projected full collection at 16 workers: <...> hours for 100,000 evaluation
-rows and <...> hours for the remaining 48,000 calibration rows.
-
-**Decision.** <Proceed to M2 | Diagnose | Stop>. Proceed requires the
-all-refined minus initial-only paired difference on the pooled
-misattribution rate of the UF reference pair to be negative with a 95%
-interval excluding zero. Otherwise record the observed difference and
-interval and the diagnosis planned.
-
-**Reproduction.** Commands as in Task 12 of
-`docs/superpowers/plans/2026-09-14-hierarchical-l1-l2-m1-pilot.md`. Run
-directories: `$TMPDIR/hier-d9-p003/{preflight_evaluation,calibration,evaluation,replay_pilot}`;
-calibrators `$TMPDIR/hier-d9-p003/calibrators_pilot.json`. Package versions
-and source hashes are in each manifest.
-```
-
-- [ ] **Step 6: Commit the report**
-
-```bash
-git add docs/results/hierarchical_pilot_d9_p003.md
-git commit -m "Record the d=9 hierarchical L1/L2 pilot endpoints and decision
-
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01RCFuXzCmozp8C3y72SmFdM"
-```
+Only the report is committed; samples, checkpoints, predictions, and intermediate
+outputs remain under `$TMPDIR`. A failed or inconclusive pilot still produces
+an honest report and diagnosis rather than starting full collection automatically.
 
 ---
 
 ## What the second plan covers
 
-Written after the pilot decision, against the same spec: selective policies (`top_k_given_yoke`, `top_k_uncertain`) and exact random controls with `ExpectedReplayResult` (section 8); work accounting for requested patch-sectors, distinct patches, and matching calls; coverage, transitions with the magnitude-versus-reversal split, recovery fraction η(k), queried-population reliability and residual marginals (sections 6 and 9); historical baseline import with hash and row verification; the figure-producing `report` stage; the freeze manifest; full collection of the remaining calibration and evaluation rows with `L1Record.concatenate`; confirmation sampling and replay (milestones M2 to M4); and the d=7 replication.
+M2 covers the remaining calibration/evaluation rows and verified concatenation,
+full-set refitting/endpoints, and reusable historical-baseline import. M3 adds
+selective policies, exact random controls, both outer rules for those policies,
+coverage, transitions, recovery fraction eta, queried-population reliability,
+residual marginals, figures, and the analysis freeze. It extends the existing
+work accounting rather than introducing it for the first time. M4 adds
+confirmation-role support only together with freeze verification for sampling,
+collection, replay, and reporting. The d=7 replication follows separately.
 
-## Plan self-review
+## Plan consistency and acceptance checklist
 
-Spec coverage for M1: section 4 is Task 2; 5.1 is Task 3; 5.2 is Task 4 plus Task 1; 5.3 is Tasks 7 to 9; 6 is Task 6 and the per-sector pooling in Task 10; 7 is Task 5; the two endpoint rows of section 8 are Task 10; the primary metric, strata, block failure, bootstrap, and normalized LER of section 9 are Task 10; validation tests 1 to 9 map to Tasks 2, 8, 8, 4 and 8, 4 and 8, 8, 5, 3, and 6 plus 11; milestone M1's pilot is Task 12. Deferred items are listed above.
-
-Type consistency: `signed_gaps` takes patch-major `(..., 2, 2)` and `(..., 2)` inputs everywhere it is called (Tasks 4, 8, 10). `by_sector` and `to_columns` are the only layout converters. `ARRAY_FIELDS` in `_record.py` is the public field tuple used by Task 9. `Estimator.direction` is always `'decreasing'`, matching `IsotonicCalibrator.fit`'s `direction` argument. `policy_from_name` raises for the selective names until the second plan adds them.
+- [ ] Tasks 1 to 6 provide shared correlation rules, a narrow UF result method,
+  graph splitting, soft outputs, an independent parity-aware L2 oracle, and an
+  explicit PAV knot convention. Result arrays are owned/read-only.
+- [ ] Tasks 7 to 9 provide immutable records, saved model/sample verification,
+  stage-specific identities, atomic checkpoints, and validated completion.
+  Tests exercise failure and interruption paths as well as successful resume.
+- [ ] Tasks 10 to 11 provide deterministic endpoint replay, initial/incremental
+  work accounting, rate intervals and paired intervals for primary and block
+  failure, verified calibration compatibility, and verified report inputs.
+- [ ] Task 12 repeats graph/correction invariants on d=9, checks imported-edge
+  statistics, reports endpoints and work, and records an exploratory M1 decision.
+- [ ] Selective/random-policy checks and confirmation/freeze work are explicitly
+  deferred. M1 refuses confirmation requests.
+- [ ] Existing decoder regressions and all new applicable checks pass before the
+  pilot. No test is weakened to fit a result; investigate invariant failures.
