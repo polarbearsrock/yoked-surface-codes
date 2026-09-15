@@ -24,8 +24,10 @@ calibration-role collection of the same sample on the role, writing nothing eith
 time, and reporting a subset whose stored values were altered under the array and
 parent row, with the JSON written before the refusal; the summary scoring a record's
 imported baselines, the collector's own joint MWPM, and every replayed cell on the same
-shots, every rate equal to a direct computation from the arrays and the fake decoders'
-rates distinct so that a rate under another decoder's name would be caught, rendered as
+shots, every rate equal to a direct computation from the arrays and the five
+non-hierarchical rates pairwise distinct, the recorded joint MWPM differing from the
+collected one on a cost-tied row the import counts, so that a rate under another
+decoder's name would be caught, rendered as
 a baselines table after the endpoint groups with the paired difference of each cell
 against the recorded joint MWPM, that difference unavailable by name when the record
 does not carry the recorded joint MWPM, the summary manifest's inputs unchanged by
@@ -138,11 +140,22 @@ on beyond the ``FLIPS`` of ``_baselines_test``, rows it would otherwise get righ
 Those flips land on rows the joint matcher already fails on the ``BASELINE_SEED``
 sample, so without this every fake's block-failure vector equals the matcher's and
 a rate reported under another decoder's name would pass unnoticed. One, two, and
-three extra failures give the three historical rows distinct counts. ``mwpm`` is left
-alone: the import gates it against the collector's own joint MWPM, and the sample
-holds no cost tie under which the two could differ (an exhaustive scan of every
-parity-preserving class change on every row found none), so the recorded and the
-collected joint MWPM rows are one array by design."""
+three extra failures give the three historical rows distinct counts. ``mwpm`` is not
+flipped this way: the import gates it against the collector's own joint MWPM up to
+cost ties, so it is told apart from that column by ``JOINT_MWPM_TIE`` instead."""
+
+JOINT_MWPM_TIE = (6, (2, 7, 9, 10))
+"""The row of the ``BASELINE_SEED`` sample and the prediction columns (``2 * patch +
+sector``) on which the fake ``mwpm`` takes the other optimal matching: sector 0 of
+patches 1 and 5 and sector 1 of patches 3 and 4, so that every sector's parity holds.
+Both matchings have the same total forced cost on that row, so the import's tie gate
+accepts the disagreement and counts it, and this one equals the actual observables
+where the collector's joint MWPM is wrong, so the recorded and the collected joint MWPM
+rows of the summary get distinct counts. Found by scanning every parity-preserving
+class change of every row of the collected record with ``_total_forced_cost``: the
+sample holds six ties, three on this row and three on row 34, and only this one lands
+on the actual observables. The ``baselined`` fixture asserts the gate saw exactly one
+tie-explained disagreement, so a sample that loses the tie fails there."""
 
 
 @dataclass(frozen=True)
@@ -226,7 +239,9 @@ def copied(source, destination) -> Path:
 def distinguishable_predictions(sample: SampleSet, context: L1Context) -> dict[str, np.ndarray]:
     """The fake run's predictions with each non-MWPM decoder failing on ``EXTRA_FAILURES``
     rows of its own that it got right, flipping both sectors of the same two patches as
-    its ``FLIPS`` so that every sector's parity, and with it the import's yoke gate, holds.
+    its ``FLIPS`` so that every sector's parity, and with it the import's yoke gate, holds,
+    and with ``mwpm`` taking the tied matching of ``JOINT_MWPM_TIE``. The other three
+    fakes are derived from the matcher's own decode, so they do not inherit that flip.
     """
     predictions = fake_predictions(sample, context)
     _, actual = sample.rows(np.arange(sample.shots))
@@ -237,6 +252,12 @@ def distinguishable_predictions(sample: SampleSet, context: L1Context) -> dict[s
         assert len(right) >= count, f'{stem!r} gets too few rows right to fail {count} more'
         used.update(right[:count])
         predictions[stem] = flipped(predictions[stem], right[:count], FLIPS[stem][1])
+    tie_row, tie_columns = JOINT_MWPM_TIE
+    mwpm = np.array(predictions['mwpm'], dtype=bool)
+    mwpm[tie_row, list(tie_columns)] ^= True
+    assert np.array_equal(mwpm[tie_row], actual[tie_row]), \
+        f'the tied matching on row {tie_row} no longer equals the actual observables'
+    predictions['mwpm'] = mwpm
     return predictions
 
 
@@ -271,6 +292,11 @@ def baselined(tmp_path_factory, pipeline) -> Baselined:
     assert collected is not None
     before_dir = copied(collected.directory, root / 'evaluation_before')
     record = stage_import_baselines(collected.directory, run)
+    # The one disagreement between the recorded and the collected joint MWPM is the cost
+    # tie of ``JOINT_MWPM_TIE``; a sample that loses the tie would either be refused by
+    # the gate or arrive here with no disagreement, and either failure names the cause.
+    gate = record.manifest[BASELINES_FIELD]['joint_mwpm']
+    assert gate['disagreements'] == 1 and gate['tie_explained'] == 1, dict(gate)
     results = stage_replay(record.directory, pipeline.calibrators, root / 'replay', CONFIGS)
     markdown = stage_summarize([root / 'replay'], root / 'summary.md', replicates=REPLICATES,
                                seed=DEFAULT_SEED)
@@ -952,13 +978,15 @@ def test_the_summary_scores_the_baselines_and_every_cell_on_the_same_shots(basel
     assert baselines['order'] == list(BASELINE_DECODERS) + [COLLECTED_JOINT_MWPM] + cells
     assert sorted(baselines['decoders']) == sorted(baselines['order'])   # the JSON sorts its keys
     # Fixture guard: a rate reported under another decoder's name is caught below only
-    # if the decoders' rates differ. The three flipped baselines and the joint MWPM are
-    # four distinct blocks; the recorded and the collected joint MWPM are the one
-    # coincidence, the same array by the import gate (see ``EXTRA_FAILURES``).
+    # if the decoders' rates differ. The three flipped baselines, the recorded joint MWPM
+    # on its tied row, and the collected joint MWPM are five pairwise distinct blocks
+    # (see ``EXTRA_FAILURES`` and ``JOINT_MWPM_TIE``), and the two joint MWPM arrays
+    # differ on the tie row alone.
     blocks = {name: tuple(sorted(baselines['decoders'][name]['block_failure'].items()))
               for name in list(BASELINE_DECODERS) + [COLLECTED_JOINT_MWPM]}
-    assert blocks[RECORDED_JOINT_MWPM] == blocks[COLLECTED_JOINT_MWPM]
-    assert len(set(blocks.values())) == len(blocks) - 1
+    assert len(set(blocks.values())) == len(blocks)
+    differs = (record.baselines[RECORDED_JOINT_MWPM] != record.joint_mwpm).any(axis=1)
+    assert record.rows[np.flatnonzero(differs)].tolist() == [JOINT_MWPM_TIE[0]]
     kinds = {name: HISTORICAL_KIND for name in BASELINE_DECODERS}
     kinds[COLLECTED_JOINT_MWPM] = COLLECTED_KIND
     kinds.update({name: HIERARCHICAL_KIND for name in cells})
