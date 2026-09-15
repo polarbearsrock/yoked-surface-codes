@@ -24,13 +24,14 @@ calibration-role collection of the same sample on the role, writing nothing eith
 time, and reporting a subset whose stored values were altered under the array and
 parent row, with the JSON written before the refusal; the summary scoring a record's
 imported baselines, the collector's own joint MWPM, and every replayed cell on the same
-shots, every rate equal to a direct computation from the arrays, rendered as a baselines
-table after the endpoint groups with the paired difference of each cell against the
-recorded joint MWPM, that difference unavailable by name when the record does not carry
-the recorded joint MWPM, the summary manifest's inputs unchanged by baselines, and no
-table and no JSON key for a record without them; and the report renderers printing
-``unavailable`` with the denominator or eligible count beside it whenever a number, an
-interval bound, or a rate is undefined.
+shots, every rate equal to a direct computation from the arrays and the fake decoders'
+rates distinct so that a rate under another decoder's name would be caught, rendered as
+a baselines table after the endpoint groups with the paired difference of each cell
+against the recorded joint MWPM, that difference unavailable by name when the record
+does not carry the recorded joint MWPM, the summary manifest's inputs unchanged by
+baselines, and no table and no JSON key for a record without them; and the report
+renderers printing ``unavailable`` with the denominator or eligible count beside it
+whenever a number, an interval bound, or a rate is undefined.
 """
 from __future__ import annotations
 
@@ -41,13 +42,16 @@ import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 
 import numpy as np
 import pytest
 import stim
 
 from yoked.hierarchical._baselines import BASELINE_DECODERS, BASELINES_FIELD, RECORDED_JOINT_MWPM
-from yoked.hierarchical._baselines_test import fake_predictions, write_recorded_run_with_predictions
+from yoked.hierarchical._baselines_test import (
+    FLIPS, fake_predictions, flipped, write_recorded_run_with_predictions,
+)
 from yoked.hierarchical._calibration import CLIP, KNOT_CONVENTION
 from yoked.hierarchical._collect import (
     DETECTORS_FILE, SAMPLE_MANIFEST, CircuitParameters, SampleSet, CIRCUIT_FILE, DEM_FILE,
@@ -128,6 +132,18 @@ BASELINE_SEED = 3
 call, so the pipeline's calibrators are held out from it, and not the evaluation call
 either, so no two module fixtures share a parent sample."""
 
+EXTRA_FAILURES = MappingProxyType({'uf': 1, 'correlated_mwpm': 2, 'correlated_uf': 3})
+"""How many rows each non-MWPM fake decoder of the baselines summary is made to fail
+on beyond the ``FLIPS`` of ``_baselines_test``, rows it would otherwise get right.
+Those flips land on rows the joint matcher already fails on the ``BASELINE_SEED``
+sample, so without this every fake's block-failure vector equals the matcher's and
+a rate reported under another decoder's name would pass unnoticed. One, two, and
+three extra failures give the three historical rows distinct counts. ``mwpm`` is left
+alone: the import gates it against the collector's own joint MWPM, and the sample
+holds no cost tie under which the two could differ (an exhaustive scan of every
+parity-preserving class change on every row found none), so the recorded and the
+collected joint MWPM rows are one array by design."""
+
 
 @dataclass(frozen=True)
 class Reproduction:
@@ -207,6 +223,23 @@ def copied(source, destination) -> Path:
     return destination
 
 
+def distinguishable_predictions(sample: SampleSet, context: L1Context) -> dict[str, np.ndarray]:
+    """The fake run's predictions with each non-MWPM decoder failing on ``EXTRA_FAILURES``
+    rows of its own that it got right, flipping both sectors of the same two patches as
+    its ``FLIPS`` so that every sector's parity, and with it the import's yoke gate, holds.
+    """
+    predictions = fake_predictions(sample, context)
+    _, actual = sample.rows(np.arange(sample.shots))
+    used: set[int] = set()
+    for stem, count in EXTRA_FAILURES.items():
+        right = [int(row) for row in np.flatnonzero(~block_failures(predictions[stem], actual))
+                 if int(row) not in used]
+        assert len(right) >= count, f'{stem!r} gets too few rows right to fail {count} more'
+        used.update(right[:count])
+        predictions[stem] = flipped(predictions[stem], right[:count], FLIPS[stem][1])
+    return predictions
+
+
 @dataclass(frozen=True)
 class Baselined:
     """One summary over an evaluation record that carries imported baselines.
@@ -232,7 +265,7 @@ def baselined(tmp_path_factory, pipeline) -> Baselined:
     sample = SampleSet.sample(PARAMETERS, seed=BASELINE_SEED, shots=SHOTS)
     context = L1Context.from_dem_text(sample.dem_text, sample.parameters.patches)
     run = write_recorded_run_with_predictions(sample, root / 'run',
-                                              fake_predictions(sample, context))
+                                              distinguishable_predictions(sample, context))
     collected = stage_collect(CollectRequest(out_dir=root / 'evaluation', role='evaluation',
                                              recorded_run=run, chunk_size=CHUNK))
     assert collected is not None
@@ -918,6 +951,14 @@ def test_the_summary_scores_the_baselines_and_every_cell_on_the_same_shots(basel
     assert baselines['comparator'] == RECORDED_JOINT_MWPM
     assert baselines['order'] == list(BASELINE_DECODERS) + [COLLECTED_JOINT_MWPM] + cells
     assert sorted(baselines['decoders']) == sorted(baselines['order'])   # the JSON sorts its keys
+    # Fixture guard: a rate reported under another decoder's name is caught below only
+    # if the decoders' rates differ. The three flipped baselines and the joint MWPM are
+    # four distinct blocks; the recorded and the collected joint MWPM are the one
+    # coincidence, the same array by the import gate (see ``EXTRA_FAILURES``).
+    blocks = {name: tuple(sorted(baselines['decoders'][name]['block_failure'].items()))
+              for name in list(BASELINE_DECODERS) + [COLLECTED_JOINT_MWPM]}
+    assert blocks[RECORDED_JOINT_MWPM] == blocks[COLLECTED_JOINT_MWPM]
+    assert len(set(blocks.values())) == len(blocks) - 1
     kinds = {name: HISTORICAL_KIND for name in BASELINE_DECODERS}
     kinds[COLLECTED_JOINT_MWPM] = COLLECTED_KIND
     kinds.update({name: HIERARCHICAL_KIND for name in cells})
