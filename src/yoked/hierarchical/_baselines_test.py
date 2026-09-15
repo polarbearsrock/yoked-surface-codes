@@ -9,15 +9,20 @@ the wrong shape or non-binary values, a missing file, an unknown or repeated nam
 a run without recorded implementation provenance are each rejected naming the file or
 field; the import round trip, where ``load_record`` exposes the four baselines with the
 parent rows mapped, the record hash changes, and every other manifest field is unchanged
-byte for byte; a second import returning without writing, and a differing second import
-or one naming other baselines refused naming the first difference; a payload mismatch
-from another seed, a circuit or DEM hash mismatch, a parity-violating baseline, a
-joint-MWPM disagreement that is not a cost tie, and an import onto a calibration-role
-record refused, while a disagreement explained by a cost tie is accepted and counted;
+byte for byte; a record collected on a strided subset of the run's rows receiving each
+baseline by parent row id rather than by position, with both gates passing on that
+subset; a second import returning without writing, and a differing second import or one
+naming other baselines refused naming the first difference; a payload mismatch from
+another seed, a circuit or DEM hash mismatch, a parity-violating baseline, a joint-MWPM
+disagreement that is not a cost tie, and an import onto a calibration-role record
+refused, while a disagreement explained by a cost tie is accepted and counted;
 calibrators fitted before the import loading and replaying after it, with the
 calibration record carrying no baselines; a replay made before the import rejected by
-the summary; and an interrupted import leaving a directory ``load_record`` refuses
-rather than a half-imported record.
+the summary; the import gathering its provenance once and before the record changes;
+an import interrupted between its renames leaving a directory ``load_record`` refuses
+and the next import puts back and completes; one interrupted after its manifest leaving
+a kept record the next import drops; and a kept record the manifest does not describe
+refused.
 
 The fake run's ``mwpm`` predictions come from the collector's own joint matcher, so the
 tie gate sees zero disagreements unless a test introduces one; the other three decoders
@@ -49,12 +54,13 @@ from yoked.hierarchical._metrics import DEFAULT_SEED
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
 from yoked.hierarchical._provenance import (
     CHECK_SOURCES, DECODER_SOURCES, MODEL_PACKAGES, REPOSITORY_ROOT, SAMPLING_PACKAGES,
-    canonical_json, package_versions, read_json, sha256_file, write_json_atomic,
+    canonical_json, git_commit, package_versions, read_json, sha256_file, source_hashes,
+    write_json_atomic,
 )
 from yoked.hierarchical._record import RECORD_FILE, RECORD_MANIFEST, LoadedRecord, load_record
 from yoked.hierarchical._stages import (
-    CollectRequest, _ImportHooks, load_calibrators, stage_calibrate, stage_collect,
-    stage_import_baselines, stage_replay, stage_summarize,
+    KEPT_RECORD, STAGED_RECORD, CollectRequest, _ImportHooks, load_calibrators, stage_calibrate,
+    stage_collect, stage_import_baselines, stage_replay, stage_summarize,
 )
 
 DISTANCE, ROUNDS, P = 3, 12, 0.005
@@ -88,6 +94,12 @@ FLIPS = MappingProxyType({
 """How each non-MWPM fake decoder differs from the joint matcher: the parent rows and
 the two patches whose both sectors are flipped there. A sector's parity is the XOR over
 patches, so flipping one patch would break it and flipping two keeps it."""
+
+STRIDED_ROWS = np.array([3, 5, 8, 13, 21, 34, 40, 47])
+"""Parent rows of a record that is not a prefix of the run: they meet the ``uf`` flip
+rows at 5 and the ``correlated_uf`` ones at 3, and none of the ``correlated_mwpm`` ones,
+while the first eight rows meet each set at other positions. A baseline mapped by
+position rather than by parent row id would therefore carry the wrong flips."""
 
 FAKE_SOURCE = 'src/yoked/decoders/_union_find.py'
 """One real file the fake run hashes as its recorded implementation provenance."""
@@ -575,18 +587,123 @@ def test_a_replay_made_before_the_import_is_rejected_by_the_summary(pipeline, tm
                         replicates=REPLICATES, seed=DEFAULT_SEED)
 
 
-def test_an_interrupted_import_leaves_a_directory_the_loader_refuses(pipeline, tmp_path):
+def test_a_subset_record_receives_each_baseline_by_parent_row_id(run, tmp_path):
+    subset = stage_collect(CollectRequest(out_dir=tmp_path / 'subset', role='evaluation',
+                                          recorded_run=run.directory, rows=STRIDED_ROWS,
+                                          chunk_size=CHUNK))
+    assert subset is not None
+    record = stage_import_baselines(subset.directory, run.directory).record
+    shots = len(STRIDED_ROWS)
+    np.testing.assert_array_equal(record.rows, STRIDED_ROWS)
+    prefixed = 0
+    for name, stem in BASELINE_DECODERS.items():
+        np.testing.assert_array_equal(record.baselines[name], run.predictions[stem][STRIDED_ROWS])
+        prefixed += np.array_equal(record.baselines[name], run.predictions[stem][:shots])
+    assert prefixed < len(BASELINE_DECODERS), 'the first rows of the run would have passed too'
+    # With no tie-gate disagreement the recorded joint MWPM is the record's own on every
+    # row, so each other baseline differs from ``joint_mwpm`` by exactly its flips, at
+    # exactly the positions whose parent row is one of its flip rows: a property of the
+    # parent row ids, which the first eight rows of the run do not share.
+    np.testing.assert_array_equal(record.baselines[RECORDED_JOINT_MWPM], record.joint_mwpm)
+    for name, stem in BASELINE_DECODERS.items():
+        if stem in FLIPS:
+            flip_rows, patches = FLIPS[stem]
+            positions = np.flatnonzero(np.isin(STRIDED_ROWS, flip_rows))
+            assert not np.array_equal(positions, np.flatnonzero(np.isin(np.arange(shots), flip_rows)))
+            np.testing.assert_array_equal(record.baselines[name],
+                                          flipped(record.joint_mwpm, positions, patches))
+    block = read_json(subset.directory / RECORD_MANIFEST)[BASELINES_FIELD]
+    assert block['yoke_parity'] == {'rows': shots, 'violations': 0}
+    assert block['joint_mwpm']['agreement'] == 1.0 and block['joint_mwpm']['disagreements'] == 0
+
+
+def test_the_import_gathers_its_provenance_once_and_before_the_record_changes(
+        pipeline, tmp_path, monkeypatch):
+    directory = copied(pipeline.before_dir, tmp_path / 'evaluation')
+    original = sha256_file(directory / RECORD_FILE)
+    calls = {name: 0 for name in ('source_hashes', 'package_versions', 'git_commit', 'sha256_file')}
+
+    def counted(name, function):
+        def wrapper(*arguments, **keywords):
+            assert sha256_file(directory / RECORD_FILE) == original, f'{name} ran after the record changed'
+            calls[name] += 1
+            return function(*arguments, **keywords)
+        return wrapper
+
+    for name, function in (('source_hashes', source_hashes), ('package_versions', package_versions),
+                           ('git_commit', git_commit), ('sha256_file', sha256_file)):
+        monkeypatch.setattr(f'yoked.hierarchical._stages.{name}', counted(name, function))
+    imported = stage_import_baselines(directory, pipeline.run.directory)
+    assert tuple(imported.record.baselines) == tuple(BASELINE_DECODERS)
+    assert {name: calls[name] for name in ('source_hashes', 'package_versions', 'git_commit')} == \
+        {'source_hashes': 1, 'package_versions': 1, 'git_commit': 1}
+    assert calls['sha256_file'] >= 1, 'the new record must be hashed before it takes its place'
+
+
+def stop_before_manifest() -> None:
+    raise RuntimeError('interrupted before the manifest')
+
+
+def stop_after_manifest() -> None:
+    raise RuntimeError('interrupted after the manifest')
+
+
+def test_an_import_interrupted_between_its_renames_is_put_back_and_completed_next_time(
+        pipeline, tmp_path):
     directory = copied(pipeline.before_dir, tmp_path / 'interrupted')
-
-    def stop() -> None:
-        raise RuntimeError('interrupted before the manifest')
-
-    with pytest.raises(RuntimeError, match='interrupted'):
+    with pytest.raises(RuntimeError, match='before the manifest'):
         stage_import_baselines(directory, pipeline.run.directory,
-                               hooks=_ImportHooks(before_manifest=stop))
+                               hooks=_ImportHooks(before_manifest=stop_before_manifest))
     assert read_json(directory / RECORD_MANIFEST) == pipeline.manifest_before
+    assert (directory / KEPT_RECORD).is_file() and not (directory / STAGED_RECORD).exists()
+    assert sha256_file(directory / KEPT_RECORD) == pipeline.manifest_before['artifacts'][RECORD_FILE]
     with pytest.raises(ValueError, match=f'{RECORD_FILE} hashes to'):
         load_record(directory)
+
+    recovered = stage_import_baselines(directory, pipeline.run.directory)
+    assert not (directory / KEPT_RECORD).exists() and not (directory / STAGED_RECORD).exists()
+    assert tuple(recovered.record.baselines) == tuple(BASELINE_DECODERS)
+    for name in BASELINE_DECODERS:
+        np.testing.assert_array_equal(recovered.record.baselines[name],
+                                      pipeline.imported.record.baselines[name])
+    assert recovered.identities == pipeline.before.identities
+    assert load_record(directory).manifest[BASELINES_FIELD]['names'] == tuple(BASELINE_DECODERS)
+
+
+def test_an_import_interrupted_after_its_manifest_drops_the_kept_record_next_time(
+        pipeline, tmp_path, monkeypatch):
+    directory = copied(pipeline.before_dir, tmp_path / 'interrupted')
+    with pytest.raises(RuntimeError, match='after the manifest'):
+        stage_import_baselines(directory, pipeline.run.directory,
+                               hooks=_ImportHooks(after_manifest=stop_after_manifest))
+    assert (directory / KEPT_RECORD).is_file()
+    assert tuple(load_record(directory).record.baselines) == tuple(BASELINE_DECODERS)
+    record_bytes = (directory / RECORD_FILE).read_bytes()
+    manifest_bytes = (directory / RECORD_MANIFEST).read_bytes()
+
+    def refuse(*arguments, **keywords):
+        raise AssertionError('finishing the cleanup must not rewrite the record or its manifest')
+
+    monkeypatch.setattr('yoked.hierarchical._stages._save_arrays', refuse)
+    monkeypatch.setattr('yoked.hierarchical._stages.write_json_atomic', refuse)
+    again = stage_import_baselines(directory, pipeline.run.directory)
+    assert tuple(again.record.baselines) == tuple(BASELINE_DECODERS)
+    assert not (directory / KEPT_RECORD).exists()
+    assert (directory / RECORD_FILE).read_bytes() == record_bytes
+    assert (directory / RECORD_MANIFEST).read_bytes() == manifest_bytes
+
+
+def test_a_kept_record_the_manifest_does_not_describe_is_refused(pipeline, tmp_path):
+    directory = copied(pipeline.before_dir, tmp_path / 'evaluation')
+    # The manifest hashes neither file, which no interruption of an import produces, so
+    # nothing may be restored, dropped, or written.
+    (directory / KEPT_RECORD).write_bytes(b'not the record the manifest describes')
+    (directory / RECORD_FILE).write_bytes(b'nor is this')
+    before = {name: (directory / name).read_bytes()
+              for name in (RECORD_FILE, RECORD_MANIFEST, KEPT_RECORD)}
+    with pytest.raises(ValueError, match=f'{KEPT_RECORD}.*neither'):
+        stage_import_baselines(directory, pipeline.run.directory)
+    assert {name: (directory / name).read_bytes() for name in before} == before
 
 
 def test_attaching_leaves_the_loaded_record_untouched(pipeline):

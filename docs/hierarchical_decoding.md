@@ -78,8 +78,9 @@ hash changes while its collection identity does not, and a replay made before th
 import is refused by the summary stage. Repeating an identical import returns without
 writing; a run whose baselines differ, or a different selection of names, is refused
 naming the first difference, because a record carries one set of baselines. Only
-evaluation records accept baselines; calibration records never carry any. The
-verification the import performs is described under [Historical
+evaluation records accept baselines; calibration records never carry any. An
+import interrupted while publishing is put back by the next `import-baselines`
+call. The verification the import performs is described under [Historical
 baselines](#historical-baselines).
 
 **Calibrate.** Fit one isotonic calibrator per estimator and sector on the
@@ -144,6 +145,8 @@ as `unavailable` beside its counts, never as a zero.
 <collect out>/collection.json
 <collect out>/checkpoint.npz        only while incomplete
 <collect out>/record.npz            plus baseline_<name> arrays after import-baselines
+<collect out>/record.npz.before-import   the previous record, only while
+                                    import-baselines is publishing
 <collect out>/manifest.json         completion marker, hashes, graph/record checks,
                                     and a baselines block after import-baselines
 <calibrators>.json                  knots, verified parents and compatibility
@@ -305,14 +308,21 @@ the run and the record have been verified against each other:
   count, and the tie-explained count are recorded in the manifest.
 
 Every failure raises naming the file, field, baseline, or parent rows, and nothing
-is written. On success `record.npz` is replaced atomically and `manifest.json` is
-republished last: `artifacts.record.npz` takes the new hash, a `baselines` block
-records the run's directory, manifest and results hashes, per-baseline prediction
-hashes, the run's provenance, the importer's check identity, and the gate results,
-and every other field is unchanged byte for byte. An import interrupted between the
-two writes leaves a record the manifest does not describe, which `load_record`
-refuses; recollect the record from its saved sample in a fresh directory rather
-than editing either file.
+is written. On success the republished manifest is assembled in full first, the new
+`record.npz` is written and hashed beside the record, and only then does the record
+change, by renames alone: the previous `record.npz` steps aside as
+`record.npz.before-import`, the new one takes its place, and `manifest.json` is
+republished last over it, after which the kept record is dropped. In the manifest
+`artifacts.record.npz` takes the new hash, a `baselines` block records the run's
+directory, manifest and results hashes, per-baseline prediction hashes, the run's
+provenance, the importer's check identity, and the gate results, and every other
+field is unchanged byte for byte. An import interrupted between the renames leaves a
+record the manifest does not describe, which `load_record` (and so `calibrate` and
+`replay`) refuses; run `import-baselines` again: it puts the kept record back, so the
+directory reads as it did before the interrupted import, and then imports normally.
+An import interrupted after the manifest leaves only the kept record behind, which the
+next call drops. Do not edit either file by hand; a kept record the manifest describes
+neither of is refused.
 
 ```python
 from yoked.hierarchical import load_record, load_recorded_baselines, attach_baselines

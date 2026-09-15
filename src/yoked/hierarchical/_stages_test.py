@@ -15,7 +15,8 @@ manifest and rerunning cleanly; a reused replay directory returning its stored
 results without replaying again; a confirmation request refused; a change to the
 replay sources leaving the collection identity and its reuse untouched; the import
 stage attaching a fake recorded run's four baselines to an evaluation record once
-through ``stage_import_baselines`` and once through the command line; and the report
+through ``stage_import_baselines`` and once through the command line, the latter on a
+record that starts a few parent rows into the run; and the report
 renderers printing ``unavailable`` with the denominator or eligible count beside it
 whenever a number, an interval bound, or a rate is undefined.
 """
@@ -85,6 +86,11 @@ keep the suite fast. The pilot quotes the 10,000 of ``DEFAULT_REPLICATES``."""
 CLI_SHOTS = 16
 """The command-line pipeline decodes fewer shots still: it checks the wiring, not the
 statistics, and pays five interpreter startups for it."""
+
+CLI_FIRST_ROW = 4
+"""The command-line import test collects its record from this parent row on, so that its
+baselines are the library record's from the same row on rather than a prefix of the run:
+a baseline mapped by position instead of by parent row id would not match."""
 
 
 @dataclass(frozen=True)
@@ -255,14 +261,17 @@ def test_the_stage_and_the_command_line_import_baselines_once_each(tmp_path):
     assert imported.manifest[BASELINES_FIELD]['names'] == tuple(BASELINE_DECODERS)
 
     run_cli('collect', '--out', str(tmp_path / 'cli'), '--role', 'evaluation',
-            '--recorded-run', str(run), '--workers', '1', '--chunk-size', '8')
+            '--recorded-run', str(run), '--rows', f'{CLI_FIRST_ROW}:{CLI_SHOTS}',
+            '--workers', '1', '--chunk-size', '8')
     finished = run_cli('import-baselines', '--record', str(tmp_path / 'cli'),
                        '--recorded-run', str(run))
     assert f'{len(BASELINE_DECODERS)} baselines' in finished.stdout
     loaded = load_record(tmp_path / 'cli')
     assert tuple(loaded.record.baselines) == tuple(BASELINE_DECODERS)
+    np.testing.assert_array_equal(loaded.record.rows, np.arange(CLI_FIRST_ROW, CLI_SHOTS))
     for name in BASELINE_DECODERS:
-        np.testing.assert_array_equal(loaded.record.baselines[name], imported.record.baselines[name])
+        np.testing.assert_array_equal(loaded.record.baselines[name],
+                                      imported.record.baselines[name][CLI_FIRST_ROW:])
     assert read_json(tmp_path / 'cli' / RECORD_MANIFEST)[BASELINES_FIELD]['run']['directory'] == \
         str(run.resolve())
 

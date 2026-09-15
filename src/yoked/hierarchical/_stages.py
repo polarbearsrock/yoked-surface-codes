@@ -13,13 +13,16 @@ Five stages, each a function over already-verified inputs:
     changed generator must not quietly hand old shots a new model.
   * ``stage_import_baselines`` attaches a recorded four-decoder run's saved predictions
     to a completed evaluation record as the historical baselines of section 5.3, after
-    ``_baselines.py`` has verified the run and gated it against the record. It rewrites
-    ``record.npz`` with the baseline columns and republishes the manifest last, with the
-    new record hash and a ``baselines`` block and every other field unchanged, so the
-    record's collection identity is untouched while its artifact hash is not: import
-    runs before calibration and replay on that record, and a replay made earlier is
-    refused by the summary. A repeated identical import returns without writing; a
-    differing one is refused naming the first baseline that differs.
+    ``_baselines.py`` has verified the run and gated it against the record. It assembles
+    the republished manifest in full, replaces ``record.npz`` by a container with the
+    baseline columns, and publishes the manifest last, with the new record hash and a
+    ``baselines`` block and every other field unchanged, so the record's collection
+    identity is untouched while its artifact hash is not: import runs before calibration
+    and replay on that record, and a replay made earlier is refused by the summary. The
+    previous record is kept beside the new one until the manifest lands, so an import
+    interrupted between its renames is put back by the next call rather than leaving a
+    record only a recollection can replace. A repeated identical import returns without
+    writing; a differing one is refused naming the first baseline that differs.
   * ``stage_calibrate`` fits the calibrators of section 6 on a completed calibration
     record and publishes them with the exact record and manifest hashes, the five
     record identities, the fitted rows, the estimator definitions, the knot convention,
@@ -63,6 +66,7 @@ once through the command line. The import's own gates are checked beside
 from __future__ import annotations
 
 import dataclasses
+import os
 import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -397,18 +401,63 @@ def stage_collect(request: CollectRequest) -> LoadedRecord | None:
 # --- import baselines --------------------------------------------------------
 
 
+STAGED_RECORD = RECORD_FILE + '.import'
+"""Where an import writes and hashes the new ``record.npz`` while the record and its
+manifest are still untouched, so that the republished manifest is complete before the
+first rename and nothing slow or fallible sits between the renames."""
+
+KEPT_RECORD = RECORD_FILE + '.before-import'
+"""Where an import keeps the previous ``record.npz`` from the moment the new one takes
+its place until the manifest is republished over it. While it exists the manifest may
+still describe it, and the next import puts it back; once the manifest describes the new
+record it is dropped."""
+
+
 @dataclass(frozen=True)
 class _ImportHooks:
-    """Where a test may interrupt a baseline import, by raising from this callable.
+    """Where a test may interrupt a baseline import, by raising from one of these.
 
-    ``before_manifest`` runs once the new ``record.npz`` is on disk and just before the
-    manifest is republished over it: the one window in which an interruption leaves a
-    record the manifest does not describe, which ``load_record`` then refuses. It does
-    nothing in production; ``stage_import_baselines`` defaults it to a no-op and the CLI
-    never exposes it.
+    ``before_manifest`` runs once the new ``record.npz`` has taken the old one's place
+    and just before the manifest is republished over it, so the manifest still describes
+    the record kept beside it; ``after_manifest`` runs once the manifest is over the new
+    record and just before the kept one is dropped. They do nothing in production:
+    ``stage_import_baselines`` defaults them to no-ops and the CLI never exposes them.
     """
 
     before_manifest: Callable[[], None] = _no_op
+    after_manifest: Callable[[], None] = _no_op
+
+
+def _restore_interrupted_import(directory: Path) -> None:
+    """Put back the record an interrupted import moved aside, or finish its cleanup.
+
+    ``_publish_import`` keeps the previous ``record.npz`` beside the record as
+    ``KEPT_RECORD`` until the manifest stands over the new one. If it is still there, the
+    manifest says how far the import got: a manifest describing the kept record was never
+    republished, so the kept record goes back and the directory is as it was before that
+    import; a manifest describing the record in place was, so only the cleanup was
+    interrupted and the kept copy is dropped. A manifest describing neither was not left
+    by an import and is refused rather than guessed at; a missing manifest is left for
+    ``load_record`` to name. A staged record that never took its place is dropped either
+    way, because the next import writes its own.
+    """
+    (directory / STAGED_RECORD).unlink(missing_ok=True)
+    kept, record, manifest_path = (directory / name for name in (KEPT_RECORD, RECORD_FILE,
+                                                                  RECORD_MANIFEST))
+    if not kept.is_file() or not manifest_path.is_file():
+        return
+    manifest = read_json(manifest_path)
+    _require_fields(manifest, ('artifacts',), str(manifest_path))
+    _require_fields(manifest['artifacts'], (RECORD_FILE,), f'{RECORD_MANIFEST} artifacts')
+    declared = manifest['artifacts'][RECORD_FILE]
+    if declared == sha256_file(kept):
+        os.replace(kept, record)                        # the manifest was never republished
+    elif record.is_file() and declared == sha256_file(record):
+        kept.unlink()                                   # only the cleanup was interrupted
+    else:
+        raise ValueError(f'{directory} holds {KEPT_RECORD} from an interrupted import, but '
+                         f'{RECORD_MANIFEST} describes neither it nor {RECORD_FILE}; an import '
+                         f'never leaves that, so nothing is restored')
 
 
 def _require_same_baselines(record: L1Record, attached: L1Record, *, where) -> None:
@@ -429,55 +478,90 @@ def _require_same_baselines(record: L1Record, attached: L1Record, *, where) -> N
                              f'a fresh collection instead')
 
 
+def _import_manifest(directory: Path, block: Mapping) -> dict:
+    """The manifest an import republishes, complete but for the new record's hash.
+
+    Read back from the bytes on disk rather than from the loader's frozen view, so that
+    every field the import does not touch is written back exactly as verified. The
+    importer's check sources and versions are hashed once and shared between its check
+    identity and its provenance, and the commit is looked up here as well: everything
+    that could be slow or fail is done before the record changes.
+    """
+    manifest = read_json(directory / RECORD_MANIFEST)
+    sources, versions = source_hashes(CHECK_SOURCES), package_versions(CHECK_PACKAGES)
+    manifest[BASELINES_FIELD] = {
+        'imported_utc': utc_now(),
+        'importer': {
+            'check_identity': check_identity(sources=sources, versions=versions),
+            'source_sha256': sources,
+            'versions': versions,
+            'code_commit': git_commit(),
+        },
+        **block,
+    }
+    return manifest
+
+
+def _publish_import(directory: Path, arrays: Mapping[str, np.ndarray], manifest: dict,
+                    hooks: _ImportHooks) -> None:
+    """Replace ``record.npz`` and republish the manifest over it, keeping the previous
+    record beside it until the manifest lands.
+
+    The new container is written and hashed as ``STAGED_RECORD`` while the record and its
+    manifest are still untouched, so that the manifest is complete before the first
+    rename. What follows is renames only: the previous record steps aside as
+    ``KEPT_RECORD``, the staged one takes its place, the manifest is published over it,
+    and the kept record is dropped. An interruption anywhere in between leaves the
+    manifest describing exactly one of the two records, which is what
+    ``_restore_interrupted_import`` needs to put the directory back on the next call.
+    """
+    record, staged, kept = (directory / name for name in (RECORD_FILE, STAGED_RECORD, KEPT_RECORD))
+    try:
+        _save_arrays(staged, arrays, schema=RECORD_SCHEMA)
+        manifest['artifacts'] = {**manifest['artifacts'], RECORD_FILE: sha256_file(staged)}
+        os.replace(record, kept)
+        os.replace(staged, record)
+    finally:
+        staged.unlink(missing_ok=True)                  # only there if a rename did not happen
+    hooks.before_manifest()
+    write_json_atomic(directory / RECORD_MANIFEST, manifest)
+    hooks.after_manifest()
+    kept.unlink()
+
+
 def stage_import_baselines(record_dir, recorded_run, *, names: Iterable[str] | None = None,
                            hooks: _ImportHooks | None = None) -> LoadedRecord:
     """Attach a recorded run's saved predictions to a completed evaluation record.
 
-    The record is read through ``load_record`` and the run through
-    ``load_recorded_baselines``, which re-hashes its circuit, model, payload, and every
-    prediction file; ``attach_baselines`` then requires the evaluation role, the same
-    sample, yoke parity on every row, and the joint-MWPM tie rule. ``names`` selects
-    baselines from ``BASELINE_DECODERS`` and defaults to all four.
+    An earlier import interrupted between its renames is put back first, so that the
+    record reads as it did before it. The record is then read through ``load_record``
+    and the run through ``load_recorded_baselines``, which re-hashes its circuit, model,
+    payload, and every prediction file; ``attach_baselines`` then requires the evaluation
+    role, the same sample, yoke parity on every row, and the joint-MWPM tie rule.
+    ``names`` selects baselines from ``BASELINE_DECODERS`` and defaults to all four.
 
     A record that already carries baselines is compared with what this import would
     attach: identical names and arrays return the record unchanged, without writing;
-    anything else raises naming the first difference. Otherwise ``record.npz`` is
-    rewritten atomically with the baseline columns and ``manifest.json`` is republished
-    last with the new record hash and a ``baselines`` block, every other field unchanged
-    byte for byte. Returns the record re-read through ``load_record``.
+    anything else raises naming the first difference. Otherwise the manifest is
+    assembled in full, ``record.npz`` is replaced by a container with the baseline
+    columns, and ``manifest.json`` is republished last with the new record hash and a
+    ``baselines`` block, every other field unchanged byte for byte. Returns the record
+    re-read through ``load_record``.
     """
     if hooks is None:
         hooks = _ImportHooks()
     elif not isinstance(hooks, _ImportHooks):
         raise TypeError(f'hooks must be an _ImportHooks, got {type(hooks).__name__}')
-    loaded = load_record(record_dir)                    # verifies every record artifact hash
+    directory = Path(record_dir)
+    _restore_interrupted_import(directory)
+    loaded = load_record(directory)                     # verifies every record artifact hash
     recorded = load_recorded_baselines(recorded_run, BASELINE_DECODERS.keys() if names is None
                                        else names)
     attached, block = attach_baselines(loaded, recorded)
-    directory = loaded.directory
     if loaded.record.baselines:
         _require_same_baselines(loaded.record, attached, where=directory)
         return loaded
-
-    _save_arrays(directory / RECORD_FILE, attached.arrays(), schema=RECORD_SCHEMA)
-    # Republished from the bytes on disk rather than from the loader's frozen view, so
-    # that every field the import does not touch is written back exactly as verified.
-    manifest = read_json(directory / RECORD_MANIFEST)
-    manifest['artifacts'] = {**manifest['artifacts'],
-                             RECORD_FILE: sha256_file(directory / RECORD_FILE)}
-    manifest[BASELINES_FIELD] = {
-        'imported_utc': utc_now(),
-        'importer': {
-            'check_identity': check_identity(sources=source_hashes(CHECK_SOURCES),
-                                             versions=package_versions(CHECK_PACKAGES)),
-            'source_sha256': source_hashes(CHECK_SOURCES),
-            'versions': package_versions(CHECK_PACKAGES),
-            'code_commit': git_commit(),
-        },
-        **block,
-    }
-    hooks.before_manifest()
-    write_json_atomic(directory / RECORD_MANIFEST, manifest)
+    _publish_import(directory, attached.arrays(), _import_manifest(directory, block), hooks)
     return load_record(directory)
 
 
