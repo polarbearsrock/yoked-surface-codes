@@ -30,6 +30,19 @@ class _Correction:
     observable_mask: int
 
 
+@dataclass(frozen=True)
+class GrowthDecodeResult:
+    """UF correction and the settled costs needed by a soft-output consumer.
+
+    selected_edges: correction edge ids in graph order.
+    observable_mask: XOR of selected edge masks, an integer bit mask.
+    remaining_costs: one cost per graph edge in nats, zero within a cluster.
+    """
+    selected_edges: tuple[int, ...]
+    observable_mask: int
+    remaining_costs: tuple[float, ...]
+
+
 class UnionFindDecoder:
     """Default UF decoder: repository growth and peeling on a fixed graph.
 
@@ -43,12 +56,41 @@ class UnionFindDecoder:
     def _validate(self, syndromes: np.ndarray, ndim: int) -> np.ndarray:
         return _validate_syndromes(syndromes, self.graph.num_detectors, ndim)
 
-    def _decode(self, syndrome: np.ndarray) -> _Correction:
+    def _decode_state(self, syndrome: np.ndarray) -> tuple[_Correction, _Growth]:
+        """Run growth and peeling once, returning the correction and the growth state.
+
+        Shared by ``_decode`` and ``decode_with_growth_costs`` so both entry
+        points make exactly one growth-and-peel pass per syndrome and agree
+        on the resulting correction. ``_Growth`` stays private: only this
+        module reads its settled edge costs.
+        """
         syndrome = self._validate(syndrome, 1)
         growth = _Growth(self.graph, syndrome)
         growth.run()
         selected, mask = _peel(self.graph, syndrome, growth.forest)
-        return _Correction(tuple(growth.forest), selected, mask)
+        return _Correction(tuple(growth.forest), selected, mask), growth
+
+    def _decode(self, syndrome: np.ndarray) -> _Correction:
+        correction, _ = self._decode_state(syndrome)
+        return correction
+
+    def decode_with_growth_costs(self, syndrome: np.ndarray) -> GrowthDecodeResult:
+        """Decode and additionally report each edge's remaining growth cost.
+
+        An edge whose endpoints share a cluster root after growth costs
+        nothing; every other edge costs the growth it still needs to reach
+        its weight. Settling each edge here (rather than during growth)
+        keeps the hot path in ``_Growth`` free of this extra bookkeeping,
+        since only soft-output consumers need it.
+        """
+        correction, growth = self._decode_state(syndrome)
+        costs = []
+        for edge_id, (u, v) in enumerate(self.graph.endpoints):
+            growth._settle(edge_id)
+            cost = (0.0 if growth.find(u) == growth.find(v)
+                    else max(0.0, self.graph.edges[edge_id][2] - growth.grown[edge_id]))
+            costs.append(cost)
+        return GrowthDecodeResult(correction.selected_edges, correction.observable_mask, tuple(costs))
 
     def decode(self, syndrome: np.ndarray) -> np.ndarray:
         """Return a boolean vector of predicted observables for one syndrome."""

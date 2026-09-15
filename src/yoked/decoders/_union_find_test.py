@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from yoked.decoders import DecodingGraph, InvalidSyndromeError, UnionFindDecoder
-from yoked.decoders._union_find import _Growth
+from yoked.decoders._union_find import GrowthDecodeResult, _Growth
 
 
 def _assert_valid(graph, syndrome, result):
@@ -356,3 +356,88 @@ def test_growth_time_overflow_has_a_clear_error():
     graph = DecodingGraph(2, 0, [(0, 1, 1e308, 0), (1, None, 1e308, 0)])
     with pytest.raises(OverflowError, match='rescale the graph weights'):
         UnionFindDecoder(graph).decode([1, 0])
+
+
+# --- decode_with_growth_costs: the shared _decode_state path ---------------
+#
+# These tests exercise the growth-cost entry point added for soft-output
+# consumers (the cluster-gap decoder). Both `decode`/`_decode` and
+# `decode_with_growth_costs` are built on the same private `_decode_state`,
+# so they must agree on every correction and fail identically on the same
+# malformed input; only `decode_with_growth_costs` additionally exposes the
+# settled per-edge growth costs.
+
+
+def test_growth_costs_entry_point_matches_plain_decode_on_random_graphs():
+    rng = np.random.default_rng(123)
+    for _ in range(20):
+        n = int(rng.integers(1, 9))
+        edges = []
+        for u in range(n):
+            for v in range(u + 1, n):
+                if rng.random() < 0.35:
+                    edges.append((u, v, int(rng.integers(1, 4)), int(rng.integers(0, 8))))
+            if rng.random() < 0.3:
+                edges.append((u, None, int(rng.integers(1, 4)), int(rng.integers(0, 8))))
+        if edges and rng.random() < 0.5:
+            u, v, w, mask = edges[0]
+            edges.append((u, v, w, mask ^ 1))
+        rng.shuffle(edges)
+        graph = DecodingGraph(n, 3, edges)
+        decoder = UnionFindDecoder(graph)
+        for _ in range(3):
+            syndrome = np.zeros(n, dtype=np.uint8)
+            for u, v, _, _ in edges:
+                if rng.integers(0, 2):
+                    syndrome[u] ^= 1
+                    if v is not None:
+                        syndrome[v] ^= 1
+            expected = decoder._decode(syndrome)
+            growth_result = decoder.decode_with_growth_costs(syndrome)
+            # Both entry points must choose the identical correction.
+            assert growth_result.selected_edges == expected.selected_edges
+            assert growth_result.observable_mask == expected.observable_mask
+            assert len(growth_result.remaining_costs) == len(graph.edges)
+            np.testing.assert_array_equal(
+                decoder.decode(syndrome),
+                [(growth_result.observable_mask >> k) & 1 for k in range(graph.num_observables)],
+            )
+
+
+def test_growth_decode_result_tuples_survive_a_later_decode_unchanged():
+    graph = DecodingGraph(4, 3, [(0, 1, 1, 1), (1, 2, 2, 2), (2, 3, 3, 4), (3, 0, 1, 3), (0, 2, 2, 6)])
+    decoder = UnionFindDecoder(graph)
+    first = decoder.decode_with_growth_costs([1, 1, 0, 0])
+    assert isinstance(first, GrowthDecodeResult)
+    selected_snapshot = tuple(first.selected_edges)
+    costs_snapshot = tuple(first.remaining_costs)
+    mask_snapshot = first.observable_mask
+    # Later calls on the same decoder must not reach back and mutate a
+    # previously returned result; each call owns fresh growth state.
+    decoder.decode_with_growth_costs([0, 1, 1, 0])
+    decoder.decode([1, 0, 0, 1])
+    decoder.decode_batch([[1, 1, 0, 0], [0, 0, 0, 0]])
+    assert first.selected_edges == selected_snapshot
+    assert first.remaining_costs == costs_snapshot
+    assert first.observable_mask == mask_snapshot
+
+
+@pytest.mark.parametrize('syndrome', [[1], [[1, 1]], [2, 0], [-1, 0], [float('nan'), 0], ['1', '0'], [1j, 0]])
+def test_growth_costs_rejects_malformed_syndromes_like_decode(syndrome):
+    decoder = UnionFindDecoder(DecodingGraph(2, 0, [(0, 1, 1, 0)]))
+    with pytest.raises(ValueError) as via_decode:
+        decoder.decode(syndrome)
+    with pytest.raises(ValueError) as via_growth_costs:
+        decoder.decode_with_growth_costs(syndrome)
+    assert type(via_decode.value) is type(via_growth_costs.value)
+    assert str(via_decode.value) == str(via_growth_costs.value)
+
+
+def test_growth_costs_rejects_unrealizable_syndrome_like_decode():
+    # A boundaryless triangle with an odd syndrome has no valid correction.
+    edges = [(0, 1, 1, 1), (1, 2, 1, 2), (2, 0, 1, 4)]
+    decoder = UnionFindDecoder(DecodingGraph(3, 3, edges))
+    with pytest.raises(InvalidSyndromeError):
+        decoder.decode([1, 1, 1])
+    with pytest.raises(InvalidSyndromeError):
+        decoder.decode_with_growth_costs([1, 1, 1])
