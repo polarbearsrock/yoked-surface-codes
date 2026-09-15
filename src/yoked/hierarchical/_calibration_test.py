@@ -5,9 +5,12 @@ data in both directions; the exact PAV knot convention on small hand-picked
 examples (block centres are count-weighted means, equal-valued adjacent
 blocks stay separate knots, a strict violation pools into one block);
 interpolation between knots and constant extrapolation beyond them; clipped
-outputs keep the log-odds finite; invalid input (bad direction, non-finite
-scores, outcomes outside {0, 1}, mismatched or empty samples) is rejected;
-and the calibrator round-trips through JSON.
+outputs keep the log-odds finite; invalid input to `fit`/`probability` (bad
+direction, non-finite scores, outcomes outside {0, 1}, mismatched or empty
+samples) is rejected; every knot-validity branch in the dataclass
+constructor itself (`__post_init__`) is separately exercised by constructing
+`IsotonicCalibrator` directly, since `fit` only ever builds valid knots; and
+the calibrator round-trips through JSON.
 """
 import json
 
@@ -72,6 +75,37 @@ def test_rejects_bad_input():
     calibrator = IsotonicCalibrator.fit([1.0, 2.0], [0, 1], direction='increasing')
     with pytest.raises(ValueError, match='finite'):
         calibrator.probability([np.nan])
+
+
+@pytest.mark.parametrize('direction, centers, probabilities, num_samples, message', [
+    ('sideways', [1.0, 2.0], [0.4, 0.5], 10, 'direction'),               # not one of DIRECTIONS
+    ('increasing', [], [], 10, 'nonempty'),                              # no knots at all
+    ('increasing', [1.0, 2.0], [0.4], 10, 'equally sized'),              # centers/probabilities length mismatch
+    ('increasing', [1.0, np.inf], [0.4, 0.5], 10, 'finite'),             # a non-finite center
+    ('increasing', [2.0, 1.0], [0.4, 0.5], 10, 'strictly increasing'),   # centers out of order
+    ('increasing', [1.0, 2.0], [0.0, 0.5], 10, 'clipping range'),        # probability below CLIP
+    ('increasing', [1.0, 2.0], [0.5, 1.0], 10, 'clipping range'),        # probability above 1 - CLIP
+    ('increasing', [1.0, 2.0], [0.9, 0.1], 10, 'monotone'),              # falling probabilities, increasing direction
+    ('decreasing', [1.0, 2.0], [0.1, 0.9], 10, 'monotone'),              # rising probabilities, decreasing direction
+    ('increasing', [1.0, 2.0], [0.4, 0.5], 0, 'positive integer'),       # num_samples zero
+    ('increasing', [1.0, 2.0], [0.4, 0.5], -1, 'positive integer'),      # num_samples negative
+    ('increasing', [1.0, 2.0], [0.4, 0.5], True, 'positive integer'),    # num_samples a bool, not a count
+])
+def test_constructor_rejects_every_invalid_knot_case(direction, centers, probabilities, num_samples, message):
+    # fit() only ever hands the constructor knots that are already valid, so these branches of
+    # __post_init__ are otherwise untested; construct directly to hit each one.
+    with pytest.raises(ValueError, match=message):
+        IsotonicCalibrator(direction, centers, probabilities, num_samples)
+
+
+def test_constructor_accepts_valid_knots_and_interpolates():
+    # A direct construction with hand-picked knots, exercising the happy path through the same
+    # validation that the rejection cases above each trip on one branch of.
+    calibrator = IsotonicCalibrator('increasing', [1.0, 3.0], [0.2, 0.8], 5)
+    assert calibrator.num_samples == 5
+    assert calibrator.probability([2.0]) == pytest.approx(0.5)   # linear interpolation, midpoint of the two knots
+    assert calibrator.probability([0.0]) == pytest.approx(0.2)   # constant extrapolation below the first knot
+    assert calibrator.probability([5.0]) == pytest.approx(0.8)   # constant extrapolation above the last knot
 
 
 def test_json_round_trip():
