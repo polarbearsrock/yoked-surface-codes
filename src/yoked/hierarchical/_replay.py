@@ -287,16 +287,6 @@ class ReplayConfig:
                 f'{ESTIMATOR_SEPARATOR}{self.policy.name}{ESTIMATOR_SEPARATOR}{self.outer}')
 
 
-def reference_of_config(name: str) -> str:
-    """The reference decoder named by a configuration name.
-
-    A ``ReplayResult`` carries its configuration as a string, so the metrics
-    read the reference back from the name rather than from a second field that
-    could disagree with it.
-    """
-    return Estimator.parse(str(name).split(CONFIG_SEPARATOR)[0]).reference
-
-
 # --- work counts ---------------------------------------------------------------
 
 
@@ -407,15 +397,19 @@ def _replay_work(record: L1Record, config: ReplayConfig, requested: np.ndarray,
 class ReplayResult:
     """One configuration's replay over a record, every array owned and read-only.
 
-    Fields: ``config`` the configuration name; ``final`` (shots, 2P) bool the
-    predicted observable flips; ``requested`` (shots, 2P) bool the request mask
-    M in column layout; ``refined_patches`` (shots, P) bool the distinct-patch
-    mask U; ``ties`` (shots, 2) bool whether L2's maximum was tied in that
-    sector; ``above_half`` (shots, 2, P) bool whether the probability L2
-    consumed exceeded one half; ``work`` the per-shot ``WorkCounts``.
+    Fields: ``config`` the configuration name; ``reference`` the reference
+    decoder both its estimators were defined against, in ``REFERENCE_NAMES``,
+    which fixes the eligible population every metric is measured over;
+    ``final`` (shots, 2P) bool the predicted observable flips; ``requested``
+    (shots, 2P) bool the request mask M in column layout; ``refined_patches``
+    (shots, P) bool the distinct-patch mask U; ``ties`` (shots, 2) bool whether
+    L2's maximum was tied in that sector; ``above_half`` (shots, 2, P) bool
+    whether the probability L2 consumed exceeded one half; ``work`` the
+    per-shot ``WorkCounts``.
     """
 
     config: str
+    reference: str
     final: np.ndarray
     requested: np.ndarray
     refined_patches: np.ndarray
@@ -426,6 +420,8 @@ class ReplayResult:
     def __post_init__(self) -> None:
         if not isinstance(self.config, str) or not self.config:
             raise ValueError('config must be a nonempty configuration name')
+        if self.reference not in REFERENCE_NAMES:
+            raise ValueError(f'reference must be one of {REFERENCE_NAMES}, got {self.reference!r}')
         if not isinstance(self.work, WorkCounts):
             raise TypeError(f'work must be a WorkCounts, got {type(self.work).__name__}')
         final = np.asarray(self.final)
@@ -506,6 +502,7 @@ def replay(record: L1Record, calibrators: Calibrators, config: ReplayConfig) -> 
         rows = np.flatnonzero((parity != record.yoke).any(axis=1))
         raise ValueError(f'final sector parity does not equal the yoke bit on rows {rows[:10].tolist()}')
 
-    return ReplayResult(config=config.name, final=final, requested=to_columns(requested),
+    return ReplayResult(config=config.name, reference=config.reference, final=final,
+                        requested=to_columns(requested),
                         refined_patches=refined_patches, ties=ties, above_half=q > 0.5,
                         work=_replay_work(record, config, requested, refined_patches))

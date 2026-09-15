@@ -34,8 +34,7 @@ from yoked.hierarchical._policies import NoRefinement, RefineAll
 from yoked.hierarchical._record import L1Record, by_sector
 from yoked.hierarchical._replay import (
     REFINEMENT_PAIRS, REPLAY_BATCH_SHOTS, Estimator, ReplayConfig, ReplayResult, WorkCounts,
-    calibrated_probabilities, estimator_scores, fit_calibrators, reference_of_config,
-    residual_errors, replay,
+    calibrated_probabilities, estimator_scores, fit_calibrators, residual_errors, replay,
 )
 
 # --- small hand-built records ------------------------------------------------
@@ -255,7 +254,7 @@ def test_calibrated_probabilities_name_a_missing_estimator():
 def test_replay_config_name():
     config = ReplayConfig(INITIAL, REFINED, RefineAll())
     assert config.name == 'uf:cluster_gap->gap_plain:all_refined:mixed'
-    assert reference_of_config(config.name) == 'uf'
+    assert config.reference == 'uf'
 
 
 def test_replay_config_requires_one_reference():
@@ -318,6 +317,7 @@ def test_initial_only_final_bits_are_the_hand_worked_l2_answer():
     ]))
     assert not result.requested.any() and not result.refined_patches.any()
     assert not result.ties.any()
+    assert result.reference == 'uf' and result.config.startswith('uf:cluster_gap->')
 
 
 def test_all_refined_final_bits_are_the_hand_worked_l2_answer():
@@ -580,7 +580,7 @@ def test_replay_work_is_a_separate_object_from_collection_work(distance3_collect
 def test_replay_result_rejects_inconsistent_shapes():
     shots, patches = 2, 3
     work = WorkCounts(**{f.name: np.zeros(shots, dtype=np.int64) for f in dataclasses.fields(WorkCounts)})
-    good = dict(config='c', final=np.zeros((shots, 2 * patches), dtype=bool),
+    good = dict(config='c', reference='uf', final=np.zeros((shots, 2 * patches), dtype=bool),
                 requested=np.zeros((shots, 2 * patches), dtype=bool),
                 refined_patches=np.zeros((shots, patches), dtype=bool),
                 ties=np.zeros((shots, 2), dtype=bool),
@@ -590,3 +590,5 @@ def test_replay_result_rejects_inconsistent_shapes():
         ReplayResult(**{**good, 'ties': np.zeros((shots + 1, 2), dtype=bool)})
     with pytest.raises(ValueError):
         ReplayResult(**{**good, 'refined_patches': np.zeros((shots, patches + 1), dtype=bool)})
+    with pytest.raises(ValueError, match='reference'):
+        ReplayResult(**{**good, 'reference': 'joint'})

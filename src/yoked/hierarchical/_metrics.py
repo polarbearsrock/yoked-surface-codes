@@ -37,7 +37,7 @@ import numpy as np
 import sinter
 
 from yoked.hierarchical._record import L1Record, by_sector
-from yoked.hierarchical._replay import ReplayResult, reference_of_config
+from yoked.hierarchical._replay import ReplayResult
 
 SECTOR_NAMES = ('X', 'Z')
 """Sector 0 is X and sector 1 is Z, the order of the record's column layout."""
@@ -385,7 +385,7 @@ def _checked_pair(record: L1Record, result: ReplayResult) -> str:
     if result.num_patches != record.num_patches:
         raise ValueError(f'{result.config} covers {result.num_patches} patches, '
                          f'the record has {record.num_patches}')
-    return reference_of_config(result.config)
+    return result.reference
 
 
 def summarize_result(record: L1Record, result: ReplayResult, *, pieces) -> dict:
