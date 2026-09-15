@@ -31,6 +31,15 @@ CLIP = 1e-6
 DIRECTIONS = ('increasing', 'decreasing')
 """The only two monotone senses a calibrator can be fit in; anything else is a caller error."""
 
+KNOT_CONVENTION = ('pav-blocks-of-distinct-scores; knot at each block weighted-mean score; '
+                   'linear between knots; constant beyond; clipped to [1e-6, 1 - 1e-6]')
+"""Exactly the rule ``fit`` and ``probability`` implement, written down so that a stage can
+record it and a later stage can refuse knots fitted under a different one. Two calibrators
+with the same knots but different rules between them are different maps, and nothing in the
+knot arrays themselves would say so. It is part of the calibration identity, so changing the
+string without changing the rule invalidates stored calibrations, and changing the rule
+without changing the string would let an incompatible fit pass as this one."""
+
 
 @dataclass(frozen=True)
 class IsotonicCalibrator:

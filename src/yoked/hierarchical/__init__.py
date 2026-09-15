@@ -23,6 +23,10 @@ from yoked.hierarchical._replay import (
     Calibrators, Estimator, ReplayConfig, ReplayResult, WorkCounts, calibrated_probabilities,
     estimator_scores, fit_calibrators, replay, residual_errors,
 )
+from yoked.hierarchical._stages import (
+    CollectRequest, config_directory_name, load_calibrators, parse_config, stage_calibrate,
+    stage_collect, stage_replay, stage_summarize,
+)
 
 __all__ = [
     'NUM_SECTORS', 'PatchGraph', 'PatchGraphs',
@@ -40,4 +44,6 @@ __all__ = [
     'fit_calibrators', 'calibrated_probabilities', 'estimator_scores', 'residual_errors', 'replay',
     'Rate', 'PairedDifference', 'paired_bootstrap', 'normalized_ler',
     'summarize_result', 'compare_endpoints',
+    'CollectRequest', 'stage_collect', 'stage_calibrate', 'load_calibrators',
+    'parse_config', 'config_directory_name', 'stage_replay', 'stage_summarize',
 ]

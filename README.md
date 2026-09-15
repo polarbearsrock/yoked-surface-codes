@@ -38,6 +38,17 @@ passes with correlation information from the DEM. Fusion Blossom's UF variant
 is available separately as an optional dependency and explicit decoder choice. See
 [usage and correctness tests](docs/union_find_usage.md).
 
+## Hierarchical L1/L2 decoding
+
+The `yoked.hierarchical` package decodes a 1D yoked block in two layers: L1
+decodes each patch on its own and stores reference bits with soft outputs, and
+an exact outer decoder (L2) uses the calibrated residual-error probabilities and
+the yoke parities to decide which patches to correct. `tools/hierarchical_experiment`
+drives it in four verified stages -- collect, calibrate, replay, summarize -- each
+publishing a manifest that the next one checks before reading. See
+[usage](docs/hierarchical_decoding.md) and the
+[design spec](docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md).
+
 ## Directory structure
 
 - `.`: top level of repository, with this README and the generation scripts

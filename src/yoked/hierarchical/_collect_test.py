@@ -26,15 +26,15 @@ from yoked.hierarchical._collect import (
     ACTUAL_FILE, CHECKPOINT_FILE, CIRCUIT_FILE, COLLECTION_FILE, DEM_FILE, DETECTORS_FILE,
     EDGE_WEIGHT_TOLERANCE, FAILED_CHECKS_FILE, FORCED_CALLS_PER_DECODE, RECORDED_MANIFEST, ROLES,
     SAMPLE_MANIFEST, WEIGHT_TOLERANCE, WORK_FIELDS, CircuitParameters, CollectionSettings,
-    CollectionWork, L1Context, SampleSet, _Buffers, _CollectionHooks, _run_chunks, check_graphs,
-    check_record, collect_rows, collect_sample,
+    CollectionWork, L1Context, SampleSet, _audit_source_hashes, _Buffers, _CollectionHooks,
+    _run_chunks, check_graphs, check_record, collect_rows, collect_sample,
 )
 from yoked.hierarchical._matching_gaps import signed_gaps
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
 from yoked.hierarchical._provenance import (
-    CHECK_SOURCES, DECODER_PACKAGES, DECODER_SOURCES, MODEL_PACKAGES, RECORD_CONVENTIONS,
-    SAMPLING_PACKAGES, decoder_identity, package_versions, read_json, row_ids_sha256,
-    sha256_file, source_hashes, write_json_atomic,
+    AUDIT_SOURCES, CHECK_SOURCES, DECODER_PACKAGES, DECODER_SOURCES, MODEL_PACKAGES,
+    RECORD_CONVENTIONS, REPOSITORY_ROOT, SAMPLING_PACKAGES, decoder_identity, package_versions,
+    read_json, row_ids_sha256, sha256_file, source_hashes, write_json_atomic,
 )
 from yoked.hierarchical._record import (
     ARRAY_FIELDS, IDENTITY_NAMES, LoadedRecord, RECORD_FILE, RECORD_MANIFEST,
@@ -591,10 +591,18 @@ def test_the_published_identities_name_the_sample_the_decoder_and_the_collection
         versions=package_versions(DECODER_PACKAGES))
 
 
-def test_the_manifest_lists_the_audit_sources_that_do_not_exist_yet(reference):
+def test_the_manifest_hashes_the_audit_sources_and_names_any_that_are_missing(reference,
+                                                                             monkeypatch):
     audit = reference.manifest['source_sha256']['audit']
-    assert 'src/yoked/hierarchical/_stages.py' in audit['missing']
-    assert 'src/yoked/_yoked_memory_circuits.py' in audit
+    for name in ('src/yoked/hierarchical/_stages.py', 'tools/hierarchical_experiment',
+                 'src/yoked/_yoked_memory_circuits.py'):
+        assert audit[name] == sha256_file(REPOSITORY_ROOT / name)
+    assert audit['missing'] == ()
+    # A source a later milestone has not written yet is named rather than raising: no
+    # identity is computed from this group, so a record may be collected before it exists.
+    monkeypatch.setattr('yoked.hierarchical._collect.AUDIT_SOURCES',
+                        AUDIT_SOURCES + ('src/yoked/hierarchical/_not_written_yet.py',))
+    assert _audit_source_hashes()['missing'] == ['src/yoked/hierarchical/_not_written_yet.py']
     assert set(reference.manifest['source_sha256']) == {'decoder', 'check', 'audit'}
     assert set(reference.manifest['versions']) == {'decoder', 'check'}
 

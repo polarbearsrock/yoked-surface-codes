@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+"""Driver for the hierarchical L1/L2 experiment: collect, calibrate, replay, summarize.
+
+Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, section 11.
+Usage: docs/hierarchical_decoding.md.
+
+This file parses arguments and prints paths. Every check and every published artifact
+belongs to ``yoked.hierarchical``, so a failure can be reproduced from Python without
+the command line, and no behavior here is out of reach of a test.
+"""
+
+import argparse
+import pathlib
+import sys
+
+import numpy as np
+
+src_path = pathlib.Path(__file__).parent.parent / 'src'
+assert src_path.exists()
+sys.path.append(str(src_path))
+
+from yoked.hierarchical import (
+    ROLES, CircuitParameters, CollectRequest, parse_config, stage_calibrate, stage_collect,
+    stage_replay, stage_summarize,
+)
+from yoked.hierarchical._metrics import DEFAULT_REPLICATES, DEFAULT_SEED
+
+GENERATION_ARGUMENTS = ('distance', 'rounds', 'p', 'seed', 'shots')
+"""What a generated sample needs. ``--patches`` has the circuit's own default, so it is
+not required, and a recorded run supplies all of them from its own manifest."""
+
+ROW_RANGE_SEPARATOR = ':'
+"""``0:2000`` means the 2,000 parent rows 0 to 1,999, the half-open convention of slices."""
+
+
+def row_range(text: str) -> np.ndarray:
+    """Parse ``START:STOP`` into the parent row ids it names, half-open as slices are."""
+    parts = text.split(ROW_RANGE_SEPARATOR)
+    if len(parts) != 2 or not all(part.strip().lstrip('-').isdigit() for part in parts):
+        raise argparse.ArgumentTypeError(
+            f'rows must be written START{ROW_RANGE_SEPARATOR}STOP, for example '
+            f'0{ROW_RANGE_SEPARATOR}2000 for rows 0 to 1999; got {text!r}')
+    start, stop = (int(part) for part in parts)
+    if start < 0 or stop <= start:
+        raise argparse.ArgumentTypeError(
+            f'rows must name a nonempty range of nonnegative parent rows, got {text!r}')
+    return np.arange(start, stop, dtype=np.int64)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    stages = parser.add_subparsers(dest='stage', required=True)
+
+    collect = stages.add_parser('collect', help='decode parent rows of one sample into a record')
+    collect.add_argument('--out', required=True, help='collection directory')
+    collect.add_argument('--role', required=True, choices=ROLES)
+    collect.add_argument('--recorded-run', help='directory of a recorded four-decoder run to import')
+    collect.add_argument('--distance', type=int, help='patch diameter of a generated sample')
+    collect.add_argument('--rounds', type=int)
+    collect.add_argument('--p', type=float, help='SI1000 noise strength')
+    collect.add_argument('--patches', type=int, default=6)
+    collect.add_argument('--seed', type=int, help='Stim sampler seed of the one sampling call')
+    collect.add_argument('--shots', type=int, help='shots in that full call, not rows decoded')
+    collect.add_argument('--rows', type=row_range, default=None,
+                         help='parent rows to decode, as START:STOP; default every row')
+    collect.add_argument('--workers', type=int, default=1)
+    collect.add_argument('--chunk-size', type=int, default=64)
+    collect.add_argument('--max-chunks', type=int, default=None)
+
+    calibrate = stages.add_parser('calibrate', help='fit calibrators on a calibration record')
+    calibrate.add_argument('--record', required=True)
+    calibrate.add_argument('--out', required=True, help='calibrator artifact to write')
+    calibrate.add_argument('--estimators', nargs='+', required=True,
+                           help='estimator names, each reference:score')
+
+    replay = stages.add_parser('replay', help='replay configurations over an evaluation record')
+    replay.add_argument('--record', required=True)
+    replay.add_argument('--calibrators', required=True)
+    replay.add_argument('--out', required=True, help='replay directory')
+    replay.add_argument('--config', action='append', required=True, dest='configs',
+                        help='initial=ref:score,refined=score,policy=name[,outer=rule]')
+
+    summarize = stages.add_parser('summarize', help='report verified replay outputs')
+    summarize.add_argument('--replays', nargs='+', required=True)
+    summarize.add_argument('--out', required=True, help='report path, for example summary.md')
+    summarize.add_argument('--replicates', type=int, default=DEFAULT_REPLICATES)
+    summarize.add_argument('--seed', type=int, default=DEFAULT_SEED)
+    return parser
+
+
+def run_collect(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Build the request, letting argparse report which flags cannot be combined."""
+    supplied = [name for name in GENERATION_ARGUMENTS if getattr(args, name) is not None]
+    if args.recorded_run is not None:
+        if supplied:
+            parser.error(f'--recorded-run cannot be combined with {supplied}')
+        parameters, seed, shots = None, None, None
+    else:
+        missing = [name for name in GENERATION_ARGUMENTS if getattr(args, name) is None]
+        if missing:
+            parser.error(f'a generated sample needs --recorded-run or all of {missing}')
+        parameters = CircuitParameters(distance=args.distance, rounds=args.rounds, p=args.p,
+                                       patches=args.patches)
+        seed, shots = args.seed, args.shots
+    record = stage_collect(CollectRequest(
+        out_dir=args.out, role=args.role, rows=args.rows, workers=args.workers,
+        chunk_size=args.chunk_size, max_chunks=args.max_chunks, recorded_run=args.recorded_run,
+        parameters=parameters, seed=seed, shots=shots))
+    if record is None:
+        print(f'{args.out}: rows remain; run the same command again to continue')
+    else:
+        print(f'{record.directory}: {record.record.shots} rows collected and published')
+
+
+def main() -> None:
+    parser = build_parser()
+    args = parser.parse_args()
+    if args.stage == 'collect':
+        run_collect(parser, args)
+    elif args.stage == 'calibrate':
+        stage_calibrate(args.record, args.out, args.estimators)
+        print(f'{args.out}: calibrators fitted on {args.record}')
+    elif args.stage == 'replay':
+        results = stage_replay(args.record, args.calibrators, args.out,
+                               [parse_config(text) for text in args.configs])
+        print(f'{args.out}: {len(results)} configurations replayed')
+    else:
+        stage_summarize(args.replays, args.out, replicates=args.replicates, seed=args.seed)
+        print(f'{args.out}: report, results, and manifest written')
+
+
+if __name__ == '__main__':
+    main()
