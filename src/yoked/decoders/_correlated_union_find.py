@@ -6,7 +6,7 @@ from yoked.decoders._correlations import (
     CorrelationRule, apply_correlation_rules, correlation_rules_from_dem, index_rules_by_source,
 )
 from yoked.decoders._graph import DecodingGraph
-from yoked.decoders._union_find import UnionFindDecoder, _Correction
+from yoked.decoders._union_find import GrowthDecodeResult, UnionFindDecoder, _Correction
 
 if TYPE_CHECKING:
     import stim
@@ -63,3 +63,10 @@ class CorrelatedUnionFindDecoder(UnionFindDecoder):
         # Restart growth on the original syndrome. The first correction was
         # evidence only; the second correction supplies the complete answer.
         return UnionFindDecoder(adjusted)._decode(syndrome)
+
+    def decode_with_growth_costs(self, syndrome) -> GrowthDecodeResult:
+        """Refuse: two reweighted passes have no single terminated growth state to cost."""
+        raise NotImplementedError(
+            'decode_with_growth_costs is defined for the single-pass UnionFindDecoder only; '
+            'CorrelatedUnionFindDecoder has no single terminated growth state to report costs from'
+        )

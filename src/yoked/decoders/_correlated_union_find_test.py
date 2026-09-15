@@ -164,3 +164,20 @@ def test_invalid_correlation_rules(rule):
     graph = DecodingGraph(3, 0, [(0, 1, 1, 0), (1, 2, 1, 0)])
     with pytest.raises(ValueError):
         CorrelatedUnionFindDecoder(graph, correlation_rules=[rule])
+
+
+def test_growth_costs_are_refused_but_decode_still_works():
+    # The two-pass correlated solve has no single terminated growth state to
+    # report costs from, so the inherited single-pass method must not run
+    # silently against the first, uncorrelated pass (it would then disagree
+    # with .decode() on the same object). Reuse the reviewer's reproduction:
+    # a correlated pair whose second pass changes the logical answer.
+    graph = DecodingGraph(4, 3, [
+        (0, 1, 5, 1), (1, 2, 5, 2), (2, 3, 2, 4), (0, None, 4, 1), (3, None, 5, 2), (0, 2, 4, 3),
+    ])
+    decoder = CorrelatedUnionFindDecoder(graph, correlation_rules=[(5, 4, 2.0)])
+    syndrome = [1, 1, 0, 1]
+    with pytest.raises(NotImplementedError, match='single-pass'):
+        decoder.decode_with_growth_costs(syndrome)
+    # The decoder itself must remain usable afterwards.
+    np.testing.assert_array_equal(decoder.decode(syndrome), [True, True, False])

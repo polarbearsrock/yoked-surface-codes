@@ -82,6 +82,12 @@ class UnionFindDecoder:
         its weight. Settling each edge here (rather than during growth)
         keeps the hot path in ``_Growth`` free of this extra bookkeeping,
         since only soft-output consumers need it.
+
+        This reports the single-pass growth state terminated by
+        ``_decode_state``; a subclass that overrides ``_decode`` with a
+        different decoding procedure (for example a second pass over
+        reweighted edges) must override this method too, or it will report
+        costs from a growth state that does not correspond to its correction.
         """
         correction, growth = self._decode_state(syndrome)
         costs = []
