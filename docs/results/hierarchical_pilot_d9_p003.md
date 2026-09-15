@@ -293,13 +293,22 @@ counts. Neither number is elapsed time.
 | Collection seconds (`timing.seconds_this_run`) | 17.863 | 45.326 | 45.276 |
 | Wall clock of the command | 30.71 s | 63.65 s | 58.17 s |
 | Setup, graph gate and record gate (wall minus collection) | 12.8 s | 18.3 s | 12.9 s |
-| Measured throughput | 2.799 rows/s (1.400 per worker) | 43.906 rows/s (2.744 per worker) | 44.174 rows/s (2.761 per worker) |
+| Measured throughput | 2.799 rows/s (1.400 per worker) | 44.125 rows/s (2.758 per worker) | 44.174 rows/s (2.761 per worker) |
+
+Each throughput is that collection's own rows divided by its own manifest's
+`timing.seconds_this_run`, then divided by its worker count:
+50 / 17.863 = 2.799 rows/s (2.799 / 2 = 1.400 per worker);
+2000 / 45.326 = 44.125 rows/s (44.125 / 16 = 2.758 per worker);
+2000 / 45.276 = 44.174 rows/s (44.174 / 16 = 2.761 per worker).
+The calibration figures come from the current `$OUT/calibration/manifest.json`
+(`timing.seconds_this_run` 45.32559), not from the superseded pre-fix
+collection described below, whose manifest records 45.56216 s.
 
 No collection was interrupted, none was resumed, and no `checkpoint.npz` or
 `failed_checks.json` remains: `resumptions` is 0 everywhere and no attempted-work
 telemetry was lost. The setup row is not decoder work; it is process start, the
 sample load or generation, the per-worker rebuild of the d=9 decoders from the
-19 MB DEM, the graph gate and the record gate.
+19,665,395-byte DEM, the graph gate and the record gate.
 
 Two operational notes belong with these numbers. First, the calibration record
 was collected twice. The first collection (2026-09-15T06:50:28Z, commit
@@ -318,8 +327,12 @@ verbatim their model identity never changed, so both took the
 revalidate-and-republish path — 12.93 s and 12.95 s, no rows recollected,
 `record.npz` hash, `timing`, `collection_work` and `created_utc` all unchanged,
 only the check identity and the check source hashes updated to the new
-`_collect.py`. The timings above are those of the original collections, which
-are the runs that actually decoded the rows.
+`_collect.py`. Every timing above is that of the run whose rows the published
+record holds: for calibration that is the post-fix recollection (45.326 s), not
+the superseded one (45.562 s), and for evaluation and preflight it is their
+original collection, which the later revalidation left untouched. The 12.93 s
+and 12.95 s revalidation passes decoded nothing and are excluded from the
+throughput figures.
 
 ## 6. Historical baselines on the same rows
 
@@ -352,21 +365,24 @@ measurement.
 ## 7. Projected full collection cost, and the decision
 
 Projections use the measured 16-worker pilot throughput of section 5, not an
-assumed scaling. Per-worker throughput was 1.400 rows/s on 2 workers and 2.744
+assumed scaling. Per-worker throughput was 1.400 rows/s on 2 workers and 2.758
 to 2.761 rows/s on 16, so the numbers below assume the 16-worker per-row cost
 holds over the whole sample; setup adds 13 to 19 s per invocation and does not
-scale with rows.
+scale with rows. The evaluation rows are projected at 44.174 rows/s and the
+calibration rows at 44.125 rows/s, each from its own current manifest.
 
 | Work | Rows | Projected collection time |
 |---|---:|---:|
-| Full evaluation set | 100,000 | 37.7 min |
-| Evaluation rows remaining after the pilot | 98,000 | 37.0 min |
-| Full calibration set | 50,000 | 19.0 min |
-| Calibration rows remaining after the pilot | 48,000 | 18.2 min |
+| Full evaluation set | 100,000 | 37.7 min (100000 / 44.174 = 2,264 s) |
+| Evaluation rows remaining after the pilot | 98,000 | 37.0 min (98000 / 44.174 = 2,219 s) |
+| Full calibration set | 50,000 | 18.9 min (50000 / 44.125 = 1,133 s) |
+| Calibration rows remaining after the pilot | 48,000 | 18.1 min (48000 / 44.125 = 1,088 s) |
 
-A record grows to about 65 MB per 100,000 rows (`record.npz` is 1.3 MB for
-2,000), and each saved sample keeps its packed detector array (233 MB for the
-100,000-shot evaluation call, 127 MB for the 50,000-shot calibration call).
+Sizes below are MiB (1,048,576 bytes). A record grows to about 62 MiB per
+100,000 rows (`record.npz` is 1,307,462 bytes, 1.25 MiB, for 2,000), and each
+saved sample keeps its packed detector array: 222,100,128 bytes (211.8 MiB) for
+the 100,000-shot evaluation call and 111,050,128 bytes (105.9 MiB) for the
+50,000-shot calibration call.
 
 **Decision: proceed to M2.** The plan's criterion is a negative paired
 all-refined minus initial-only difference on the pooled misattribution rate of
