@@ -540,7 +540,9 @@ class SampleSet:
         _check_dimensions(parameters, dem.num_detectors, dem.num_observables)
         detectors, actual = circuit.compile_detector_sampler(seed=seed).sample(
             shots=shots, separate_observables=True, bit_packed=True)
-        circuit_text, dem_text = str(circuit), str(dem)
+        # One trailing newline, matching Stim's own to_file: the model identity hashes
+        # these bytes, and an imported recorded run's files carry that newline too.
+        circuit_text, dem_text = str(circuit) + '\n', str(dem) + '\n'
         circuit_sha256 = sha256_bytes(circuit_text.encode('utf-8'))
         dem_sha256 = sha256_bytes(dem_text.encode('utf-8'))
         payload_sha256 = packed_sample_hash(detectors, actual)

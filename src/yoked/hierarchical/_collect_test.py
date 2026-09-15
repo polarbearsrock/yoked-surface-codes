@@ -84,9 +84,20 @@ def copied(source, destination):
 
 
 def write_recorded_run(saved, directory, sample):
-    """The recorded four-decoder run layout, rebuilt from a saved sample."""
+    """The recorded four-decoder run layout, rebuilt from a saved sample.
+
+    The circuit and model files are written through Stim's own ``to_file`` rather than
+    copied from ``SampleSet.save``'s bytes, so this fixture follows the real recorded-run
+    convention independently of how the generator happens to write them; a mismatch
+    between the two shows up as a differing model identity instead of being masked by
+    both sides sharing the same bytes.
+    """
     copied(saved, directory)
     (directory / SAMPLE_MANIFEST).unlink()
+    circuit = sample.parameters.circuit()
+    dem = sample.parameters.dem(circuit)
+    circuit.to_file(directory / CIRCUIT_FILE)
+    dem.to_file(directory / DEM_FILE)
     write_json_atomic(directory / RECORDED_MANIFEST, {
         'parameters': {**sample.parameters.to_json(), 'shots': sample.shots, 'seed': sample.seed},
         'input_sha256': {
@@ -132,6 +143,15 @@ def test_a_generated_sample_reports_its_dimensions_and_identities(sample, parame
     assert not sample.detectors_packed.flags.writeable and not sample.actual_packed.flags.writeable
     assert set(sample.identities) == {'model', 'parent_sample', 'sampling_family'}
     assert sample.source['kind'] == 'generated'
+
+
+def test_a_generated_samples_text_matches_stims_own_file_convention(sample, parameters):
+    """The model identity hashes these bytes, and an imported recorded run's files carry
+    Stim's ``to_file`` trailing newline, so a generated sample's text must too."""
+    circuit = parameters.circuit()
+    dem = parameters.dem(circuit)
+    assert sample.circuit_text == str(circuit) + '\n'
+    assert sample.dem_text == str(dem) + '\n'
 
 
 def test_rows_unpack_only_the_requested_rows(sample):
@@ -206,6 +226,10 @@ def test_a_recorded_run_imports_with_the_same_identities(sample, saved, tmp_path
     assert imported.dem_text == sample.dem_text
     np.testing.assert_array_equal(imported.detectors_packed, sample.detectors_packed)
     np.testing.assert_array_equal(imported.actual_packed, sample.actual_packed)
+    # A generated calibration sample and an imported evaluation sample built from the
+    # same circuit must carry the same model identity, or stage_replay cannot pair them.
+    generated = SampleSet.sample(sample.parameters, seed=sample.seed, shots=1)
+    assert imported.identities['model'] == generated.identities['model']
 
 
 def test_importing_rejects_a_tampered_model(sample, saved, tmp_path):

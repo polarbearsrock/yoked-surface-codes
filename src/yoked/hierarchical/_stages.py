@@ -297,10 +297,12 @@ def _generated_model_identity(parameters: CircuitParameters) -> str:
     """
     circuit = parameters.circuit()
     dem = parameters.dem(circuit)
+    # Same trailing newline as SampleSet.sample and Stim's own to_file: the model
+    # identity hashes file bytes, so this independent rebuild must hash the same bytes.
     return model_identity(
         parameters=parameters.to_json(),
-        circuit_sha256=sha256_bytes(str(circuit).encode('utf-8')),
-        dem_sha256=sha256_bytes(str(dem).encode('utf-8')),
+        circuit_sha256=sha256_bytes((str(circuit) + '\n').encode('utf-8')),
+        dem_sha256=sha256_bytes((str(dem) + '\n').encode('utf-8')),
         num_detectors=dem.num_detectors, num_observables=dem.num_observables,
         conventions=SAMPLE_CONVENTIONS, versions=package_versions(MODEL_PACKAGES))
 
