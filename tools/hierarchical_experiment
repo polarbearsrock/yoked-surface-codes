@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Driver for the hierarchical L1/L2 experiment: collect, import-baselines, calibrate, replay, summarize.
+"""Driver for the hierarchical L1/L2 experiment: collect, verify-subset, import-baselines, calibrate, replay, summarize.
 
 Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, section 11.
 Usage: docs/hierarchical_decoding.md.
@@ -21,7 +21,7 @@ sys.path.append(str(src_path))
 
 from yoked.hierarchical import (
     BASELINE_DECODERS, ROLES, CircuitParameters, CollectRequest, parse_config, stage_calibrate,
-    stage_collect, stage_import_baselines, stage_replay, stage_summarize,
+    stage_collect, stage_import_baselines, stage_replay, stage_summarize, stage_verify_subset,
 )
 from yoked.hierarchical._metrics import DEFAULT_REPLICATES, DEFAULT_SEED
 
@@ -66,6 +66,13 @@ def build_parser() -> argparse.ArgumentParser:
     collect.add_argument('--workers', type=int, default=1)
     collect.add_argument('--chunk-size', type=int, default=64)
     collect.add_argument('--max-chunks', type=int, default=None)
+
+    verify_subset = stages.add_parser(
+        'verify-subset',
+        help='compare a subset record with the full record of the same sampling call, row for row')
+    verify_subset.add_argument('--full', required=True, help='directory of the full record')
+    verify_subset.add_argument('--subset', required=True, help='directory of the subset record')
+    verify_subset.add_argument('--out', required=True, help='JSON path the check is written to')
 
     import_baselines = stages.add_parser(
         'import-baselines',
@@ -127,6 +134,10 @@ def main() -> None:
     args = parser.parse_args()
     if args.stage == 'collect':
         run_collect(parser, args)
+    elif args.stage == 'verify-subset':
+        check = stage_verify_subset(args.full, args.subset, args.out)
+        print(f'{args.out}: {check.matched_rows} of {check.subset_rows} subset rows reproduce '
+              f'the full record exactly')
     elif args.stage == 'import-baselines':
         record = stage_import_baselines(args.record, args.recorded_run, names=args.names)
         print(f'{record.directory}: {len(record.record.baselines)} baselines verified and attached')

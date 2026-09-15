@@ -2,7 +2,7 @@
 
 Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, sections 3, 6, 9, and 11.
 
-Five stages, each a function over already-verified inputs:
+Six stages, each a function over already-verified inputs:
 
   * ``stage_collect`` turns a ``CollectRequest`` into a collected record. The request
     names exactly one sample source -- a recorded four-decoder run, or the complete
@@ -11,6 +11,13 @@ Five stages, each a function over already-verified inputs:
     argument be ignored. A generated request additionally rebuilds today's circuit and
     model in memory and compares their model identity with the saved one, because a
     changed generator must not quietly hand old shots a new model.
+  * ``stage_verify_subset`` compares a completed full record with a completed subset
+    record of the same sampling call, row for row and array by array, through
+    ``_reproduction.py``. Both records must share their model, parent-sample,
+    sampling-family, and decoder identities and their role, named by the first that
+    differs, before anything is compared. The check's JSON is written with both records'
+    directories, identities, hashes, and row summaries whether or not it passed, and a
+    failed check then raises, so the numbers behind a refusal are on disk.
   * ``stage_import_baselines`` attaches a recorded four-decoder run's saved predictions
     to a completed evaluation record as the historical baselines of section 5.3, after
     ``_baselines.py`` has verified the run and gated it against the record. It assembles
@@ -59,9 +66,13 @@ sampling family, and another model; invalid knots, an altered calibrator, an alt
 prediction container, a replaced record, and a missing completion manifest refused; an
 interrupted replay publication rerunning cleanly; a reused replay directory returning
 its stored results; a confirmation request refused; a replay-source change leaving
-the collection identity untouched; and a baseline import once through the function and
-once through the command line. The import's own gates are checked beside
-``_baselines.py``.
+the collection identity untouched; a baseline import once through the function and
+once through the command line; and the subset check passing a full and a subset
+collection of one sampling call through the function and the command line, refusing
+another seed on the parent-sample identity and another role on the role, and reporting
+an altered subset record under its array and parent row with the JSON written first.
+The import's own gates are checked beside ``_baselines.py`` and the comparison beside
+``_reproduction.py``.
 """
 from __future__ import annotations
 
@@ -108,6 +119,7 @@ from yoked.hierarchical._replay import (
     CONFIG_SEPARATOR, ESTIMATOR_SEPARATOR, Calibrators, Estimator, ReplayConfig, ReplayResult,
     WorkCounts, fit_calibrators, replay,
 )
+from yoked.hierarchical._reproduction import SubsetCheck, subset_reproduction
 
 SAMPLE_DIRECTORY = 'sample'
 """Where a collect stage keeps the shots it decodes, inside its own output directory. A
@@ -123,6 +135,7 @@ CALIBRATION_ROLE, EVALUATION_ROLE = ROLES
 """The role each stage requires of the record it is handed: fitting reads only the
 calibration set, and replay only the held-out evaluation set."""
 
+VERIFY_SUBSET_STAGE = 'verify-subset'
 CALIBRATE_STAGE = 'calibrate'
 REPLAY_STAGE = 'replay'
 SUMMARIZE_STAGE = 'summarize'
@@ -396,6 +409,78 @@ def stage_collect(request: CollectRequest) -> LoadedRecord | None:
     settings = CollectionSettings(role=request.role, rows=rows, workers=request.workers,
                                   chunk_size=request.chunk_size, max_chunks=request.max_chunks)
     return collect_sample(sample_dir, request.out_dir, settings)
+
+
+# --- verify subset -----------------------------------------------------------
+
+
+SUBSET_IDENTITY_NAMES = ('model', 'parent_sample', 'sampling_family', 'decoder')
+"""The identities a full record and a subset record must share before their rows can be
+compared: one model, one sampling call and its family, and one L1 implementation. The
+collection identity is deliberately absent, because it covers the rows and the shot
+count and so differs between a full record and its subset by construction."""
+
+
+def _require_comparable(full: LoadedRecord, subset: LoadedRecord) -> None:
+    """Two records may be compared row for row only when they are the same experiment.
+
+    The four shared identities are checked first and the role last, each named on the
+    first difference, so that a subset of another seed is refused as another parent
+    sample rather than as a mass of differing rows.
+    """
+    for name in SUBSET_IDENTITY_NAMES:
+        if full.identities[name] != subset.identities[name]:
+            raise ValueError(f'{subset.directory} has the {name} identity '
+                             f'{subset.identities[name]}, {full.directory} has '
+                             f'{full.identities[name]}; a subset check compares two records of '
+                             f'one sampling call decoded by one L1 implementation')
+    if full.manifest['role'] != subset.manifest['role']:
+        raise ValueError(f'{subset.directory} holds a {subset.manifest["role"]!r} record and '
+                         f'{full.directory} a {full.manifest["role"]!r} record; a subset check '
+                         f'compares two records of one role')
+
+
+def _compared_record(loaded: LoadedRecord) -> dict:
+    """What the check's JSON records about each of the two records it compared."""
+    return {**_record_block(loaded), 'shots': loaded.record.shots,
+            'patches': loaded.record.num_patches}
+
+
+def stage_verify_subset(full_dir, subset_dir, out_path) -> SubsetCheck:
+    """Compare a completed subset record with the completed full record it is part of.
+
+    Both records are read through ``load_record``, must share the identities in
+    ``SUBSET_IDENTITY_NAMES`` and their role, and are then compared by
+    ``subset_reproduction``: every subset row located in the full record by parent row
+    id, every stored array equal there exactly, baselines excluded. The result is written
+    to ``out_path`` atomically, as JSON carrying both records' directories, identities,
+    ``record.npz`` and manifest hashes, row summaries, and roles, the check itself, and
+    the checker's own identity, whether or not the check passed; a failed check then
+    raises naming the differing arrays and parent rows. Returns the ``SubsetCheck``.
+    """
+    full, subset = load_record(full_dir), load_record(subset_dir)
+    _require_comparable(full, subset)
+    check = subset_reproduction(full.record, subset.record)
+    sources, versions = source_hashes(CHECK_SOURCES), package_versions(CHECK_PACKAGES)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json_atomic(out_path, {
+        'schema_version': SCHEMA_VERSION,
+        'stage': VERIFY_SUBSET_STAGE,
+        'passed': check.passed,
+        'full': _compared_record(full),
+        'subset': _compared_record(subset),
+        'check': check.to_json(),
+        'checker': {
+            'check_identity': check_identity(sources=sources, versions=versions),
+            'source_sha256': sources,
+            'versions': versions,
+            'code_commit': git_commit(),
+        },
+        'created_utc': utc_now(),
+    })
+    check.raise_if_failed(recorded_in=out_path)
+    return check
 
 
 # --- import baselines --------------------------------------------------------

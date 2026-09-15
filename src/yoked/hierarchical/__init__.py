@@ -27,9 +27,10 @@ from yoked.hierarchical._replay import (
     Calibrators, Estimator, ReplayConfig, ReplayResult, WorkCounts, calibrated_probabilities,
     estimator_scores, fit_calibrators, replay, residual_errors,
 )
+from yoked.hierarchical._reproduction import SubsetCheck, subset_reproduction
 from yoked.hierarchical._stages import (
     CollectRequest, config_directory_name, load_calibrators, parse_config, stage_calibrate,
-    stage_collect, stage_import_baselines, stage_replay, stage_summarize,
+    stage_collect, stage_import_baselines, stage_replay, stage_summarize, stage_verify_subset,
 )
 
 __all__ = [
@@ -44,12 +45,13 @@ __all__ = [
     'frame_adjusted_syndrome',
     'L1Record', 'LoadedRecord', 'by_sector', 'load_record', 'to_columns',
     'BASELINE_DECODERS', 'RecordedBaselines', 'load_recorded_baselines', 'attach_baselines',
+    'SubsetCheck', 'subset_reproduction',
     'NoRefinement', 'RefineAll', 'policy_from_name',
     'Estimator', 'ReplayConfig', 'ReplayResult', 'WorkCounts', 'Calibrators',
     'fit_calibrators', 'calibrated_probabilities', 'estimator_scores', 'residual_errors', 'replay',
     'Rate', 'PairedDifference', 'paired_bootstrap', 'normalized_ler',
     'summarize_result', 'compare_endpoints',
-    'CollectRequest', 'stage_collect', 'stage_import_baselines', 'stage_calibrate',
-    'load_calibrators', 'parse_config', 'config_directory_name', 'stage_replay',
-    'stage_summarize',
+    'CollectRequest', 'stage_collect', 'stage_verify_subset', 'stage_import_baselines',
+    'stage_calibrate', 'load_calibrators', 'parse_config', 'config_directory_name',
+    'stage_replay', 'stage_summarize',
 ]

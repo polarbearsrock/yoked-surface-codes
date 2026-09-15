@@ -32,7 +32,7 @@ where the final prediction is still wrong, and two configurations may only be
 compared when they share a reference, because different references define
 different eligible populations.
 
-## The five stages
+## The six stages
 
 `tools/hierarchical_experiment` is a thin argparse layer: it parses arguments,
 calls one library function, and prints a path. Every check lives in
@@ -61,6 +61,31 @@ A request names exactly one sample source: `--recorded-run`, or the complete
 `--rows` decodes every row of the call. `--role` accepts only `calibration` and
 `evaluation`; confirmation is refused, because section 3 allows it only after
 the analysis freeze and freeze verification is a later milestone.
+
+**Verify a subset.** Compare a completed subset record with the completed full
+record of the same sampling call, row for row. This is how M2 shows that a full
+collection made under the current provenance contract reproduces the pilot's
+subset number for number, rather than merely sharing its identities.
+
+```bash
+.venv/bin/python tools/hierarchical_experiment verify-subset --full "$OUT/evaluation" \
+    --subset "$OUT/evaluation_pilot_rows" --out "$OUT/verify_evaluation.json"
+```
+
+`--full` names a collection of every row of the call and `--subset` a `--rows`
+collection of the same call. Both are read through `load_record` and must share
+their model, parent-sample, sampling-family, and decoder identities and their
+role; the first that differs is named and nothing is written. Every subset row
+is then located in the full record by its parent row id, a row the full record
+does not hold being refused by name, and every stored array is compared there
+exactly: no tolerance, float values bit for bit, and baselines excluded, because
+a subset need not carry them and they are verified by `import-baselines` rather
+than reproduced by collection. The JSON at `--out` records both records'
+directories, identities, `record.npz` and manifest hashes, row summaries, and
+roles, the checker's identity, and the check: per-array equality, the number of
+differing rows per array, and the first eight parent rows where each differs. It
+is written whether or not the check passed; a failed check then raises naming
+the arrays and rows, so the numbers behind a refusal are on disk.
 
 **Import baselines.** Attach the recorded run's four saved decoders to the
 evaluation record as historical baselines, after verifying them (spec section 5.3).
@@ -149,6 +174,8 @@ as `unavailable` beside its counts, never as a zero.
                                     import-baselines is publishing
 <collect out>/manifest.json         completion marker, hashes, graph/record checks,
                                     and a baselines block after import-baselines
+<verify out>.json                   both compared records' identities and hashes,
+                                    and the row-for-row check
 <calibrators>.json                  knots, verified parents and compatibility
 <replay out>/<config>/              prediction/mask/tie/work arrays, results.json
 <replay out>/replay_manifest.json    completion marker and all artifact hashes
@@ -495,6 +522,8 @@ column pinned to an independent recomputation from the patch's own graph, the
 PAV fit, the exact outer decoder, the
 endpoint policies, replay and its work accounting, the metrics and their paired
 bootstrap, the baseline import against a fake recorded run with each way a run or a
-record can fail its gates, and the stage boundaries: a full pipeline through the
-functions and once through the command line, valid resume, and each way a changed
-request, altered artifact, replaced record, or interrupted publication is refused.
+record can fail its gates, the subset check on synthetic records and on a full and a
+subset collection of one sampling call, and the stage boundaries: a full pipeline
+through the functions and once through the command line, valid resume, and each way a
+changed request, altered artifact, replaced record, or interrupted publication is
+refused.

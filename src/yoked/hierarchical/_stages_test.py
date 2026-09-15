@@ -16,7 +16,13 @@ results without replaying again; a confirmation request refused; a change to the
 replay sources leaving the collection identity and its reuse untouched; the import
 stage attaching a fake recorded run's four baselines to an evaluation record once
 through ``stage_import_baselines`` and once through the command line, the latter on a
-record that starts a few parent rows into the run; and the report
+record that starts a few parent rows into the run; the subset check passing a 48-row
+collection against a 10-row collection of the same sampling call, once through
+``stage_verify_subset`` and once through the command line, with its JSON naming both
+records, refusing a subset of another seed on the parent-sample identity and a
+calibration-role collection of the same sample on the role, writing nothing either
+time, and reporting a subset whose stored values were altered under the array and
+parent row, with the JSON written before the refusal; and the report
 renderers printing ``unavailable`` with the denominator or eligible count beside it
 whenever a number, an interval bound, or a rate is undefined.
 """
@@ -46,13 +52,15 @@ from yoked.hierarchical._provenance import (
     CALIBRATION_PACKAGES, DECODER_PACKAGES, MODEL_PACKAGES, REPLAY_SOURCES, REPOSITORY_ROOT,
     SAMPLING_PACKAGES, package_versions, read_json, sha256_file, source_hashes, write_json_atomic,
 )
-from yoked.hierarchical._record import RECORD_FILE, RECORD_MANIFEST, LoadedRecord, load_record
+from yoked.hierarchical._record import (
+    RECORD_FILE, RECORD_MANIFEST, RECORD_SCHEMA, LoadedRecord, _save_arrays, load_record,
+)
 from yoked.hierarchical._stages import (
     REPLAY_ARRAYS_FILE, REPLAY_MANIFEST, REPLAY_RESULTS_FILE, SAMPLE_DIRECTORY, UNAVAILABLE,
-    CollectRequest, _calibrator_payload_sha256, _interval, _number, _paired_rows, _rate,
-    _ReplayHooks, config_directory_name,
+    VERIFY_SUBSET_STAGE, CollectRequest, _calibrator_payload_sha256, _interval, _number,
+    _paired_rows, _rate, _ReplayHooks, config_directory_name,
     load_calibrators, parse_config, stage_calibrate, stage_collect, stage_import_baselines,
-    stage_replay, stage_summarize,
+    stage_replay, stage_summarize, stage_verify_subset,
 )
 
 DISTANCE, ROUNDS, P = 3, 12, 0.005
@@ -91,6 +99,50 @@ CLI_FIRST_ROW = 4
 """The command-line import test collects its record from this parent row on, so that its
 baselines are the library record's from the same row on rather than a prefix of the run:
 a baseline mapped by position instead of by parent row id would not match."""
+
+FULL_SHOTS = 48
+"""Rows in the sampling call the subset check is exercised on; the full record decodes
+every one of them."""
+
+SUBSET_ROWS = np.array([0, 3, 7, 11, 19, 23, 29, 31, 40, 47])
+"""The ten parent rows of the subset collection: not a prefix, and not contiguous, so
+that a row's position in the subset never equals its parent row id."""
+
+FULL_SEED, OTHER_SEED = 5, 6
+"""The subset check's sampling call, and another call of the same size that shares its
+model but not its shots."""
+
+
+@dataclass(frozen=True)
+class Reproduction:
+    """A full collection and a subset collection of one sampling call.
+
+    Fields: ``full`` the 48-row evaluation record; ``subset`` the 10-row evaluation
+    record over ``SUBSET_ROWS`` of the same call; ``other`` a 10-row evaluation record
+    over the same rows of another seed's call; ``calibration`` a 10-row calibration-role
+    record of the full record's call.
+    """
+
+    full: LoadedRecord
+    subset: LoadedRecord
+    other: LoadedRecord
+    calibration: LoadedRecord
+
+
+@pytest.fixture(scope='module')
+def reproduction(tmp_path_factory) -> Reproduction:
+    root = tmp_path_factory.mktemp('reproduction')
+    records = {}
+    for name, role, seed, rows in (('full', 'evaluation', FULL_SEED, None),
+                                   ('subset', 'evaluation', FULL_SEED, SUBSET_ROWS),
+                                   ('other', 'evaluation', OTHER_SEED, SUBSET_ROWS),
+                                   ('calibration', 'calibration', FULL_SEED, SUBSET_ROWS)):
+        record = stage_collect(CollectRequest(out_dir=root / name, role=role, parameters=PARAMETERS,
+                                              seed=seed, shots=FULL_SHOTS, rows=rows,
+                                              chunk_size=CHUNK))
+        assert record is not None
+        records[name] = record
+    return Reproduction(**records)
 
 
 @dataclass(frozen=True)
@@ -382,6 +434,88 @@ def test_an_imported_request_reuses_its_saved_sample_and_rejects_another_run(tmp
     with pytest.raises(ValueError, match='payload'):
         stage_collect(CollectRequest(out_dir=out_dir, role='evaluation', recorded_run=other,
                                      rows=np.arange(CLI_SHOTS // 2), chunk_size=CHUNK))
+
+
+# --- verify subset -----------------------------------------------------------
+
+def test_a_subset_collection_reproduces_the_full_one_and_the_json_names_both(reproduction,
+                                                                             tmp_path):
+    out = tmp_path / 'subset_check.json'
+    check = stage_verify_subset(reproduction.full.directory, reproduction.subset.directory, out)
+    assert check.passed
+    assert check.subset_rows == len(SUBSET_ROWS) and check.matched_rows == len(SUBSET_ROWS)
+    written = read_json(out)
+    assert written['stage'] == VERIFY_SUBSET_STAGE and written['passed'] is True
+    assert written['check'] == check.to_json()
+    for name, loaded in (('full', reproduction.full), ('subset', reproduction.subset)):
+        block = written[name]
+        assert block['directory'] == str(loaded.directory.resolve())
+        assert block['record_sha256'] == loaded.manifest['artifacts'][RECORD_FILE]
+        assert block['manifest_sha256'] == sha256_file(loaded.directory / RECORD_MANIFEST)
+        assert block['identities'] == dict(loaded.identities)
+        assert block['rows'] == dict(loaded.manifest['rows'])
+        assert block['role'] == 'evaluation' and block['shots'] == loaded.record.shots
+    assert written['full']['rows']['count'] == FULL_SHOTS
+    assert written['subset']['rows']['count'] == len(SUBSET_ROWS)
+    assert written['full']['identities']['parent_sample'] == \
+        written['subset']['identities']['parent_sample']
+    assert written['full']['identities']['collection'] != \
+        written['subset']['identities']['collection']
+    assert written['checker']['check_identity']
+
+
+def test_a_subset_of_another_sampling_call_is_refused_on_its_identity(reproduction, tmp_path):
+    out = tmp_path / 'other_seed.json'
+    with pytest.raises(ValueError, match='parent_sample'):
+        stage_verify_subset(reproduction.full.directory, reproduction.other.directory, out)
+    assert not out.exists()
+
+
+def test_a_subset_of_another_role_is_refused_on_the_role(reproduction, tmp_path):
+    # Same model, sampling call, and decoder, so every compared identity agrees and only
+    # the role can name the difference.
+    assert reproduction.calibration.identities['parent_sample'] == \
+        reproduction.full.identities['parent_sample']
+    out = tmp_path / 'other_role.json'
+    with pytest.raises(ValueError, match='role'):
+        stage_verify_subset(reproduction.full.directory, reproduction.calibration.directory, out)
+    assert not out.exists()
+
+
+def test_a_subset_whose_stored_values_differ_is_reported_and_refused(reproduction, tmp_path):
+    subset_dir = copied(reproduction.subset.directory, tmp_path / 'altered-subset')
+    arrays = reproduction.subset.record.arrays()
+    gaps = np.array(arrays['cluster_gap'])
+    gaps[0, 0] += 1.0
+    arrays['cluster_gap'] = gaps
+    # Republished consistently, so that load_record accepts the altered record and the
+    # difference is found by the comparison rather than by an artifact hash.
+    _save_arrays(subset_dir / RECORD_FILE, arrays, schema=RECORD_SCHEMA)
+    manifest = read_json(subset_dir / RECORD_MANIFEST)
+    manifest['artifacts'][RECORD_FILE] = sha256_file(subset_dir / RECORD_FILE)
+    write_json_atomic(subset_dir / RECORD_MANIFEST, manifest)
+
+    out = tmp_path / 'altered_check.json'
+    with pytest.raises(ValueError, match=rf'cluster_gap.*\b{int(SUBSET_ROWS[0])}\b'):
+        stage_verify_subset(reproduction.full.directory, subset_dir, out)
+    written = read_json(out)
+    assert written['passed'] is False
+    assert written['check']['equal']['cluster_gap'] is False
+    assert written['check']['mismatch_counts']['cluster_gap'] == 1
+    assert written['check']['mismatched_rows']['cluster_gap'] == [int(SUBSET_ROWS[0])]
+    assert written['check']['matched_rows'] == len(SUBSET_ROWS) - 1
+    assert all(written['check']['equal'][name] for name in written['check']['equal']
+               if name != 'cluster_gap')
+
+
+def test_the_command_line_verifies_a_subset_once(reproduction, tmp_path):
+    out = tmp_path / 'cli_check.json'
+    finished = run_cli('verify-subset', '--full', str(reproduction.full.directory),
+                       '--subset', str(reproduction.subset.directory), '--out', str(out))
+    assert f'{len(SUBSET_ROWS)} of {len(SUBSET_ROWS)}' in finished.stdout
+    written = read_json(out)
+    assert written['passed'] is True and written['stage'] == VERIFY_SUBSET_STAGE
+    assert written['check']['subset_rows'] == len(SUBSET_ROWS)
 
 
 # --- calibration -------------------------------------------------------------

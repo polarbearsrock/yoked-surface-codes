@@ -294,6 +294,9 @@ CHECK_SOURCES = (
     # Baseline import gates data that another run decoded and produces no L1 output, so
     # it identifies what was verified, never what was decoded.
     'src/yoked/hierarchical/_baselines.py',
+    # The subset reproduction check compares two collected records and decodes nothing,
+    # so it too identifies what was verified.
+    'src/yoked/hierarchical/_reproduction.py',
 )
 """Validation sources, recorded as their own identity so that changed validation can
 recheck stored arrays without rerunning L1."""
