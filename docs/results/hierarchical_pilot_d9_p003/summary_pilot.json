@@ -3,7 +3,7 @@
     "replicates": 10000,
     "seed": 43
   },
-  "created_utc": "2026-09-15T07:11:38Z",
+  "created_utc": "2026-09-15T08:00:55Z",
   "records": [
     {
       "artifacts": {
@@ -21,9 +21,9 @@
         "uf_cluster_gap_to_gap_plain_initial_only_mixed/results.json": "7b525e8774ff7877ef0f7278401ac7957fe312c88a19f5691d39fa550c692585"
       },
       "calibrators": {
-        "identity": "19b0390daa341b30dfe7c2f81b05bdfccd706aeba82f3060c44afd93b6eb2c52",
+        "identity": "cf172257783d3e95a15ec486070755c005c2213ca80cd5359e6b1fe7f852d1ec",
         "path": "/data2/s2chitni/.tmp/hier-d9-p003/calibrators_pilot.json",
-        "sha256": "273bb3d7e0f2e31d1a7ecfdbcf90ae09e7336c3ed8001f95a308d7644cca57da"
+        "sha256": "7e24a25d4ff3a27dff6c4a8f84e0c6741628bf7d3840cd98d4de00b9a5b0cc3a"
       },
       "groups": [
         {
@@ -2041,13 +2041,13 @@
       "record": {
         "directory": "/data2/s2chitni/.tmp/hier-d9-p003/evaluation",
         "identities": {
-          "collection": "6db1561bbcc8a3d2dfb94608076bce787877bc298396010b59e7d8d84a41a498",
-          "decoder": "af532393733d652a58ea69e69363ec61150dbbd8193b7d560c23ce69eb4a49a0",
+          "collection": "9aea40f812b43f27dc95ec04cedb643f565c18e25be3dc62ab7f5320a6261cd3",
+          "decoder": "bd305c71961b9dc353cb1a70765cbcc16067bd3b566b10db296e300e02bf2aea",
           "model": "73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d",
           "parent_sample": "d1bc5fcf04da0c265f67b23637ee518f730cebc86700d04db09fec097a5130f1",
           "sampling_family": "51918c6cd9505f780bd9ef6a6b029a52bb3f68ae81a6ea195f4dbe185668bf69"
         },
-        "manifest_sha256": "133a5a682899bd9956758397f3d36c618e327bc11593fecb2876509a0140c916",
+        "manifest_sha256": "b65ab2a45c42cf2b928b74adf2e026c046eee29dfdef32d1f57f8c42532331cc",
         "patches": 6,
         "record_sha256": "8cbc6a3ae9bd818dc74b3d075093aa257bf4f72148a5a9931c16986b0b2dea1b",
         "role": "evaluation",
@@ -2060,8 +2060,8 @@
         "shots": 2000
       },
       "replay_directory": "/data2/s2chitni/.tmp/hier-d9-p003/replay_pilot",
-      "replay_identity": "b331a585dc30ceba43c2d474567f99df2fe09cd68bef7c7d0670d469bc15600a",
-      "replay_manifest_sha256": "dda95425c5f7b8b42be75de42f1568cd1d732d4d2bf02c5c41b5db6ca3a077ad"
+      "replay_identity": "991a9847a4327b1c53d244c3df1bcfc0504951a3f9c5d0200797c212c0e3722d",
+      "replay_manifest_sha256": "20afd91ab2534b0cf7a50ac0bd577117e113cbe8e33af39b23984763e7c0436b"
     }
   ],
   "schema_version": "hierarchical-l1-l2/1",

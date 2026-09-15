@@ -47,13 +47,19 @@ each record keeps its parent's identity and can be extended in M2.
 | Model identity | `73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d` | `73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d` |
 | Parent sample identity | `e9ace633bc9ff34b2dc228d63393f4daf58c4f4acbde3c678669b8b9645d8398` | `d1bc5fcf04da0c265f67b23637ee518f730cebc86700d04db09fec097a5130f1` |
 | Sampling family identity | `060a8f93813c288d32cf5b8801cfd74c052df1c08092c1e07df152c4d5498933` | `51918c6cd9505f780bd9ef6a6b029a52bb3f68ae81a6ea195f4dbe185668bf69` |
-| Decoder identity | `af532393733d652a58ea69e69363ec61150dbbd8193b7d560c23ce69eb4a49a0` | `af532393733d652a58ea69e69363ec61150dbbd8193b7d560c23ce69eb4a49a0` |
-| Collection identity | `91fddd2b6a1046a5d85f671b28fb82992711d5c2962338aad40178c07a51d7e5` | `6db1561bbcc8a3d2dfb94608076bce787877bc298396010b59e7d8d84a41a498` |
+| Decoder identity | `bd305c71961b9dc353cb1a70765cbcc16067bd3b566b10db296e300e02bf2aea` | `bd305c71961b9dc353cb1a70765cbcc16067bd3b566b10db296e300e02bf2aea` |
+| Check identity | `c30067b03fcd83f6356afa0d046039080f1a02a12dd0815f2ee4d21eedffd642` | `c30067b03fcd83f6356afa0d046039080f1a02a12dd0815f2ee4d21eedffd642` |
+| Collection identity | `6c7d889b1c70b4575e7e9b0e6ff0d2537e1a9b00656708390bb73221beed1c86` | `9aea40f812b43f27dc95ec04cedb643f565c18e25be3dc62ab7f5320a6261cd3` |
 | `record.npz` sha256 | `9612c5f2b79b6834163cf3b3df259ae30356112d5236c8aee405326032668f05` | `8cbc6a3ae9bd818dc74b3d075093aa257bf4f72148a5a9931c16986b0b2dea1b` |
+| `manifest.json` sha256 | `45a3fbfa23ac82c188619cb41fac43cee1b944234774f3d5f1e0b171278a3fc2` | `b65ab2a45c42cf2b928b74adf2e026c046eee29dfdef32d1f57f8c42532331cc` |
 
-The two records share one model and one decoder, and differ in both parent
-sample and sampling family, which is what the replay stage requires before it
-will evaluate a calibration on held-out shots.
+The two records share one model, one decoder and one check implementation, and
+differ in both parent sample and sampling family, which is what the replay stage
+requires before it will evaluate a calibration on held-out shots. The 50-row
+preflight collection is a third record of the evaluation parent, decoder
+identity `bd305c71…`, collection identity
+`17c489b5884de735d72a647c731a7701da5c39c0a4fe5ecf8016ad0e159735b3`, `record.npz`
+sha256 `7ea156c4ec8d41f19ef781a9e15293b03e3a9ef140f735c2d6fdaf83d2ab2d51`.
 
 **Original circuit and DEM.** The evaluation sample's `circuit.stim` and
 `model.dem` are the bytes of the recorded run
@@ -70,8 +76,8 @@ today's generator and hashes to the same values, which is why the two model
 identities agree.
 
 **Calibration artifact.** `calibrators_pilot.json`, identity
-`19b0390daa341b30dfe7c2f81b05bdfccd706aeba82f3060c44afd93b6eb2c52`, sha256
-`273bb3d7e0f2e31d1a7ecfdbcf90ae09e7336c3ed8001f95a308d7644cca57da`. One
+`cf172257783d3e95a15ec486070755c005c2213ca80cd5359e6b1fe7f852d1ec`, sha256
+`7e24a25d4ff3a27dff6c4a8f84e0c6741628bf7d3840cd98d4de00b9a5b0cc3a`. One
 isotonic fit per estimator and sector, the six patches of a sector pooled.
 Knot convention, as recorded in the artifact:
 
@@ -85,15 +91,18 @@ Knots per estimator (X, Z): `uf:cluster_gap` (2751, 1359), `uf:gap_plain`
 (2139, 2009), `uf:gap_correlated` (3386, 6909), `mwpm:gap_plain` (2118, 1993),
 `mwpm:gap_correlated` (3307, 6825).
 
-**Code and packages.** The calibration record, the calibrators, the replays and
-the summary were produced at commit
-`0078e0589bc16a97fd29d9128a7748c654f289fb`; the evaluation and preflight
-records were decoded at its parent `f2b5d19744d757c68d88486e656de574a2127852`
-and revalidated and republished at `0078e05` (section 5). Python 3.14.5;
-decoder packages `{numpy 2.5.1, pymatching 2.4.0, scipy 1.18.0, stim 1.16.0}`,
-check packages `{numpy 2.5.1, pymatching 2.4.0}`, sampling `{stim 1.16.0}`,
-summary `{numpy 2.5.1, sinter 1.16.0}`. Replay identity
-`b331a585dc30ceba43c2d474567f99df2fe09cd68bef7c7d0670d469bc15600a`; replay tie
+**Code and packages.** Every collection, the calibrators, the replays, the
+summary and the baseline audit were produced at one commit,
+`610762d9a52ce71d54ddbb71bcdfe5eba13d5038`. The pilot was recollected at that
+commit because splitting the per-row L1 evaluation out of `_collect.py` into
+`_l1.py` moved it into the decoder identity, which by construction invalidated
+the earlier collections; the superseded run is kept as
+`hier-d9-p003-pre-split` (section 8), and section 5 records that it decoded the
+same numbers. Python 3.14.5; decoder packages
+`{numpy 2.5.1, pymatching 2.4.0, scipy 1.18.0, stim 1.16.0}`, check packages
+`{numpy 2.5.1, pymatching 2.4.0}`, sampling `{stim 1.16.0}`, summary
+`{numpy 2.5.1, sinter 1.16.0}`. Replay identity
+`991a9847a4327b1c53d244c3df1bcfc0504951a3f9c5d0200797c212c0e3722d`; replay tie
 rule "log-weight ties within 1e-09 break to the lowest binary pattern".
 
 ## 2. Graph and record checks
@@ -290,19 +299,19 @@ counts. Neither number is elapsed time.
 | Timing | Preflight | Calibration | Evaluation |
 |---|---:|---:|---:|
 | Workers / chunk size | 2 / 25 | 16 / 25 | 16 / 25 |
-| Collection seconds (`timing.seconds_this_run`) | 17.863 | 45.326 | 45.276 |
-| Wall clock of the command | 30.71 s | 63.65 s | 58.17 s |
-| Setup, graph gate and record gate (wall minus collection) | 12.8 s | 18.3 s | 12.9 s |
-| Measured throughput | 2.799 rows/s (1.400 per worker) | 44.125 rows/s (2.758 per worker) | 44.174 rows/s (2.761 per worker) |
+| Collection seconds (`timing.seconds_this_run`) | 17.665 | 46.236 | 45.431 |
+| Wall clock of the command | 30.41 s | 65.45 s | 58.06 s |
+| Setup, graph gate and record gate (wall minus collection) | 12.7 s | 19.2 s | 12.6 s |
+| Measured throughput | 2.830 rows/s (1.415 per worker) | 43.256 rows/s (2.703 per worker) | 44.023 rows/s (2.751 per worker) |
 
 Each throughput is that collection's own rows divided by its own manifest's
 `timing.seconds_this_run`, then divided by its worker count:
-50 / 17.863 = 2.799 rows/s (2.799 / 2 = 1.400 per worker);
-2000 / 45.326 = 44.125 rows/s (44.125 / 16 = 2.758 per worker);
-2000 / 45.276 = 44.174 rows/s (44.174 / 16 = 2.761 per worker).
-The calibration figures come from the current `$OUT/calibration/manifest.json`
-(`timing.seconds_this_run` 45.32559), not from the superseded pre-fix
-collection described below, whose manifest records 45.56216 s.
+50 / 17.66497 = 2.830 rows/s (2.830 / 2 = 1.415 per worker);
+2000 / 46.23638 = 43.256 rows/s (43.256 / 16 = 2.703 per worker);
+2000 / 45.43121 = 44.023 rows/s (44.023 / 16 = 2.751 per worker).
+Each setup row is that command's wall clock minus the same
+`timing.seconds_this_run`: 30.41 - 17.665 = 12.7 s; 65.45 - 46.236 = 19.2 s;
+58.06 - 45.431 = 12.6 s.
 
 No collection was interrupted, none was resumed, and no `checkpoint.npz` or
 `failed_checks.json` remains: `resumptions` is 0 everywhere and no attempted-work
@@ -310,29 +319,20 @@ telemetry was lost. The setup row is not decoder work; it is process start, the
 sample load or generation, the per-worker rebuild of the d=9 decoders from the
 19,665,395-byte DEM, the graph gate and the record gate.
 
-Two operational notes belong with these numbers. First, the calibration record
-was collected twice. The first collection (2026-09-15T06:50:28Z, commit
-`f2b5d19`) was made before the sample-text newline fix
-(`0078e05`, "Terminate generated sample text with Stim's file newline"); its
-generated `circuit.stim` and `model.dem` were one byte short of Stim's
-`to_file` convention, so its model identity did not match the imported
-evaluation record's and `replay` correctly refused to pair them. That directory
-was moved aside to `calibration_stale_no_newline` and the identical collect
-command was rerun into a fresh `calibration` directory at commit `0078e05`. The
-decoded values are unaffected: the recollected `record.npz` hashes to
-`9612c5f2…`, the same value as the stale collection, and the parent payload
-hash is unchanged. Second, the evaluation and preflight collections were rerun
-after the fix as well; because they import the recorded run's model bytes
-verbatim their model identity never changed, so both took the
-revalidate-and-republish path — 12.93 s and 12.95 s, no rows recollected,
-`record.npz` hash, `timing`, `collection_work` and `created_utc` all unchanged,
-only the check identity and the check source hashes updated to the new
-`_collect.py`. Every timing above is that of the run whose rows the published
-record holds: for calibration that is the post-fix recollection (45.326 s), not
-the superseded one (45.562 s), and for evaluation and preflight it is their
-original collection, which the later revalidation left untouched. The 12.93 s
-and 12.95 s revalidation passes decoded nothing and are excluded from the
-throughput figures.
+One operational note belongs with these numbers. This pilot is a recollection.
+The previous run of the same commands, kept as `hier-d9-p003-pre-split`, was
+decoded before the per-row L1 evaluation moved out of `_collect.py` into its own
+`_l1.py`, which put it inside the decoder identity; a record decoded under the
+old identity may not be extended or revalidated under the new one, so all three
+collections were rerun from scratch rather than reused. The recollection is
+purely an identity matter, and the two runs are compared directly: all three
+`record.npz` files hash to the same values as before
+(`7ea156c4…` preflight, `9612c5f2…` calibration, `8cbc6a3a…` evaluation), and
+every `collection_work` counter, every graph-check field and every record-check
+field is equal to the superseded run's. Only the wall times differ, as two runs
+of the same work on a shared machine do: 17.863 / 45.326 / 45.276 s then,
+17.665 / 46.236 / 45.431 s now. Every timing and throughput above is the new
+run's, from the manifests the published records carry.
 
 ## 6. Historical baselines on the same rows
 
@@ -343,7 +343,11 @@ payload hash from the recorded arrays, checks it against both the run manifest
 and the collection's `parent_payload_sha256`, and re-derives each decoder's
 packed prediction hash from the `.npy` file rather than trusting it. All
 assertions passed. Rates are on the pilot's 2,000 rows, normalized with
-`pieces=216, values=8`.
+`pieces=216, values=8`. The recollection did not move a single field of this
+file: the committed `baselines_pilot.json` is byte-identical to the superseded
+run's, sha256 `f80b3aa9b6ac00d10a2d8a79df1a0a547b01dbc587fcef5ba097cf22d9c688bb`,
+which is expected, since it reads the recorded run's arrays and the evaluation
+record's row ids and neither changed.
 
 | Decoder | Failed shots / 2,000 | Block failure | Normalized LER (per patch per round) | Verified `prediction_packed_sha256` |
 |---|---:|---:|---:|---|
@@ -365,18 +369,18 @@ measurement.
 ## 7. Projected full collection cost, and the decision
 
 Projections use the measured 16-worker pilot throughput of section 5, not an
-assumed scaling. Per-worker throughput was 1.400 rows/s on 2 workers and 2.758
-to 2.761 rows/s on 16, so the numbers below assume the 16-worker per-row cost
-holds over the whole sample; setup adds 13 to 19 s per invocation and does not
-scale with rows. The evaluation rows are projected at 44.174 rows/s and the
-calibration rows at 44.125 rows/s, each from its own current manifest.
+assumed scaling. Per-worker throughput was 1.415 rows/s on 2 workers and 2.703
+to 2.751 rows/s on 16, so the numbers below assume the 16-worker per-row cost
+holds over the whole sample; setup adds 12.6 to 19.2 s per invocation and does
+not scale with rows. The evaluation rows are projected at 44.023 rows/s and the
+calibration rows at 43.256 rows/s, each from its own current manifest.
 
 | Work | Rows | Projected collection time |
 |---|---:|---:|
-| Full evaluation set | 100,000 | 37.7 min (100000 / 44.174 = 2,264 s) |
-| Evaluation rows remaining after the pilot | 98,000 | 37.0 min (98000 / 44.174 = 2,219 s) |
-| Full calibration set | 50,000 | 18.9 min (50000 / 44.125 = 1,133 s) |
-| Calibration rows remaining after the pilot | 48,000 | 18.1 min (48000 / 44.125 = 1,088 s) |
+| Full evaluation set | 100,000 | 37.9 min (100000 / 44.023 = 2,272 s) |
+| Evaluation rows remaining after the pilot | 98,000 | 37.1 min (98000 / 44.023 = 2,226 s) |
+| Full calibration set | 50,000 | 19.3 min (50000 / 43.256 = 1,156 s) |
+| Calibration rows remaining after the pilot | 48,000 | 18.5 min (48000 / 43.256 = 1,110 s) |
 
 Sizes below are MiB (1,048,576 bytes). A record grows to about 62 MiB per
 100,000 rows (`record.npz` is 1,307,462 bytes, 1.25 MiB, for 2,000), and each
@@ -402,7 +406,7 @@ is quoted as a result.
 ## 8. Reproduction
 
 Run from the repository root with `PYTHONPATH=src`, at commit
-`0078e0589bc16a97fd29d9128a7748c654f289fb`, with
+`610762d9a52ce71d54ddbb71bcdfe5eba13d5038`, with
 `OUT="$TMPDIR/hier-d9-p003"` and
 `RUN=/data2/s2chitni/.tmp/ysc-four-decoders-d9-p003-100k-7efr23ha`. See
 [the usage doc](../hierarchical_decoding.md) for what each stage writes.
@@ -430,18 +434,24 @@ Run from the repository root with `PYTHONPATH=src`, at commit
 .venv/bin/python "$OUT/baselines_pilot.py"
 ```
 
+The audit script of step 4 is committed beside this report as
+[`hierarchical_pilot_d9_p003/baselines_pilot.py`](hierarchical_pilot_d9_p003/baselines_pilot.py),
+sha256 `461fce8be52bfee26a1388f7a41966bb8cec6eab4bba78050f701f6d4b18f457`; it is
+the copy that was run, from `$OUT/baselines_pilot.py`, and it needs `OUT` and
+`RUN` exported as above.
+
 Bootstrap: 10,000 replicates, seed 43, resampling whole shots; both are
 recorded in `summary_pilot.manifest.json` under `bootstrap`.
 
-**Resumptions.** None. No collection was interrupted or resumed. The
-calibration collection was *repeated* once for the provenance reason described
-in section 5, which is a second collection into a new directory rather than a
-resumption; the evaluation and preflight directories were revalidated and
-republished in place without recollecting rows.
+**Resumptions.** None. No collection was interrupted or resumed, and every
+directory was collected once, from empty. The pilot as a whole was run twice:
+`hier-d9-p003-pre-split` holds the earlier run, which the L1 module split
+invalidated (section 5), and the directories listed here hold this one.
 
 **Artifacts.** Samples, records, checkpoints, per-configuration replay arrays
-and the calibration artifact stay under `$TMPDIR`; only this report and the two
-machine-readable files it cites are committed.
+and the calibration artifact stay under `$TMPDIR`; only this report, the two
+machine-readable files it cites, and the audit script that wrote one of them are
+committed.
 
 - `/data2/s2chitni/.tmp/hier-d9-p003/preflight_evaluation/manifest.json`
 - `/data2/s2chitni/.tmp/hier-d9-p003/calibration/manifest.json`
@@ -451,14 +461,28 @@ machine-readable files it cites are committed.
 - `/data2/s2chitni/.tmp/hier-d9-p003/summary_pilot.md`, `summary_pilot.json`,
   `summary_pilot.manifest.json`
 - `/data2/s2chitni/.tmp/hier-d9-p003/baselines_pilot.py`, `baselines_pilot.json`
-- `/data2/s2chitni/.tmp/hier-d9-p003/calibration_stale_no_newline/` (the
-  superseded pre-fix calibration collection, kept for provenance)
+- `/data2/s2chitni/.tmp/hier-d9-p003-pre-split/` (the whole superseded run,
+  decoded before the L1 module split, kept for provenance and for the
+  record-hash comparison of section 5)
 
 Committed beside this report:
 
 - [`hierarchical_pilot_d9_p003/summary_pilot.json`](hierarchical_pilot_d9_p003/summary_pilot.json)
   — every number the section 3 and 4 tables print, sha256
-  `c739cab211809d0ec7fb173f0503ed31cc31b48a6a3ea7669a800b4870958b44`
+  `ced09129d41463db65da69ea1c6908f3d948b2ef866fde264fe0fb0c6b4a1ded`
 - [`hierarchical_pilot_d9_p003/baselines_pilot.json`](hierarchical_pilot_d9_p003/baselines_pilot.json)
   — the section 6 audit, with the parent payload hash, the 2,000 row ids and
-  the verified prediction hashes
+  the verified prediction hashes, sha256
+  `f80b3aa9b6ac00d10a2d8a79df1a0a547b01dbc587fcef5ba097cf22d9c688bb`
+- [`hierarchical_pilot_d9_p003/baselines_pilot.py`](hierarchical_pilot_d9_p003/baselines_pilot.py)
+  — the script that wrote it, sha256
+  `461fce8be52bfee26a1388f7a41966bb8cec6eab4bba78050f701f6d4b18f457`
+
+Against the superseded `hier-d9-p003-pre-split` run, only identities, artifact
+hashes and timestamps moved. The `summary_pilot.json` above differs from the
+earlier one in eight leaves and no others — `created_utc`, the calibration
+identity and artifact hash, the evaluation record's collection and decoder
+identities, its manifest hash, and the replay identity and manifest hash — so
+every rate, interval, stratum denominator, tie count and work count in sections
+3 and 4 is unchanged, `baselines_pilot.json` is byte-identical, and the
+decision of section 7 is unchanged.
