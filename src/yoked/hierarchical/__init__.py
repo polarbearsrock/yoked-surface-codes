@@ -9,12 +9,20 @@ from yoked.hierarchical._collect import (
     L1Context, RecordChecks, SampleSet, check_graphs, check_record, collect_rows, collect_sample,
 )
 from yoked.hierarchical._matching_gaps import ForcedWeights, MatchingGaps, signed_gaps
+from yoked.hierarchical._metrics import (
+    PairedDifference, Rate, compare_endpoints, normalized_ler, paired_bootstrap, summarize_result,
+)
 from yoked.hierarchical._outer_decoder import (
     TIE_TOLERANCE, BatchOuterDecision, OuterDecision, exact_outer_map, exact_outer_map_batch,
     frame_adjusted_syndrome,
 )
 from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraph, PatchGraphs
+from yoked.hierarchical._policies import NoRefinement, RefineAll, policy_from_name
 from yoked.hierarchical._record import L1Record, LoadedRecord, by_sector, load_record, to_columns
+from yoked.hierarchical._replay import (
+    Calibrators, Estimator, ReplayConfig, ReplayResult, WorkCounts, calibrated_probabilities,
+    estimator_scores, fit_calibrators, replay, residual_errors,
+)
 
 __all__ = [
     'NUM_SECTORS', 'PatchGraph', 'PatchGraphs',
@@ -27,4 +35,9 @@ __all__ = [
     'TIE_TOLERANCE', 'OuterDecision', 'BatchOuterDecision', 'exact_outer_map', 'exact_outer_map_batch',
     'frame_adjusted_syndrome',
     'L1Record', 'LoadedRecord', 'by_sector', 'load_record', 'to_columns',
+    'NoRefinement', 'RefineAll', 'policy_from_name',
+    'Estimator', 'ReplayConfig', 'ReplayResult', 'WorkCounts', 'Calibrators',
+    'fit_calibrators', 'calibrated_probabilities', 'estimator_scores', 'residual_errors', 'replay',
+    'Rate', 'PairedDifference', 'paired_bootstrap', 'normalized_ler',
+    'summarize_result', 'compare_endpoints',
 ]
