@@ -22,9 +22,15 @@ collection against a 10-row collection of the same sampling call, once through
 records, refusing a subset of another seed on the parent-sample identity and a
 calibration-role collection of the same sample on the role, writing nothing either
 time, and reporting a subset whose stored values were altered under the array and
-parent row, with the JSON written before the refusal; and the report
-renderers printing ``unavailable`` with the denominator or eligible count beside it
-whenever a number, an interval bound, or a rate is undefined.
+parent row, with the JSON written before the refusal; the summary scoring a record's
+imported baselines, the collector's own joint MWPM, and every replayed cell on the same
+shots, every rate equal to a direct computation from the arrays, rendered as a baselines
+table after the endpoint groups with the paired difference of each cell against the
+recorded joint MWPM, that difference unavailable by name when the record does not carry
+the recorded joint MWPM, the summary manifest's inputs unchanged by baselines, and no
+table and no JSON key for a record without them; and the report renderers printing
+``unavailable`` with the denominator or eligible count beside it whenever a number, an
+interval bound, or a rate is undefined.
 """
 from __future__ import annotations
 
@@ -32,6 +38,7 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -39,7 +46,7 @@ import numpy as np
 import pytest
 import stim
 
-from yoked.hierarchical._baselines import BASELINE_DECODERS, BASELINES_FIELD
+from yoked.hierarchical._baselines import BASELINE_DECODERS, BASELINES_FIELD, RECORDED_JOINT_MWPM
 from yoked.hierarchical._baselines_test import fake_predictions, write_recorded_run_with_predictions
 from yoked.hierarchical._calibration import CLIP, KNOT_CONVENTION
 from yoked.hierarchical._collect import (
@@ -47,7 +54,9 @@ from yoked.hierarchical._collect import (
     RECORDED_MANIFEST,
 )
 from yoked.hierarchical._l1 import L1Context
-from yoked.hierarchical._metrics import DEFAULT_SEED
+from yoked.hierarchical._metrics import (
+    DEFAULT_SEED, block_failures, bootstrap_rate, normalized_ler, paired_block_failure,
+)
 from yoked.hierarchical._provenance import (
     CALIBRATION_PACKAGES, DECODER_PACKAGES, MODEL_PACKAGES, REPLAY_SOURCES, REPOSITORY_ROOT,
     SAMPLING_PACKAGES, package_versions, read_json, sha256_file, source_hashes, write_json_atomic,
@@ -55,12 +64,14 @@ from yoked.hierarchical._provenance import (
 from yoked.hierarchical._record import (
     RECORD_FILE, RECORD_MANIFEST, RECORD_SCHEMA, LoadedRecord, _save_arrays, load_record,
 )
+from yoked.hierarchical._replay import ReplayResult
 from yoked.hierarchical._stages import (
+    BASELINES_HEADING, COLLECTED_JOINT_MWPM, COLLECTED_KIND, HIERARCHICAL_KIND, HISTORICAL_KIND,
     REPLAY_ARRAYS_FILE, REPLAY_MANIFEST, REPLAY_RESULTS_FILE, SAMPLE_DIRECTORY, UNAVAILABLE,
-    VERIFY_SUBSET_STAGE, CollectRequest, _calibrator_payload_sha256, _interval, _number,
-    _paired_rows, _rate, _ReplayHooks, config_directory_name,
-    load_calibrators, parse_config, stage_calibrate, stage_collect, stage_import_baselines,
-    stage_replay, stage_summarize, stage_verify_subset,
+    VERIFY_SUBSET_STAGE, CollectRequest, _baseline_paired_rows, _baseline_rows,
+    _calibrator_payload_sha256, _interval, _number, _paired_rows, _rate, _ReplayHooks,
+    config_directory_name, load_calibrators, parse_config, stage_calibrate, stage_collect,
+    stage_import_baselines, stage_replay, stage_summarize, stage_verify_subset,
 )
 
 DISTANCE, ROUNDS, P = 3, 12, 0.005
@@ -111,6 +122,11 @@ that a row's position in the subset never equals its parent row id."""
 FULL_SEED, OTHER_SEED = 5, 6
 """The subset check's sampling call, and another call of the same size that shares its
 model but not its shots."""
+
+BASELINE_SEED = 3
+"""The sampling call the baselines summary imports as a recorded run: not the calibration
+call, so the pipeline's calibrators are held out from it, and not the evaluation call
+either, so no two module fixtures share a parent sample."""
 
 
 @dataclass(frozen=True)
@@ -189,6 +205,45 @@ def copied(source, destination) -> Path:
     """A private copy of a published directory, so a tamper test leaves the shared one alone."""
     shutil.copytree(source, destination)
     return destination
+
+
+@dataclass(frozen=True)
+class Baselined:
+    """One summary over an evaluation record that carries imported baselines.
+
+    Fields: ``root`` the directory holding everything; ``run`` the fake recorded run;
+    ``before_dir`` a copy of the evaluation record taken before the import; ``record``
+    the imported record; ``results`` the replayed configurations by name; ``markdown``
+    the report; ``section`` the summary JSON's one record section.
+    """
+
+    root: Path
+    run: Path
+    before_dir: Path
+    record: LoadedRecord
+    results: Mapping[str, ReplayResult]
+    markdown: str
+    section: dict
+
+
+@pytest.fixture(scope='module')
+def baselined(tmp_path_factory, pipeline) -> Baselined:
+    root = tmp_path_factory.mktemp('baselined')
+    sample = SampleSet.sample(PARAMETERS, seed=BASELINE_SEED, shots=SHOTS)
+    context = L1Context.from_dem_text(sample.dem_text, sample.parameters.patches)
+    run = write_recorded_run_with_predictions(sample, root / 'run',
+                                              fake_predictions(sample, context))
+    collected = stage_collect(CollectRequest(out_dir=root / 'evaluation', role='evaluation',
+                                             recorded_run=run, chunk_size=CHUNK))
+    assert collected is not None
+    before_dir = copied(collected.directory, root / 'evaluation_before')
+    record = stage_import_baselines(collected.directory, run)
+    results = stage_replay(record.directory, pipeline.calibrators, root / 'replay', CONFIGS)
+    markdown = stage_summarize([root / 'replay'], root / 'summary.md', replicates=REPLICATES,
+                               seed=DEFAULT_SEED)
+    section, = read_json(root / 'summary.json')['records']
+    return Baselined(root=root, run=run, before_dir=before_dir, record=record, results=results,
+                     markdown=markdown, section=section)
 
 
 def write_recorded_run(sample: SampleSet, directory: Path) -> Path:
@@ -844,6 +899,113 @@ def test_a_record_replaced_after_replay_is_rejected_by_the_summary(pipeline, tmp
                         seed=DEFAULT_SEED)
 
 
+# --- baselines in the summary ------------------------------------------------
+
+def predictions_of(baselined: Baselined, name: str) -> np.ndarray:
+    """The (shots, 2P) prediction the baselines table scores under ``name``."""
+    record = baselined.record.record
+    if name in record.baselines:
+        return record.baselines[name]
+    if name == COLLECTED_JOINT_MWPM:
+        return record.joint_mwpm
+    return baselined.results[name].final
+
+
+def test_the_summary_scores_the_baselines_and_every_cell_on_the_same_shots(baselined):
+    section, record = baselined.section, baselined.record.record
+    baselines = section['baselines']
+    cells = [parse_config(text).name for text in CONFIGS]
+    assert baselines['comparator'] == RECORDED_JOINT_MWPM
+    assert baselines['order'] == list(BASELINE_DECODERS) + [COLLECTED_JOINT_MWPM] + cells
+    assert sorted(baselines['decoders']) == sorted(baselines['order'])   # the JSON sorts its keys
+    kinds = {name: HISTORICAL_KIND for name in BASELINE_DECODERS}
+    kinds[COLLECTED_JOINT_MWPM] = COLLECTED_KIND
+    kinds.update({name: HIERARCHICAL_KIND for name in cells})
+    comparator = record.baselines[RECORDED_JOINT_MWPM]
+    for name, entry in baselines['decoders'].items():
+        predictions = predictions_of(baselined, name)
+        failed = block_failures(predictions, record.actual)
+        expected = bootstrap_rate(failed, replicates=REPLICATES, seed=DEFAULT_SEED)
+        assert entry['kind'] == kinds[name]
+        assert entry['block_failure'] == expected.to_json()
+        assert entry['block_failure']['count'] == int(failed.sum())
+        assert entry['block_failure']['total'] == record.shots == section['record']['shots']
+        assert entry['normalized_ler'] == pytest.approx(
+            normalized_ler(expected.estimate, pieces=section['pieces']))
+        if kinds[name] == HIERARCHICAL_KIND:
+            paired = paired_block_failure(record, comparator, predictions,
+                                          replicates=REPLICATES, seed=DEFAULT_SEED)
+            assert entry['paired_block_failure'] == paired.to_json()
+            assert entry['paired_block_failure']['difference'] == pytest.approx(
+                entry['block_failure']['estimate']
+                - baselines['decoders'][RECORDED_JOINT_MWPM]['block_failure']['estimate'])
+        else:
+            assert 'paired_block_failure' not in entry
+    # A cell's block failure and interval here are the ones its endpoint table prints:
+    # the same shots are drawn under the same seed on both sides of every comparison.
+    for group in section['groups']:
+        for name in group['order']:
+            cell, block = group['cells'][name]['block_failure'], baselines['decoders'][name]['block_failure']
+            assert (cell['count'], cell['total']) == (block['count'], block['total'])
+            assert group['intervals'][name]['block_failure'] == [block['low'], block['high']]
+
+
+def test_the_report_renders_the_baselines_table_after_the_endpoint_groups(baselined):
+    baselines = baselined.section['baselines']
+    lines = baselined.markdown.splitlines()
+    heading = lines.index(f'### {BASELINES_HEADING}')
+    assert heading > max(index for index, line in enumerate(lines) if line.startswith('### uf:'))
+    after = lines[heading:]
+    for name, entry in baselines['decoders'].items():
+        block = entry['block_failure']
+        assert (f'| `{name}` | {entry["kind"]} | {_number(block["estimate"])} '
+                f'[{block["count"]} / {block["total"]}] | {_interval([block["low"], block["high"]])} '
+                f'| {_number(entry["normalized_ler"])} |') in after
+        if 'paired_block_failure' in entry:
+            paired = entry['paired_block_failure']
+            assert (f'| `{name}` | {_number(paired["difference"])} | '
+                    f'{_interval([paired["low"], paired["high"]])} |') in after
+    assert f'against `{RECORDED_JOINT_MWPM}`' in baselined.markdown
+
+
+def test_baselines_leave_the_summary_manifest_inputs_unchanged(baselined, pipeline, tmp_path):
+    stage_summarize([pipeline.replay_dir], tmp_path / 'summary.md', replicates=REPLICATES,
+                    seed=DEFAULT_SEED)
+    plain = read_json(tmp_path / 'summary.manifest.json')['inputs']
+    with_baselines = read_json(baselined.root / 'summary.manifest.json')['inputs']
+    assert [sorted(entry) for entry in with_baselines] == [sorted(entry) for entry in plain]
+    # The record hash the manifest names is the imported record's, whose container holds
+    # the baseline columns, so the inputs already cover them.
+    assert with_baselines[0]['record_sha256'] == baselined.record.manifest['artifacts'][RECORD_FILE]
+
+
+def test_a_record_without_baselines_renders_no_baselines_table(pipeline, tmp_path):
+    markdown = stage_summarize([pipeline.replay_dir], tmp_path / 'summary.md',
+                               replicates=REPLICATES, seed=DEFAULT_SEED)
+    assert BASELINES_HEADING not in markdown
+    section, = read_json(tmp_path / 'summary.json')['records']
+    assert 'baselines' not in section
+
+
+def test_cells_without_the_recorded_joint_mwpm_have_no_paired_difference(baselined, pipeline,
+                                                                          tmp_path):
+    record_dir = copied(baselined.before_dir, tmp_path / 'evaluation')
+    stage_import_baselines(record_dir, baselined.run, names=('joint_uf',))
+    stage_replay(record_dir, pipeline.calibrators, tmp_path / 'replay', CONFIGS)
+    markdown = stage_summarize([tmp_path / 'replay'], tmp_path / 'summary.md',
+                               replicates=REPLICATES, seed=DEFAULT_SEED)
+    section, = read_json(tmp_path / 'summary.json')['records']
+    baselines = section['baselines']
+    assert baselines['comparator'] is None
+    cells = [parse_config(text).name for text in CONFIGS]
+    assert baselines['order'] == ['joint_uf', COLLECTED_JOINT_MWPM] + cells
+    for name in cells:
+        assert baselines['decoders'][name]['paired_block_failure'] is None
+        assert f'| `{name}` | {UNAVAILABLE} | {UNAVAILABLE} |' in markdown
+    assert baselines['decoders']['joint_uf']['block_failure'] == \
+        baselined.section['baselines']['decoders']['joint_uf']['block_failure']
+
+
 # --- how an undefined statistic is rendered ----------------------------------
 #
 # A pilot whose bootstrap forms every interval prints none of these, so the renderers
@@ -903,6 +1065,27 @@ def test_a_paired_row_whose_bootstrap_formed_no_interval_shows_unavailable_and_i
          str(REPLICATES)],
         ['all_refined:mixed', 'block_failure', '-0.268', '(-0.2885, -0.2475)', '2000', '0'],
     ]
+
+
+def test_a_baseline_row_whose_statistics_are_undefined_shows_unavailable_and_its_counts():
+    undefined = {'estimate': None, 'count': 0, 'total': 0, 'low': None, 'high': None,
+                 'replicates': REPLICATES, 'seed': DEFAULT_SEED}
+    defined = {'estimate': 0.125, 'count': 8, 'total': 64, 'low': 0.046875, 'high': 0.21875,
+               'replicates': REPLICATES, 'seed': DEFAULT_SEED}
+    baselines = {
+        'comparator': None,
+        'order': ['joint_uf', 'cell'],
+        'decoders': {
+            'joint_uf': {'kind': HISTORICAL_KIND, 'block_failure': undefined, 'normalized_ler': None},
+            'cell': {'kind': HIERARCHICAL_KIND, 'block_failure': defined, 'normalized_ler': 0.00123,
+                     'paired_block_failure': None},
+        },
+    }
+    assert _baseline_rows(baselines) == [
+        ['`joint_uf`', HISTORICAL_KIND, f'{UNAVAILABLE} [0 / 0]', UNAVAILABLE, UNAVAILABLE],
+        ['`cell`', HIERARCHICAL_KIND, '0.125 [8 / 64]', '(0.046875, 0.21875)', '0.00123'],
+    ]
+    assert _baseline_paired_rows(baselines) == [['`cell`', UNAVAILABLE, UNAVAILABLE]]
 
 
 # --- what a report change may not touch --------------------------------------

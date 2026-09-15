@@ -163,6 +163,20 @@ denominator, the 95% percentile interval of each side, and the paired
 difference with its interval. A statistic no eligible case supports is printed
 as `unavailable` beside its counts, never as a zero.
 
+When the record carries imported baselines, its section ends with "Baselines on
+the same shots" (spec section 9): the recorded run's imported decoders (`historical`),
+the collector's recomputed `joint_mwpm` (`collected`), and every replayed cell
+(`hierarchical`), each with its block failure count, the 95% bootstrap interval
+of that rate over the same resampled shots, and the normalized LER per patch per
+round, followed by each hierarchical cell's paired block-failure difference
+against `joint_mwpm_recorded`. The rate interval is drawn under the same seed as
+the paired comparisons, so a cell's interval here is the interval its endpoint
+table prints. A record whose import left out `joint_mwpm_recorded` gets the
+table with every paired difference `unavailable`, never a difference against
+another column; a record without baselines gets no table and no `baselines` key
+in the JSON. The summary manifest's inputs are the same either way: the record
+hash they name already covers the baseline columns.
+
 ## What each stage writes
 
 ```text
@@ -360,6 +374,11 @@ attached, provenance = attach_baselines(loaded, recorded)     # gates, no writin
 print(sorted(attached.baselines), provenance['joint_mwpm']['agreement'])
 ```
 
+Once imported, the baselines are reported only by `summarize`, in the
+"Baselines on the same shots" table described under that stage, and only for the
+evaluation record they were attached to: historical results are never presented
+as confirmation measurements.
+
 ## Two kinds of work count
 
 The reports carry two work tables, and they measure different things.
@@ -520,10 +539,12 @@ against the joint model, the cluster gap against brute-force odd walks, the
 forced weights and their additivity, the per-row L1 evaluation with every stored
 column pinned to an independent recomputation from the patch's own graph, the
 PAV fit, the exact outer decoder, the
-endpoint policies, replay and its work accounting, the metrics and their paired
-bootstrap, the baseline import against a fake recorded run with each way a run or a
-record can fail its gates, the subset check on synthetic records and on a full and a
-subset collection of one sampling call, and the stage boundaries: a full pipeline
-through the functions and once through the command line, valid resume, and each way a
-changed request, altered artifact, replaced record, or interrupted publication is
-refused.
+endpoint policies, replay and its work accounting, the metrics, their paired
+bootstrap, one rate's interval, and the paired block failure of two prediction arrays,
+the baseline import against a fake recorded run with each way a run or a record can
+fail its gates, the subset check on synthetic records and on a full and a subset
+collection of one sampling call, the baselines table of a summary over imported fake
+baselines with every rate pinned to a direct computation from the arrays, and the
+stage boundaries: a full pipeline through the functions and once through the command
+line, valid resume, and each way a changed request, altered artifact, replaced record,
+or interrupted publication is refused.

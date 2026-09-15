@@ -10,8 +10,13 @@ reproduces a hand-computed point estimate, is reproducible from its seed,
 gives the same answer however the replicates are blocked, keeps the two
 sectors of a shot together so cross-sector dependence widens the interval,
 counts zero-denominator replicates instead of dropping them silently, and
-reports undefined bounds as None; and the endpoint summary and comparison
-report hand-worked counts as JSON-ready mappings.
+reports undefined bounds as None; one configuration's rate interval reports a
+hand-computed rate, is reproducible from its seed, resamples exactly the shots
+the paired bootstrap resamples, and reports an empty input as unavailable; the
+paired block failure of two prediction arrays reproduces a hand-computed
+difference, is antisymmetric in its arguments, and is the block-failure
+comparison ``compare_endpoints`` reports; and the endpoint summary and
+comparison report hand-worked counts as JSON-ready mappings.
 """
 from __future__ import annotations
 
@@ -24,9 +29,9 @@ import sinter
 from yoked.hierarchical._calibration import IsotonicCalibrator
 from yoked.hierarchical._metrics import (
     DEFAULT_REPLICATES, DEFAULT_SEED, OUTER_LOGICAL_VALUES, STRATA, PairedDifference, Rate,
-    above_half_frequency, block_failures, compare_endpoints, failure_by_stratum, misattribution,
-    normalized_ler, paired_bootstrap, residual_failure_counts, sector_failures, summarize_result,
-    tie_frequency,
+    RateInterval, above_half_frequency, block_failures, bootstrap_rate, compare_endpoints,
+    failure_by_stratum, misattribution, normalized_ler, paired_block_failure, paired_bootstrap,
+    residual_failure_counts, sector_failures, summarize_result, tie_frequency,
 )
 from yoked.hierarchical._policies import NoRefinement, RefineAll
 from yoked.hierarchical._record import L1Record
@@ -253,6 +258,138 @@ def test_paired_difference_json_is_serializable():
     json.dumps(payload)
 
 
+# --- one rate's interval -------------------------------------------------------------
+
+
+def test_bootstrap_rate_reports_a_hand_computed_rate_with_its_interval():
+    """Two failures in five shots."""
+    result = bootstrap_rate(np.array([1, 0, 0, 1, 0]), replicates=200, seed=DEFAULT_SEED)
+    assert (result.count, result.total) == (2, 5)
+    assert result.estimate == pytest.approx(0.4)
+    assert 0.0 <= result.low <= result.estimate <= result.high <= 1.0
+    assert result.replicates == 200 and result.seed == DEFAULT_SEED
+    payload = result.to_json()
+    assert set(payload) == {field for field in RateInterval.__dataclass_fields__}
+    assert (payload['count'], payload['total']) == (2, 5)
+    assert payload['estimate'] == pytest.approx(0.4)
+    assert (payload['replicates'], payload['seed']) == (200, DEFAULT_SEED)
+    json.dumps(payload)
+
+
+def test_bootstrap_rate_reads_boolean_and_integer_indicators_alike():
+    flags = np.array([True, False, True, True])
+    assert bootstrap_rate(flags, replicates=50, seed=1) == bootstrap_rate(flags.astype(int), replicates=50, seed=1)
+    assert bootstrap_rate(flags, replicates=50, seed=1).count == 3
+
+
+def test_bootstrap_rate_is_reproducible_from_its_seed():
+    indicators = np.random.default_rng(3).integers(0, 2, size=40)
+    first = bootstrap_rate(indicators, replicates=500, seed=DEFAULT_SEED)
+    assert bootstrap_rate(indicators, replicates=500, seed=DEFAULT_SEED) == first
+    other = bootstrap_rate(indicators, replicates=500, seed=DEFAULT_SEED + 1)
+    assert other.estimate == first.estimate
+    assert (other.low, other.high) != (first.low, first.high)
+
+
+def test_bootstrap_rate_resamples_the_shots_the_paired_bootstrap_resamples():
+    """Under one seed the two draw the same shots, so a rate's interval is exactly the
+    interval that side of a paired comparison carries, and the report can quote either."""
+    indicators = np.random.default_rng(4).integers(0, 2, size=40).astype(np.float64)
+    ones = np.ones(len(indicators))
+    rate = bootstrap_rate(indicators, replicates=64, seed=DEFAULT_SEED)
+    paired = paired_bootstrap(indicators, ones - indicators, ones, ones, replicates=64, seed=DEFAULT_SEED)
+    assert (rate.estimate, rate.low, rate.high) == (paired.estimate_a, paired.low_a, paired.high_a)
+
+
+def test_blocking_the_rate_replicates_does_not_change_the_answer(monkeypatch):
+    import yoked.hierarchical._metrics as metrics
+
+    indicators = np.random.default_rng(4).integers(0, 2, size=40)
+    whole = bootstrap_rate(indicators, replicates=64, seed=DEFAULT_SEED)
+    monkeypatch.setattr(metrics, 'BOOTSTRAP_BLOCK_ENTRIES', 40)      # one replicate per block
+    assert bootstrap_rate(indicators, replicates=64, seed=DEFAULT_SEED) == whole
+
+
+def test_an_empty_input_is_reported_as_unavailable():
+    result = bootstrap_rate(np.zeros(0, dtype=bool), replicates=100, seed=DEFAULT_SEED)
+    assert (result.count, result.total) == (0, 0)
+    assert np.isnan(result.estimate) and np.isnan(result.low) and np.isnan(result.high)
+    assert (result.replicates, result.seed) == (100, DEFAULT_SEED)
+    payload = result.to_json()
+    assert payload['estimate'] is None and payload['low'] is None and payload['high'] is None
+    assert (payload['count'], payload['total']) == (0, 0)
+    json.dumps(payload)
+
+
+@pytest.mark.parametrize('indicators', [np.array([[1, 0]]), np.array([2, 0]), np.array([0.5]),
+                                        np.array([np.nan]), np.array([-1]), np.array(['1'])])
+def test_bootstrap_rate_rejects_values_that_are_not_indicators(indicators):
+    with pytest.raises(ValueError):
+        bootstrap_rate(indicators, replicates=10, seed=DEFAULT_SEED)
+
+
+@pytest.mark.parametrize('kwargs', [dict(replicates=0), dict(replicates=1.5), dict(seed=-1),
+                                    dict(seed=True)])
+def test_bootstrap_rate_validates_its_settings(kwargs):
+    with pytest.raises(ValueError):
+        bootstrap_rate(np.array([1, 0]), **{'replicates': 10, 'seed': DEFAULT_SEED, **kwargs})
+
+
+@pytest.mark.parametrize('fields', [dict(count=3), dict(count=True), dict(replicates=0),
+                                    dict(seed=-1), dict(low=None)])
+def test_rate_interval_rejects_impossible_fields(fields):
+    valid = dict(count=1, total=2, estimate=0.5, low=0.0, high=1.0, replicates=10, seed=0)
+    RateInterval(**valid)
+    with pytest.raises((TypeError, ValueError)):
+        RateInterval(**{**valid, **fields})
+
+
+# --- block failure of two prediction arrays -------------------------------------------
+
+
+def test_paired_block_failure_reports_the_hand_computed_difference():
+    """Three shots, two patches: a fails shot 0, b fails shots 0 and 2, so b - a = 1/3."""
+    record = _record(shots=3, patches=2)
+    a = np.zeros((3, 4), dtype=bool)
+    a[0, 1] = True
+    b = np.zeros((3, 4), dtype=bool)
+    b[0, 0] = True
+    b[2, 3] = True
+    result = paired_block_failure(record, a, b, replicates=200, seed=DEFAULT_SEED)
+    assert isinstance(result, PairedDifference)
+    assert result.estimate_a == pytest.approx(1 / 3) and result.estimate_b == pytest.approx(2 / 3)
+    assert result.difference == pytest.approx(1 / 3)
+    assert result.low <= result.difference <= result.high
+    assert result.zero_denominator_replicates == 0
+    assert (result.replicates, result.seed) == (200, DEFAULT_SEED)
+    reverse = paired_block_failure(record, b, a, replicates=200, seed=DEFAULT_SEED)
+    assert reverse.difference == pytest.approx(-1 / 3)
+    assert (reverse.low, reverse.high) == (pytest.approx(-result.high), pytest.approx(-result.low))
+
+
+def test_paired_block_failure_scores_against_the_records_actual_flips():
+    """A prediction equal to ``actual`` never fails, whatever the reference columns hold."""
+    actual = np.array([[True, False, False, True], [False, False, True, False]])
+    record = _record(shots=2, patches=2, actual=actual)
+    result = paired_block_failure(record, actual, np.zeros((2, 4), dtype=bool), replicates=50, seed=1)
+    assert result.estimate_a == 0.0 and result.estimate_b == 1.0 and result.difference == 1.0
+
+
+def test_paired_block_failure_rejects_the_wrong_record_shapes_and_values():
+    record = _record(shots=3, patches=2)
+    good = np.zeros((3, 4), dtype=bool)
+    with pytest.raises(TypeError):
+        paired_block_failure(record.actual, good, good, replicates=10, seed=1)
+    with pytest.raises(ValueError):
+        paired_block_failure(record, good[:2], good, replicates=10, seed=1)
+    with pytest.raises(ValueError):
+        paired_block_failure(record, good, np.zeros((3, 6), dtype=bool), replicates=10, seed=1)
+    with pytest.raises(ValueError):
+        paired_block_failure(record, good, np.full((3, 4), 2), replicates=10, seed=1)
+    with pytest.raises(ValueError):
+        paired_block_failure(record, good, good, replicates=0, seed=1)
+
+
 # --- summaries over a replayed record ----------------------------------------------
 
 
@@ -362,6 +499,16 @@ def test_compare_endpoints_pairs_the_two_configurations():
     assert block['estimate_a'] == 0.5 and block['estimate_b'] == 1.0 and block['difference'] == 0.5
     assert block['replicates'] == 200 and block['seed'] == DEFAULT_SEED
     json.dumps(comparison)
+
+
+def test_compare_endpoints_block_failure_is_the_paired_block_failure():
+    record, initial, refined = _endpoint_fixture()
+    comparison = compare_endpoints(record, initial, refined, pieces=PIECES, replicates=200, seed=DEFAULT_SEED)
+    direct = paired_block_failure(record, initial.final, refined.final, replicates=200, seed=DEFAULT_SEED)
+    assert comparison['block_failure'] == direct.to_json()
+    # And the rate interval of either side is the one ``bootstrap_rate`` gives that side.
+    side = bootstrap_rate(block_failures(refined.final, record.actual), replicates=200, seed=DEFAULT_SEED)
+    assert (side.estimate, side.low, side.high) == (direct.estimate_b, direct.low_b, direct.high_b)
 
 
 def test_compare_endpoints_rejects_results_that_are_not_paired():

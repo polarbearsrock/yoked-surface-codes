@@ -22,11 +22,19 @@ Replicates whose denominator is empty are counted and excluded, not replaced
 by zero. Both endpoints are resampled under the same draw, so the reported
 difference ``all_refined - initial_only`` is paired.
 
+The same draw serves the baselines table of section 9: ``bootstrap_rate``
+gives one configuration's block failure rate with its interval, and
+``paired_block_failure`` the paired difference of any two prediction arrays on
+one record, so a historical decoder, the collector's joint decode, and a
+replayed cell are scored and compared on exactly the same resampled shots.
+
 ``_metrics_test.py`` checks the rates and strata on hand-built bit patterns,
 the undefined cases, the sinter conversion, a hand-computed paired point
 estimate, reproducibility from the seed, invariance to replicate blocking,
-retained cross-sector dependence, the zero-denominator count, and the
-hand-worked endpoint summary and comparison.
+retained cross-sector dependence, the zero-denominator count, a rate
+interval's agreement with the corresponding side of a paired comparison, the
+empty rate reported as unavailable, a hand-computed paired block failure and
+its antisymmetry, and the hand-worked endpoint summary and comparison.
 """
 from __future__ import annotations
 
@@ -274,13 +282,26 @@ class PairedDifference:
 
     def to_json(self) -> dict:
         """Every field, with undefined estimates and bounds serialized as None."""
-        payload = {}
-        for field in dataclasses.fields(self):
-            value = getattr(self, field.name)
-            payload[field.name] = (None if isinstance(value, float) and not np.isfinite(value)
-                                   else value)
-        return payload
+        return _json_fields(self)
 
+
+def _json_fields(result) -> dict:
+    """Every field of a frozen result, with undefined floats serialized as None."""
+    payload = {}
+    for field in dataclasses.fields(result):
+        value = getattr(result, field.name)
+        payload[field.name] = None if isinstance(value, float) and not np.isfinite(value) else value
+    return payload
+
+
+def _checked_settings(replicates, seed) -> tuple[int, int]:
+    """The bootstrap settings as whole numbers: a positive replicate count and a seed."""
+    if isinstance(replicates, (bool, np.bool_)) or not isinstance(replicates, (int, np.integer)) \
+            or replicates < 1:
+        raise ValueError(f'replicates must be a positive integer, got {replicates!r}')
+    if isinstance(seed, (bool, np.bool_)) or not isinstance(seed, (int, np.integer)) or seed < 0:
+        raise ValueError(f'seed must be a nonnegative integer, got {seed!r}')
+    return int(replicates), int(seed)
 
 
 def _ratio(numerator: float, denominator: float) -> float:
@@ -336,11 +357,7 @@ def paired_bootstrap(numerator_a, numerator_b, denominator_a, denominator_b, *,
     shot's sectors move together and its whole contribution is resampled at
     once. The reported difference is side b minus side a.
     """
-    if isinstance(replicates, (bool, np.bool_)) or not isinstance(replicates, (int, np.integer)) \
-            or replicates < 1:
-        raise ValueError(f'replicates must be a positive integer, got {replicates!r}')
-    if isinstance(seed, (bool, np.bool_)) or not isinstance(seed, (int, np.integer)) or seed < 0:
-        raise ValueError(f'seed must be a nonnegative integer, got {seed!r}')
+    replicates, seed = _checked_settings(replicates, seed)
     numerator_a = _per_shot(numerator_a, 'numerator_a', None)
     shots = len(numerator_a)
     numerator_b = _per_shot(numerator_b, 'numerator_b', shots)
@@ -354,7 +371,7 @@ def paired_bootstrap(numerator_a, numerator_b, denominator_a, denominator_b, *,
     estimate_a = _ratio(numerator_a.sum(), denominator_a.sum())
     estimate_b = _ratio(numerator_b.sum(), denominator_b.sum())
 
-    sums = _resampled_sums(columns, replicates=int(replicates), seed=int(seed))
+    sums = _resampled_sums(columns, replicates=replicates, seed=seed)
     usable = (sums[:, 2] > 0) & (sums[:, 3] > 0)
     empty = int(replicates - usable.sum())
     if usable.any():
@@ -368,7 +385,102 @@ def paired_bootstrap(numerator_a, numerator_b, denominator_a, denominator_b, *,
     return PairedDifference(
         estimate_a=estimate_a, estimate_b=estimate_b, low_a=low_a, high_a=high_a,
         low_b=low_b, high_b=high_b, difference=estimate_b - estimate_a, low=low, high=high,
-        replicates=int(replicates), seed=int(seed), zero_denominator_replicates=empty)
+        replicates=replicates, seed=seed, zero_denominator_replicates=empty)
+
+
+# --- one rate's interval, and two predictions' block failure ---------------------------
+
+
+RATE_INTERVAL_SETTINGS = ('count', 'total', 'replicates', 'seed')
+"""The whole-number fields of a ``RateInterval``; ``estimate``, ``low``, and ``high`` are
+floats that are nan when the rate is undefined."""
+
+
+@dataclass(frozen=True)
+class RateInterval:
+    """One configuration's rate over whole shots, with its bootstrap percentile interval.
+
+    ``count`` events out of ``total`` shots; ``estimate`` is ``count / total`` and
+    ``low``/``high`` the 95% percentile interval of the rate over ``replicates``
+    resamples of whole shots drawn at ``seed``. A rate over no shots is undefined and
+    travels with its zero counts: nan here and None in ``to_json``, as in
+    ``PairedDifference``.
+    """
+
+    count: int
+    total: int
+    estimate: float
+    low: float
+    high: float
+    replicates: int
+    seed: int
+
+    def __post_init__(self) -> None:
+        for field in dataclasses.fields(self):
+            value = getattr(self, field.name)
+            if field.name in RATE_INTERVAL_SETTINGS:
+                object.__setattr__(self, field.name, _whole(value, field.name))
+            else:
+                object.__setattr__(self, field.name, float(value))
+        if self.count > self.total:
+            raise ValueError(f'count {self.count} exceeds total {self.total}')
+        if self.replicates < 1:
+            raise ValueError('replicates must be positive')
+
+    def to_json(self) -> dict:
+        """Every field, with an undefined estimate and bounds serialized as None."""
+        return _json_fields(self)
+
+
+def _indicators(value) -> np.ndarray:
+    """A per-shot array of 0/1 flags as float64; it may be empty."""
+    array = np.asarray(value)
+    if array.ndim != 1:
+        raise ValueError(f'indicators must be a per-shot array, got shape {array.shape}')
+    if array.dtype.kind not in 'buif' or not np.isin(array, (0, 1)).all():
+        raise ValueError('indicators must contain only 0 and 1')
+    return array.astype(np.float64)
+
+
+def bootstrap_rate(indicators, *, replicates: int, seed: int) -> RateInterval:
+    """One rate over whole shots with its 95% percentile interval.
+
+    ``indicators`` holds one 0/1 flag per shot, so the rate is ``count / shots`` and a
+    replicate's rate is the mean flag over ``shots`` shots drawn with replacement. The
+    draw is the one ``paired_bootstrap`` makes under the same seed, so the interval here
+    is exactly the interval that side of a paired comparison carries, and a report may
+    quote either. No shots at all give an undefined rate, reported as unavailable
+    rather than resampled.
+    """
+    replicates, seed = _checked_settings(replicates, seed)
+    flags = _indicators(indicators)
+    count, total = int(flags.sum()), len(flags)
+    if total == 0:
+        undefined = float('nan')
+        return RateInterval(count=0, total=0, estimate=undefined, low=undefined, high=undefined,
+                            replicates=replicates, seed=seed)
+    sums = _resampled_sums(flags[:, None], replicates=replicates, seed=seed)
+    low, high = np.percentile(sums[:, 0] / total, INTERVAL_PERCENTILES)
+    return RateInterval(count=count, total=total, estimate=count / total, low=low, high=high,
+                        replicates=replicates, seed=seed)
+
+
+def paired_block_failure(record: L1Record, predictions_a, predictions_b, *,
+                         replicates: int, seed: int) -> PairedDifference:
+    """The paired block-failure difference ``b - a`` of two predictions on one record.
+
+    Either side is any ``(shots, 2P)`` bit array over the record's shots -- a replayed
+    final prediction, a historical baseline, or the collector's own joint decode -- and
+    is scored against the record's ``actual`` flips. Every shot contributes its failure
+    flag with denominator one, so the comparison resamples whole shots exactly as
+    ``compare_endpoints`` does; this is the block-failure comparison it reports.
+    """
+    if not isinstance(record, L1Record):
+        raise TypeError(f'record must be an L1Record, got {type(record).__name__}')
+    failed = [block_failures(predictions, record.actual).astype(np.float64)
+              for predictions in (predictions_a, predictions_b)]
+    ones = np.ones(record.shots, dtype=np.float64)
+    return paired_bootstrap(failed[0], failed[1], ones, ones, replicates=replicates, seed=seed)
 
 
 # --- summaries ---------------------------------------------------------------------
@@ -434,8 +546,6 @@ def compare_endpoints(record: L1Record, initial: ReplayResult, refined: ReplayRe
     eligible_per_shot = eligible.sum(axis=1).astype(np.float64)
     misattributed = [(sector_failures(result.final, record.actual) & eligible).sum(axis=1).astype(np.float64)
                      for result in (initial, refined)]
-    failed = [block_failures(result.final, record.actual).astype(np.float64) for result in (initial, refined)]
-    ones = np.ones(record.shots, dtype=np.float64)
     return {
         'shots': record.shots,
         'reference': reference,
@@ -445,6 +555,6 @@ def compare_endpoints(record: L1Record, initial: ReplayResult, refined: ReplayRe
         'misattribution_pooled': paired_bootstrap(
             misattributed[0], misattributed[1], eligible_per_shot, eligible_per_shot,
             replicates=replicates, seed=seed).to_json(),
-        'block_failure': paired_bootstrap(
-            failed[0], failed[1], ones, ones, replicates=replicates, seed=seed).to_json(),
+        'block_failure': paired_block_failure(
+            record, initial.final, refined.final, replicates=replicates, seed=seed).to_json(),
     }

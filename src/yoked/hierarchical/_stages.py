@@ -49,7 +49,13 @@ Six stages, each a function over already-verified inputs:
     its recomputed identity, every declared artifact hash, and the referenced record's
     manifest hash, identities, and exact row summary. It pairs configurations only
     within one record and one estimator pair, and writes the markdown report, the
-    machine-readable results, and the summary's own completion manifest last.
+    machine-readable results, and the summary's own completion manifest last. When the
+    record carries imported baselines, each record section ends with the baselines
+    table of section 9: the recorded run's decoders, the collector's own joint MWPM, and
+    every replayed cell scored on the same shots, with each cell's paired block-failure
+    difference against the recorded joint MWPM. A record without baselines gets no
+    table and no JSON key, and the summary manifest's inputs are the same either way,
+    because the record hash they name already covers the baseline columns.
 
 Publication order is the whole point of the module. A completion manifest appears only
 after the artifacts it stands over, so a directory without one holds an interrupted
@@ -70,9 +76,13 @@ the collection identity untouched; a baseline import once through the function a
 once through the command line; and the subset check passing a full and a subset
 collection of one sampling call through the function and the command line, refusing
 another seed on the parent-sample identity and another role on the role, and reporting
-an altered subset record under its array and parent row with the JSON written first.
-The import's own gates are checked beside ``_baselines.py`` and the comparison beside
-``_reproduction.py``.
+an altered subset record under its array and parent row with the JSON written first;
+and the summary of a replay over a record with imported baselines rendering the
+baselines table after the endpoint groups with every rate equal to a direct computation
+from the arrays, leaving the manifest inputs unchanged, naming the paired difference
+unavailable when the recorded joint MWPM was not imported, and rendering no table for a
+record without baselines. The import's own gates are checked beside ``_baselines.py``
+and the comparison beside ``_reproduction.py``.
 """
 from __future__ import annotations
 
@@ -87,7 +97,8 @@ from types import MappingProxyType
 import numpy as np
 
 from yoked.hierarchical._baselines import (
-    BASELINE_DECODERS, BASELINES_FIELD, attach_baselines, load_recorded_baselines,
+    BASELINE_DECODERS, BASELINES_FIELD, RECORDED_JOINT_MWPM, attach_baselines,
+    load_recorded_baselines,
 )
 from yoked.hierarchical._calibration import CLIP, KNOT_CONVENTION, IsotonicCalibrator
 from yoked.hierarchical._collect import (
@@ -99,7 +110,8 @@ from yoked.hierarchical._collect import (
 # and read the same way a record is.
 from yoked.hierarchical._collect import _requested_rows
 from yoked.hierarchical._metrics import (
-    DEFAULT_REPLICATES, DEFAULT_SEED, SECTOR_NAMES, STRATA, compare_endpoints, summarize_result,
+    DEFAULT_REPLICATES, DEFAULT_SEED, SECTOR_NAMES, STRATA, block_failures, bootstrap_rate,
+    compare_endpoints, normalized_ler, paired_block_failure, summarize_result,
 )
 from yoked.hierarchical._outer_decoder import TIE_TOLERANCE
 from yoked.hierarchical._policies import INITIAL_ONLY, policy_from_name
@@ -222,6 +234,23 @@ PAIRED_METRICS = ('misattribution_pooled', 'block_failure')
 REPORT_DIGITS = 6
 """Significant digits in the report's numbers: enough to read a rate of a few times 1e-4
 without suggesting precision the shot counts do not support."""
+
+BASELINES_HEADING = 'Baselines on the same shots'
+"""The heading of the section-9 baselines table, which closes a record section that
+carries imported baselines. It says what the table is for: every row is scored on the
+record's shots, so the rows are comparable and nothing in it is a historical number
+quoted from elsewhere."""
+
+COLLECTED_JOINT_MWPM = 'joint_mwpm'
+"""How the baselines table names the record's own ``joint_mwpm`` column: the collector's
+recomputed joint decode, which the import gated the recorded one against, reported beside
+it so the two are seen to agree rather than assumed to."""
+
+HISTORICAL_KIND, COLLECTED_KIND, HIERARCHICAL_KIND = 'historical', 'collected', 'hierarchical'
+"""What each row of the baselines table is: a prediction saved by the recorded run, the
+collector's own joint decode, or a replayed hierarchical cell. Section 5.3 requires
+historical results to be told apart from newly collected ones, so the kind is printed
+beside every row and stored beside every JSON block."""
 
 
 def _whole(value, name: str, *, minimum: int) -> int:
@@ -1243,8 +1272,63 @@ def _group_json(loaded: LoadedRecord, cells: Mapping, *, pieces: int, replicates
     }
 
 
+def _baseline_entry(record: L1Record, predictions: np.ndarray, *, kind: str,
+                    comparator: np.ndarray | None, pieces: int, replicates: int, seed: int) -> dict:
+    """One row of the baselines table: block failure with its interval and normalized LER.
+
+    A hierarchical row also carries its paired block-failure difference against the
+    comparator, the recorded joint MWPM, or None when the record does not carry that
+    baseline: the difference is then unavailable rather than taken against another
+    column, so the table never compares against something other than what it names.
+    """
+    rate = bootstrap_rate(block_failures(predictions, record.actual), replicates=replicates, seed=seed)
+    entry = {'kind': kind, 'block_failure': rate.to_json(),
+             'normalized_ler': normalized_ler(rate.estimate, pieces=pieces)}
+    if kind == HIERARCHICAL_KIND:
+        entry['paired_block_failure'] = (
+            None if comparator is None else
+            paired_block_failure(record, comparator, predictions, replicates=replicates,
+                                 seed=seed).to_json())
+    return entry
+
+
+def _baselines_json(loaded: LoadedRecord, groups: Sequence[Mapping], cells: Mapping, *,
+                    pieces: int, replicates: int, seed: int) -> dict:
+    """The baselines table of section 9: every decoder scored on the record's shots.
+
+    The rows are the record's imported baselines in ``BASELINE_DECODERS`` order (any
+    other name it carries after them), the collector's own joint MWPM, and then every
+    replayed cell in the order its endpoint tables use. Every rate resamples the same
+    shots under the same seed, and every hierarchical cell is paired against the
+    recorded joint MWPM when the record carries it.
+    """
+    record = loaded.record
+    historical = [name for name in BASELINE_DECODERS if name in record.baselines]
+    historical += sorted(set(record.baselines) - set(historical))
+    rows = [(name, record.baselines[name], HISTORICAL_KIND) for name in historical]
+    rows.append((COLLECTED_JOINT_MWPM, record.joint_mwpm, COLLECTED_KIND))
+    rows += [(name, cells[name][0].final, HIERARCHICAL_KIND)
+             for group in groups for name in group['order']]
+    comparator = record.baselines.get(RECORDED_JOINT_MWPM)
+    decoders: dict[str, dict] = {}
+    for name, predictions, kind in rows:
+        if name in decoders:
+            raise ValueError(f'the baselines table would name {name!r} twice')
+        decoders[name] = _baseline_entry(record, predictions, kind=kind, comparator=comparator,
+                                         pieces=pieces, replicates=replicates, seed=seed)
+    return {
+        'comparator': None if comparator is None else RECORDED_JOINT_MWPM,
+        'order': list(decoders),
+        'decoders': decoders,
+    }
+
+
 def _summarize_replay(directory: Path, *, replicates: int, seed: int) -> dict:
-    """Verify one replay directory end to end and compute every number the report prints."""
+    """Verify one replay directory end to end and compute every number the report prints.
+
+    A record carrying baselines adds the ``baselines`` block; one without adds nothing,
+    so the JSON says whether a table was possible rather than holding an empty one.
+    """
     manifest = _verified_replay_manifest(directory)
     loaded = load_record(manifest['record']['directory'])
     _require_same_record(loaded, manifest['record'], where=directory / REPLAY_MANIFEST)
@@ -1263,7 +1347,9 @@ def _summarize_replay(directory: Path, *, replicates: int, seed: int) -> dict:
     for name, cell in cells.items():
         key = (cell[1]['initial_estimator'], cell[1]['refined_score'])
         groups.setdefault(key, {})[name] = cell
-    return {
+    ordered = [_group_json(loaded, members, pieces=pieces, replicates=replicates, seed=seed)
+               for _, members in sorted(groups.items())]
+    section = {
         'replay_directory': str(directory.resolve()),
         'replay_identity': manifest['identity'],
         'replay_manifest_sha256': sha256_file(directory / REPLAY_MANIFEST),
@@ -1272,9 +1358,12 @@ def _summarize_replay(directory: Path, *, replicates: int, seed: int) -> dict:
         'record': {**{name: manifest['record'][name] for name in RECORD_BLOCK_FIELDS},
                    'shots': loaded.record.shots, 'patches': loaded.record.num_patches},
         'pieces': pieces,
-        'groups': [_group_json(loaded, members, pieces=pieces, replicates=replicates, seed=seed)
-                   for _, members in sorted(groups.items())],
+        'groups': ordered,
     }
+    if loaded.record.baselines:
+        section['baselines'] = _baselines_json(loaded, ordered, cells, pieces=pieces,
+                                               replicates=replicates, seed=seed)
+    return section
 
 
 # --- the report ---------------------------------------------------------------
@@ -1287,9 +1376,14 @@ def _number(value) -> str:
     return f'{float(value):.{REPORT_DIGITS}g}'
 
 
-def _rate(rate: Mapping) -> str:
+def _counted(value, count, total) -> str:
     """A rate with the denominator it was taken over, so an empty population is visible."""
-    return f'{_number(rate["value"])} [{rate["count"]} / {rate["total"]}]'
+    return f'{_number(value)} [{count} / {total}]'
+
+
+def _rate(rate: Mapping) -> str:
+    """A ``Rate`` as JSON, printed with its denominator."""
+    return _counted(rate['value'], rate['count'], rate['total'])
 
 
 def _interval(bounds) -> str:
@@ -1382,6 +1476,54 @@ def _render_group(group: Mapping, shots: int) -> list[str]:
     return lines
 
 
+def _baseline_rows(baselines: Mapping) -> list[list[str]]:
+    """Every decoder of the baselines table: kind, block failure, interval, normalized LER."""
+    rows = []
+    for name in baselines['order']:
+        entry = baselines['decoders'][name]
+        block = entry['block_failure']
+        rows.append([f'`{name}`', entry['kind'],
+                     _counted(block['estimate'], block['count'], block['total']),
+                     _interval([block['low'], block['high']]), _number(entry['normalized_ler'])])
+    return rows
+
+
+def _baseline_paired_rows(baselines: Mapping) -> list[list[str]]:
+    """Every hierarchical cell's paired difference against the comparator; a cell without
+    one, because the record carries no recorded joint MWPM, still occupies its row."""
+    rows = []
+    for name in baselines['order']:
+        entry = baselines['decoders'][name]
+        if entry['kind'] != HIERARCHICAL_KIND:
+            continue
+        paired = entry['paired_block_failure']
+        if paired is None:
+            rows.append([f'`{name}`', UNAVAILABLE, UNAVAILABLE])
+        else:
+            rows.append([f'`{name}`', _number(paired['difference']),
+                         _interval([paired['low'], paired['high']])])
+    return rows
+
+
+def _render_baselines(baselines: Mapping, shots: int) -> list[str]:
+    """The baselines table and the paired differences of the hierarchical cells."""
+    lines = [f'### {BASELINES_HEADING}', '',
+             f'The recorded run\'s decoders (`{HISTORICAL_KIND}`), the collector\'s recomputed '
+             f'`{COLLECTED_JOINT_MWPM}` (`{COLLECTED_KIND}`), and every replayed cell above '
+             f'(`{HIERARCHICAL_KIND}`), each scored on the same {shots} shots:', '']
+    lines += _table(['Decoder', 'Kind', 'Block failure', '95% interval',
+                     'Normalized LER (per patch per round)'], _baseline_rows(baselines))
+    if baselines['comparator'] is None:
+        lines += [f'Paired block-failure differences of the hierarchical cells against '
+                  f'`{RECORDED_JOINT_MWPM}`, which this record does not carry, so none is '
+                  f'available:', '']
+    else:
+        lines += [f'Paired block-failure differences of the hierarchical cells against '
+                  f'`{baselines["comparator"]}`, resampling whole shots:', '']
+    lines += _table(['Cell', 'Difference', '95% interval'], _baseline_paired_rows(baselines))
+    return lines
+
+
 def _render(sections: Sequence[Mapping], *, replicates: int, seed: int) -> str:
     """The whole report: one section per replay directory, one subsection per estimator pair."""
     lines = ['# Hierarchical L1/L2 endpoint summary', '',
@@ -1408,6 +1550,8 @@ def _render(sections: Sequence[Mapping], *, replicates: int, seed: int) -> str:
         ])
         for group in section['groups']:
             lines += _render_group(group, record['shots'])
+        if 'baselines' in section:
+            lines += _render_baselines(section['baselines'], record['shots'])
     return '\n'.join(lines).rstrip('\n') + '\n'
 
 
@@ -1434,6 +1578,9 @@ def stage_summarize(replay_dirs: Iterable, out_path, *, replicates: int = DEFAUL
     identities, role, record hash, and manifest hash. Configurations are paired only
     within one record and one estimator pair, against that pair's ``initial_only`` mixed
     cell, so both sides share a reference decoder and therefore one eligible population.
+    A record carrying imported baselines closes its section with the baselines table,
+    every row scored on the same shots and every cell paired against the recorded
+    joint MWPM.
 
     Writes ``<out>.md``, ``<out>.json``, and then ``<out>.manifest.json`` last, and
     returns the markdown text.
