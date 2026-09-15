@@ -1,0 +1,2069 @@
+{
+  "bootstrap": {
+    "replicates": 10000,
+    "seed": 43
+  },
+  "created_utc": "2026-09-15T07:11:38Z",
+  "records": [
+    {
+      "artifacts": {
+        "mwpm_gap_plain_to_gap_correlated_all_refined_mixed/arrays.npz": "eb236baa7e73163bfa72b987127bd2172fe5cc16e460b925b75d0bbfad485b83",
+        "mwpm_gap_plain_to_gap_correlated_all_refined_mixed/results.json": "31156eeb9a99fdfe27fecdcb6c58ee4d33e61373e48b5f4cafde38d7088a3e27",
+        "mwpm_gap_plain_to_gap_correlated_initial_only_mixed/arrays.npz": "afa506608ab07ece4ac22aa20e89677a56b1e5a52f00d1ff677edacb9752edd9",
+        "mwpm_gap_plain_to_gap_correlated_initial_only_mixed/results.json": "e352a9e0ed53563dc6861163ee84b9a22079bac707911ea6e89b1f9615cdd1f7",
+        "uf_cluster_gap_to_gap_correlated_all_refined_mixed/arrays.npz": "cf0c4d83b269535005c61754d7853593e34f6544bcd330c1e4590140fc19035d",
+        "uf_cluster_gap_to_gap_correlated_all_refined_mixed/results.json": "0134b63ef0e43d8324d2f65a1725ae0027a2ca3f9aa9b0a2b3a20a8219a43caf",
+        "uf_cluster_gap_to_gap_correlated_initial_only_mixed/arrays.npz": "1d52846b610a0753d691f8f2f4fa42269131cbbb2eae87a8e988170cb62a73b3",
+        "uf_cluster_gap_to_gap_correlated_initial_only_mixed/results.json": "6bea7b01c5099df178a0b5a7e36cb18326e44a43663268b20c7da45145d2bed1",
+        "uf_cluster_gap_to_gap_plain_all_refined_mixed/arrays.npz": "39dcf78e8d473e0785296545c3d144f12561242038a4a94fd6bffaa29ea32363",
+        "uf_cluster_gap_to_gap_plain_all_refined_mixed/results.json": "3b5b18130ac85ae314bbbcd4d0b3b5c2c3b276a2c10eb368beb193a51d72b7b8",
+        "uf_cluster_gap_to_gap_plain_initial_only_mixed/arrays.npz": "1d52846b610a0753d691f8f2f4fa42269131cbbb2eae87a8e988170cb62a73b3",
+        "uf_cluster_gap_to_gap_plain_initial_only_mixed/results.json": "7b525e8774ff7877ef0f7278401ac7957fe312c88a19f5691d39fa550c692585"
+      },
+      "calibrators": {
+        "identity": "19b0390daa341b30dfe7c2f81b05bdfccd706aeba82f3060c44afd93b6eb2c52",
+        "path": "/data2/s2chitni/.tmp/hier-d9-p003/calibrators_pilot.json",
+        "sha256": "273bb3d7e0f2e31d1a7ecfdbcf90ae09e7336c3ed8001f95a308d7644cca57da"
+      },
+      "groups": [
+        {
+          "baseline": "mwpm:gap_plain->gap_correlated:initial_only:mixed",
+          "cells": {
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed": {
+              "above_half": {
+                "count": 1382,
+                "total": 24000,
+                "value": 0.057583333333333334
+              },
+              "block_failure": {
+                "count": 130,
+                "total": 2000,
+                "value": 0.065
+              },
+              "config": "mwpm:gap_plain->gap_correlated:all_refined:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 38,
+                  "total": 550,
+                  "value": 0.06909090909090909
+                },
+                "Z": {
+                  "count": 28,
+                  "total": 560,
+                  "value": 0.05
+                },
+                "pooled": {
+                  "count": 66,
+                  "total": 1110,
+                  "value": 0.05945945945945946
+                }
+              },
+              "normalized_ler": 0.0003124147931049537,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "mwpm",
+              "sector_failure": {
+                "X": {
+                  "count": 71,
+                  "total": 2000,
+                  "value": 0.0355
+                },
+                "Z": {
+                  "count": 61,
+                  "total": 2000,
+                  "value": 0.0305
+                }
+              },
+              "shots": 2000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 23,
+                    "total": 93,
+                    "value": 0.24731182795698925
+                  },
+                  "Z": {
+                    "count": 25,
+                    "total": 112,
+                    "value": 0.22321428571428573
+                  },
+                  "pooled": {
+                    "count": 48,
+                    "total": 205,
+                    "value": 0.23414634146341465
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 38,
+                    "total": 550,
+                    "value": 0.06909090909090909
+                  },
+                  "Z": {
+                    "count": 28,
+                    "total": 560,
+                    "value": 0.05
+                  },
+                  "pooled": {
+                    "count": 66,
+                    "total": 1110,
+                    "value": 0.05945945945945946
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 10,
+                    "total": 1357,
+                    "value": 0.007369196757553427
+                  },
+                  "Z": {
+                    "count": 8,
+                    "total": 1328,
+                    "value": 0.006024096385542169
+                  },
+                  "pooled": {
+                    "count": 18,
+                    "total": 2685,
+                    "value": 0.0067039106145251395
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 0,
+                  "total": 2000,
+                  "value": 0.0
+                },
+                "Z": {
+                  "count": 0,
+                  "total": 2000,
+                  "value": 0.0
+                },
+                "pooled": {
+                  "count": 0,
+                  "total": 4000,
+                  "value": 0.0
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 6.0,
+                  "incremental_correlated_forced_calls": 24.0,
+                  "incremental_plain_forced_calls": 0.0,
+                  "incremental_reweight_passes": 6.0,
+                  "incremental_unforced_plain_calls": 0.0,
+                  "initial_dijkstra_searches": 0.0,
+                  "initial_dijkstra_states": 0.0,
+                  "initial_plain_forced_calls": 24.0,
+                  "initial_uf_calls": 0.0,
+                  "initial_unforced_plain_calls": 6.0,
+                  "requested_patch_sectors": 12.0
+                },
+                "shots": 2000,
+                "totals": {
+                  "distinct_patches": 12000,
+                  "incremental_correlated_forced_calls": 48000,
+                  "incremental_plain_forced_calls": 0,
+                  "incremental_reweight_passes": 12000,
+                  "incremental_unforced_plain_calls": 0,
+                  "initial_dijkstra_searches": 0,
+                  "initial_dijkstra_states": 0,
+                  "initial_plain_forced_calls": 48000,
+                  "initial_uf_calls": 0,
+                  "initial_unforced_plain_calls": 12000,
+                  "requested_patch_sectors": 24000
+                }
+              }
+            },
+            "mwpm:gap_plain->gap_correlated:initial_only:mixed": {
+              "above_half": {
+                "count": 62,
+                "total": 24000,
+                "value": 0.0025833333333333333
+              },
+              "block_failure": {
+                "count": 513,
+                "total": 2000,
+                "value": 0.2565
+              },
+              "config": "mwpm:gap_plain->gap_correlated:initial_only:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 173,
+                  "total": 550,
+                  "value": 0.3145454545454546
+                },
+                "Z": {
+                  "count": 185,
+                  "total": 560,
+                  "value": 0.33035714285714285
+                },
+                "pooled": {
+                  "count": 358,
+                  "total": 1110,
+                  "value": 0.3225225225225225
+                }
+              },
+              "normalized_ler": 0.0013974594656983585,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "mwpm",
+              "sector_failure": {
+                "X": {
+                  "count": 263,
+                  "total": 2000,
+                  "value": 0.1315
+                },
+                "Z": {
+                  "count": 297,
+                  "total": 2000,
+                  "value": 0.1485
+                }
+              },
+              "shots": 2000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 90,
+                    "total": 93,
+                    "value": 0.967741935483871
+                  },
+                  "Z": {
+                    "count": 112,
+                    "total": 112,
+                    "value": 1.0
+                  },
+                  "pooled": {
+                    "count": 202,
+                    "total": 205,
+                    "value": 0.9853658536585366
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 173,
+                    "total": 550,
+                    "value": 0.3145454545454546
+                  },
+                  "Z": {
+                    "count": 185,
+                    "total": 560,
+                    "value": 0.33035714285714285
+                  },
+                  "pooled": {
+                    "count": 358,
+                    "total": 1110,
+                    "value": 0.3225225225225225
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 0,
+                    "total": 1357,
+                    "value": 0.0
+                  },
+                  "Z": {
+                    "count": 0,
+                    "total": 1328,
+                    "value": 0.0
+                  },
+                  "pooled": {
+                    "count": 0,
+                    "total": 2685,
+                    "value": 0.0
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 3,
+                  "total": 2000,
+                  "value": 0.0015
+                },
+                "Z": {
+                  "count": 0,
+                  "total": 2000,
+                  "value": 0.0
+                },
+                "pooled": {
+                  "count": 3,
+                  "total": 4000,
+                  "value": 0.00075
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 0.0,
+                  "incremental_correlated_forced_calls": 0.0,
+                  "incremental_plain_forced_calls": 0.0,
+                  "incremental_reweight_passes": 0.0,
+                  "incremental_unforced_plain_calls": 0.0,
+                  "initial_dijkstra_searches": 0.0,
+                  "initial_dijkstra_states": 0.0,
+                  "initial_plain_forced_calls": 24.0,
+                  "initial_uf_calls": 0.0,
+                  "initial_unforced_plain_calls": 6.0,
+                  "requested_patch_sectors": 0.0
+                },
+                "shots": 2000,
+                "totals": {
+                  "distinct_patches": 0,
+                  "incremental_correlated_forced_calls": 0,
+                  "incremental_plain_forced_calls": 0,
+                  "incremental_reweight_passes": 0,
+                  "incremental_unforced_plain_calls": 0,
+                  "initial_dijkstra_searches": 0,
+                  "initial_dijkstra_states": 0,
+                  "initial_plain_forced_calls": 48000,
+                  "initial_uf_calls": 0,
+                  "initial_unforced_plain_calls": 12000,
+                  "requested_patch_sectors": 0
+                }
+              }
+            }
+          },
+          "comparisons": {
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed": {
+              "block_failure": {
+                "difference": -0.1915,
+                "estimate_a": 0.2565,
+                "estimate_b": 0.065,
+                "high": -0.1725,
+                "high_a": 0.2755,
+                "high_b": 0.076,
+                "low": -0.21000000000000002,
+                "low_a": 0.237,
+                "low_b": 0.0545,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "initial": {
+                "above_half": {
+                  "count": 62,
+                  "total": 24000,
+                  "value": 0.0025833333333333333
+                },
+                "block_failure": {
+                  "count": 513,
+                  "total": 2000,
+                  "value": 0.2565
+                },
+                "config": "mwpm:gap_plain->gap_correlated:initial_only:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 173,
+                    "total": 550,
+                    "value": 0.3145454545454546
+                  },
+                  "Z": {
+                    "count": 185,
+                    "total": 560,
+                    "value": 0.33035714285714285
+                  },
+                  "pooled": {
+                    "count": 358,
+                    "total": 1110,
+                    "value": 0.3225225225225225
+                  }
+                },
+                "normalized_ler": 0.0013974594656983585,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "mwpm",
+                "sector_failure": {
+                  "X": {
+                    "count": 263,
+                    "total": 2000,
+                    "value": 0.1315
+                  },
+                  "Z": {
+                    "count": 297,
+                    "total": 2000,
+                    "value": 0.1485
+                  }
+                },
+                "shots": 2000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 90,
+                      "total": 93,
+                      "value": 0.967741935483871
+                    },
+                    "Z": {
+                      "count": 112,
+                      "total": 112,
+                      "value": 1.0
+                    },
+                    "pooled": {
+                      "count": 202,
+                      "total": 205,
+                      "value": 0.9853658536585366
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 173,
+                      "total": 550,
+                      "value": 0.3145454545454546
+                    },
+                    "Z": {
+                      "count": 185,
+                      "total": 560,
+                      "value": 0.33035714285714285
+                    },
+                    "pooled": {
+                      "count": 358,
+                      "total": 1110,
+                      "value": 0.3225225225225225
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 0,
+                      "total": 1357,
+                      "value": 0.0
+                    },
+                    "Z": {
+                      "count": 0,
+                      "total": 1328,
+                      "value": 0.0
+                    },
+                    "pooled": {
+                      "count": 0,
+                      "total": 2685,
+                      "value": 0.0
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 3,
+                    "total": 2000,
+                    "value": 0.0015
+                  },
+                  "Z": {
+                    "count": 0,
+                    "total": 2000,
+                    "value": 0.0
+                  },
+                  "pooled": {
+                    "count": 3,
+                    "total": 4000,
+                    "value": 0.00075
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 0.0,
+                    "incremental_correlated_forced_calls": 0.0,
+                    "incremental_plain_forced_calls": 0.0,
+                    "incremental_reweight_passes": 0.0,
+                    "incremental_unforced_plain_calls": 0.0,
+                    "initial_dijkstra_searches": 0.0,
+                    "initial_dijkstra_states": 0.0,
+                    "initial_plain_forced_calls": 24.0,
+                    "initial_uf_calls": 0.0,
+                    "initial_unforced_plain_calls": 6.0,
+                    "requested_patch_sectors": 0.0
+                  },
+                  "shots": 2000,
+                  "totals": {
+                    "distinct_patches": 0,
+                    "incremental_correlated_forced_calls": 0,
+                    "incremental_plain_forced_calls": 0,
+                    "incremental_reweight_passes": 0,
+                    "incremental_unforced_plain_calls": 0,
+                    "initial_dijkstra_searches": 0,
+                    "initial_dijkstra_states": 0,
+                    "initial_plain_forced_calls": 48000,
+                    "initial_uf_calls": 0,
+                    "initial_unforced_plain_calls": 12000,
+                    "requested_patch_sectors": 0
+                  }
+                }
+              },
+              "misattribution_pooled": {
+                "difference": -0.26306306306306304,
+                "estimate_a": 0.3225225225225225,
+                "estimate_b": 0.05945945945945946,
+                "high": -0.23518410852713179,
+                "high_a": 0.3509877251379255,
+                "high_b": 0.07353005562995775,
+                "low": -0.2919319267258127,
+                "low_a": 0.295036411199095,
+                "low_b": 0.04596597022955524,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "pieces": 216,
+              "reference": "mwpm",
+              "refined": {
+                "above_half": {
+                  "count": 1382,
+                  "total": 24000,
+                  "value": 0.057583333333333334
+                },
+                "block_failure": {
+                  "count": 130,
+                  "total": 2000,
+                  "value": 0.065
+                },
+                "config": "mwpm:gap_plain->gap_correlated:all_refined:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 38,
+                    "total": 550,
+                    "value": 0.06909090909090909
+                  },
+                  "Z": {
+                    "count": 28,
+                    "total": 560,
+                    "value": 0.05
+                  },
+                  "pooled": {
+                    "count": 66,
+                    "total": 1110,
+                    "value": 0.05945945945945946
+                  }
+                },
+                "normalized_ler": 0.0003124147931049537,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "mwpm",
+                "sector_failure": {
+                  "X": {
+                    "count": 71,
+                    "total": 2000,
+                    "value": 0.0355
+                  },
+                  "Z": {
+                    "count": 61,
+                    "total": 2000,
+                    "value": 0.0305
+                  }
+                },
+                "shots": 2000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 23,
+                      "total": 93,
+                      "value": 0.24731182795698925
+                    },
+                    "Z": {
+                      "count": 25,
+                      "total": 112,
+                      "value": 0.22321428571428573
+                    },
+                    "pooled": {
+                      "count": 48,
+                      "total": 205,
+                      "value": 0.23414634146341465
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 38,
+                      "total": 550,
+                      "value": 0.06909090909090909
+                    },
+                    "Z": {
+                      "count": 28,
+                      "total": 560,
+                      "value": 0.05
+                    },
+                    "pooled": {
+                      "count": 66,
+                      "total": 1110,
+                      "value": 0.05945945945945946
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 10,
+                      "total": 1357,
+                      "value": 0.007369196757553427
+                    },
+                    "Z": {
+                      "count": 8,
+                      "total": 1328,
+                      "value": 0.006024096385542169
+                    },
+                    "pooled": {
+                      "count": 18,
+                      "total": 2685,
+                      "value": 0.0067039106145251395
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 0,
+                    "total": 2000,
+                    "value": 0.0
+                  },
+                  "Z": {
+                    "count": 0,
+                    "total": 2000,
+                    "value": 0.0
+                  },
+                  "pooled": {
+                    "count": 0,
+                    "total": 4000,
+                    "value": 0.0
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 6.0,
+                    "incremental_correlated_forced_calls": 24.0,
+                    "incremental_plain_forced_calls": 0.0,
+                    "incremental_reweight_passes": 6.0,
+                    "incremental_unforced_plain_calls": 0.0,
+                    "initial_dijkstra_searches": 0.0,
+                    "initial_dijkstra_states": 0.0,
+                    "initial_plain_forced_calls": 24.0,
+                    "initial_uf_calls": 0.0,
+                    "initial_unforced_plain_calls": 6.0,
+                    "requested_patch_sectors": 12.0
+                  },
+                  "shots": 2000,
+                  "totals": {
+                    "distinct_patches": 12000,
+                    "incremental_correlated_forced_calls": 48000,
+                    "incremental_plain_forced_calls": 0,
+                    "incremental_reweight_passes": 12000,
+                    "incremental_unforced_plain_calls": 0,
+                    "initial_dijkstra_searches": 0,
+                    "initial_dijkstra_states": 0,
+                    "initial_plain_forced_calls": 48000,
+                    "initial_uf_calls": 0,
+                    "initial_unforced_plain_calls": 12000,
+                    "requested_patch_sectors": 24000
+                  }
+                }
+              },
+              "shots": 2000
+            }
+          },
+          "initial_estimator": "mwpm:gap_plain",
+          "intervals": {
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed": {
+              "block_failure": [
+                0.0545,
+                0.076
+              ],
+              "misattribution_pooled": [
+                0.04596597022955524,
+                0.07353005562995775
+              ]
+            },
+            "mwpm:gap_plain->gap_correlated:initial_only:mixed": {
+              "block_failure": [
+                0.237,
+                0.2755
+              ],
+              "misattribution_pooled": [
+                0.295036411199095,
+                0.3509877251379255
+              ]
+            }
+          },
+          "labels": {
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed": "all_refined:mixed",
+            "mwpm:gap_plain->gap_correlated:initial_only:mixed": "initial_only:mixed"
+          },
+          "order": [
+            "mwpm:gap_plain->gap_correlated:initial_only:mixed",
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed"
+          ],
+          "policies": {
+            "mwpm:gap_plain->gap_correlated:all_refined:mixed": {
+              "outer": "mixed",
+              "policy": "all_refined"
+            },
+            "mwpm:gap_plain->gap_correlated:initial_only:mixed": {
+              "outer": "mixed",
+              "policy": "initial_only"
+            }
+          },
+          "refined_score": "gap_correlated"
+        },
+        {
+          "baseline": "uf:cluster_gap->gap_correlated:initial_only:mixed",
+          "cells": {
+            "uf:cluster_gap->gap_correlated:all_refined:mixed": {
+              "above_half": {
+                "count": 1595,
+                "total": 24000,
+                "value": 0.06645833333333333
+              },
+              "block_failure": {
+                "count": 131,
+                "total": 2000,
+                "value": 0.0655
+              },
+              "config": "uf:cluster_gap->gap_correlated:all_refined:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 32,
+                  "total": 602,
+                  "value": 0.053156146179401995
+                },
+                "Z": {
+                  "count": 31,
+                  "total": 599,
+                  "value": 0.05175292153589316
+                },
+                "pooled": {
+                  "count": 63,
+                  "total": 1201,
+                  "value": 0.05245628642797669
+                }
+              },
+              "normalized_ler": 0.000314911466551715,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "uf",
+              "sector_failure": {
+                "X": {
+                  "count": 68,
+                  "total": 2000,
+                  "value": 0.034
+                },
+                "Z": {
+                  "count": 65,
+                  "total": 2000,
+                  "value": 0.0325
+                }
+              },
+              "shots": 2000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 25,
+                    "total": 137,
+                    "value": 0.18248175182481752
+                  },
+                  "Z": {
+                    "count": 30,
+                    "total": 154,
+                    "value": 0.19480519480519481
+                  },
+                  "pooled": {
+                    "count": 55,
+                    "total": 291,
+                    "value": 0.18900343642611683
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 32,
+                    "total": 602,
+                    "value": 0.053156146179401995
+                  },
+                  "Z": {
+                    "count": 31,
+                    "total": 599,
+                    "value": 0.05175292153589316
+                  },
+                  "pooled": {
+                    "count": 63,
+                    "total": 1201,
+                    "value": 0.05245628642797669
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 11,
+                    "total": 1261,
+                    "value": 0.008723235527359239
+                  },
+                  "Z": {
+                    "count": 4,
+                    "total": 1247,
+                    "value": 0.0032076984763432237
+                  },
+                  "pooled": {
+                    "count": 15,
+                    "total": 2508,
+                    "value": 0.005980861244019139
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 0,
+                  "total": 2000,
+                  "value": 0.0
+                },
+                "Z": {
+                  "count": 1,
+                  "total": 2000,
+                  "value": 0.0005
+                },
+                "pooled": {
+                  "count": 1,
+                  "total": 4000,
+                  "value": 0.00025
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 6.0,
+                  "incremental_correlated_forced_calls": 24.0,
+                  "incremental_plain_forced_calls": 0.0,
+                  "incremental_reweight_passes": 6.0,
+                  "incremental_unforced_plain_calls": 6.0,
+                  "initial_dijkstra_searches": 12.0,
+                  "initial_dijkstra_states": 9365.5675,
+                  "initial_plain_forced_calls": 0.0,
+                  "initial_uf_calls": 6.0,
+                  "initial_unforced_plain_calls": 0.0,
+                  "requested_patch_sectors": 12.0
+                },
+                "shots": 2000,
+                "totals": {
+                  "distinct_patches": 12000,
+                  "incremental_correlated_forced_calls": 48000,
+                  "incremental_plain_forced_calls": 0,
+                  "incremental_reweight_passes": 12000,
+                  "incremental_unforced_plain_calls": 12000,
+                  "initial_dijkstra_searches": 24000,
+                  "initial_dijkstra_states": 18731135,
+                  "initial_plain_forced_calls": 0,
+                  "initial_uf_calls": 12000,
+                  "initial_unforced_plain_calls": 0,
+                  "requested_patch_sectors": 24000
+                }
+              }
+            },
+            "uf:cluster_gap->gap_correlated:initial_only:mixed": {
+              "above_half": {
+                "count": 213,
+                "total": 24000,
+                "value": 0.008875
+              },
+              "block_failure": {
+                "count": 667,
+                "total": 2000,
+                "value": 0.3335
+              },
+              "config": "uf:cluster_gap->gap_correlated:initial_only:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 233,
+                  "total": 602,
+                  "value": 0.38704318936877075
+                },
+                "Z": {
+                  "count": 217,
+                  "total": 599,
+                  "value": 0.3622704507512521
+                },
+                "pooled": {
+                  "count": 450,
+                  "total": 1201,
+                  "value": 0.37468776019983346
+                }
+              },
+              "normalized_ler": 0.001926405615341964,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "uf",
+              "sector_failure": {
+                "X": {
+                  "count": 386,
+                  "total": 2000,
+                  "value": 0.193
+                },
+                "Z": {
+                  "count": 370,
+                  "total": 2000,
+                  "value": 0.185
+                }
+              },
+              "shots": 2000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 124,
+                    "total": 137,
+                    "value": 0.9051094890510949
+                  },
+                  "Z": {
+                    "count": 153,
+                    "total": 154,
+                    "value": 0.9935064935064936
+                  },
+                  "pooled": {
+                    "count": 277,
+                    "total": 291,
+                    "value": 0.9518900343642611
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 233,
+                    "total": 602,
+                    "value": 0.38704318936877075
+                  },
+                  "Z": {
+                    "count": 217,
+                    "total": 599,
+                    "value": 0.3622704507512521
+                  },
+                  "pooled": {
+                    "count": 450,
+                    "total": 1201,
+                    "value": 0.37468776019983346
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 29,
+                    "total": 1261,
+                    "value": 0.022997620935765267
+                  },
+                  "Z": {
+                    "count": 0,
+                    "total": 1247,
+                    "value": 0.0
+                  },
+                  "pooled": {
+                    "count": 29,
+                    "total": 2508,
+                    "value": 0.011562998405103669
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 1,
+                  "total": 2000,
+                  "value": 0.0005
+                },
+                "Z": {
+                  "count": 0,
+                  "total": 2000,
+                  "value": 0.0
+                },
+                "pooled": {
+                  "count": 1,
+                  "total": 4000,
+                  "value": 0.00025
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 0.0,
+                  "incremental_correlated_forced_calls": 0.0,
+                  "incremental_plain_forced_calls": 0.0,
+                  "incremental_reweight_passes": 0.0,
+                  "incremental_unforced_plain_calls": 0.0,
+                  "initial_dijkstra_searches": 12.0,
+                  "initial_dijkstra_states": 9365.5675,
+                  "initial_plain_forced_calls": 0.0,
+                  "initial_uf_calls": 6.0,
+                  "initial_unforced_plain_calls": 0.0,
+                  "requested_patch_sectors": 0.0
+                },
+                "shots": 2000,
+                "totals": {
+                  "distinct_patches": 0,
+                  "incremental_correlated_forced_calls": 0,
+                  "incremental_plain_forced_calls": 0,
+                  "incremental_reweight_passes": 0,
+                  "incremental_unforced_plain_calls": 0,
+                  "initial_dijkstra_searches": 24000,
+                  "initial_dijkstra_states": 18731135,
+                  "initial_plain_forced_calls": 0,
+                  "initial_uf_calls": 12000,
+                  "initial_unforced_plain_calls": 0,
+                  "requested_patch_sectors": 0
+                }
+              }
+            }
+          },
+          "comparisons": {
+            "uf:cluster_gap->gap_correlated:all_refined:mixed": {
+              "block_failure": {
+                "difference": -0.268,
+                "estimate_a": 0.3335,
+                "estimate_b": 0.0655,
+                "high": -0.2475,
+                "high_a": 0.3540124999999998,
+                "high_b": 0.0765,
+                "low": -0.2885,
+                "low_a": 0.3125,
+                "low_b": 0.055,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "initial": {
+                "above_half": {
+                  "count": 213,
+                  "total": 24000,
+                  "value": 0.008875
+                },
+                "block_failure": {
+                  "count": 667,
+                  "total": 2000,
+                  "value": 0.3335
+                },
+                "config": "uf:cluster_gap->gap_correlated:initial_only:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 233,
+                    "total": 602,
+                    "value": 0.38704318936877075
+                  },
+                  "Z": {
+                    "count": 217,
+                    "total": 599,
+                    "value": 0.3622704507512521
+                  },
+                  "pooled": {
+                    "count": 450,
+                    "total": 1201,
+                    "value": 0.37468776019983346
+                  }
+                },
+                "normalized_ler": 0.001926405615341964,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "uf",
+                "sector_failure": {
+                  "X": {
+                    "count": 386,
+                    "total": 2000,
+                    "value": 0.193
+                  },
+                  "Z": {
+                    "count": 370,
+                    "total": 2000,
+                    "value": 0.185
+                  }
+                },
+                "shots": 2000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 124,
+                      "total": 137,
+                      "value": 0.9051094890510949
+                    },
+                    "Z": {
+                      "count": 153,
+                      "total": 154,
+                      "value": 0.9935064935064936
+                    },
+                    "pooled": {
+                      "count": 277,
+                      "total": 291,
+                      "value": 0.9518900343642611
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 233,
+                      "total": 602,
+                      "value": 0.38704318936877075
+                    },
+                    "Z": {
+                      "count": 217,
+                      "total": 599,
+                      "value": 0.3622704507512521
+                    },
+                    "pooled": {
+                      "count": 450,
+                      "total": 1201,
+                      "value": 0.37468776019983346
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 29,
+                      "total": 1261,
+                      "value": 0.022997620935765267
+                    },
+                    "Z": {
+                      "count": 0,
+                      "total": 1247,
+                      "value": 0.0
+                    },
+                    "pooled": {
+                      "count": 29,
+                      "total": 2508,
+                      "value": 0.011562998405103669
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 1,
+                    "total": 2000,
+                    "value": 0.0005
+                  },
+                  "Z": {
+                    "count": 0,
+                    "total": 2000,
+                    "value": 0.0
+                  },
+                  "pooled": {
+                    "count": 1,
+                    "total": 4000,
+                    "value": 0.00025
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 0.0,
+                    "incremental_correlated_forced_calls": 0.0,
+                    "incremental_plain_forced_calls": 0.0,
+                    "incremental_reweight_passes": 0.0,
+                    "incremental_unforced_plain_calls": 0.0,
+                    "initial_dijkstra_searches": 12.0,
+                    "initial_dijkstra_states": 9365.5675,
+                    "initial_plain_forced_calls": 0.0,
+                    "initial_uf_calls": 6.0,
+                    "initial_unforced_plain_calls": 0.0,
+                    "requested_patch_sectors": 0.0
+                  },
+                  "shots": 2000,
+                  "totals": {
+                    "distinct_patches": 0,
+                    "incremental_correlated_forced_calls": 0,
+                    "incremental_plain_forced_calls": 0,
+                    "incremental_reweight_passes": 0,
+                    "incremental_unforced_plain_calls": 0,
+                    "initial_dijkstra_searches": 24000,
+                    "initial_dijkstra_states": 18731135,
+                    "initial_plain_forced_calls": 0,
+                    "initial_uf_calls": 12000,
+                    "initial_unforced_plain_calls": 0,
+                    "requested_patch_sectors": 0
+                  }
+                }
+              },
+              "misattribution_pooled": {
+                "difference": -0.3222314737718568,
+                "estimate_a": 0.37468776019983346,
+                "estimate_b": 0.05245628642797669,
+                "high": -0.2931170598911071,
+                "high_a": 0.40337573407576904,
+                "high_b": 0.06530958439355386,
+                "low": -0.35123675557179396,
+                "low_a": 0.34615384615384615,
+                "low_b": 0.04013377926421405,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "pieces": 216,
+              "reference": "uf",
+              "refined": {
+                "above_half": {
+                  "count": 1595,
+                  "total": 24000,
+                  "value": 0.06645833333333333
+                },
+                "block_failure": {
+                  "count": 131,
+                  "total": 2000,
+                  "value": 0.0655
+                },
+                "config": "uf:cluster_gap->gap_correlated:all_refined:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 32,
+                    "total": 602,
+                    "value": 0.053156146179401995
+                  },
+                  "Z": {
+                    "count": 31,
+                    "total": 599,
+                    "value": 0.05175292153589316
+                  },
+                  "pooled": {
+                    "count": 63,
+                    "total": 1201,
+                    "value": 0.05245628642797669
+                  }
+                },
+                "normalized_ler": 0.000314911466551715,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "uf",
+                "sector_failure": {
+                  "X": {
+                    "count": 68,
+                    "total": 2000,
+                    "value": 0.034
+                  },
+                  "Z": {
+                    "count": 65,
+                    "total": 2000,
+                    "value": 0.0325
+                  }
+                },
+                "shots": 2000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 25,
+                      "total": 137,
+                      "value": 0.18248175182481752
+                    },
+                    "Z": {
+                      "count": 30,
+                      "total": 154,
+                      "value": 0.19480519480519481
+                    },
+                    "pooled": {
+                      "count": 55,
+                      "total": 291,
+                      "value": 0.18900343642611683
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 32,
+                      "total": 602,
+                      "value": 0.053156146179401995
+                    },
+                    "Z": {
+                      "count": 31,
+                      "total": 599,
+                      "value": 0.05175292153589316
+                    },
+                    "pooled": {
+                      "count": 63,
+                      "total": 1201,
+                      "value": 0.05245628642797669
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 11,
+                      "total": 1261,
+                      "value": 0.008723235527359239
+                    },
+                    "Z": {
+                      "count": 4,
+                      "total": 1247,
+                      "value": 0.0032076984763432237
+                    },
+                    "pooled": {
+                      "count": 15,
+                      "total": 2508,
+                      "value": 0.005980861244019139
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 0,
+                    "total": 2000,
+                    "value": 0.0
+                  },
+                  "Z": {
+                    "count": 1,
+                    "total": 2000,
+                    "value": 0.0005
+                  },
+                  "pooled": {
+                    "count": 1,
+                    "total": 4000,
+                    "value": 0.00025
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 6.0,
+                    "incremental_correlated_forced_calls": 24.0,
+                    "incremental_plain_forced_calls": 0.0,
+                    "incremental_reweight_passes": 6.0,
+                    "incremental_unforced_plain_calls": 6.0,
+                    "initial_dijkstra_searches": 12.0,
+                    "initial_dijkstra_states": 9365.5675,
+                    "initial_plain_forced_calls": 0.0,
+                    "initial_uf_calls": 6.0,
+                    "initial_unforced_plain_calls": 0.0,
+                    "requested_patch_sectors": 12.0
+                  },
+                  "shots": 2000,
+                  "totals": {
+                    "distinct_patches": 12000,
+                    "incremental_correlated_forced_calls": 48000,
+                    "incremental_plain_forced_calls": 0,
+                    "incremental_reweight_passes": 12000,
+                    "incremental_unforced_plain_calls": 12000,
+                    "initial_dijkstra_searches": 24000,
+                    "initial_dijkstra_states": 18731135,
+                    "initial_plain_forced_calls": 0,
+                    "initial_uf_calls": 12000,
+                    "initial_unforced_plain_calls": 0,
+                    "requested_patch_sectors": 24000
+                  }
+                }
+              },
+              "shots": 2000
+            }
+          },
+          "initial_estimator": "uf:cluster_gap",
+          "intervals": {
+            "uf:cluster_gap->gap_correlated:all_refined:mixed": {
+              "block_failure": [
+                0.055,
+                0.0765
+              ],
+              "misattribution_pooled": [
+                0.04013377926421405,
+                0.06530958439355386
+              ]
+            },
+            "uf:cluster_gap->gap_correlated:initial_only:mixed": {
+              "block_failure": [
+                0.3125,
+                0.3540124999999998
+              ],
+              "misattribution_pooled": [
+                0.34615384615384615,
+                0.40337573407576904
+              ]
+            }
+          },
+          "labels": {
+            "uf:cluster_gap->gap_correlated:all_refined:mixed": "all_refined:mixed",
+            "uf:cluster_gap->gap_correlated:initial_only:mixed": "initial_only:mixed"
+          },
+          "order": [
+            "uf:cluster_gap->gap_correlated:initial_only:mixed",
+            "uf:cluster_gap->gap_correlated:all_refined:mixed"
+          ],
+          "policies": {
+            "uf:cluster_gap->gap_correlated:all_refined:mixed": {
+              "outer": "mixed",
+              "policy": "all_refined"
+            },
+            "uf:cluster_gap->gap_correlated:initial_only:mixed": {
+              "outer": "mixed",
+              "policy": "initial_only"
+            }
+          },
+          "refined_score": "gap_correlated"
+        },
+        {
+          "baseline": "uf:cluster_gap->gap_plain:initial_only:mixed",
+          "cells": {
+            "uf:cluster_gap->gap_plain:all_refined:mixed": {
+              "above_half": {
+                "count": 871,
+                "total": 24000,
+                "value": 0.036291666666666667
+              },
+              "block_failure": {
+                "count": 517,
+                "total": 2000,
+                "value": 0.2585
+              },
+              "config": "uf:cluster_gap->gap_plain:all_refined:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 153,
+                  "total": 602,
+                  "value": 0.2541528239202658
+                },
+                "Z": {
+                  "count": 158,
+                  "total": 599,
+                  "value": 0.2637729549248748
+                },
+                "pooled": {
+                  "count": 311,
+                  "total": 1201,
+                  "value": 0.2589508742714405
+                }
+              },
+              "normalized_ler": 0.0014104008722765071,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "uf",
+              "sector_failure": {
+                "X": {
+                  "count": 268,
+                  "total": 2000,
+                  "value": 0.134
+                },
+                "Z": {
+                  "count": 295,
+                  "total": 2000,
+                  "value": 0.1475
+                }
+              },
+              "shots": 2000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 102,
+                    "total": 137,
+                    "value": 0.7445255474452555
+                  },
+                  "Z": {
+                    "count": 126,
+                    "total": 154,
+                    "value": 0.8181818181818182
+                  },
+                  "pooled": {
+                    "count": 228,
+                    "total": 291,
+                    "value": 0.7835051546391752
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 153,
+                    "total": 602,
+                    "value": 0.2541528239202658
+                  },
+                  "Z": {
+                    "count": 158,
+                    "total": 599,
+                    "value": 0.2637729549248748
+                  },
+                  "pooled": {
+                    "count": 311,
+                    "total": 1201,
+                    "value": 0.2589508742714405
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 13,
+                    "total": 1261,
+                    "value": 0.010309278350515464
+                  },
+                  "Z": {
+                    "count": 11,
+                    "total": 1247,
+                    "value": 0.008821170809943865
+                  },
+                  "pooled": {
+                    "count": 24,
+                    "total": 2508,
+                    "value": 0.009569377990430622
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 1,
+                  "total": 2000,
+                  "value": 0.0005
+                },
+                "Z": {
+                  "count": 0,
+                  "total": 2000,
+                  "value": 0.0
+                },
+                "pooled": {
+                  "count": 1,
+                  "total": 4000,
+                  "value": 0.00025
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 6.0,
+                  "incremental_correlated_forced_calls": 0.0,
+                  "incremental_plain_forced_calls": 24.0,
+                  "incremental_reweight_passes": 0.0,
+                  "incremental_unforced_plain_calls": 0.0,
+                  "initial_dijkstra_searches": 12.0,
+                  "initial_dijkstra_states": 9365.5675,
+                  "initial_plain_forced_calls": 0.0,
+                  "initial_uf_calls": 6.0,
+                  "initial_unforced_plain_calls": 0.0,
+                  "requested_patch_sectors": 12.0
+                },
+                "shots": 2000,
+                "totals": {
+                  "distinct_patches": 12000,
+                  "incremental_correlated_forced_calls": 0,
+                  "incremental_plain_forced_calls": 48000,
+                  "incremental_reweight_passes": 0,
+                  "incremental_unforced_plain_calls": 0,
+                  "initial_dijkstra_searches": 24000,
+                  "initial_dijkstra_states": 18731135,
+                  "initial_plain_forced_calls": 0,
+                  "initial_uf_calls": 12000,
+                  "initial_unforced_plain_calls": 0,
+                  "requested_patch_sectors": 24000
+                }
+              }
+            },
+            "uf:cluster_gap->gap_plain:initial_only:mixed": {
+              "above_half": {
+                "count": 213,
+                "total": 24000,
+                "value": 0.008875
+              },
+              "block_failure": {
+                "count": 667,
+                "total": 2000,
+                "value": 0.3335
+              },
+              "config": "uf:cluster_gap->gap_plain:initial_only:mixed",
+              "misattribution": {
+                "X": {
+                  "count": 233,
+                  "total": 602,
+                  "value": 0.38704318936877075
+                },
+                "Z": {
+                  "count": 217,
+                  "total": 599,
+                  "value": 0.3622704507512521
+                },
+                "pooled": {
+                  "count": 450,
+                  "total": 1201,
+                  "value": 0.37468776019983346
+                }
+              },
+              "normalized_ler": 0.001926405615341964,
+              "patches": 6,
+              "pieces": 216,
+              "reference": "uf",
+              "sector_failure": {
+                "X": {
+                  "count": 386,
+                  "total": 2000,
+                  "value": 0.193
+                },
+                "Z": {
+                  "count": 370,
+                  "total": 2000,
+                  "value": 0.185
+                }
+              },
+              "shots": 2000,
+              "strata": {
+                "multiple": {
+                  "X": {
+                    "count": 124,
+                    "total": 137,
+                    "value": 0.9051094890510949
+                  },
+                  "Z": {
+                    "count": 153,
+                    "total": 154,
+                    "value": 0.9935064935064936
+                  },
+                  "pooled": {
+                    "count": 277,
+                    "total": 291,
+                    "value": 0.9518900343642611
+                  }
+                },
+                "one": {
+                  "X": {
+                    "count": 233,
+                    "total": 602,
+                    "value": 0.38704318936877075
+                  },
+                  "Z": {
+                    "count": 217,
+                    "total": 599,
+                    "value": 0.3622704507512521
+                  },
+                  "pooled": {
+                    "count": 450,
+                    "total": 1201,
+                    "value": 0.37468776019983346
+                  }
+                },
+                "zero": {
+                  "X": {
+                    "count": 29,
+                    "total": 1261,
+                    "value": 0.022997620935765267
+                  },
+                  "Z": {
+                    "count": 0,
+                    "total": 1247,
+                    "value": 0.0
+                  },
+                  "pooled": {
+                    "count": 29,
+                    "total": 2508,
+                    "value": 0.011562998405103669
+                  }
+                }
+              },
+              "ties": {
+                "X": {
+                  "count": 1,
+                  "total": 2000,
+                  "value": 0.0005
+                },
+                "Z": {
+                  "count": 0,
+                  "total": 2000,
+                  "value": 0.0
+                },
+                "pooled": {
+                  "count": 1,
+                  "total": 4000,
+                  "value": 0.00025
+                }
+              },
+              "values": 8,
+              "work": {
+                "per_shot_mean": {
+                  "distinct_patches": 0.0,
+                  "incremental_correlated_forced_calls": 0.0,
+                  "incremental_plain_forced_calls": 0.0,
+                  "incremental_reweight_passes": 0.0,
+                  "incremental_unforced_plain_calls": 0.0,
+                  "initial_dijkstra_searches": 12.0,
+                  "initial_dijkstra_states": 9365.5675,
+                  "initial_plain_forced_calls": 0.0,
+                  "initial_uf_calls": 6.0,
+                  "initial_unforced_plain_calls": 0.0,
+                  "requested_patch_sectors": 0.0
+                },
+                "shots": 2000,
+                "totals": {
+                  "distinct_patches": 0,
+                  "incremental_correlated_forced_calls": 0,
+                  "incremental_plain_forced_calls": 0,
+                  "incremental_reweight_passes": 0,
+                  "incremental_unforced_plain_calls": 0,
+                  "initial_dijkstra_searches": 24000,
+                  "initial_dijkstra_states": 18731135,
+                  "initial_plain_forced_calls": 0,
+                  "initial_uf_calls": 12000,
+                  "initial_unforced_plain_calls": 0,
+                  "requested_patch_sectors": 0
+                }
+              }
+            }
+          },
+          "comparisons": {
+            "uf:cluster_gap->gap_plain:all_refined:mixed": {
+              "block_failure": {
+                "difference": -0.07500000000000001,
+                "estimate_a": 0.3335,
+                "estimate_b": 0.2585,
+                "high": -0.057499999999999996,
+                "high_a": 0.3540124999999998,
+                "high_b": 0.278,
+                "low": -0.09200000000000003,
+                "low_a": 0.3125,
+                "low_b": 0.239,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "initial": {
+                "above_half": {
+                  "count": 213,
+                  "total": 24000,
+                  "value": 0.008875
+                },
+                "block_failure": {
+                  "count": 667,
+                  "total": 2000,
+                  "value": 0.3335
+                },
+                "config": "uf:cluster_gap->gap_plain:initial_only:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 233,
+                    "total": 602,
+                    "value": 0.38704318936877075
+                  },
+                  "Z": {
+                    "count": 217,
+                    "total": 599,
+                    "value": 0.3622704507512521
+                  },
+                  "pooled": {
+                    "count": 450,
+                    "total": 1201,
+                    "value": 0.37468776019983346
+                  }
+                },
+                "normalized_ler": 0.001926405615341964,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "uf",
+                "sector_failure": {
+                  "X": {
+                    "count": 386,
+                    "total": 2000,
+                    "value": 0.193
+                  },
+                  "Z": {
+                    "count": 370,
+                    "total": 2000,
+                    "value": 0.185
+                  }
+                },
+                "shots": 2000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 124,
+                      "total": 137,
+                      "value": 0.9051094890510949
+                    },
+                    "Z": {
+                      "count": 153,
+                      "total": 154,
+                      "value": 0.9935064935064936
+                    },
+                    "pooled": {
+                      "count": 277,
+                      "total": 291,
+                      "value": 0.9518900343642611
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 233,
+                      "total": 602,
+                      "value": 0.38704318936877075
+                    },
+                    "Z": {
+                      "count": 217,
+                      "total": 599,
+                      "value": 0.3622704507512521
+                    },
+                    "pooled": {
+                      "count": 450,
+                      "total": 1201,
+                      "value": 0.37468776019983346
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 29,
+                      "total": 1261,
+                      "value": 0.022997620935765267
+                    },
+                    "Z": {
+                      "count": 0,
+                      "total": 1247,
+                      "value": 0.0
+                    },
+                    "pooled": {
+                      "count": 29,
+                      "total": 2508,
+                      "value": 0.011562998405103669
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 1,
+                    "total": 2000,
+                    "value": 0.0005
+                  },
+                  "Z": {
+                    "count": 0,
+                    "total": 2000,
+                    "value": 0.0
+                  },
+                  "pooled": {
+                    "count": 1,
+                    "total": 4000,
+                    "value": 0.00025
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 0.0,
+                    "incremental_correlated_forced_calls": 0.0,
+                    "incremental_plain_forced_calls": 0.0,
+                    "incremental_reweight_passes": 0.0,
+                    "incremental_unforced_plain_calls": 0.0,
+                    "initial_dijkstra_searches": 12.0,
+                    "initial_dijkstra_states": 9365.5675,
+                    "initial_plain_forced_calls": 0.0,
+                    "initial_uf_calls": 6.0,
+                    "initial_unforced_plain_calls": 0.0,
+                    "requested_patch_sectors": 0.0
+                  },
+                  "shots": 2000,
+                  "totals": {
+                    "distinct_patches": 0,
+                    "incremental_correlated_forced_calls": 0,
+                    "incremental_plain_forced_calls": 0,
+                    "incremental_reweight_passes": 0,
+                    "incremental_unforced_plain_calls": 0,
+                    "initial_dijkstra_searches": 24000,
+                    "initial_dijkstra_states": 18731135,
+                    "initial_plain_forced_calls": 0,
+                    "initial_uf_calls": 12000,
+                    "initial_unforced_plain_calls": 0,
+                    "requested_patch_sectors": 0
+                  }
+                }
+              },
+              "misattribution_pooled": {
+                "difference": -0.11573688592839299,
+                "estimate_a": 0.37468776019983346,
+                "estimate_b": 0.2589508742714405,
+                "high": -0.08721204856592543,
+                "high_a": 0.40337573407576904,
+                "high_b": 0.2844497958523124,
+                "low": -0.14347234869426648,
+                "low_a": 0.34615384615384615,
+                "low_b": 0.2343093707678936,
+                "replicates": 10000,
+                "seed": 43,
+                "zero_denominator_replicates": 0
+              },
+              "pieces": 216,
+              "reference": "uf",
+              "refined": {
+                "above_half": {
+                  "count": 871,
+                  "total": 24000,
+                  "value": 0.036291666666666667
+                },
+                "block_failure": {
+                  "count": 517,
+                  "total": 2000,
+                  "value": 0.2585
+                },
+                "config": "uf:cluster_gap->gap_plain:all_refined:mixed",
+                "misattribution": {
+                  "X": {
+                    "count": 153,
+                    "total": 602,
+                    "value": 0.2541528239202658
+                  },
+                  "Z": {
+                    "count": 158,
+                    "total": 599,
+                    "value": 0.2637729549248748
+                  },
+                  "pooled": {
+                    "count": 311,
+                    "total": 1201,
+                    "value": 0.2589508742714405
+                  }
+                },
+                "normalized_ler": 0.0014104008722765071,
+                "patches": 6,
+                "pieces": 216,
+                "reference": "uf",
+                "sector_failure": {
+                  "X": {
+                    "count": 268,
+                    "total": 2000,
+                    "value": 0.134
+                  },
+                  "Z": {
+                    "count": 295,
+                    "total": 2000,
+                    "value": 0.1475
+                  }
+                },
+                "shots": 2000,
+                "strata": {
+                  "multiple": {
+                    "X": {
+                      "count": 102,
+                      "total": 137,
+                      "value": 0.7445255474452555
+                    },
+                    "Z": {
+                      "count": 126,
+                      "total": 154,
+                      "value": 0.8181818181818182
+                    },
+                    "pooled": {
+                      "count": 228,
+                      "total": 291,
+                      "value": 0.7835051546391752
+                    }
+                  },
+                  "one": {
+                    "X": {
+                      "count": 153,
+                      "total": 602,
+                      "value": 0.2541528239202658
+                    },
+                    "Z": {
+                      "count": 158,
+                      "total": 599,
+                      "value": 0.2637729549248748
+                    },
+                    "pooled": {
+                      "count": 311,
+                      "total": 1201,
+                      "value": 0.2589508742714405
+                    }
+                  },
+                  "zero": {
+                    "X": {
+                      "count": 13,
+                      "total": 1261,
+                      "value": 0.010309278350515464
+                    },
+                    "Z": {
+                      "count": 11,
+                      "total": 1247,
+                      "value": 0.008821170809943865
+                    },
+                    "pooled": {
+                      "count": 24,
+                      "total": 2508,
+                      "value": 0.009569377990430622
+                    }
+                  }
+                },
+                "ties": {
+                  "X": {
+                    "count": 1,
+                    "total": 2000,
+                    "value": 0.0005
+                  },
+                  "Z": {
+                    "count": 0,
+                    "total": 2000,
+                    "value": 0.0
+                  },
+                  "pooled": {
+                    "count": 1,
+                    "total": 4000,
+                    "value": 0.00025
+                  }
+                },
+                "values": 8,
+                "work": {
+                  "per_shot_mean": {
+                    "distinct_patches": 6.0,
+                    "incremental_correlated_forced_calls": 0.0,
+                    "incremental_plain_forced_calls": 24.0,
+                    "incremental_reweight_passes": 0.0,
+                    "incremental_unforced_plain_calls": 0.0,
+                    "initial_dijkstra_searches": 12.0,
+                    "initial_dijkstra_states": 9365.5675,
+                    "initial_plain_forced_calls": 0.0,
+                    "initial_uf_calls": 6.0,
+                    "initial_unforced_plain_calls": 0.0,
+                    "requested_patch_sectors": 12.0
+                  },
+                  "shots": 2000,
+                  "totals": {
+                    "distinct_patches": 12000,
+                    "incremental_correlated_forced_calls": 0,
+                    "incremental_plain_forced_calls": 48000,
+                    "incremental_reweight_passes": 0,
+                    "incremental_unforced_plain_calls": 0,
+                    "initial_dijkstra_searches": 24000,
+                    "initial_dijkstra_states": 18731135,
+                    "initial_plain_forced_calls": 0,
+                    "initial_uf_calls": 12000,
+                    "initial_unforced_plain_calls": 0,
+                    "requested_patch_sectors": 24000
+                  }
+                }
+              },
+              "shots": 2000
+            }
+          },
+          "initial_estimator": "uf:cluster_gap",
+          "intervals": {
+            "uf:cluster_gap->gap_plain:all_refined:mixed": {
+              "block_failure": [
+                0.239,
+                0.278
+              ],
+              "misattribution_pooled": [
+                0.2343093707678936,
+                0.2844497958523124
+              ]
+            },
+            "uf:cluster_gap->gap_plain:initial_only:mixed": {
+              "block_failure": [
+                0.3125,
+                0.3540124999999998
+              ],
+              "misattribution_pooled": [
+                0.34615384615384615,
+                0.40337573407576904
+              ]
+            }
+          },
+          "labels": {
+            "uf:cluster_gap->gap_plain:all_refined:mixed": "all_refined:mixed",
+            "uf:cluster_gap->gap_plain:initial_only:mixed": "initial_only:mixed"
+          },
+          "order": [
+            "uf:cluster_gap->gap_plain:initial_only:mixed",
+            "uf:cluster_gap->gap_plain:all_refined:mixed"
+          ],
+          "policies": {
+            "uf:cluster_gap->gap_plain:all_refined:mixed": {
+              "outer": "mixed",
+              "policy": "all_refined"
+            },
+            "uf:cluster_gap->gap_plain:initial_only:mixed": {
+              "outer": "mixed",
+              "policy": "initial_only"
+            }
+          },
+          "refined_score": "gap_plain"
+        }
+      ],
+      "pieces": 216,
+      "record": {
+        "directory": "/data2/s2chitni/.tmp/hier-d9-p003/evaluation",
+        "identities": {
+          "collection": "6db1561bbcc8a3d2dfb94608076bce787877bc298396010b59e7d8d84a41a498",
+          "decoder": "af532393733d652a58ea69e69363ec61150dbbd8193b7d560c23ce69eb4a49a0",
+          "model": "73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d",
+          "parent_sample": "d1bc5fcf04da0c265f67b23637ee518f730cebc86700d04db09fec097a5130f1",
+          "sampling_family": "51918c6cd9505f780bd9ef6a6b029a52bb3f68ae81a6ea195f4dbe185668bf69"
+        },
+        "manifest_sha256": "133a5a682899bd9956758397f3d36c618e327bc11593fecb2876509a0140c916",
+        "patches": 6,
+        "record_sha256": "8cbc6a3ae9bd818dc74b3d075093aa257bf4f72148a5a9931c16986b0b2dea1b",
+        "role": "evaluation",
+        "rows": {
+          "count": 2000,
+          "sha256": "55f385cf2332d9056aaed6f496e7bebd2df52c6a9547ce2144b309432d4b0290",
+          "start": 0,
+          "stop": 2000
+        },
+        "shots": 2000
+      },
+      "replay_directory": "/data2/s2chitni/.tmp/hier-d9-p003/replay_pilot",
+      "replay_identity": "b331a585dc30ceba43c2d474567f99df2fe09cd68bef7c7d0670d469bc15600a",
+      "replay_manifest_sha256": "dda95425c5f7b8b42be75de42f1568cd1d732d4d2bf02c5c41b5db6ca3a077ad"
+    }
+  ],
+  "schema_version": "hierarchical-l1-l2/1",
+  "stage": "summarize"
+}
