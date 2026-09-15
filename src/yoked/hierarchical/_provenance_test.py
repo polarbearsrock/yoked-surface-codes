@@ -241,6 +241,7 @@ def test_check_group_names_the_validation_sources():
 
 def test_calibration_and_replay_groups_name_their_own_sources():
     assert 'src/yoked/hierarchical/_calibration.py' in CALIBRATION_SOURCES
+    assert 'src/yoked/hierarchical/_calibration.py' in REPLAY_SOURCES
     assert 'src/yoked/hierarchical/_policies.py' in REPLAY_SOURCES
     assert 'src/yoked/hierarchical/_metrics.py' in REPLAY_SOURCES
 

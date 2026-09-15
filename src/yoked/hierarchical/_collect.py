@@ -92,10 +92,10 @@ from yoked.hierarchical._outer_decoder import exact_outer_map_batch, frame_adjus
 from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraphs
 from yoked.hierarchical._provenance import (
     AUDIT_SOURCES, CHECK_PACKAGES, CHECK_SOURCES, DECODER_PACKAGES, DECODER_SOURCES,
-    MODEL_PACKAGES, RECORD_CONVENTIONS, REPOSITORY_ROOT, SAMPLE_CONVENTIONS, SAMPLING_PACKAGES,
+    MODEL_PACKAGES, RECORD_CONVENTIONS, REPOSITORY_ROOT, SAMPLING_PACKAGES,
     SCHEMA_VERSION, atomic_replacement, check_identity, collection_identity, decoder_identity,
-    git_commit, model_identity, package_versions, packed_sample_hash, parent_sample_identity,
-    read_json, sampling_family_identity, sha256_bytes, sha256_file, source_hashes, utc_now,
+    git_commit, package_versions, packed_sample_hash, read_json, sample_identities, sha256_bytes,
+    sha256_file, source_hashes, utc_now,
     write_json_atomic,
 )
 # The array container is private to this package: collection writes record.npz and
@@ -318,17 +318,11 @@ def _sample_identities(*, parameters: CircuitParameters, circuit_sha256: str, de
                        num_detectors: int, num_observables: int, seed: int, shots: int,
                        payload_sha256: str, model_versions: Mapping, sampling_versions: Mapping) -> dict:
     """The three identities a sample determines, all from content rather than paths."""
-    model = model_identity(
+    return sample_identities(
         parameters=parameters.to_json(), circuit_sha256=circuit_sha256, dem_sha256=dem_sha256,
-        num_detectors=num_detectors, num_observables=num_observables,
-        conventions=SAMPLE_CONVENTIONS, versions=model_versions)
-    return {
-        'model': model,
-        'parent_sample': parent_sample_identity(model=model, seed=seed, parent_shots=shots,
-                                                payload_sha256=payload_sha256, versions=sampling_versions),
-        'sampling_family': sampling_family_identity(circuit_sha256=circuit_sha256, seed=seed,
-                                                    versions=sampling_versions),
-    }
+        num_detectors=num_detectors, num_observables=num_observables, seed=seed,
+        parent_shots=shots, payload_sha256=payload_sha256, model_versions=model_versions,
+        sampling_versions=sampling_versions)
 
 
 def _subset_versions(stored: Mapping, group) -> dict:
@@ -431,6 +425,9 @@ class SampleSet:
     - ``circuit_text`` / ``dem_text``: the exact saved text of both, so that ``save``
       republishes the same bytes and a worker rebuilds its decoders from the sampled
       model instead of regenerating one.
+    - ``model_versions`` / ``sampling_versions``: immutable copies of the package
+      versions that formed the identities, retained when a historical sample is
+      republished under a newer runtime.
     - ``identities``: an immutable mapping with ``SAMPLE_IDENTITY_NAMES``.
     - ``source``: an immutable mapping with ``kind`` ('generated' or 'imported'), the
       ``directory`` it was read from, and that directory's ``manifest_sha256``; both are
@@ -448,6 +445,8 @@ class SampleSet:
     actual_packed: np.ndarray
     circuit_text: str
     dem_text: str
+    model_versions: Mapping[str, str]
+    sampling_versions: Mapping[str, str]
     identities: Mapping[str, str]
     source: Mapping[str, object]
 
@@ -463,6 +462,17 @@ class SampleSet:
         for name, text in (('circuit_text', self.circuit_text), ('dem_text', self.dem_text)):
             if not isinstance(text, str) or not text:
                 raise ValueError(f'{name} must be the nonempty saved text')
+        for name in ('model_versions', 'sampling_versions'):
+            versions = dict(getattr(self, name))
+            required = MODEL_PACKAGES if name == 'model_versions' else SAMPLING_PACKAGES
+            versions = _subset_versions(versions, required)
+            if not all(isinstance(value, str) and value for value in versions.values()):
+                raise ValueError(f'{name} must map package names to nonempty version strings')
+            set_field(self, name, MappingProxyType(versions))
+        for name in self.model_versions.keys() & self.sampling_versions.keys():
+            if self.model_versions[name] != self.sampling_versions[name]:
+                raise ValueError(f'model and sampling versions disagree for {name!r}; '
+                                 'the saved sample format records one version per package')
         set_field(self, 'detectors_packed', _packed(self.detectors_packed, DETECTORS_FILE,
                                                     rows=self.shots, bits=self.num_detectors))
         set_field(self, 'actual_packed', _packed(self.actual_packed, ACTUAL_FILE,
@@ -492,6 +502,21 @@ class SampleSet:
         return (_unpack_rows(self.detectors_packed, positions, self.num_detectors),
                 _unpack_rows(self.actual_packed, positions, self.num_observables))
 
+    def identity_inputs(self) -> dict:
+        """Canonical inputs from which a record loader can verify sample identities."""
+        return {
+            'parameters': self.parameters.to_json(),
+            'circuit_sha256': self.circuit_sha256,
+            'dem_sha256': self.dem_sha256,
+            'num_detectors': self.num_detectors,
+            'num_observables': self.num_observables,
+            'seed': self.seed,
+            'parent_shots': self.shots,
+            'payload_sha256': self.payload_sha256,
+            'model_versions': dict(self.model_versions),
+            'sampling_versions': dict(self.sampling_versions),
+        }
+
     # --- creating, saving, loading -------------------------------------------
 
     @classmethod
@@ -509,21 +534,23 @@ class SampleSet:
         circuit_sha256 = sha256_bytes(circuit_text.encode('utf-8'))
         dem_sha256 = sha256_bytes(dem_text.encode('utf-8'))
         payload_sha256 = packed_sample_hash(detectors, actual)
+        model_versions = package_versions(MODEL_PACKAGES)
+        sampling_versions = package_versions(SAMPLING_PACKAGES)
         identities = _sample_identities(
             parameters=parameters, circuit_sha256=circuit_sha256, dem_sha256=dem_sha256,
             num_detectors=dem.num_detectors, num_observables=dem.num_observables, seed=seed,
             shots=shots, payload_sha256=payload_sha256,
-            model_versions=package_versions(MODEL_PACKAGES),
-            sampling_versions=package_versions(SAMPLING_PACKAGES))
+            model_versions=model_versions, sampling_versions=sampling_versions)
         return cls(parameters=parameters, seed=seed, shots=shots, num_detectors=dem.num_detectors,
                    num_observables=dem.num_observables, circuit_sha256=circuit_sha256,
                    dem_sha256=dem_sha256, payload_sha256=payload_sha256, detectors_packed=detectors,
                    actual_packed=actual, circuit_text=circuit_text, dem_text=dem_text,
+                   model_versions=model_versions, sampling_versions=sampling_versions,
                    identities=identities,
                    source={'kind': 'generated', 'directory': None, 'manifest_sha256': None})
 
     def save(self, directory) -> Path:
-        """Write the four artifacts and then publish ``sample.json`` over them."""
+        """Write the artifacts and publish their original identity inputs last."""
         directory = Path(directory)
         directory.mkdir(parents=True, exist_ok=True)
         _write_bytes_atomic(directory / CIRCUIT_FILE, self.circuit_text.encode('utf-8'))
@@ -539,7 +566,7 @@ class SampleSet:
             'num_observables': self.num_observables,
             'files': {name: sha256_file(directory / name) for name in SAMPLE_FILES},
             'payload_sha256': self.payload_sha256,
-            'versions': package_versions(SAMPLING_PACKAGES),
+            'versions': {**dict(self.model_versions), **dict(self.sampling_versions)},
             'identities': dict(self.identities),
             'source': dict(self.source),
             'created_utc': utc_now(),
@@ -576,12 +603,13 @@ class SampleSet:
         _verify_shapes(detectors, actual, shots=shots, num_detectors=num_detectors,
                        num_observables=num_observables)
         versions = manifest['versions']
+        model_versions = _subset_versions(versions, MODEL_PACKAGES)
+        sampling_versions = _subset_versions(versions, SAMPLING_PACKAGES)
         identities = _sample_identities(
             parameters=parameters, circuit_sha256=hashes[CIRCUIT_FILE], dem_sha256=hashes[DEM_FILE],
             num_detectors=num_detectors, num_observables=num_observables, seed=seed, shots=shots,
             payload_sha256=manifest['payload_sha256'],
-            model_versions=_subset_versions(versions, MODEL_PACKAGES),
-            sampling_versions=_subset_versions(versions, SAMPLING_PACKAGES))
+            model_versions=model_versions, sampling_versions=sampling_versions)
         # Recomputed from the verified content rather than trusted: a manifest whose
         # declared identity does not follow from its own artifacts is not a sample.
         if dict(manifest['identities']) != identities:
@@ -590,7 +618,8 @@ class SampleSet:
                    num_observables=num_observables, circuit_sha256=hashes[CIRCUIT_FILE],
                    dem_sha256=hashes[DEM_FILE], payload_sha256=manifest['payload_sha256'],
                    detectors_packed=detectors, actual_packed=actual, circuit_text=circuit_text,
-                   dem_text=dem_text, identities=identities,
+                   dem_text=dem_text, model_versions=model_versions,
+                   sampling_versions=sampling_versions, identities=identities,
                    source={'kind': manifest['source']['kind'], 'directory': str(directory),
                            'manifest_sha256': sha256_file(directory / SAMPLE_MANIFEST)})
 
@@ -624,16 +653,18 @@ class SampleSet:
         _verify_shapes(detectors, actual, shots=shots, num_detectors=num_detectors,
                        num_observables=num_observables)
         versions = manifest['versions']
+        model_versions = _subset_versions(versions, MODEL_PACKAGES)
+        sampling_versions = _subset_versions(versions, SAMPLING_PACKAGES)
         identities = _sample_identities(
             parameters=parameters, circuit_sha256=circuit_sha256, dem_sha256=dem_sha256,
             num_detectors=num_detectors, num_observables=num_observables, seed=seed, shots=shots,
             payload_sha256=payload_sha256,
-            model_versions=_subset_versions(versions, MODEL_PACKAGES),
-            sampling_versions=_subset_versions(versions, SAMPLING_PACKAGES))
+            model_versions=model_versions, sampling_versions=sampling_versions)
         return cls(parameters=parameters, seed=seed, shots=shots, num_detectors=num_detectors,
                    num_observables=num_observables, circuit_sha256=circuit_sha256,
                    dem_sha256=dem_sha256, payload_sha256=payload_sha256, detectors_packed=detectors,
                    actual_packed=actual, circuit_text=circuit_text, dem_text=dem_text,
+                   model_versions=model_versions, sampling_versions=sampling_versions,
                    identities=identities,
                    source={'kind': 'imported', 'directory': str(directory),
                            'manifest_sha256': sha256_file(directory / RECORDED_MANIFEST)})
@@ -1518,6 +1549,7 @@ def _completion_manifest(*, record: L1Record, sample: SampleSet, settings: Colle
         'shots': record.shots,
         'rows': row_summary(record.rows),
         'parent_payload_sha256': sample.payload_sha256,
+        'sample_identity_inputs': sample.identity_inputs(),
         'identities': dict(identities),
         'artifacts': dict(artifacts),
         'checks': {'passed': graph['passed'] and checks.passed, 'identity': check,

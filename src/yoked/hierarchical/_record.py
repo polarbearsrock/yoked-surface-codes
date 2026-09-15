@@ -23,9 +23,11 @@ directory means nothing until its completion manifest exists: the loader require
 manifest's schema and ``status``, that its recorded checks passed, that every declared
 artifact still hashes to what was published, that the stored row ids match the
 manifest's row summary exactly, and that the recorded collection identity follows from
-the manifest's own fields. Every failure is a ``ValueError`` naming what failed, and a
-missing manifest is one of them: an orphan ``record.npz`` is an interrupted
-publication, not a result.
+the manifest's own fields. It also derives the model, parent-sample, and sampling-family
+identities from canonical inputs embedded by collection, rather than accepting those
+labels on trust. Every failure is a ``ValueError`` naming what failed, and a missing
+manifest is one of them: an orphan ``record.npz`` is an interrupted publication, not a
+result.
 
 Concatenating the records of a full set is not implemented here; it belongs to M2,
 where it consumes verified ``LoadedRecord`` values, requires equal parent sample,
@@ -53,7 +55,8 @@ import numpy as np
 from yoked.hierarchical._arrays import readonly_array
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
 from yoked.hierarchical._provenance import (
-    SCHEMA_VERSION, atomic_replacement, collection_identity, read_json, row_ids_sha256, sha256_file,
+    RECORD_CONVENTIONS, SCHEMA_VERSION, atomic_replacement, collection_identity,
+    decoder_identity, read_json, row_ids_sha256, sample_identities, sha256_file,
 )
 
 RECORD_FILE = 'record.npz'
@@ -71,11 +74,13 @@ ROW_SUMMARY_FIELDS = ('count', 'start', 'stop', 'sha256')
 """What a manifest says about the rows a record holds; ``sha256`` is the only one of the
 four that identifies them exactly."""
 
-MANIFEST_FIELDS = ('schema_version', 'status', 'role', 'shots', 'rows', 'identities',
-                   'artifacts', 'checks')
-"""The fields ``load_record`` verifies. The collection stage writes more of them
-(parameters, versions, source hashes, work, timing); those are carried through to the
-caller without being interpreted here."""
+MANIFEST_FIELDS = (
+    'schema_version', 'status', 'role', 'parameters', 'seed', 'parent_shots', 'shots',
+    'rows', 'parent_payload_sha256', 'sample_identity_inputs', 'identities', 'artifacts',
+    'checks', 'versions', 'source_sha256',
+)
+"""The fields ``load_record`` verifies. Work, timing, and audit metadata are carried
+through to the caller without being interpreted here."""
 
 CHECK_FIELDS = ('passed', 'identity', 'graph', 'record')
 """The check block a completed manifest carries: whether both gates passed, the identity
@@ -104,6 +109,12 @@ not verified what it is about to hand downstream."""
 _NUMERIC_KINDS = 'buif'
 """NumPy dtype kinds a caller may offer for a bit array: bool, unsigned, signed, float.
 Anything else (object, string, datetime) is a caller error, not something to cast."""
+
+SAMPLE_IDENTITY_INPUT_FIELDS = (
+    'parameters', 'circuit_sha256', 'dem_sha256', 'num_detectors', 'num_observables',
+    'seed', 'parent_shots', 'payload_sha256', 'model_versions', 'sampling_versions',
+)
+"""Canonical saved inputs needed to recompute a record's three sample identities."""
 
 
 # --- value checks, all of which run before any dtype cast --------------------
@@ -513,10 +524,12 @@ def load_record(record_dir) -> LoadedRecord:
     schema and ``status='complete'``, and report checks that passed; every declared
     artifact must still hash to its published value; the stored arrays must pass every
     ``L1Record`` check; the row ids must match the manifest's summary exactly; and the
-    recorded collection identity must follow from the manifest's own parent sample,
-    decoder, role, shot count, and row hash. Anything else raises a ``ValueError``
-    naming what failed, including a missing manifest, which means the collection is
-    incomplete rather than damaged.
+    three sample identities must follow from the manifest's canonical sample inputs.
+    The experiment parameters must agree with those inputs, the decoder identity must
+    follow from its recorded sources and versions, and the collection identity must
+    follow from its parent sample, decoder, role, shot count, and row hash. Anything
+    else raises a ``ValueError`` naming what failed, including a missing manifest,
+    which means the collection is incomplete rather than damaged.
     """
     directory = Path(record_dir)
     manifest_path = directory / RECORD_MANIFEST
@@ -541,6 +554,32 @@ def load_record(record_dir) -> LoadedRecord:
     summary = _verify_rows(record, manifest)
     identities = manifest['identities']
     _require_fields(identities, IDENTITY_NAMES, f'{RECORD_MANIFEST} identities')
+    sample_inputs = manifest['sample_identity_inputs']
+    _require_fields(sample_inputs, SAMPLE_IDENTITY_INPUT_FIELDS,
+                    f'{RECORD_MANIFEST} sample_identity_inputs')
+    expected_sample = sample_identities(**{
+        name: sample_inputs[name] for name in SAMPLE_IDENTITY_INPUT_FIELDS
+    })
+    for name, expected_identity in expected_sample.items():
+        if identities[name] != expected_identity:
+            raise ValueError(f'The {name} identity {identities[name]!r} in {manifest_path} '
+                             'does not follow from its saved sample identity inputs')
+    for flat_name, input_name in (
+            ('parameters', 'parameters'), ('seed', 'seed'),
+            ('parent_shots', 'parent_shots'),
+            ('parent_payload_sha256', 'payload_sha256')):
+        if manifest[flat_name] != sample_inputs[input_name]:
+            raise ValueError(f'{flat_name} in {manifest_path} does not agree with '
+                             f'sample_identity_inputs.{input_name}')
+    _require_fields(manifest['versions'], ('decoder',), f'{RECORD_MANIFEST} versions')
+    _require_fields(manifest['source_sha256'], ('decoder',),
+                    f'{RECORD_MANIFEST} source_sha256')
+    expected_decoder = decoder_identity(
+        sources=manifest['source_sha256']['decoder'], conventions=RECORD_CONVENTIONS,
+        versions=manifest['versions']['decoder'])
+    if identities['decoder'] != expected_decoder:
+        raise ValueError(f'The decoder identity {identities["decoder"]!r} in {manifest_path} '
+                         'does not follow from its saved decoder sources and versions')
     # Recomputed rather than trusted: a record whose declared collection identity does
     # not follow from its own role, rows, parent, and decoder is not that collection.
     expected = collection_identity(

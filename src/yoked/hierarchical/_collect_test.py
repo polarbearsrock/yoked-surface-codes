@@ -22,6 +22,8 @@ import shutil
 import numpy as np
 import pytest
 
+import yoked.hierarchical._collect as collect_module
+
 from yoked.decoders._graph import DecodingGraph
 from yoked.hierarchical._collect import (
     ACTUAL_FILE, CHECKPOINT_FILE, CIRCUIT_FILE, COLLECTION_FILE, DEM_FILE, DETECTORS_FILE,
@@ -144,6 +146,10 @@ def test_a_generated_sample_reports_its_dimensions_and_identities(sample, parame
     assert not sample.detectors_packed.flags.writeable and not sample.actual_packed.flags.writeable
     assert set(sample.identities) == {'model', 'parent_sample', 'sampling_family'}
     assert sample.source['kind'] == 'generated'
+    with pytest.raises(TypeError):
+        sample.model_versions['stim'] = 'changed'
+    with pytest.raises(TypeError):
+        sample.sampling_versions['stim'] = 'changed'
 
 
 def test_a_generated_samples_text_matches_stims_own_file_convention(sample, parameters):
@@ -188,6 +194,26 @@ def test_a_saved_sample_writes_every_artifact(saved):
     manifest = read_json(saved / SAMPLE_MANIFEST)
     assert set(manifest['files']) == {CIRCUIT_FILE, DEM_FILE, DETECTORS_FILE, ACTUAL_FILE}
     assert manifest['versions'] == package_versions(SAMPLING_PACKAGES)
+
+
+def test_saving_an_imported_sample_preserves_the_versions_that_define_its_identities(
+        sample, saved, tmp_path, monkeypatch):
+    imported = SampleSet.load_recorded_run(
+        write_recorded_run(saved, tmp_path / 'recorded', sample))
+    original_versions = {**imported.model_versions, **imported.sampling_versions}
+    monkeypatch.setattr(
+        collect_module, 'package_versions',
+        lambda names: {name: 'simulated-new-runtime' for name in names})
+
+    republished = imported.save(tmp_path / 'republished')
+    manifest = read_json(republished / SAMPLE_MANIFEST)
+    assert manifest['versions'] == original_versions
+    assert SampleSet.load(republished).identities == imported.identities
+
+
+def test_a_sample_rejects_conflicting_model_and_sampling_versions(sample):
+    with pytest.raises(ValueError, match='versions disagree.*stim'):
+        dataclasses.replace(sample, model_versions={'stim': 'different-model-version'})
 
 
 def test_loading_rejects_a_tampered_payload(saved, tmp_path):

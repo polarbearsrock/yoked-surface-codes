@@ -17,7 +17,8 @@ import pytest
 
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
 from yoked.hierarchical._provenance import (
-    SCHEMA_VERSION, collection_identity, read_json, row_ids_sha256, sha256_file, write_json_atomic,
+    RECORD_CONVENTIONS, SCHEMA_VERSION, collection_identity, decoder_identity, read_json,
+    row_ids_sha256, sample_identities, sha256_file, write_json_atomic,
 )
 from yoked.hierarchical._record import (
     ARRAY_FIELDS, BASELINE_PREFIX, COMPLETE_STATUS, IDENTITY_NAMES, L1Record, LoadedRecord,
@@ -492,8 +493,24 @@ def published(directory, record=None, **overrides) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     _save_arrays(directory / RECORD_FILE, record.arrays(), schema=RECORD_SCHEMA)
     summary = row_summary(record.rows)
-    ids = {'model': 'a1' * 32, 'parent_sample': 'b2' * 32, 'sampling_family': 'c3' * 32,
-           'decoder': 'd4' * 32}
+    sample_inputs = {
+        'parameters': {'distance': 3, 'rounds': 12, 'p': 0.003, 'patches': 2,
+                       'yokes': 2, 'style': 'cz', 'noise': 'si1000'},
+        'circuit_sha256': 'a1' * 32,
+        'dem_sha256': 'b2' * 32,
+        'num_detectors': 10,
+        'num_observables': 4,
+        'seed': 42,
+        'parent_shots': 10,
+        'payload_sha256': 'c3' * 32,
+        'model_versions': {'stim': '1.16.0'},
+        'sampling_versions': {'stim': '1.16.0'},
+    }
+    decoder_sources = {'decoder.py': 'd4' * 32}
+    decoder_versions = {'numpy': '2.5.1'}
+    decoder = decoder_identity(
+        sources=decoder_sources, conventions=RECORD_CONVENTIONS, versions=decoder_versions)
+    ids = {**sample_identities(**sample_inputs), 'decoder': decoder}
     ids['collection'] = collection_identity(
         parent_sample=ids['parent_sample'], decoder=ids['decoder'], role='evaluation',
         shots=record.shots, rows_sha256=summary['sha256'])
@@ -501,12 +518,19 @@ def published(directory, record=None, **overrides) -> Path:
         'schema_version': SCHEMA_VERSION,
         'status': COMPLETE_STATUS,
         'role': 'evaluation',
+        'parameters': sample_inputs['parameters'],
+        'seed': sample_inputs['seed'],
+        'parent_shots': sample_inputs['parent_shots'],
         'shots': record.shots,
         'rows': summary,
+        'parent_payload_sha256': sample_inputs['payload_sha256'],
+        'sample_identity_inputs': sample_inputs,
         'identities': ids,
         'artifacts': {RECORD_FILE: sha256_file(directory / RECORD_FILE)},
         'checks': {'passed': True, 'identity': 'e5' * 32, 'graph': {'passed': True},
                    'record': {'passed': True}},
+        'versions': {'decoder': decoder_versions},
+        'source_sha256': {'decoder': decoder_sources},
     }
     write_json_atomic(directory / RECORD_MANIFEST, {**manifest, **overrides})
     return directory
@@ -653,6 +677,42 @@ def test_load_record_rejects_a_collection_identity_that_does_not_follow(tmp_path
 
     with pytest.raises(ValueError, match='collection'):
         load_record(republish(published(tmp_path / 'collection'), relabel))
+
+
+@pytest.mark.parametrize('name', ['model', 'sampling_family'])
+def test_load_record_rejects_a_sample_identity_that_does_not_follow(tmp_path, name):
+    directory = republish(
+        published(tmp_path / 'collection'),
+        lambda manifest: manifest['identities'].update({name: 'ff' * 32}))
+    with pytest.raises(ValueError, match=name):
+        load_record(directory)
+
+
+def test_load_record_rejects_tampered_sample_identity_inputs(tmp_path):
+    directory = republish(
+        published(tmp_path / 'collection'),
+        lambda manifest: manifest['sample_identity_inputs'].update(seed=43))
+    with pytest.raises(ValueError, match='parent_sample'):
+        load_record(directory)
+
+
+def test_load_record_rejects_parameters_that_disagree_with_sample_identity_inputs(tmp_path):
+    directory = republish(
+        published(tmp_path / 'collection'),
+        lambda manifest: manifest['parameters'].update(p=0.004))
+    with pytest.raises(ValueError, match='parameters'):
+        load_record(directory)
+
+
+@pytest.mark.parametrize('block', ['versions', 'source_sha256'])
+def test_load_record_rejects_decoder_metadata_that_does_not_follow(tmp_path, block):
+    def alter(manifest):
+        decoder = manifest[block]['decoder']
+        key = next(iter(decoder))
+        decoder[key] = 'changed' if block == 'versions' else 'ff' * 32
+
+    with pytest.raises(ValueError, match='decoder identity'):
+        load_record(republish(published(tmp_path / 'collection'), alter))
 
 
 def test_load_record_rejects_a_missing_identity(tmp_path):

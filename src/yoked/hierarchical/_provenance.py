@@ -302,13 +302,15 @@ CALIBRATION_SOURCES = (
 """The isotonic fit and the scores it is fitted on."""
 
 REPLAY_SOURCES = (
+    'src/yoked/hierarchical/_calibration.py',
     'src/yoked/hierarchical/_outer_decoder.py',
     'src/yoked/hierarchical/_policies.py',
     'src/yoked/hierarchical/_replay.py',
     'src/yoked/hierarchical/_metrics.py',
 )
-"""L2, the policies, the replay loop, and the metrics: what a replayed result depends
-on and an L1 record does not."""
+"""Calibration application, L2, the policies, the replay loop, and the metrics: what a
+replayed result depends on and an L1 record does not. A stored fit records the fitting
+code; replay also depends on the current code that applies its knots."""
 
 
 def _generator_sources() -> tuple[str, ...]:
@@ -406,6 +408,30 @@ def sampling_family_identity(*, circuit_sha256: str, seed: int, versions: Mappin
         'seed': seed,
         'versions': versions,
     })
+
+
+def sample_identities(*, parameters: Mapping, circuit_sha256: str, dem_sha256: str,
+                      num_detectors: int, num_observables: int, seed: int, parent_shots: int,
+                      payload_sha256: str, model_versions: Mapping,
+                      sampling_versions: Mapping) -> dict[str, str]:
+    """Derive every sample identity from its canonical, serializable inputs.
+
+    This pure helper is shared by sample publication and record verification. Keeping
+    it below the three primitive identity functions lets ``_record.py`` validate a
+    record's embedded sample provenance without importing the collection module.
+    """
+    model = model_identity(
+        parameters=parameters, circuit_sha256=circuit_sha256, dem_sha256=dem_sha256,
+        num_detectors=num_detectors, num_observables=num_observables,
+        conventions=SAMPLE_CONVENTIONS, versions=model_versions)
+    return {
+        'model': model,
+        'parent_sample': parent_sample_identity(
+            model=model, seed=seed, parent_shots=parent_shots,
+            payload_sha256=payload_sha256, versions=sampling_versions),
+        'sampling_family': sampling_family_identity(
+            circuit_sha256=circuit_sha256, seed=seed, versions=sampling_versions),
+    }
 
 
 def decoder_identity(*, sources: Mapping[str, str], conventions: Mapping, versions: Mapping) -> str:

@@ -75,6 +75,11 @@ An estimator is named `reference:score`, with `reference` in `uf`, `mwpm` and
 `score` in `cluster_gap`, `gap_plain`, `gap_correlated`. The cluster gap is a UF
 quantity and has no meaning for the MWPM reference.
 
+Repeating calibration with identical inputs verifies and reuses the existing
+artifact byte for byte, including its creation timestamp. Changed records,
+estimators, fitting code, or dependency versions require a new output path.
+This keeps an existing replay reusable when the calibration command is repeated.
+
 **Replay.** Replay configurations over the held-out evaluation record.
 
 ```bash
@@ -155,6 +160,10 @@ refuses calibrators whose record shares the evaluation record's parent sample
 **or** its sampling family, so a fit can never quietly be evaluated on the shots
 it was fitted on.
 
+Imported and republished samples retain their original model and sampling
+package versions. A newer runtime does not change the identity of historical
+shots; its decoder versions are recorded separately when collecting them.
+
 ## Checkpoints and completion
 
 Collection writes one `checkpoint.npz` holding every buffer and the completion
@@ -221,16 +230,34 @@ passed, that every declared artifact still hashes to its published value, that
 the stored row ids match the manifest's summary exactly, and that the recorded
 collection identity follows from the manifest's own fields.
 
+The manifest includes the canonical sample inputs used to recompute its model,
+parent-sample, and sampling-family identities. The loader also checks the
+decoder identity against the recorded source hashes and versions, and checks
+that the experiment parameters agree with the sample provenance.
+
 Calibration and replay verify further. `load_calibrators` rebuilds every knot
 array through `IsotonicCalibrator.from_json`, which rejects centers that are not
 strictly increasing, probabilities outside `[1e-6, 1 - 1e-6]`, and probabilities
 that are not monotone in the declared direction; it checks the declared knot
 convention and clipping constant against the ones this code implements, and
-recomputes the calibration identity from the artifact's own fields. The summary
-stage re-verifies the replay manifest, its identity, every array and JSON hash,
+recomputes the calibration identity from the artifact's own fields. A separate
+`payload_sha256` covers the fitted values and complete source-record declaration,
+including the parent and sampling-family identities used for holdout checks.
+The loader reopens that source record and checks its role, rows, identities, and
+artifact and manifest hashes, so the calibration record must remain accessible
+at the path recorded in the calibrator artifact. Replay fingerprints the current
+calibration application code as well as L2, policies, replay, and metrics.
+
+The summary stage re-verifies the replay manifest, its identity, every array and JSON hash,
 and that the record it names is still the record that was replayed: the same
 rows, identities, role, record hash, and manifest hash. A record replaced after
 replay is rejected rather than quietly summarized.
+
+Records written before canonical sample provenance was required, and
+calibrators without `payload_sha256`, are rejected explicitly. Generate new
+collection, calibration, and replay outputs in a fresh run directory using the
+saved full-call samples; do not add checksums or identity inputs to old outputs
+by hand. The saved sample format remains supported.
 
 ## Two kinds of work count
 

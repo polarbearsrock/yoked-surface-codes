@@ -37,13 +37,14 @@ from yoked.hierarchical._collect import (
 )
 from yoked.hierarchical._metrics import DEFAULT_SEED
 from yoked.hierarchical._provenance import (
-    DECODER_PACKAGES, MODEL_PACKAGES, REPLAY_SOURCES, REPOSITORY_ROOT, SAMPLING_PACKAGES,
-    package_versions, read_json, sha256_file, source_hashes, write_json_atomic,
+    CALIBRATION_PACKAGES, DECODER_PACKAGES, MODEL_PACKAGES, REPLAY_SOURCES, REPOSITORY_ROOT,
+    SAMPLING_PACKAGES, package_versions, read_json, sha256_file, source_hashes, write_json_atomic,
 )
 from yoked.hierarchical._record import RECORD_FILE, RECORD_MANIFEST, LoadedRecord
 from yoked.hierarchical._stages import (
     REPLAY_ARRAYS_FILE, REPLAY_MANIFEST, REPLAY_RESULTS_FILE, SAMPLE_DIRECTORY, UNAVAILABLE,
-    CollectRequest, _interval, _number, _paired_rows, _rate, _ReplayHooks, config_directory_name,
+    CollectRequest, _calibrator_payload_sha256, _interval, _number, _paired_rows, _rate,
+    _ReplayHooks, config_directory_name,
     load_calibrators, parse_config, stage_calibrate, stage_collect, stage_replay, stage_summarize,
 )
 
@@ -411,6 +412,142 @@ def test_an_altered_record_hash_breaks_the_calibration_identity(pipeline, tmp_pa
         load_calibrators(path)
 
 
+@pytest.mark.parametrize('field', ['probabilities', 'centers', 'num_samples'])
+def test_valid_edits_to_fitted_values_fail_the_payload_checksum(pipeline, tmp_path, field):
+    path = tmp_path / 'edited-fit.json'
+    artifact = read_json(pipeline.calibrators)
+    entry = artifact['estimators'][ESTIMATORS[0]]['X']
+    if field == 'probabilities':
+        entry[field] = [0.25] * len(entry[field])
+    elif field == 'centers':
+        entry[field] = [center + 0.125 for center in entry[field]]
+    else:
+        entry[field] += 1
+    write_json_atomic(path, artifact)
+    with pytest.raises(ValueError, match='payload checksum'):
+        load_calibrators(path)
+    with pytest.raises(ValueError, match='payload checksum'):
+        stage_replay(pipeline.evaluation.directory, path, tmp_path / 'replay', CONFIGS)
+    assert not (tmp_path / 'replay').exists()
+
+
+@pytest.mark.parametrize('field', ['role', 'manifest_sha256', 'parent_sample', 'sampling_family',
+                                  'collection'])
+@pytest.mark.parametrize('refresh_checksum', [False, True])
+def test_calibrator_provenance_must_match_the_verified_source_record(
+        pipeline, tmp_path, field, refresh_checksum):
+    path = tmp_path / 'edited-parent.json'
+    artifact = read_json(pipeline.calibrators)
+    record = artifact['record']
+    if field == 'role':
+        record[field] = 'evaluation'
+    elif field == 'manifest_sha256':
+        record[field] = 'ff' * 32
+    else:
+        record['identities'][field] = 'ff' * 32
+    if refresh_checksum:
+        artifact['payload_sha256'] = _calibrator_payload_sha256(record, artifact['estimators'])
+    write_json_atomic(path, artifact)
+    message = 'payload checksum'
+    if refresh_checksum:
+        message = {'manifest_sha256': RECORD_MANIFEST, 'role': 'evaluation'}.get(field, field)
+    with pytest.raises(ValueError, match=message):
+        load_calibrators(path)
+
+
+def test_calibrator_loading_requires_the_source_record_to_have_the_calibration_role(pipeline,
+                                                                                  tmp_path):
+    path = tmp_path / 'evaluation-parent.json'
+    artifact = read_json(pipeline.calibrators)
+    artifact['record']['directory'] = str(pipeline.evaluation.directory)
+    artifact['payload_sha256'] = _calibrator_payload_sha256(artifact['record'], artifact['estimators'])
+    write_json_atomic(path, artifact)
+    with pytest.raises(ValueError, match='requires the.*calibration'):
+        load_calibrators(path)
+
+
+@pytest.mark.parametrize('damage', ['missing', 'replaced'])
+def test_calibrator_loading_reverifies_its_source_record(pipeline, tmp_path, damage):
+    record_dir = copied(pipeline.calibration.directory, tmp_path / 'calibration')
+    path = tmp_path / 'calibrators.json'
+    stage_calibrate(record_dir, path, ESTIMATORS)
+    if damage == 'missing':
+        (record_dir / RECORD_MANIFEST).unlink()
+    else:
+        shutil.copyfile(pipeline.evaluation.directory / RECORD_FILE, record_dir / RECORD_FILE)
+    with pytest.raises(ValueError, match='missing' if damage == 'missing' else 'hashes'):
+        load_calibrators(path)
+
+
+def test_repeated_calibration_preserves_the_artifact_and_reuses_replay(pipeline, tmp_path,
+                                                                     monkeypatch):
+    path = tmp_path / 'calibrators.json'
+    shutil.copyfile(pipeline.calibrators, path)
+    before = path.read_bytes()
+
+    def refuse(*arguments, **keywords):
+        raise AssertionError('identical calibration and replay must reuse their outputs')
+
+    monkeypatch.setattr('yoked.hierarchical._stages.fit_calibrators', refuse)
+    monkeypatch.setattr('yoked.hierarchical._stages.replay', refuse)
+    monkeypatch.setattr('yoked.hierarchical._stages.utc_now', lambda: '2099-01-01T00:00:00Z')
+    fitted = stage_calibrate(pipeline.calibration.directory, path, reversed(ESTIMATORS))
+    assert sorted(fitted) == sorted(ESTIMATORS)
+    assert path.read_bytes() == before
+    results = stage_replay(pipeline.evaluation.directory, path, pipeline.replay_dir, CONFIGS)
+    assert sorted(results) == sorted(read_json(pipeline.replay_dir / REPLAY_MANIFEST)['configurations'])
+
+
+@pytest.mark.parametrize('changed', ['estimators', 'sources', 'versions', 'record'])
+def test_calibration_refuses_to_overwrite_different_inputs(pipeline, tmp_path, monkeypatch, changed):
+    path = tmp_path / 'calibrators.json'
+    shutil.copyfile(pipeline.calibrators, path)
+    before = path.read_bytes()
+    estimators = ESTIMATORS
+    record_dir = pipeline.calibration.directory
+    if changed == 'estimators':
+        estimators = ESTIMATORS[:1]
+    elif changed == 'sources':
+        def moved(group):
+            return {name: 'ff' * 32 for name in group}
+        monkeypatch.setattr('yoked.hierarchical._stages.source_hashes', moved)
+    elif changed == 'versions':
+        def upgraded(group):
+            versions = package_versions(group)
+            if group is CALIBRATION_PACKAGES:
+                versions['numpy'] = 'other-version'
+            return versions
+        monkeypatch.setattr('yoked.hierarchical._stages.package_versions', upgraded)
+    else:
+        record_dir = tmp_path / 'other-record'
+        stage_collect(generated_request(record_dir, 'calibration', CALIBRATION_SEED,
+                                        rows=np.arange(SHOTS // 2)))
+    with pytest.raises(ValueError, match='new output path'):
+        stage_calibrate(record_dir, path, estimators)
+    assert path.read_bytes() == before
+
+
+def test_repeating_calibration_does_not_overwrite_a_corrupt_artifact(pipeline, tmp_path):
+    path = tmp_path / 'calibrators.json'
+    artifact = read_json(pipeline.calibrators)
+    entry = artifact['estimators'][ESTIMATORS[0]]['X']
+    entry['probabilities'] = [0.25] * len(entry['probabilities'])
+    write_json_atomic(path, artifact)
+    before = path.read_bytes()
+    with pytest.raises(ValueError, match='payload checksum'):
+        stage_calibrate(pipeline.calibration.directory, path, ESTIMATORS)
+    assert path.read_bytes() == before
+
+
+def test_a_legacy_calibrator_without_payload_integrity_is_rejected(pipeline, tmp_path):
+    path = tmp_path / 'legacy.json'
+    artifact = read_json(pipeline.calibrators)
+    del artifact['payload_sha256']
+    write_json_atomic(path, artifact)
+    with pytest.raises(ValueError, match='payload_sha256'):
+        load_calibrators(path)
+
+
 # --- replay ------------------------------------------------------------------
 
 def test_replay_requires_an_evaluation_record(pipeline, tmp_path):
@@ -617,3 +754,33 @@ def test_a_replay_source_change_leaves_the_collection_identity_alone(pipeline, t
     assert sorted(replayed) == sorted(
         read_json(tmp_path / 'after-change' / REPLAY_MANIFEST)['configurations'])
     assert read_json(tmp_path / 'after-change' / REPLAY_MANIFEST)['identity'] != before
+
+
+def test_a_calibration_application_change_invalidates_replay_but_keeps_l1(pipeline, tmp_path,
+                                                                        monkeypatch):
+    calibration_source = 'src/yoked/hierarchical/_calibration.py'
+
+    def moved(group):
+        digests = source_hashes(group)
+        if calibration_source in digests:
+            digests[calibration_source] = 'ff' * 32
+        return digests
+
+    monkeypatch.setattr('yoked.hierarchical._collect.source_hashes', moved)
+    monkeypatch.setattr('yoked.hierarchical._stages.source_hashes', moved)
+    monkeypatch.setattr('yoked.hierarchical._calibration.IsotonicCalibrator.probability',
+                        lambda self, scores: np.full(np.shape(scores), 0.25))
+    again = stage_collect(generated_request(pipeline.calibration.directory, 'calibration',
+                                            CALIBRATION_SEED))
+    assert again.identities == pipeline.calibration.identities
+    with pytest.raises(ValueError, match='new output directory'):
+        stage_replay(pipeline.evaluation.directory, pipeline.calibrators, pipeline.replay_dir, CONFIGS)
+    fresh = tmp_path / 'changed-application'
+    results = stage_replay(pipeline.evaluation.directory, pipeline.calibrators, fresh, CONFIGS)
+    assert read_json(fresh / REPLAY_MANIFEST)['identity'] != \
+        read_json(pipeline.replay_dir / REPLAY_MANIFEST)['identity']
+    # Compare actual predictions, not just the list of files included in a fingerprint.
+    initial = parse_config(INITIAL_ONLY_CONFIG)
+    stored_path = pipeline.replay_dir / config_directory_name(initial) / REPLAY_ARRAYS_FILE
+    with np.load(stored_path, allow_pickle=False) as stored:
+        assert np.any(results[initial.name].final != stored['final'])

@@ -17,7 +17,9 @@ Four stages, each a function over already-verified inputs:
     the clipping constant, and the calibration sources and versions.
     ``load_calibrators`` reads that artifact back, rebuilds every knot array through
     ``IsotonicCalibrator.from_json``, checks the declared conventions, and recomputes
-    the calibration identity from the artifact's own fields.
+    the calibration identity and fitted-payload checksum. It verifies the source record
+    again before trusting its provenance. Identical calibration requests reuse the
+    existing artifact without fitting or rewriting it.
   * ``stage_replay`` replays configurations over a completed evaluation record. It
     refuses a calibration-role record, a record sharing the calibration record's parent
     sample or sampling family, a calibration fitted under another model or decoder, and
@@ -74,7 +76,7 @@ from yoked.hierarchical._outer_decoder import TIE_TOLERANCE
 from yoked.hierarchical._policies import INITIAL_ONLY, policy_from_name
 from yoked.hierarchical._provenance import (
     CALIBRATION_PACKAGES, CALIBRATION_SOURCES, MODEL_PACKAGES, REPLAY_PACKAGES, REPLAY_SOURCES,
-    SAMPLE_CONVENTIONS, SCHEMA_VERSION, atomic_replacement, calibration_identity, git_commit,
+    SAMPLE_CONVENTIONS, SCHEMA_VERSION, atomic_replacement, calibration_identity, canonical_json, git_commit,
     model_identity, package_versions, read_json, replay_identity, sha256_bytes, sha256_file,
     source_hashes, utc_now, write_json_atomic,
 )
@@ -112,10 +114,11 @@ RECORD_BLOCK_FIELDS = ('directory', 'record_sha256', 'manifest_sha256', 'identit
                        'role')
 """What every stage records about the verified record it consumed."""
 
-CALIBRATOR_FIELDS = ('schema_version', 'stage', 'identity', 'record', 'estimators',
+CALIBRATOR_FIELDS = ('schema_version', 'stage', 'identity', 'payload_sha256', 'record', 'estimators',
                      'knot_convention', 'clip', 'versions', 'source_sha256')
 """The fields ``load_calibrators`` verifies. ``code_commit`` and ``created_utc`` are written
-for auditability and are deliberately not among them: neither determines a fitted map."""
+for auditability and are deliberately not among them: neither determines a fitted map.
+``identity`` names the fit inputs; ``payload_sha256`` checks the fitted map and provenance."""
 
 ESTIMATOR_FIELDS = ('reference', 'score', 'direction') + SECTOR_NAMES
 """One estimator's entry in a calibrator artifact: its definition and one knot set per sector."""
@@ -405,6 +408,34 @@ def _record_block(loaded: LoadedRecord) -> dict:
     }
 
 
+def _require_same_record(loaded: LoadedRecord, block: Mapping, *, where) -> None:
+    """The record a stage consumed must be the record that is there now.
+
+    Rows are compared first because replacing a record with one over other rows is the
+    difference a reader is most likely to create by accident, and the hashes below would
+    only say that something changed.
+    """
+    for name in ROW_SUMMARY_FIELDS:
+        if loaded.manifest['rows'][name] != block['rows'][name]:
+            raise ValueError(f'{where} declares rows with {name} {block["rows"][name]!r}, '
+                             f'{loaded.directory} now holds {loaded.manifest["rows"][name]!r}')
+    for name in IDENTITY_NAMES:
+        if loaded.identities[name] != block['identities'][name]:
+            raise ValueError(f'{where} declares a record with {name} identity '
+                             f'{block["identities"][name]}, {loaded.directory} now has '
+                             f'{loaded.identities[name]}')
+    if loaded.manifest['role'] != block['role']:
+        raise ValueError(f'{where} declares a {block["role"]!r} record, '
+                         f'{loaded.directory} now holds a {loaded.manifest["role"]!r} one')
+    for name, stored, declared in (
+            (RECORD_FILE, loaded.manifest['artifacts'][RECORD_FILE], block['record_sha256']),
+            (RECORD_MANIFEST, sha256_file(loaded.directory / RECORD_MANIFEST),
+             block['manifest_sha256'])):
+        if stored != declared:
+            raise ValueError(f'{where} declares a record whose {name} hashes to '
+                             f'{declared}, {loaded.directory} now hashes to {stored}')
+
+
 def _estimators(values: Iterable) -> tuple[Estimator, ...]:
     """The estimators to fit, parsed from names where needed, distinct, in name order."""
     parsed = tuple(value if isinstance(value, Estimator) else Estimator.parse(value)
@@ -427,6 +458,16 @@ def _definitions(estimators: Iterable[Estimator]) -> dict:
                             'direction': estimator.direction} for estimator in estimators}
 
 
+def _calibrator_payload_sha256(record: Mapping, estimators: Mapping) -> str:
+    """Bind the fitted output and its complete source-record declaration to one checksum.
+
+    The fit identity names the scientific inputs; this checksum verifies the actual
+    knots and provenance written alongside it. Audit timestamps and commits affect
+    neither, while replay separately hashes the exact artifact bytes it consumed.
+    """
+    return sha256_bytes(canonical_json({'record': record, 'estimators': estimators}).encode('utf-8'))
+
+
 def stage_calibrate(record_dir, out_path, estimators: Iterable) -> Calibrators:
     """Fit the calibrators of section 6 on a completed calibration record and publish them.
 
@@ -435,30 +476,43 @@ def stage_calibrate(record_dir, out_path, estimators: Iterable) -> Calibrators:
     artifact records everything a later stage needs to decide whether these knots may be
     used on another record: the exact record and manifest hashes, the five record
     identities, the fitted rows, the estimator definitions, the knot convention, the
-    clipping constant, and the calibration sources and versions.
+    clipping constant, and the calibration sources and versions. An existing artifact
+    is verified and reused byte for byte for identical inputs; different inputs require
+    a new output path.
     """
     loaded = load_record(record_dir)
     _require_role(loaded, CALIBRATION_ROLE)
     estimators = _estimators(estimators)
-    calibrators = fit_calibrators(loaded.record, estimators)
     definitions = _definitions(estimators)
     record = _record_block(loaded)
     sources, versions = source_hashes(CALIBRATION_SOURCES), package_versions(CALIBRATION_PACKAGES)
+    identity = calibration_identity(
+        record_sha256=record['record_sha256'], rows_sha256=record['rows']['sha256'],
+        model=record['identities']['model'], decoder=record['identities']['decoder'],
+        estimators=definitions, knot_convention=KNOT_CONVENTION, sources=sources,
+        versions=versions)
     out_path = Path(out_path)
+    if out_path.exists():
+        calibrators, artifact = load_calibrators(out_path)
+        if artifact['identity'] != identity:
+            raise ValueError(f'{out_path} already holds a calibration of other inputs; '
+                             f'use a new output path')
+        _require_same_record(loaded, artifact['record'], where=out_path)
+        return calibrators
+
+    calibrators = fit_calibrators(loaded.record, estimators)
+    fitted = {name: {**definition,
+                     **{sector: calibrators[name][index].to_json()
+                        for index, sector in enumerate(SECTOR_NAMES)}}
+              for name, definition in definitions.items()}
     out_path.parent.mkdir(parents=True, exist_ok=True)
     write_json_atomic(out_path, {
         'schema_version': SCHEMA_VERSION,
         'stage': CALIBRATE_STAGE,
-        'identity': calibration_identity(
-            record_sha256=record['record_sha256'], rows_sha256=record['rows']['sha256'],
-            model=record['identities']['model'], decoder=record['identities']['decoder'],
-            estimators=definitions, knot_convention=KNOT_CONVENTION, sources=sources,
-            versions=versions),
+        'identity': identity,
+        'payload_sha256': _calibrator_payload_sha256(record, fitted),
         'record': record,
-        'estimators': {name: {**definition,
-                              **{sector: calibrators[name][index].to_json()
-                                 for index, sector in enumerate(SECTOR_NAMES)}}
-                       for name, definition in definitions.items()},
+        'estimators': fitted,
         'knot_convention': KNOT_CONVENTION,
         'clip': CLIP,
         'versions': versions,
@@ -477,8 +531,9 @@ def load_calibrators(path) -> tuple[Calibrators, Mapping]:
     and probabilities that are not monotone in the declared direction. The declared
     conventions must be the ones this code implements, and the calibration identity must
     follow from the artifact's own record hashes, estimator definitions, convention,
-    sources, and versions. Returns the fitted calibrators and an immutable view of the
-    artifact.
+    sources, and versions. The payload checksum covers the fitted knots and complete
+    record declaration, which is also checked against the source calibration record.
+    Returns the fitted calibrators and an immutable view of the artifact.
     """
     path = Path(path)
     artifact = read_json(path)
@@ -532,6 +587,12 @@ def load_calibrators(path) -> tuple[Calibrators, Mapping]:
         raise ValueError(f'the calibration identity {artifact["identity"]!r} in {path} does not '
                          f'follow from its own record, estimators, convention, sources, and '
                          f'versions')
+    if _calibrator_payload_sha256(artifact['record'], artifact['estimators']) != artifact['payload_sha256']:
+        raise ValueError(f'the calibration payload checksum in {path} does not match its '
+                         f'fitted estimators and source record')
+    loaded = load_record(artifact['record']['directory'])
+    _require_role(loaded, CALIBRATION_ROLE)
+    _require_same_record(loaded, artifact['record'], where=path)
     return MappingProxyType(fitted), _frozen(artifact)
 
 
@@ -863,34 +924,6 @@ def _configuration_directories(manifest: Mapping) -> list[str]:
     if not names:
         raise ValueError('a replay manifest declares no configuration directories')
     return names
-
-
-def _require_same_record(loaded: LoadedRecord, block: Mapping, *, where) -> None:
-    """The record a replay consumed must be the record that is there now.
-
-    Rows are compared first because replacing a record with one over other rows is the
-    difference a reader is most likely to create by accident, and the hashes below would
-    only say that something changed.
-    """
-    for name in ROW_SUMMARY_FIELDS:
-        if loaded.manifest['rows'][name] != block['rows'][name]:
-            raise ValueError(f'{where} was replayed over rows with {name} {block["rows"][name]!r}, '
-                             f'{loaded.directory} now holds {loaded.manifest["rows"][name]!r}')
-    for name in IDENTITY_NAMES:
-        if loaded.identities[name] != block['identities'][name]:
-            raise ValueError(f'{where} was replayed over a record with {name} identity '
-                             f'{block["identities"][name]}, {loaded.directory} now has '
-                             f'{loaded.identities[name]}')
-    if loaded.manifest['role'] != block['role']:
-        raise ValueError(f'{where} was replayed over a {block["role"]!r} record, '
-                         f'{loaded.directory} now holds a {loaded.manifest["role"]!r} one')
-    for name, stored, declared in (
-            (RECORD_FILE, loaded.manifest['artifacts'][RECORD_FILE], block['record_sha256']),
-            (RECORD_MANIFEST, sha256_file(loaded.directory / RECORD_MANIFEST),
-             block['manifest_sha256'])):
-        if stored != declared:
-            raise ValueError(f'{where} was replayed over a record whose {name} hashes to '
-                             f'{declared}, {loaded.directory} now hashes to {stored}')
 
 
 def _group_json(loaded: LoadedRecord, cells: Mapping, *, pieces: int, replicates: int,
