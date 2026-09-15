@@ -7,8 +7,13 @@ rejection of a tampered file; graph equivalence on the distance-3 fixture togeth
 with deliberately changed edge multiplicity, mask, and weight (a difference below
 1e-9 passing and a larger one failing); collection of a few hundred fixture shots
 through both correlation branches, with valid corrections, instrumented work counts,
-and equality between one call and a partitioned serial collection; and every record
-invariant failing on its own deliberately corrupted field.
+and equality between one call and a partitioned serial collection; every record
+invariant failing on its own deliberately corrupted field; and the checkpointed
+coordinator, where an uninterrupted serial run, a one-chunk run, a two-worker run, a
+run stopped by ``max_chunks``, and a run interrupted at each of the four hook points
+all publish the same arrays, row ids, and retained-row work counts, while a changed
+decoder identity, role, row set, sample payload, checkpoint, or record is rejected
+instead of being collected into the same directory.
 """
 import dataclasses
 import shutil
@@ -18,17 +23,22 @@ import pytest
 
 from yoked.decoders._graph import DecodingGraph
 from yoked.hierarchical._collect import (
-    ACTUAL_FILE, CIRCUIT_FILE, DEM_FILE, DETECTORS_FILE, EDGE_WEIGHT_TOLERANCE,
-    FORCED_CALLS_PER_DECODE, RECORDED_MANIFEST, SAMPLE_MANIFEST, WEIGHT_TOLERANCE,
-    CircuitParameters, CollectionWork, L1Context, SampleSet, check_graphs, check_record,
-    collect_rows,
+    ACTUAL_FILE, CHECKPOINT_FILE, CIRCUIT_FILE, COLLECTION_FILE, DEM_FILE, DETECTORS_FILE,
+    EDGE_WEIGHT_TOLERANCE, FAILED_CHECKS_FILE, FORCED_CALLS_PER_DECODE, RECORDED_MANIFEST, ROLES,
+    SAMPLE_MANIFEST, WEIGHT_TOLERANCE, WORK_FIELDS, CircuitParameters, CollectionSettings,
+    CollectionWork, L1Context, SampleSet, _Buffers, _CollectionHooks, _run_chunks, check_graphs,
+    check_record, collect_rows, collect_sample,
 )
 from yoked.hierarchical._matching_gaps import signed_gaps
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
 from yoked.hierarchical._provenance import (
-    MODEL_PACKAGES, SAMPLING_PACKAGES, package_versions, read_json, sha256_file, write_json_atomic,
+    CHECK_SOURCES, DECODER_PACKAGES, DECODER_SOURCES, MODEL_PACKAGES, RECORD_CONVENTIONS,
+    SAMPLING_PACKAGES, decoder_identity, package_versions, read_json, row_ids_sha256,
+    sha256_file, source_hashes, write_json_atomic,
 )
-from yoked.hierarchical._record import ARRAY_FIELDS
+from yoked.hierarchical._record import (
+    ARRAY_FIELDS, IDENTITY_NAMES, LoadedRecord, RECORD_FILE, RECORD_MANIFEST,
+)
 
 SHOTS = 200
 """Enough distance-3 shots to exercise both correlation branches in a few seconds."""
@@ -453,3 +463,391 @@ def test_a_non_finite_collected_value_fails_the_value_gate(collected):
     checks = check_record(record)
     assert not checks.passed and checks.value_violations == 1
     assert checks.diagnostics['values'] == (int(record.rows[2]),)
+
+
+# --- collection settings -----------------------------------------------------
+
+def test_collection_settings_normalize_rows_and_summarize_them():
+    settings = CollectionSettings(role='calibration', rows=np.array([9, 2, 5]))
+    np.testing.assert_array_equal(settings.rows, [2, 5, 9])
+    assert not settings.rows.flags.writeable and settings.rows.dtype == np.int64
+    assert settings.shots == 3
+    assert settings.rows_summary() == {'count': 3, 'start': 2, 'stop': 10,
+                                       'sha256': row_ids_sha256(np.array([2, 5, 9]))}
+
+
+def test_collection_settings_reject_duplicate_rows():
+    with pytest.raises(ValueError, match='unique'):
+        CollectionSettings(role='evaluation', rows=np.array([1, 1, 2]))
+
+
+def test_collection_settings_reject_negative_float_and_boolean_rows():
+    with pytest.raises(ValueError, match='nonnegative'):
+        CollectionSettings(role='evaluation', rows=np.array([-1, 2]))
+    with pytest.raises(ValueError, match='integer'):
+        CollectionSettings(role='evaluation', rows=np.array([1.0, 2.0]))
+    with pytest.raises(ValueError, match='mask'):
+        CollectionSettings(role='evaluation', rows=np.array([True, False, True]))
+
+
+def test_collection_settings_reject_an_empty_or_multidimensional_row_array():
+    with pytest.raises(ValueError, match='nonempty'):
+        CollectionSettings(role='evaluation', rows=np.array([], dtype=np.int64))
+    with pytest.raises(ValueError, match='one-dimensional'):
+        CollectionSettings(role='evaluation', rows=np.arange(4).reshape(2, 2))
+
+
+def test_collection_settings_reject_a_role_outside_the_two_m1_roles():
+    with pytest.raises(ValueError, match='confirmation'):
+        CollectionSettings(role='confirmation', rows=np.arange(4))
+    assert ROLES == ('calibration', 'evaluation')
+
+
+def test_collection_settings_reject_non_positive_worker_chunk_and_cap_counts():
+    for field in ('workers', 'chunk_size', 'max_chunks'):
+        with pytest.raises(ValueError, match=field):
+            CollectionSettings(role='evaluation', rows=np.arange(4), **{field: 0})
+    assert CollectionSettings(role='evaluation', rows=np.arange(4)).max_chunks is None
+
+
+# --- the collection coordinator ----------------------------------------------
+
+COLLECTED = np.arange(24)
+"""Few enough distance-3 rows that a dozen collections stay fast, enough to split into
+three chunks of eight."""
+
+CHUNK = 8
+"""Rows per scheduled chunk in the tests, so ``COLLECTED`` is three chunks."""
+
+
+def evaluation_settings(**overrides) -> CollectionSettings:
+    return CollectionSettings(**{'role': 'evaluation', 'rows': COLLECTED, 'chunk_size': CHUNK,
+                                 **overrides})
+
+
+@pytest.fixture(scope='module')
+def reference(saved, tmp_path_factory):
+    """One uninterrupted serial collection that every other run is compared against."""
+    out_dir = tmp_path_factory.mktemp('reference') / 'evaluation'
+    return collect_sample(saved, out_dir, evaluation_settings())
+
+
+def retained_work(loaded) -> dict:
+    """The manifest's retained-row work counts, without the resumption bookkeeping."""
+    return {name: loaded.manifest['collection_work'][name] for name in WORK_FIELDS}
+
+
+def assert_same_collection(left, right) -> None:
+    """Two runs agree when every array, the row ids, the identities, and the retained-row
+    work counts agree; how many chunks, workers, or restarts produced them cannot show."""
+    for name in ARRAY_FIELDS:
+        np.testing.assert_array_equal(getattr(left.record, name), getattr(right.record, name))
+    assert dict(left.identities) == dict(right.identities)
+    assert retained_work(left) == retained_work(right)
+
+
+def raise_once(message: str):
+    """A hook that interrupts the first run and lets every later one through."""
+    state = {'fired': False}
+
+    def hook() -> None:
+        if not state['fired']:
+            state['fired'] = True
+            raise RuntimeError(message)
+
+    return hook
+
+
+def test_a_completed_collection_publishes_a_verified_record(reference, saved, sample):
+    out_dir = reference.directory
+    assert isinstance(reference, LoadedRecord)
+    for name in (RECORD_FILE, RECORD_MANIFEST, COLLECTION_FILE):
+        assert (out_dir / name).is_file()
+    assert not (out_dir / CHECKPOINT_FILE).exists()
+    np.testing.assert_array_equal(reference.record.rows, COLLECTED)
+    manifest = reference.manifest
+    assert manifest['status'] == 'complete' and manifest['role'] == 'evaluation'
+    assert manifest['shots'] == len(COLLECTED) and manifest['parent_shots'] == sample.shots
+    assert manifest['seed'] == sample.seed
+    assert manifest['parent_payload_sha256'] == sample.payload_sha256
+    assert dict(manifest['parameters']) == sample.parameters.to_json()
+    assert manifest['artifacts'][RECORD_FILE] == sha256_file(out_dir / RECORD_FILE)
+    assert manifest['checks']['passed'] is True
+    assert manifest['checks']['graph']['equivalent'] is True
+    assert manifest['checks']['record']['passed'] is True
+    assert manifest['collection_work']['rows'] == len(COLLECTED)
+    assert manifest['collection_work']['resumptions'] == 0
+    assert 'interruption' in manifest['collection_work']['telemetry']
+    assert manifest['timing']['seconds_total'] >= manifest['timing']['seconds_this_run'] > 0
+    assert manifest['code_commit'] is None or len(manifest['code_commit']) == 40
+
+
+def test_the_published_identities_name_the_sample_the_decoder_and_the_collection(reference, sample):
+    assert set(reference.identities) == set(IDENTITY_NAMES)
+    for name in ('model', 'parent_sample', 'sampling_family'):
+        assert reference.identities[name] == sample.identities[name]
+    assert reference.identities['decoder'] == decoder_identity(
+        sources=source_hashes(DECODER_SOURCES), conventions=RECORD_CONVENTIONS,
+        versions=package_versions(DECODER_PACKAGES))
+
+
+def test_the_manifest_lists_the_audit_sources_that_do_not_exist_yet(reference):
+    audit = reference.manifest['source_sha256']['audit']
+    assert 'src/yoked/hierarchical/_stages.py' in audit['missing']
+    assert 'src/yoked/_yoked_memory_circuits.py' in audit
+    assert set(reference.manifest['source_sha256']) == {'decoder', 'check', 'audit'}
+    assert set(reference.manifest['versions']) == {'decoder', 'check'}
+
+
+def test_a_collected_record_matches_a_direct_collect_rows_call(reference, sample, context):
+    direct = collect_rows(context, *sample.rows(COLLECTED), COLLECTED)
+    for name in ARRAY_FIELDS:
+        np.testing.assert_array_equal(getattr(reference.record, name), getattr(direct.record, name))
+    assert retained_work(reference) == direct.work.to_json()
+
+
+def test_one_chunk_and_many_chunks_collect_the_same_record(reference, saved, tmp_path):
+    whole = collect_sample(saved, tmp_path / 'whole', evaluation_settings(chunk_size=len(COLLECTED)))
+    assert_same_collection(whole, reference)
+
+
+def test_a_parallel_collection_matches_the_serial_one(reference, saved, tmp_path):
+    parallel = collect_sample(saved, tmp_path / 'parallel', evaluation_settings(workers=2))
+    assert_same_collection(parallel, reference)
+
+
+def test_max_chunks_stops_scheduling_and_a_rerun_finishes_the_same_record(reference, saved, tmp_path):
+    out_dir = tmp_path / 'resumed'
+    assert collect_sample(saved, out_dir, evaluation_settings(max_chunks=1)) is None
+    assert (out_dir / CHECKPOINT_FILE).is_file() and not (out_dir / RECORD_MANIFEST).exists()
+    assert collect_sample(saved, out_dir, evaluation_settings(max_chunks=1)) is None
+    resumed = collect_sample(saved, out_dir, evaluation_settings())
+    assert_same_collection(resumed, reference)
+    assert resumed.manifest['collection_work']['resumptions'] == 2
+    assert not (out_dir / CHECKPOINT_FILE).exists()
+
+
+@pytest.mark.parametrize('point', ['before_checkpoint', 'after_checkpoint', 'after_record',
+                                   'before_manifest'])
+def test_an_interruption_at_each_hook_point_restarts_to_the_same_record(point, reference, saved,
+                                                                       tmp_path):
+    out_dir = tmp_path / point
+    hooks = _CollectionHooks(**{point: raise_once(point)})
+    with pytest.raises(RuntimeError, match=point):
+        collect_sample(saved, out_dir, evaluation_settings(), hooks=hooks)
+    assert not (out_dir / RECORD_MANIFEST).exists()
+    restarted = collect_sample(saved, out_dir, evaluation_settings(), hooks=hooks)
+    assert_same_collection(restarted, reference)
+
+
+def test_a_completed_collection_is_reloaded_without_decoding_again(reference, saved, monkeypatch):
+    def refuse(*arguments, **keywords):
+        raise AssertionError('a completed collection must not decode anything again')
+
+    monkeypatch.setattr('yoked.hierarchical._collect.collect_rows', refuse)
+    again = collect_sample(saved, reference.directory, evaluation_settings())
+    assert_same_collection(again, reference)
+    assert again.manifest['checks']['identity'] == reference.manifest['checks']['identity']
+
+
+def test_a_changed_check_identity_rechecks_the_stored_arrays_and_republishes(reference, saved,
+                                                                            tmp_path, monkeypatch):
+    out_dir = copied(reference.directory, tmp_path / 'rechecked')
+    before = sha256_file(out_dir / RECORD_FILE)
+    monkeypatch.setattr('yoked.hierarchical._collect.source_hashes',
+                        changed_sources(CHECK_SOURCES))
+    rechecked = collect_sample(saved, out_dir, evaluation_settings())
+    assert rechecked.manifest['checks']['identity'] != reference.manifest['checks']['identity']
+    assert rechecked.manifest['checks']['passed'] is True
+    assert sha256_file(out_dir / RECORD_FILE) == before
+    assert_same_collection(rechecked, reference)
+
+
+def test_a_changed_decoder_identity_cannot_join_a_completed_collection(reference, saved, tmp_path,
+                                                                      monkeypatch):
+    out_dir = copied(reference.directory, tmp_path / 'other-decoder')
+    monkeypatch.setattr('yoked.hierarchical._collect.source_hashes',
+                        changed_sources(DECODER_SOURCES))
+    with pytest.raises(ValueError, match='decoder'):
+        collect_sample(saved, out_dir, evaluation_settings())
+
+
+def test_a_changed_decoder_identity_cannot_join_a_partial_collection(saved, tmp_path, monkeypatch):
+    out_dir = tmp_path / 'partial-decoder'
+    assert collect_sample(saved, out_dir, evaluation_settings(max_chunks=1)) is None
+    monkeypatch.setattr('yoked.hierarchical._collect.package_versions', bumped_versions())
+    with pytest.raises(ValueError, match='decoder'):
+        collect_sample(saved, out_dir, evaluation_settings())
+
+
+def test_changed_rows_are_rejected_rather_than_collected_into_the_same_directory(saved, tmp_path):
+    out_dir = tmp_path / 'other-rows'
+    assert collect_sample(saved, out_dir, evaluation_settings(max_chunks=1)) is None
+    with pytest.raises(ValueError, match='rows'):
+        collect_sample(saved, out_dir,
+                       CollectionSettings(role='evaluation', rows=np.arange(25), chunk_size=CHUNK))
+
+
+def test_a_changed_role_is_rejected_rather_than_collected_into_the_same_directory(saved, tmp_path):
+    out_dir = tmp_path / 'other-role'
+    assert collect_sample(saved, out_dir, evaluation_settings(max_chunks=1)) is None
+    with pytest.raises(ValueError, match='role'):
+        collect_sample(saved, out_dir,
+                       CollectionSettings(role='calibration', rows=COLLECTED, chunk_size=CHUNK))
+
+
+def test_failing_record_checks_retain_the_checkpoint_and_publish_no_manifest(saved, tmp_path,
+                                                                            monkeypatch):
+    out_dir = tmp_path / 'failed-checks'
+    monkeypatch.setattr('yoked.hierarchical._collect.check_record', failing_record_checks)
+    with pytest.raises(ValueError, match='check_parity'):
+        collect_sample(saved, out_dir, evaluation_settings())
+    assert (out_dir / CHECKPOINT_FILE).is_file()
+    assert not (out_dir / RECORD_MANIFEST).exists()
+    assert read_json(out_dir / FAILED_CHECKS_FILE)['record']['failures'] == ['check_parity']
+
+
+def test_failing_graph_checks_stop_the_collection_before_any_row_is_decoded(saved, tmp_path,
+                                                                           monkeypatch):
+    out_dir = tmp_path / 'failed-graphs'
+    monkeypatch.setattr('yoked.hierarchical._collect.check_graphs', failing_graph_checks)
+    monkeypatch.setattr('yoked.hierarchical._collect.collect_rows', refusing_collect_rows)
+    with pytest.raises(ValueError, match='[Gg]raph'):
+        collect_sample(saved, out_dir, evaluation_settings())
+    assert not (out_dir / CHECKPOINT_FILE).exists() and not (out_dir / RECORD_MANIFEST).exists()
+
+
+def test_a_corrupt_checkpoint_is_rejected_rather_than_silently_replaced(saved, tmp_path):
+    out_dir = tmp_path / 'corrupt-checkpoint'
+    assert collect_sample(saved, out_dir, evaluation_settings(max_chunks=1)) is None
+    data = (out_dir / CHECKPOINT_FILE).read_bytes()
+    (out_dir / CHECKPOINT_FILE).write_bytes(data[: len(data) // 2])
+    with pytest.raises(ValueError):
+        collect_sample(saved, out_dir, evaluation_settings())
+    assert (out_dir / CHECKPOINT_FILE).is_file()
+
+
+def test_a_checkpoint_from_another_collection_is_rejected(saved, tmp_path):
+    evaluation, calibration = tmp_path / 'evaluation', tmp_path / 'calibration'
+    other = CollectionSettings(role='calibration', rows=COLLECTED, chunk_size=CHUNK, max_chunks=1)
+    assert collect_sample(saved, evaluation, evaluation_settings(max_chunks=1)) is None
+    assert collect_sample(saved, calibration, other) is None
+    shutil.copy(evaluation / CHECKPOINT_FILE, calibration / CHECKPOINT_FILE)
+    with pytest.raises(ValueError, match='collection'):
+        collect_sample(saved, calibration, other)
+
+
+def test_a_corrupt_record_is_rejected_on_a_completed_collection(reference, saved, tmp_path):
+    out_dir = copied(reference.directory, tmp_path / 'corrupt-record')
+    (out_dir / RECORD_FILE).write_bytes((out_dir / RECORD_FILE).read_bytes() + b'\0')
+    with pytest.raises(ValueError, match=RECORD_FILE):
+        collect_sample(saved, out_dir, evaluation_settings())
+
+
+def test_a_missing_manifest_leaves_an_orphan_record_that_is_republished(reference, saved, tmp_path):
+    out_dir = copied(reference.directory, tmp_path / 'orphan')
+    (out_dir / RECORD_MANIFEST).unlink()
+    republished = collect_sample(saved, out_dir, evaluation_settings())
+    assert_same_collection(republished, reference)
+    assert republished.manifest['collection_work']['rows'] == len(COLLECTED)
+
+
+def test_changed_sample_bytes_under_an_unchanged_manifest_are_rejected(saved, tmp_path):
+    sample_dir = copied(saved, tmp_path / 'tampered-sample')
+    packed = np.load(sample_dir / DETECTORS_FILE)
+    packed[0, 0] ^= 1
+    np.save(sample_dir / DETECTORS_FILE, packed)
+    with pytest.raises(ValueError, match=DETECTORS_FILE):
+        collect_sample(sample_dir, tmp_path / 'out', evaluation_settings())
+
+
+def test_rows_outside_the_parent_sample_are_rejected(saved, tmp_path):
+    with pytest.raises(ValueError, match='range'):
+        collect_sample(saved, tmp_path / 'out',
+                       CollectionSettings(role='evaluation', rows=np.array([0, SHOTS])))
+
+
+def test_collecting_into_the_sample_directory_is_refused(saved, tmp_path):
+    sample_dir = copied(saved, tmp_path / 'in-place')
+    with pytest.raises(ValueError, match='sample'):
+        collect_sample(sample_dir, sample_dir, evaluation_settings())
+
+
+def changed_sources(group):
+    """A ``source_hashes`` stand-in that moves exactly one group's hashes."""
+    def hashes(requested):
+        digests = source_hashes(requested)
+        if requested is group:
+            digests[next(iter(digests))] = 'ff' * 32
+        return digests
+    return hashes
+
+
+def bumped_versions():
+    """A ``package_versions`` stand-in that reports a newer decoder dependency."""
+    def versions(names):
+        installed = package_versions(names)
+        if names is DECODER_PACKAGES:
+            installed['numpy'] = installed['numpy'] + '.1'
+        return installed
+    return versions
+
+
+def failing_record_checks(record):
+    """Record checks that fail the parity gate, as a damaged record's would."""
+    checks = check_record(record)
+    return dataclasses.replace(checks, check_parity_violations=1,
+                               diagnostics={'check_parity': (int(record.rows[0]),)})
+
+
+def failing_graph_checks(dem, patches):
+    """Graph checks that report the split and the joint graph disagreeing."""
+    checks = check_graphs(dem, patches)
+    return dataclasses.replace(checks, equivalent=False, missing_groups=1,
+                               examples=('missing (0, boundary, mask 1)',))
+
+
+def refusing_collect_rows(*arguments, **keywords):
+    raise AssertionError('no row may be decoded before the graph gate passes')
+
+
+def test_checkpoints_written_while_chunks_arrive_do_not_change_the_result(reference, saved,
+                                                                         tmp_path, monkeypatch):
+    # Zero seconds makes every installed chunk trigger the interval write that a real run
+    # reaches once a minute, so the mid-run checkpoint path is actually exercised.
+    monkeypatch.setattr('yoked.hierarchical._collect.CHECKPOINT_INTERVAL_SECONDS', 0.0)
+    writes = []
+    hooks = _CollectionHooks(after_checkpoint=lambda: writes.append(None))
+    flushed = collect_sample(saved, tmp_path / 'flushed', evaluation_settings(), hooks=hooks)
+    assert len(writes) > len(COLLECTED) // CHUNK
+    assert_same_collection(flushed, reference)
+
+
+def test_a_sample_of_another_model_cannot_join_an_existing_collection(saved, tmp_path, parameters):
+    out_dir = tmp_path / 'other-model'
+    assert collect_sample(saved, out_dir, evaluation_settings(max_chunks=1)) is None
+    louder = dataclasses.replace(parameters, p=0.006)
+    other = SampleSet.sample(louder, seed=11, shots=SHOTS).save(tmp_path / 'louder-sample')
+    with pytest.raises(ValueError, match='model'):
+        collect_sample(other, out_dir, evaluation_settings())
+
+
+def test_the_buffers_reject_a_chunk_that_does_not_belong_where_it_claims(reference, sample, context):
+    buffers = _Buffers.allocate(rows=np.arange(4), patches=PATCHES)
+    collected = collect_rows(context, *sample.rows(np.arange(2)), np.arange(2))
+    buffers.install(np.array([0, 1]), collected.record, collected.work)
+    with pytest.raises(ValueError, match='already completed'):
+        buffers.install(np.array([0, 1]), collected.record, collected.work)
+    with pytest.raises(ValueError, match=r'\[0, 4\)'):
+        buffers.install(np.array([4, 5]), collected.record, collected.work)
+    with pytest.raises(ValueError, match='different parent row ids'):
+        buffers.install(np.array([2, 3]), collected.record, collected.work)
+    assert not buffers.complete and list(buffers.pending()) == [2, 3]
+
+
+def test_a_chunk_that_was_never_scheduled_is_rejected(sample, context):
+    buffers = _Buffers.allocate(rows=np.arange(4), patches=PATCHES)
+    collected = collect_rows(context, *sample.rows(np.arange(2)), np.arange(2))
+    arrived = [(np.array([2, 3]), collected.record, collected.work)]
+    with pytest.raises(ValueError, match='not\n?\\s*scheduled, or arrived twice'):
+        _run_chunks(buffers, [np.array([0, 1])], arrived, checkpoint=lambda: None)

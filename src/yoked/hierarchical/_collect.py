@@ -1,8 +1,8 @@
-"""Verified sample sets, single-process L1 collection, and the graph and record checks.
+"""Verified sample sets, L1 collection, its two gates, and the checkpointed coordinator.
 
 Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, sections 3, 5.3, 10.
 
-Four objects, in the order a run uses them:
+Five objects, in the order a run uses them:
 
   * ``SampleSet`` is one Stim sampling call kept verifiable. It owns the exact circuit
     and model text its shots were drawn from, the packed detector and observable
@@ -27,24 +27,48 @@ Four objects, in the order a run uses them:
     parity, and zero unexplained disagreements between the reconstructed
     MWPM-reference pipeline and joint MWPM. Neither encodes an agreement percentage;
     every invariant is exact, and a failure names the offending parent rows.
+  * ``collect_sample`` is the coordinator: given a saved sample, an output directory,
+    and a ``CollectionSettings``, it collects the requested rows in chunks, keeps one
+    ``checkpoint.npz`` holding every buffer and the completion mask, and publishes a
+    validated record. It returns the verified ``LoadedRecord`` when the collection is
+    finished and ``None`` while rows remain, so calling it again continues where the
+    last call stopped.
 
 ``collect_rows`` validates corrections but deliberately does not call ``check_record``:
-the record checks are defined on a whole record and are what Task 9 runs, and must
-pass, before it publishes one.
+the record checks are defined on a whole record and are what ``collect_sample`` runs,
+and must pass, before it publishes one.
+
+The publication order is the whole point of the coordinator. It verifies the sample's
+bytes, the saved model, the request, and any existing collection identity; it refuses a
+request whose rows, role, model, parent, or decoder differ from what the directory is
+already collecting; it runs the graph gate once per model before any row is decoded;
+and it writes ``manifest.json`` last, after ``check_record`` has passed and
+``record.npz`` is on disk. The manifest is therefore the commit point: an orphan
+``record.npz`` without one is an interrupted publication, and a resumed run rebuilds
+and replaces it. A failed gate keeps the checkpoint and the diagnostics and publishes
+nothing. Worker and chunk counts do not enter any identity, so they may change between
+resumptions; a changed decoder source or dependency version may not.
 
 ``_collect_test.py`` checks the sample round trip and each hash it verifies, the
 imported recorded-run format with a tampered file rejected, graph equivalence against
 deliberately changed edge multiplicity, mask, and weight (a difference below ``1e-9``
 passing and a larger one failing), collection of a few hundred distance-3 shots through
 both correlation branches, equality of one call with a partitioned serial collection,
-the work counts under instrumented decoders, and every record invariant failing on its
-own corrupted field.
+the work counts under instrumented decoders, every record invariant failing on its own
+corrupted field, and, for the coordinator, that an uninterrupted serial run, a
+one-chunk run, a two-worker run, a run stopped by ``max_chunks``, and a run interrupted
+at each of the four hook points all publish the same arrays, row ids, and retained-row
+work counts, while a changed decoder identity, role, row set, sample payload,
+checkpoint, or record is rejected rather than collected into the same directory.
 """
 from __future__ import annotations
 
 import collections
+import contextlib
 import dataclasses
-from collections.abc import Mapping
+import multiprocessing
+import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
@@ -57,16 +81,26 @@ import gen
 from yoked._yoked_memory_circuits import yoked_magic_memory_circuit
 from yoked.decoders._correlations import correlation_rules_from_dem
 from yoked.decoders._graph import DecodingGraph
+from yoked.hierarchical._arrays import readonly_array
 from yoked.hierarchical._cluster_gap import ClusterGapUnionFindDecoder
 from yoked.hierarchical._matching_gaps import CHECK_PATTERNS, MatchingGaps, signed_gaps
 from yoked.hierarchical._outer_decoder import exact_outer_map_batch, frame_adjusted_syndrome
 from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraph, PatchGraphs
 from yoked.hierarchical._provenance import (
-    MODEL_PACKAGES, SAMPLE_CONVENTIONS, SAMPLING_PACKAGES, SCHEMA_VERSION, atomic_replacement,
-    model_identity, package_versions, packed_sample_hash, parent_sample_identity, read_json,
-    sampling_family_identity, sha256_bytes, sha256_file, utc_now, write_json_atomic,
+    AUDIT_SOURCES, CHECK_PACKAGES, CHECK_SOURCES, DECODER_PACKAGES, DECODER_SOURCES,
+    MODEL_PACKAGES, RECORD_CONVENTIONS, REPOSITORY_ROOT, SAMPLE_CONVENTIONS, SAMPLING_PACKAGES,
+    SCHEMA_VERSION, atomic_replacement, check_identity, collection_identity, decoder_identity,
+    git_commit, model_identity, package_versions, packed_sample_hash, parent_sample_identity,
+    read_json, sampling_family_identity, sha256_bytes, sha256_file, source_hashes, utc_now,
+    write_json_atomic,
 )
-from yoked.hierarchical._record import L1Record, by_sector, to_columns
+# The array container is private to this package: collection writes record.npz and
+# checkpoint.npz through it, and every stage downstream reads records only through
+# load_record, which verifies the manifest that stands over them.
+from yoked.hierarchical._record import (
+    ARRAY_FIELDS, COMPLETE_STATUS, L1Record, LoadedRecord, RECORD_FILE, RECORD_MANIFEST,
+    RECORD_SCHEMA, _load_arrays, _save_arrays, by_sector, load_record, row_summary, to_columns,
+)
 
 CIRCUIT_FILE = 'circuit.stim'
 DEM_FILE = 'model.dem'
@@ -82,7 +116,9 @@ SAMPLE_MANIFEST = 'sample.json'
 """Written last, so a directory that has it has all four verified artifacts."""
 
 RECORDED_MANIFEST = 'manifest.json'
-"""The manifest name of the recorded four-decoder runs this module imports."""
+"""The manifest name of the recorded four-decoder runs this module imports. It is the
+same name a completed collection publishes (``RECORD_MANIFEST``), which is one reason
+``collect_sample`` refuses to write its outputs into a sample directory."""
 
 RECORDED_PAYLOAD_KEY = 'packed_detectors_then_observables_payload'
 """The recorded runs' name for the hash ``packed_sample_hash`` reproduces."""
@@ -304,6 +340,17 @@ def _packed(value, name: str, *, rows: int, bits: int) -> np.ndarray:
     return array
 
 
+def _unpack_rows(packed: np.ndarray, positions: np.ndarray, count: int) -> np.ndarray:
+    """The named rows of a packed payload, as a (k, count) boolean array.
+
+    Fancy indexing a memory-mapped payload reads only the requested rows, which is what
+    lets a worker hold a 100,000-shot sample open and unpack a chunk of sixty-four.
+    ``SampleSet.rows`` and the pool workers both go through here, so both sides of a
+    process boundary read the same bits in the same bit order.
+    """
+    return np.unpackbits(packed[positions], axis=1, count=count, bitorder='little').astype(bool)
+
+
 def _sample_identities(*, parameters: CircuitParameters, circuit_sha256: str, dem_sha256: str,
                        num_detectors: int, num_observables: int, seed: int, shots: int,
                        payload_sha256: str, model_versions: Mapping, sampling_versions: Mapping) -> dict:
@@ -479,11 +526,8 @@ class SampleSet:
         record they feed keeps its parent row ids in order.
         """
         positions = _positions(indices, 'row positions', limit=self.shots)
-        detectors = np.unpackbits(self.detectors_packed[positions], axis=1,
-                                  count=self.num_detectors, bitorder='little')
-        actual = np.unpackbits(self.actual_packed[positions], axis=1,
-                               count=self.num_observables, bitorder='little')
-        return detectors.astype(bool), actual.astype(bool)
+        return (_unpack_rows(self.detectors_packed, positions, self.num_detectors),
+                _unpack_rows(self.actual_packed, positions, self.num_observables))
 
     # --- creating, saving, loading -------------------------------------------
 
@@ -889,6 +933,19 @@ class GraphChecks:
         """Graph equivalence is the whole gate; the degrees are description."""
         return self.equivalent
 
+    def raise_if_failed(self) -> None:
+        """Raise naming the differing edge groups; nothing may be decoded until this holds.
+
+        The split is a prerequisite rather than a diagnostic: if the six check graphs do
+        not reproduce the joint graph, every gap and forced weight collected from them
+        would describe a model nobody wrote down.
+        """
+        if not self.passed:
+            raise ValueError(
+                f'Graph checks failed: {self.missing_groups} missing, {self.extra_groups} extra, '
+                f'{self.multiplicity_mismatches} multiplicity, and {self.weight_mismatches} weight '
+                f'mismatches between the split and the joint graph; examples {list(self.examples)}')
+
     def to_json(self) -> dict:
         return {
             'passed': self.passed,
@@ -1142,3 +1199,757 @@ def check_record(record: L1Record) -> RecordChecks:
         final_parity_violations=final_parity,
         value_violations=value_violations,
         diagnostics=diagnostics)
+
+
+# --- what to collect ---------------------------------------------------------
+
+ROLES = ('calibration', 'evaluation')
+"""The two dataset roles M1 collects. Confirmation exists in the data plan (spec
+section 3) but may only be sampled and collected after the analysis is frozen, so
+naming it here would be the one way to collect it by accident."""
+
+COLLECTION_FILE = 'collection.json'
+"""Written on the first run and compared on every later one: what this directory is
+collecting. It is not a completion marker, which is why it is a separate file from the
+manifest that appears only when the collection is finished."""
+
+CHECKPOINT_FILE = 'checkpoint.npz'
+"""Every buffer and the completion mask of an unfinished collection, in one container.
+There is deliberately no second progress file: two files can disagree about which rows
+are done, and a checkpoint that disagrees with itself is worse than none."""
+
+CHECKPOINT_SCHEMA = f'L1Checkpoint/{SCHEMA_VERSION}'
+"""Stored inside the checkpoint. A container written under another layout is rejected
+rather than reinterpreted, exactly as a record's is."""
+
+CHECKPOINT_ENTRIES = ('completed', 'collection', 'work', 'seconds_total', 'resumptions')
+"""What a checkpoint holds besides the record buffers: the completion mask, the
+collection identity it belongs to, the retained-row work counters in ``WORK_FIELDS``
+order, the cumulative collection seconds, and how often it has been resumed."""
+
+CHECKPOINT_INTERVAL_SECONDS = 60.0
+"""How often the checkpoint is rewritten while chunks are arriving. A rewrite copies
+every buffer, which at 100,000 d=9 rows is tens of megabytes, so writing after every
+chunk would spend more time on I/O than on decoding; a minute keeps that overhead
+negligible while bounding the work an interruption can lose to a minute of decoding.
+The checkpoint is also written whenever scheduling stops, regardless of this interval."""
+
+FAILED_CHECKS_FILE = 'failed_checks.json'
+"""Where a failed publication gate leaves its diagnostics. The checkpoint stays too, so
+a failure can be investigated with the collected rows in hand rather than recollected."""
+
+WORKER_START_METHOD = 'forkserver'
+"""Start method for the worker pool. Forking a coordinator that already holds Stim
+models, PyMatching matchers, and a memory-mapped sample would duplicate that state into
+every child; a forkserver child starts clean and builds exactly the one ``L1Context``
+it needs."""
+
+
+def _requested_rows(value) -> np.ndarray:
+    """The exact parent rows to collect: whole, nonnegative, unique, owned, increasing.
+
+    Input order does not matter and is normalized away, because a record stores its rows
+    in increasing order. Duplicates are not: they would silently shrink the collection
+    and change what the row hash identifies.
+    """
+    array = np.asarray(value)
+    if array.dtype.kind == 'b':
+        raise ValueError('rows must be parent row ids, not a boolean mask; use np.flatnonzero(mask)')
+    if array.dtype.kind not in 'iu':
+        raise ValueError(f'rows must be an integer array of parent row ids, got dtype {array.dtype}')
+    if array.ndim != 1:
+        raise ValueError(f'rows must be one-dimensional, got shape {array.shape}')
+    if len(array) == 0:
+        raise ValueError('rows must be nonempty; a collection of no rows is not a collection')
+    if (array < 0).any():
+        raise ValueError('rows must be nonnegative')
+    ordered = np.unique(array)
+    if len(ordered) != len(array):
+        raise ValueError('rows must be unique')
+    return readonly_array(ordered, dtype=np.int64)
+
+
+@dataclass(frozen=True)
+class CollectionSettings:
+    """What to collect, and how much machinery to collect it with.
+
+    Fields:
+
+    - ``role``: one of ``ROLES``. It is part of the collection identity, so calibration
+      and evaluation rows can never end up in one record.
+    - ``rows``: the parent sample rows to collect, stored as an owned read-only int64
+      array in increasing order. Duplicates, negatives, floats, and boolean masks are
+      rejected rather than normalized; the range check against the parent sample happens
+      in ``collect_sample``, which is where the sample's shot count is known.
+    - ``workers``: processes that decode chunks. One means in this process, with no pool
+      at all, so a failing chunk raises where it happened.
+    - ``chunk_size``: parent rows per scheduled chunk (rows).
+    - ``max_chunks``: schedule at most this many chunks in one call, then checkpoint and
+      return; None schedules every pending chunk.
+
+    ``workers``, ``chunk_size``, and ``max_chunks`` cannot change a decoded value, so
+    they are deliberately absent from the collection identity and may differ between
+    resumptions of the same collection.
+    """
+    role: str
+    rows: np.ndarray
+    workers: int = 1
+    chunk_size: int = 64
+    max_chunks: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.role not in ROLES:
+            raise ValueError(f'role must be one of {ROLES}, got {self.role!r}')
+        set_field = object.__setattr__
+        set_field(self, 'rows', _requested_rows(self.rows))
+        for name in ('workers', 'chunk_size'):
+            set_field(self, name, _whole(getattr(self, name), name, minimum=1))
+        if self.max_chunks is not None:
+            set_field(self, 'max_chunks', _whole(self.max_chunks, 'max_chunks', minimum=1))
+
+    @property
+    def shots(self) -> int:
+        """Rows this collection covers when it is complete."""
+        return int(len(self.rows))
+
+    def rows_summary(self) -> dict:
+        """Count, bounds, and the hash of the exact ordered ids, as a manifest records them."""
+        return row_summary(self.rows)
+
+
+# --- test seams --------------------------------------------------------------
+
+def _no_op() -> None:
+    """The default at every hook point: collection does nothing observable there."""
+
+
+@dataclass(frozen=True)
+class _CollectionHooks:
+    """Where a test may interrupt a collection, by raising from one of these callables.
+
+    The four points bracket the two places where a collection commits something to disk:
+    ``before_checkpoint`` and ``after_checkpoint`` surround replacing ``checkpoint.npz``,
+    and ``after_record`` and ``before_manifest`` surround the window in which
+    ``record.npz`` exists but no completion manifest does. They exist so that resume
+    behavior is tested by actually interrupting a real run rather than by monkeypatching
+    internals, and they do nothing in production: ``collect_sample`` defaults them to
+    no-ops and never exposes them through the CLI.
+    """
+    before_checkpoint: Callable[[], None] = _no_op
+    after_checkpoint: Callable[[], None] = _no_op
+    after_record: Callable[[], None] = _no_op
+    before_manifest: Callable[[], None] = _no_op
+
+
+# --- the coordinator's private buffers ---------------------------------------
+
+def _buffer_specs(shots: int, patches: int) -> dict[str, tuple[tuple[int, ...], type]]:
+    """Shape and dtype of every record buffer, for a collection of ``shots`` rows.
+
+    Allocation, checkpoint validation, and chunk installation all read the layout here,
+    so there is one place where a record field's stored shape is written down.
+    """
+    columns = NUM_SECTORS * patches
+    bits = (shots, columns)
+    forced = (shots, patches, NUM_SECTORS, NUM_SECTORS)
+    specs = {
+        'actual': (bits, np.bool_),
+        'yoke': ((shots, NUM_SECTORS), np.bool_),
+        'uf_reference': (bits, np.bool_),
+        'mwpm_reference': (bits, np.bool_),
+        'correlated_prediction': (bits, np.bool_),
+        'joint_mwpm': (bits, np.bool_),
+        'cluster_gap': (bits, np.float64),
+        'dijkstra_states': (bits, np.int64),
+        'forced_plain': (forced, np.float64),
+        'forced_correlated': (forced, np.float64),
+        'reweighted_patches': ((shots, patches), np.bool_),
+        'rows': ((shots,), np.int64),
+    }
+    if tuple(specs) != ARRAY_FIELDS:
+        raise ValueError(f'The buffers cover {tuple(specs)}, a record stores {ARRAY_FIELDS}')
+    return specs
+
+
+def _checkpoint_array(entries: Mapping, name: str, *, dtype, shape) -> np.ndarray:
+    """One checkpoint entry, with its declared dtype and shape required."""
+    array = entries[name]
+    if array.dtype != dtype or array.shape != shape:
+        raise ValueError(f'{CHECKPOINT_FILE} holds {name} as {array.dtype} {array.shape}, '
+                         f'expected {np.dtype(dtype)} {shape}')
+    return array
+
+
+class _Buffers:
+    """The coordinator's private, mutable state for one in-progress collection.
+
+    The arrays are writable, partly filled, and meaningless for any row the completion
+    mask does not name, which is exactly why they never leave this module: ``record()``
+    is the only way out and re-runs every ``L1Record`` check on the way. A row becomes
+    completed only after its arrays and its chunk's work counters are both installed, so
+    the work totals always describe precisely the retained rows.
+
+    Attributes: ``arrays`` the record buffers by name; ``completed`` (shots,) bool;
+    ``work`` the retained-row ``CollectionWork``; ``seconds_total`` cumulative collection
+    seconds across resumptions; ``resumptions`` how often a checkpoint has been reopened.
+    """
+
+    def __init__(self, arrays: dict, completed: np.ndarray, work: CollectionWork,
+                 seconds_total: float, resumptions: int):
+        self.arrays = arrays
+        self.completed = completed
+        self.work = work
+        self.seconds_total = seconds_total
+        self.resumptions = resumptions
+
+    @classmethod
+    def allocate(cls, *, rows: np.ndarray, patches: int) -> _Buffers:
+        """Empty buffers for a fresh collection, with the requested row ids already in place."""
+        specs = _buffer_specs(len(rows), patches)
+        arrays = {name: np.zeros(shape, dtype=dtype) for name, (shape, dtype) in specs.items()}
+        arrays['rows'][:] = rows
+        return cls(arrays, np.zeros(len(rows), dtype=bool), CollectionWork(**dict.fromkeys(WORK_FIELDS, 0)),
+                   seconds_total=0.0, resumptions=0)
+
+    @classmethod
+    def load(cls, path, *, rows: np.ndarray, patches: int, identity: str) -> _Buffers:
+        """Reopen a checkpoint, validating everything about it before trusting a row.
+
+        Reopening one is what a resumption is, so the count is incremented here.
+        """
+        entries = _load_arrays(path, schema=CHECKPOINT_SCHEMA)
+        specs = _buffer_specs(len(rows), patches)
+        expected = set(specs) | set(CHECKPOINT_ENTRIES)
+        if set(entries) != expected:
+            raise ValueError(f'{CHECKPOINT_FILE} holds {sorted(entries)}, expected {sorted(expected)}')
+        stored = str(entries['collection'])
+        if stored != identity:
+            raise ValueError(f'{CHECKPOINT_FILE} belongs to collection {stored}, '
+                             f'this request is collection {identity}')
+        arrays = {name: _checkpoint_array(entries, name, dtype=dtype, shape=shape)
+                  for name, (shape, dtype) in specs.items()}
+        if not np.array_equal(arrays['rows'], rows):
+            raise ValueError(f'{CHECKPOINT_FILE} holds different parent row ids than this request')
+        completed = _checkpoint_array(entries, 'completed', dtype=np.bool_, shape=(len(rows),))
+        counters = _checkpoint_array(entries, 'work', dtype=np.int64, shape=(len(WORK_FIELDS),))
+        seconds = float(_checkpoint_array(entries, 'seconds_total', dtype=np.float64, shape=()))
+        if not np.isfinite(seconds) or seconds < 0:
+            raise ValueError(f'{CHECKPOINT_FILE} holds {seconds} collection seconds')
+        resumptions = int(_checkpoint_array(entries, 'resumptions', dtype=np.int64, shape=()))
+        return cls(arrays, completed,
+                   CollectionWork(**dict(zip(WORK_FIELDS, (int(value) for value in counters)))),
+                   seconds_total=seconds,
+                   resumptions=_whole(resumptions, 'resumptions', minimum=0) + 1)
+
+    @property
+    def shots(self) -> int:
+        return int(len(self.completed))
+
+    @property
+    def complete(self) -> bool:
+        """Whether every requested row has been collected."""
+        return bool(self.completed.all())
+
+    def pending(self) -> np.ndarray:
+        """Positions of the rows still to collect, in increasing order."""
+        return np.flatnonzero(~self.completed)
+
+    def install(self, positions: np.ndarray, record: L1Record, work: CollectionWork) -> None:
+        """Copy one finished chunk into the buffers and mark its rows completed.
+
+        ``record`` has already passed every ``L1Record`` check, whether it was built in
+        this process or rebuilt from a worker's plain arrays. What is checked here is
+        that it belongs where it claims: the positions must be in range, not already
+        completed, and hold exactly the parent row ids the record carries.
+        """
+        if positions.dtype.kind not in 'iu' or positions.ndim != 1 or len(positions) == 0:
+            raise ValueError(f'chunk positions must be a nonempty integer array, got '
+                             f'{positions.dtype} {positions.shape}')
+        if (positions < 0).any() or (positions >= self.shots).any():
+            raise ValueError(f'chunk positions must lie in [0, {self.shots})')
+        if self.completed[positions].any():
+            raise ValueError('a chunk was delivered for rows that are already completed')
+        if not np.array_equal(record.rows, self.arrays['rows'][positions]):
+            raise ValueError('a chunk holds different parent row ids than the positions it claims')
+        for name in ARRAY_FIELDS:
+            self.arrays[name][positions] = getattr(record, name)
+        # Last, and only now: a row counts as collected once all of its arrays are in.
+        self.completed[positions] = True
+        self.work = self.work + work
+
+    def save(self, path, *, identity: str) -> None:
+        """Replace the checkpoint atomically, through one temporary sibling."""
+        _save_arrays(path, {
+            **self.arrays,
+            'completed': self.completed,
+            'collection': np.array(identity),
+            'work': np.array([getattr(self.work, name) for name in WORK_FIELDS], dtype=np.int64),
+            'seconds_total': np.array(self.seconds_total, dtype=np.float64),
+            'resumptions': np.array(self.resumptions, dtype=np.int64),
+        }, schema=CHECKPOINT_SCHEMA)
+
+    def record(self) -> L1Record:
+        """The immutable record these buffers hold, once every row is in.
+
+        ``L1Record`` copies what it is given, so the published record never aliases a
+        buffer the coordinator could still write to.
+        """
+        if not self.complete:
+            raise ValueError(f'{int((~self.completed).sum())} of {self.shots} rows are still pending')
+        return L1Record.from_arrays(self.arrays)
+
+
+# --- the workers -------------------------------------------------------------
+
+@dataclass(frozen=True)
+class _WorkerState:
+    """One worker process's decoders and its read-only view of the packed sample."""
+    context: L1Context
+    detectors_packed: np.ndarray
+    actual_packed: np.ndarray
+    num_detectors: int
+    num_observables: int
+
+
+_WORKER: _WorkerState | None = None
+"""Set once per worker process by the pool initializer; read only by ``_collect_chunk``."""
+
+
+def _start_worker(sample_dir: str, dem_text: str, patches: int, num_detectors: int,
+                  num_observables: int) -> None:
+    """Pool initializer: build this process's decoders once and map the packed sample.
+
+    An ``L1Context`` costs a model parse, the split, the correlation-rule compilation,
+    and a joint matcher, so it is built per process rather than per chunk. The payload
+    is mapped rather than read, and is deliberately not re-hashed: the coordinator
+    verified every byte of this sample before the pool existed, and hashing hundreds of
+    megabytes once per worker would cost more than the rows the workers decode.
+    """
+    global _WORKER
+    directory = Path(sample_dir)
+    _WORKER = _WorkerState(
+        context=L1Context.from_dem_text(dem_text, patches),
+        detectors_packed=np.load(directory / DETECTORS_FILE, mmap_mode='r'),
+        actual_packed=np.load(directory / ACTUAL_FILE, mmap_mode='r'),
+        num_detectors=num_detectors, num_observables=num_observables)
+
+
+def _collect_chunk(task) -> tuple:
+    """Decode one chunk in a worker and reply with plain data.
+
+    ``task`` is ``(positions, rows)``: where the chunk belongs in the coordinator's
+    buffers, and which parent rows it covers. The reply carries the record's arrays and
+    the work counts as a plain dict of arrays and a plain dict of ints, because the
+    immutable mapping wrappers a checked record and its work carry need not be
+    pickleable; the coordinator rebuilds both at the receiving boundary.
+    """
+    positions, rows = task
+    state = _WORKER
+    if state is None:
+        raise RuntimeError('a collection worker was started without its initializer')
+    detectors = _unpack_rows(state.detectors_packed, rows, state.num_detectors)
+    actual = _unpack_rows(state.actual_packed, rows, state.num_observables)
+    collected = collect_rows(state.context, detectors, actual, rows)
+    return positions, dict(collected.record.arrays()), collected.work.to_json()
+
+
+# --- scheduling --------------------------------------------------------------
+
+def _chunks(pending: np.ndarray, chunk_size: int, max_chunks: int | None) -> list[np.ndarray]:
+    """Split the pending positions into the chunks this call will schedule."""
+    chunks = [pending[start:start + chunk_size] for start in range(0, len(pending), chunk_size)]
+    return chunks if max_chunks is None else chunks[:max_chunks]
+
+
+def _chunk_results(chunks: list[np.ndarray], *, sample: SampleSet, sample_dir: Path,
+                   settings: CollectionSettings, context: L1Context | None):
+    """Yield ``(positions, record, work)`` for each scheduled chunk, in any order.
+
+    ``workers=1`` decodes in this process with no pool at all, so a failure raises where
+    it happened and can be stepped through. More workers fan the same ``collect_rows``
+    call out over a forkserver pool; results come back unordered, which the coordinator
+    is free to accept because each one names the positions it belongs to.
+    """
+    if not chunks:
+        return
+    rows = settings.rows
+    if settings.workers == 1:
+        for positions in chunks:
+            chunk_rows = rows[positions]
+            collected = collect_rows(context, *sample.rows(chunk_rows), chunk_rows)
+            yield positions, collected.record, collected.work
+        return
+    pool_context = multiprocessing.get_context(WORKER_START_METHOD)
+    tasks = [(positions, rows[positions]) for positions in chunks]
+    with pool_context.Pool(settings.workers, initializer=_start_worker,
+                           initargs=(str(sample_dir), sample.dem_text, sample.parameters.patches,
+                                     sample.num_detectors, sample.num_observables)) as pool:
+        for positions, arrays, work in pool.imap_unordered(_collect_chunk, tasks):
+            _require_keys(work, WORK_FIELDS, 'the work counts a worker returned')
+            yield (np.asarray(positions), L1Record.from_arrays(arrays),
+                   CollectionWork(**{name: work[name] for name in WORK_FIELDS}))
+
+
+def _run_chunks(buffers: _Buffers, chunks: list[np.ndarray], results, *, checkpoint) -> None:
+    """Install finished chunks as they arrive, checkpointing on a bounded interval.
+
+    Every chunk must be one that was scheduled and must arrive once: an unexpected or
+    repeated delivery means the coordinator and its workers disagree about what is being
+    collected, which is not something to reconcile silently. A chunk that never arrives
+    at all simply leaves its rows pending, because the buffers only ever gain rows.
+    """
+    outstanding = {_chunk_key(positions): positions for positions in chunks}
+    last_written = time.monotonic()
+    for positions, record, work in results:
+        if outstanding.pop(_chunk_key(positions), None) is None:
+            raise ValueError(f'A chunk covering positions {positions[0]}..{positions[-1]} was not '
+                             f'scheduled, or arrived twice')
+        buffers.install(positions, record, work)
+        if time.monotonic() - last_written >= CHECKPOINT_INTERVAL_SECONDS:
+            checkpoint()
+            last_written = time.monotonic()
+
+
+def _chunk_key(positions: np.ndarray) -> bytes:
+    """A scheduled chunk's identity, stable across a pickle round trip."""
+    return np.ascontiguousarray(positions, dtype=np.int64).tobytes()
+
+
+# --- collection identity -----------------------------------------------------
+
+def _collection_identities(sample: SampleSet, settings: CollectionSettings) -> dict:
+    """The five identities a collected record carries, all computed from content.
+
+    The decoder identity covers the L1 sources, the stored record conventions, and the
+    decoder package versions, so a changed algorithm or dependency produces a different
+    collection and cannot join an existing one.
+    """
+    decoder = decoder_identity(sources=source_hashes(DECODER_SOURCES), conventions=RECORD_CONVENTIONS,
+                               versions=package_versions(DECODER_PACKAGES))
+    return {
+        **{name: sample.identities[name] for name in SAMPLE_IDENTITY_NAMES},
+        'decoder': decoder,
+        'collection': collection_identity(
+            parent_sample=sample.identities['parent_sample'], decoder=decoder, role=settings.role,
+            shots=settings.shots, rows_sha256=settings.rows_summary()['sha256']),
+    }
+
+
+def _require_same_collection(recorded: Mapping, *, settings: CollectionSettings, identities: Mapping,
+                             where: str) -> None:
+    """Compare a request with what a directory is already collecting, naming any difference.
+
+    Rows, role, model, parent sample, sampling family, decoder, and the resulting
+    collection identity must all be unchanged: a different one of any of them is a
+    different collection and belongs in a different directory. Worker and chunk counts
+    are deliberately not compared, because they cannot change a decoded value.
+    """
+    _require_keys(recorded, ('schema_version', 'role', 'rows', 'identities'), where)
+    if recorded['schema_version'] != SCHEMA_VERSION:
+        raise ValueError(f'{where} holds schema {recorded["schema_version"]!r}, '
+                         f'expected {SCHEMA_VERSION!r}')
+    if recorded['role'] != settings.role:
+        raise ValueError(f'{where} is collecting the {recorded["role"]!r} role, '
+                         f'this request asks for {settings.role!r}')
+    summary = settings.rows_summary()
+    _require_keys(recorded['rows'], tuple(summary), f'{where} rows')
+    for name, value in summary.items():
+        if recorded['rows'][name] != value:
+            raise ValueError(f'{where} is collecting rows with {name} {recorded["rows"][name]!r}, '
+                             f'this request asks for {value!r}')
+    _require_keys(recorded['identities'], tuple(identities), f'{where} identities')
+    for name, value in identities.items():
+        if recorded['identities'][name] != value:
+            raise ValueError(f'{where} records the {name} identity '
+                             f'{recorded["identities"][name]!r}, this request has {value!r}')
+
+
+def _audit_source_hashes() -> dict:
+    """Hashes of the audit sources that exist, plus the names of those that do not.
+
+    This is the one place a missing source file is recorded instead of raising. The
+    audit group names files that later stages create, and no identity is computed from
+    it: it is there so a published record says which stage boundaries, CLI, and circuit
+    generator were in the tree when it was collected.
+    """
+    present, missing = [], []
+    for name in AUDIT_SOURCES:
+        (present if (REPOSITORY_ROOT / name).is_file() else missing).append(name)
+    return {**source_hashes(present), 'missing': missing}
+
+
+def _graph_prerequisite(sample: SampleSet, *, workers: int, recorded, check: str
+                        ) -> tuple[L1Context | None, dict]:
+    """Run the graph gate, or reuse the result a previous run of this collection recorded.
+
+    The gate must hold before any row is decoded: if the six check graphs do not
+    reproduce the joint graph, every value collected through them would describe a
+    different model. A resumption reuses the recorded result when the validation code is
+    unchanged, so restarting a long collection does not re-import the joint graph; the
+    model identity needs no comparison here because the caller has already refused a
+    request whose model differs.
+
+    A serial run builds its ``L1Context`` here and lends the gate its split; a parallel
+    run builds only the split, because every decoder it needs lives in a worker.
+    """
+    if recorded is not None and recorded.get('check_identity') == check and 'graph' in recorded:
+        graph = dict(recorded['graph'])
+        if graph.get('passed') is not True:
+            raise ValueError(f'{COLLECTION_FILE} records graph checks that did not pass')
+        return None, graph
+    dem = stim.DetectorErrorModel(sample.dem_text)
+    patches = sample.parameters.patches
+    context = L1Context(dem, patches) if workers == 1 else None
+    split = context.patches if context is not None else PatchGraphs.from_yoked_dem(dem, num_patches=patches)
+    checks = check_graphs(dem, split)
+    checks.raise_if_failed()
+    return context, checks.to_json()
+
+
+def _write_collection(out_dir: Path, *, settings: CollectionSettings, identities: Mapping,
+                      graph: dict, check: str, recorded) -> None:
+    """Publish what this directory is collecting, or refresh its recorded graph gate.
+
+    Everything an identity depends on is written once, on the first run. Only the
+    validation code's identity and the graph result it produced are ever rewritten, and
+    only when that code has changed; the creation time of the collection is kept.
+    """
+    write_json_atomic(out_dir / COLLECTION_FILE, {
+        'schema_version': SCHEMA_VERSION,
+        'role': settings.role,
+        'rows': settings.rows_summary(),
+        'identities': dict(identities),
+        'check_identity': check,
+        'graph': graph,
+        'created_utc': (recorded or {}).get('created_utc') or utc_now(),
+    })
+
+
+# --- publication -------------------------------------------------------------
+
+def _completion_manifest(*, record: L1Record, sample: SampleSet, settings: CollectionSettings,
+                         identities: Mapping, artifacts: Mapping, graph: dict, checks: RecordChecks,
+                         check: str, work: CollectionWork, resumptions: int,
+                         seconds_this_run: float, seconds_total: float) -> dict:
+    """The completion marker, holding everything a later stage must verify or audit.
+
+    ``write_json_atomic`` serializes this through ``json_ready``, so an undefined
+    statistic inside a check record is written as ``null`` rather than a nonstandard
+    ``NaN`` literal.
+    """
+    return {
+        'schema_version': SCHEMA_VERSION,
+        'status': COMPLETE_STATUS,
+        'role': settings.role,
+        'parameters': sample.parameters.to_json(),
+        'seed': sample.seed,
+        'parent_shots': sample.shots,
+        'shots': record.shots,
+        'rows': row_summary(record.rows),
+        'parent_payload_sha256': sample.payload_sha256,
+        'identities': dict(identities),
+        'artifacts': dict(artifacts),
+        'checks': {'passed': graph['passed'] and checks.passed, 'identity': check,
+                   'graph': graph, 'record': checks.to_json()},
+        'versions': {'decoder': package_versions(DECODER_PACKAGES),
+                     'check': package_versions(CHECK_PACKAGES)},
+        'source_sha256': {'decoder': source_hashes(DECODER_SOURCES),
+                          'check': source_hashes(CHECK_SOURCES),
+                          'audit': _audit_source_hashes()},
+        'code_commit': git_commit(),
+        'collection_work': {
+            **work.to_json(),
+            'resumptions': resumptions,
+            'telemetry': 'retained rows only: work attempted on rows lost to an interruption '
+                         'before the next checkpoint is redone on the restart and is not counted '
+                         'here, and setup, graph checks, and record checks are not decoder work',
+        },
+        'timing': {'seconds_this_run': seconds_this_run, 'seconds_total': seconds_total},
+        'created_utc': utc_now(),
+    }
+
+
+def _publish(out_dir: Path, *, buffers: _Buffers, sample: SampleSet, settings: CollectionSettings,
+             identities: Mapping, graph: dict, check: str, seconds_this_run: float,
+             hooks: _CollectionHooks) -> LoadedRecord:
+    """Gate the collected rows, write the record, and publish the manifest over it.
+
+    Nothing about this order is negotiable. The record checks run on the immutable
+    record, not on the buffers; a failure leaves the checkpoint and its diagnostics
+    standing and publishes no marker, so the next run resumes rather than starting over.
+    The manifest is written last and the checkpoint removed only after it lands, which is
+    what makes an orphan ``record.npz`` mean an interrupted publication rather than a
+    result.
+    """
+    if graph['passed'] is not True:
+        raise ValueError('the graph gate did not pass, so no record may be published')
+    record = buffers.record()
+    checks = check_record(record)
+    if not checks.passed:
+        write_json_atomic(out_dir / FAILED_CHECKS_FILE, {
+            'schema_version': SCHEMA_VERSION,
+            'collection': identities['collection'],
+            'check_identity': check,
+            'graph': graph,
+            'record': checks.to_json(),
+            'created_utc': utc_now(),
+        })
+        checks.raise_if_failed()
+    _save_arrays(out_dir / RECORD_FILE, record.arrays(), schema=RECORD_SCHEMA)
+    hooks.after_record()
+    manifest = _completion_manifest(
+        record=record, sample=sample, settings=settings, identities=identities,
+        artifacts={RECORD_FILE: sha256_file(out_dir / RECORD_FILE)}, graph=graph, checks=checks,
+        check=check, work=buffers.work, resumptions=buffers.resumptions,
+        seconds_this_run=seconds_this_run, seconds_total=buffers.seconds_total)
+    hooks.before_manifest()
+    write_json_atomic(out_dir / RECORD_MANIFEST, manifest)
+    (out_dir / CHECKPOINT_FILE).unlink(missing_ok=True)
+    # A failure recorded by an earlier attempt no longer describes this directory.
+    (out_dir / FAILED_CHECKS_FILE).unlink(missing_ok=True)
+    return load_record(out_dir)
+
+
+def _recheck(out_dir: Path, *, loaded: LoadedRecord, sample: SampleSet, check: str) -> LoadedRecord:
+    """Revalidate a published record under changed validation code and republish it.
+
+    Nothing is decoded again: both gates are functions of the saved model and the stored
+    arrays, which is exactly why the check identity is recorded separately from the
+    decoder identity. A changed decoder cannot reach this path, because the identity
+    comparison that runs first rejects it.
+    """
+    dem = stim.DetectorErrorModel(sample.dem_text)
+    graph = check_graphs(dem, PatchGraphs.from_yoked_dem(dem, num_patches=sample.parameters.patches))
+    graph.raise_if_failed()
+    checks = check_record(loaded.record)
+    checks.raise_if_failed()
+    manifest = dict(loaded.manifest)
+    manifest['checks'] = {'passed': True, 'identity': check, 'graph': graph.to_json(),
+                          'record': checks.to_json()}
+    manifest['versions'] = {**dict(loaded.manifest['versions']),
+                            'check': package_versions(CHECK_PACKAGES)}
+    manifest['source_sha256'] = {**dict(loaded.manifest['source_sha256']),
+                                 'check': source_hashes(CHECK_SOURCES)}
+    manifest['rechecked_utc'] = utc_now()
+    write_json_atomic(out_dir / RECORD_MANIFEST, manifest)
+    return load_record(out_dir)
+
+
+# --- the coordinator ---------------------------------------------------------
+
+def _rows_in_sample(rows: np.ndarray, parent_shots: int) -> None:
+    """Every requested row must name a shot the parent sample actually drew."""
+    if (rows >= parent_shots).any():
+        raise ValueError(f'rows must lie in the range [0, {parent_shots}) of the parent sample, '
+                         f'the request reaches {int(rows.max())}')
+
+
+def collect_sample(sample_dir, out_dir, settings: CollectionSettings, *,
+                   hooks: _CollectionHooks | None = None) -> LoadedRecord | None:
+    """Collect ``settings.rows`` of a saved sample into ``out_dir``, resumably.
+
+    Returns the verified ``LoadedRecord`` once every requested row is collected and
+    published, and ``None`` while rows remain, which happens when ``max_chunks`` stops
+    scheduling; calling it again with the same request continues from the checkpoint.
+    Calling it again on a finished directory decodes nothing and returns the record it
+    already holds.
+
+    Every failure raises. The sample's bytes are re-verified on every call; a request
+    whose rows, role, or identities differ from what the directory is already collecting
+    is refused by name rather than merged; a corrupt or foreign checkpoint is refused
+    rather than replaced; and a failed publication gate keeps the checkpoint and
+    publishes nothing.
+
+    ``hooks`` is a test seam documented on ``_CollectionHooks`` and does nothing by
+    default.
+    """
+    if not isinstance(settings, CollectionSettings):
+        raise TypeError(f'settings must be a CollectionSettings, got {type(settings).__name__}')
+    if hooks is None:
+        hooks = _CollectionHooks()
+    elif not isinstance(hooks, _CollectionHooks):
+        raise TypeError(f'hooks must be a _CollectionHooks, got {type(hooks).__name__}')
+    sample_dir, out_dir = Path(sample_dir), Path(out_dir)
+    if out_dir.resolve() == sample_dir.resolve():
+        # A collection publishes manifest.json, which is also the name a recorded run's
+        # sample manifest carries: writing outputs beside the shots could destroy them.
+        raise ValueError('a collection must not write into its own sample directory')
+
+    sample = SampleSet.load(sample_dir)          # re-verifies every file and payload hash
+    _rows_in_sample(settings.rows, sample.shots)
+    identities = _collection_identities(sample, settings)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    recorded = (read_json(out_dir / COLLECTION_FILE) if (out_dir / COLLECTION_FILE).is_file()
+                else None)
+    if recorded is not None:
+        _require_same_collection(recorded, settings=settings, identities=identities,
+                                 where=str(out_dir / COLLECTION_FILE))
+    check = check_identity(sources=source_hashes(CHECK_SOURCES),
+                           versions=package_versions(CHECK_PACKAGES))
+    if (out_dir / RECORD_MANIFEST).is_file():
+        return _completed(out_dir, sample=sample, settings=settings, identities=identities,
+                          check=check)
+    return _collect_pending(out_dir, sample_dir=sample_dir, sample=sample, settings=settings,
+                            identities=identities, recorded=recorded, check=check, hooks=hooks)
+
+
+def _completed(out_dir: Path, *, sample: SampleSet, settings: CollectionSettings,
+               identities: Mapping, check: str) -> LoadedRecord:
+    """Return what a finished collection already holds, re-verified rather than trusted.
+
+    The manifest is the commit point, so this path never decodes anything. It does
+    re-check: the request's identities against the manifest's, then, through
+    ``load_record``, the schema, the status, the recorded checks, every artifact hash,
+    the stored row ids, and the recomputed collection identity. When only the validation
+    code has moved, the stored arrays are rechecked in place and the manifest
+    republished with the new check identity and results.
+    """
+    manifest_path = out_dir / RECORD_MANIFEST
+    _require_same_collection(read_json(manifest_path), settings=settings, identities=identities,
+                             where=str(manifest_path))
+    loaded = load_record(out_dir)
+    if loaded.manifest['checks']['identity'] == check:
+        return loaded
+    return _recheck(out_dir, loaded=loaded, sample=sample, check=check)
+
+
+def _collect_pending(out_dir: Path, *, sample_dir: Path, sample: SampleSet,
+                     settings: CollectionSettings, identities: Mapping, recorded, check: str,
+                     hooks: _CollectionHooks) -> LoadedRecord | None:
+    """Collect whatever rows are still outstanding, then checkpoint and maybe publish."""
+    patches = sample.parameters.patches
+    context, graph = _graph_prerequisite(sample, workers=settings.workers, recorded=recorded,
+                                         check=check)
+    if recorded is None or recorded.get('check_identity') != check:
+        _write_collection(out_dir, settings=settings, identities=identities, graph=graph,
+                          check=check, recorded=recorded)
+
+    checkpoint_path = out_dir / CHECKPOINT_FILE
+    buffers = (_Buffers.load(checkpoint_path, rows=settings.rows, patches=patches,
+                             identity=identities['collection'])
+               if checkpoint_path.is_file()
+               else _Buffers.allocate(rows=settings.rows, patches=patches))
+    chunks = _chunks(buffers.pending(), settings.chunk_size, settings.max_chunks)
+    if chunks and context is None and settings.workers == 1:
+        context = L1Context.from_dem_text(sample.dem_text, patches)
+
+    base_seconds, started = buffers.seconds_total, time.monotonic()
+
+    def checkpoint() -> None:
+        """Publish the buffers, charging this run's elapsed seconds to the running total."""
+        buffers.seconds_total = base_seconds + (time.monotonic() - started)
+        hooks.before_checkpoint()
+        buffers.save(checkpoint_path, identity=identities['collection'])
+        hooks.after_checkpoint()
+
+    results = _chunk_results(chunks, sample=sample, sample_dir=sample_dir, settings=settings,
+                             context=context)
+    with contextlib.closing(results) as arriving:
+        _run_chunks(buffers, chunks, arriving, checkpoint=checkpoint)
+    checkpoint()                                  # always, whether max_chunks stopped or work ran out
+    if not buffers.complete:
+        return None
+    return _publish(out_dir, buffers=buffers, sample=sample, settings=settings,
+                    identities=identities, graph=graph, check=check,
+                    seconds_this_run=buffers.seconds_total - base_seconds, hooks=hooks)

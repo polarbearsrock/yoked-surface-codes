@@ -1,6 +1,12 @@
 """Tests for the stored L1 record: ownership of every array and baseline, the value
 checks that run before any dtype cast, the sector/column conversions, subsets, the
-plain-array boundary crossing, and the schema-checked array container."""
+plain-array boundary crossing, the schema-checked array container, and the verified
+loader that is the only way downstream stages see a completed collection.
+
+The loader tests build a completed directory by hand rather than collecting one: what
+``load_record`` promises is about the manifest, the artifact hashes, the row summary,
+and the recomputed collection identity, none of which needs a decoder.
+"""
 import dataclasses
 import stat
 import types
@@ -10,9 +16,13 @@ import numpy as np
 import pytest
 
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
+from yoked.hierarchical._provenance import (
+    SCHEMA_VERSION, collection_identity, read_json, row_ids_sha256, sha256_file, write_json_atomic,
+)
 from yoked.hierarchical._record import (
-    ARRAY_FIELDS, BASELINE_PREFIX, IDENTITY_NAMES, L1Record, LoadedRecord, RECORD_SCHEMA,
-    SCHEMA_KEY, _load_arrays, _save_arrays, by_sector, to_columns,
+    ARRAY_FIELDS, BASELINE_PREFIX, COMPLETE_STATUS, IDENTITY_NAMES, L1Record, LoadedRecord,
+    RECORD_FILE, RECORD_MANIFEST, RECORD_SCHEMA, ROW_SUMMARY_FIELDS, SCHEMA_KEY, _load_arrays,
+    _save_arrays, by_sector, load_record, row_summary, to_columns,
 )
 
 SHOTS, PATCHES = 3, 2
@@ -467,3 +477,186 @@ def test_loaded_record_rejects_something_that_is_not_a_record(tmp_path):
     with pytest.raises(TypeError):
         LoadedRecord(record=make_arrays(), directory=tmp_path,
                      identities=identities(), manifest={})
+
+
+# --- the verified loader -----------------------------------------------------
+
+def published(directory, record=None, **overrides) -> Path:
+    """A hand-built completed collection directory, holding what ``load_record`` verifies.
+
+    Nothing here decodes: the loader's contract is about the manifest, the artifact
+    hashes, and the stored arrays, so the tests build those directly.
+    """
+    record = make_record() if record is None else record
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    _save_arrays(directory / RECORD_FILE, record.arrays(), schema=RECORD_SCHEMA)
+    summary = row_summary(record.rows)
+    ids = {'model': 'a1' * 32, 'parent_sample': 'b2' * 32, 'sampling_family': 'c3' * 32,
+           'decoder': 'd4' * 32}
+    ids['collection'] = collection_identity(
+        parent_sample=ids['parent_sample'], decoder=ids['decoder'], role='evaluation',
+        shots=record.shots, rows_sha256=summary['sha256'])
+    manifest = {
+        'schema_version': SCHEMA_VERSION,
+        'status': COMPLETE_STATUS,
+        'role': 'evaluation',
+        'shots': record.shots,
+        'rows': summary,
+        'identities': ids,
+        'artifacts': {RECORD_FILE: sha256_file(directory / RECORD_FILE)},
+        'checks': {'passed': True, 'identity': 'e5' * 32, 'graph': {'passed': True},
+                   'record': {'passed': True}},
+    }
+    write_json_atomic(directory / RECORD_MANIFEST, {**manifest, **overrides})
+    return directory
+
+
+def republish(directory, change) -> Path:
+    """Rewrite the manifest of an already published directory through ``change``."""
+    manifest = read_json(Path(directory) / RECORD_MANIFEST)
+    change(manifest)
+    write_json_atomic(Path(directory) / RECORD_MANIFEST, manifest)
+    return directory
+
+
+def test_row_summary_reports_the_count_bounds_and_exact_ids():
+    summary = row_summary(np.array([3, 5, 11], dtype=np.int64))
+    assert summary['count'] == 3 and summary['start'] == 3 and summary['stop'] == 12
+    assert summary['sha256'] == row_ids_sha256(np.array([3, 5, 11], dtype=np.int64))
+    assert set(summary) == set(ROW_SUMMARY_FIELDS)
+
+
+def test_row_summary_rejects_ids_that_are_not_a_nonempty_integer_array():
+    with pytest.raises(ValueError):
+        row_summary(np.array([], dtype=np.int64))
+    with pytest.raises(ValueError):
+        row_summary(np.array([1.0, 2.0]))
+
+
+def test_load_record_returns_the_stored_record_and_its_identities(tmp_path):
+    record = make_record()
+    loaded = load_record(published(tmp_path / 'collection', record))
+    assert isinstance(loaded, LoadedRecord)
+    np.testing.assert_array_equal(loaded.record.rows, record.rows)
+    np.testing.assert_array_equal(loaded.record.forced_plain, record.forced_plain)
+    assert set(loaded.identities) == set(IDENTITY_NAMES)
+    assert loaded.manifest['status'] == COMPLETE_STATUS
+    assert loaded.directory == tmp_path / 'collection'
+
+
+def test_load_record_rejects_a_directory_with_no_manifest(tmp_path):
+    with pytest.raises(ValueError, match=RECORD_MANIFEST):
+        load_record(tmp_path)
+
+
+def test_load_record_rejects_an_orphan_record_without_a_manifest(tmp_path):
+    directory = published(tmp_path / 'collection')
+    (directory / RECORD_MANIFEST).unlink()
+    assert (directory / RECORD_FILE).is_file()
+    with pytest.raises(ValueError, match=RECORD_MANIFEST):
+        load_record(directory)
+
+
+def test_load_record_rejects_a_status_other_than_complete(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest.update(status='partial'))
+    with pytest.raises(ValueError, match='status'):
+        load_record(directory)
+
+
+def test_load_record_rejects_checks_that_did_not_pass(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest['checks'].update(passed=False))
+    with pytest.raises(ValueError, match='checks'):
+        load_record(directory)
+
+
+def test_load_record_rejects_another_schema_version(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest.update(schema_version='hierarchical-l1-l2/0'))
+    with pytest.raises(ValueError, match='schema'):
+        load_record(directory)
+
+
+def test_load_record_rejects_a_manifest_missing_a_required_field(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest.pop('identities'))
+    with pytest.raises(ValueError, match='identities'):
+        load_record(directory)
+
+
+def test_load_record_rejects_a_record_whose_bytes_changed(tmp_path):
+    directory = published(tmp_path / 'collection')
+    (directory / RECORD_FILE).write_bytes((directory / RECORD_FILE).read_bytes() + b'\0')
+    with pytest.raises(ValueError, match=RECORD_FILE):
+        load_record(directory)
+
+
+def test_load_record_rejects_a_corrupt_record_container(tmp_path):
+    directory = published(tmp_path / 'collection')
+    data = (directory / RECORD_FILE).read_bytes()[: 64]
+    (directory / RECORD_FILE).write_bytes(data)
+    republish(directory, lambda manifest: manifest['artifacts'].update(
+        {RECORD_FILE: sha256_file(directory / RECORD_FILE)}))
+    with pytest.raises(ValueError):
+        load_record(directory)
+
+
+def test_load_record_rejects_a_declared_artifact_that_is_absent(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest['artifacts'].update({'extra.npy': 'ff' * 32}))
+    with pytest.raises(ValueError, match='extra.npy'):
+        load_record(directory)
+
+
+def test_load_record_rejects_an_artifact_name_that_leaves_the_directory(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest['artifacts'].update({'../escape': 'ff' * 32}))
+    with pytest.raises(ValueError, match='escape'):
+        load_record(directory)
+
+
+def test_load_record_requires_the_record_itself_among_the_artifacts(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest['artifacts'].pop(RECORD_FILE))
+    with pytest.raises(ValueError, match=RECORD_FILE):
+        load_record(directory)
+
+
+def test_load_record_rejects_a_row_summary_the_record_does_not_have(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest['rows'].update(count=99))
+    with pytest.raises(ValueError, match='count'):
+        load_record(directory)
+
+
+def test_load_record_rejects_a_row_hash_the_record_does_not_have(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest['rows'].update(sha256='ff' * 32))
+    with pytest.raises(ValueError, match='sha256'):
+        load_record(directory)
+
+
+def test_load_record_rejects_a_shot_count_the_record_does_not_have(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest.update(shots=99))
+    with pytest.raises(ValueError, match='shots'):
+        load_record(directory)
+
+
+def test_load_record_rejects_a_collection_identity_that_does_not_follow(tmp_path):
+    def relabel(manifest):
+        """The role is one of the collection identity's inputs, so relabelling a stored
+        record cannot leave the recorded identity standing."""
+        manifest['role'] = 'calibration'
+
+    with pytest.raises(ValueError, match='collection'):
+        load_record(republish(published(tmp_path / 'collection'), relabel))
+
+
+def test_load_record_rejects_a_missing_identity(tmp_path):
+    directory = republish(published(tmp_path / 'collection'),
+                          lambda manifest: manifest['identities'].pop('decoder'))
+    with pytest.raises(ValueError, match='decoder'):
+        load_record(directory)

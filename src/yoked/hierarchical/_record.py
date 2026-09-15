@@ -1,4 +1,4 @@
-"""The stored L1 record: every L1 output for a set of parent rows, owned and checked.
+"""The stored L1 record, and the verified loader every downstream stage reads it through.
 
 Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, sections 3 and 5.3.
 
@@ -18,14 +18,26 @@ a later alias can change a record; baselines are attached at construction or wit
 ``dataclasses.replace``. ``arrays`` and ``from_arrays`` cross a process boundary as
 plain arrays, with the receiving side re-running every check.
 
+``load_record`` is the only public way to read a completed collection. A record
+directory means nothing until its completion manifest exists: the loader requires the
+manifest's schema and ``status``, that its recorded checks passed, that every declared
+artifact still hashes to what was published, that the stored row ids match the
+manifest's row summary exactly, and that the recorded collection identity follows from
+the manifest's own fields. Every failure is a ``ValueError`` naming what failed, and a
+missing manifest is one of them: an orphan ``record.npz`` is an interrupted
+publication, not a result.
+
 Concatenating the records of a full set is not implemented here; it belongs to M2,
 where it consumes verified ``LoadedRecord`` values, requires equal parent sample,
 model, decoder, and role identities together with identical baseline columns, rejects
 overlapping rows, and keeps the parent row ids sorted.
 
 ``_record_test.py`` checks ownership of every field and baseline, each invalid-value
-case, the column/sector conversions, subsets, the plain-array round trip, and the
-schema-checked array container.
+case, the column/sector conversions, subsets, the plain-array round trip, the
+schema-checked array container, and every way a published directory can fail to load:
+a missing or incomplete manifest, failed checks, another schema, a changed or corrupt
+record file, a declared artifact that is absent or outside the directory, a row summary
+the record does not have, and a collection identity that does not follow.
 """
 from __future__ import annotations
 
@@ -40,7 +52,34 @@ import numpy as np
 
 from yoked.hierarchical._arrays import readonly_array
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
-from yoked.hierarchical._provenance import SCHEMA_VERSION, atomic_replacement
+from yoked.hierarchical._provenance import (
+    SCHEMA_VERSION, atomic_replacement, collection_identity, read_json, row_ids_sha256, sha256_file,
+)
+
+RECORD_FILE = 'record.npz'
+"""The stored arrays of a completed collection, inside its record directory."""
+
+RECORD_MANIFEST = 'manifest.json'
+"""The completion manifest, published after every other artifact. A directory without
+it holds no completed collection, whatever else it contains."""
+
+COMPLETE_STATUS = 'complete'
+"""The only status a loader accepts. A stage writes it once, last, and never writes any
+other value: an unfinished collection has no manifest at all."""
+
+ROW_SUMMARY_FIELDS = ('count', 'start', 'stop', 'sha256')
+"""What a manifest says about the rows a record holds; ``sha256`` is the only one of the
+four that identifies them exactly."""
+
+MANIFEST_FIELDS = ('schema_version', 'status', 'role', 'shots', 'rows', 'identities',
+                   'artifacts', 'checks')
+"""The fields ``load_record`` verifies. The collection stage writes more of them
+(parameters, versions, source hashes, work, timing); those are carried through to the
+caller without being interpreted here."""
+
+CHECK_FIELDS = ('passed', 'identity', 'graph', 'record')
+"""The check block a completed manifest carries: whether both gates passed, the identity
+of the validation code that ran them, and each gate's serialized record."""
 
 RECORD_SCHEMA = f'L1Record/{SCHEMA_VERSION}'
 """Stored inside ``record.npz``. One string covers the field names, dtypes, and column
@@ -164,6 +203,22 @@ def _positions(value, shots: int) -> np.ndarray:
     if not (np.diff(array) > 0).all():
         raise ValueError('positions must be unique and increasing, so that rows stay increasing')
     return array
+
+
+def row_summary(rows) -> dict:
+    """What a manifest records about a set of parent row ids.
+
+    ``count`` is how many there are, ``start`` and ``stop`` bound them as a half-open
+    range, and ``sha256`` is ``row_ids_sha256`` of the exact ordered ids. The ids need
+    not be contiguous, so only the hash identifies them: ``start`` and ``stop`` are
+    there to read, and are meaningful because a record's rows are always increasing.
+    """
+    array = np.asarray(rows)
+    if array.dtype.kind not in 'iu' or array.ndim != 1 or len(array) == 0:
+        raise ValueError(f'rows must be a nonempty one-dimensional integer array, '
+                         f'got {array.dtype} {array.shape}')
+    return {'count': int(len(array)), 'start': int(array[0]), 'stop': int(array[-1]) + 1,
+            'sha256': row_ids_sha256(array)}
 
 
 # --- the record --------------------------------------------------------------
@@ -400,3 +455,100 @@ class LoadedRecord:
         object.__setattr__(self, 'directory', Path(self.directory))
         object.__setattr__(self, 'identities', MappingProxyType(identities))
         object.__setattr__(self, 'manifest', _frozen(self.manifest))
+
+
+# --- the verified loader -----------------------------------------------------
+
+def _require_fields(mapping, fields, where: str) -> None:
+    """Every field a manifest must declare; a missing one is malformed, not a KeyError."""
+    if not isinstance(mapping, Mapping):
+        raise ValueError(f'{where} must hold an object, got {type(mapping).__name__}')
+    missing = [name for name in fields if name not in mapping]
+    if missing:
+        raise ValueError(f'{where} declares no {missing}')
+
+
+def _artifact_path(directory: Path, name) -> Path:
+    """The path of one declared artifact, which must be a plain name inside the directory.
+
+    A manifest is data, and data that can name ``../something`` would let a loader hash
+    and open a file the collection never published.
+    """
+    if not isinstance(name, str) or not name or name in ('.', '..') or '/' in name or '\\' in name:
+        raise ValueError(f'artifact name {name!r} must be a plain filename inside {directory}')
+    return directory / name
+
+
+def _verify_artifacts(directory: Path, artifacts) -> None:
+    """Every published file must still hash to what the manifest declared."""
+    _require_fields(artifacts, (RECORD_FILE,), f'{RECORD_MANIFEST} artifacts')
+    for name, declared in artifacts.items():
+        path = _artifact_path(directory, name)
+        if not path.is_file():
+            raise ValueError(f'{RECORD_MANIFEST} declares the artifact {name!r}, which is missing')
+        digest = sha256_file(path)
+        if digest != declared:
+            raise ValueError(f'{name} hashes to {digest}, {RECORD_MANIFEST} declares {declared!r}')
+
+
+def _verify_rows(record: L1Record, manifest: Mapping) -> dict:
+    """The stored row ids must be exactly the ones the manifest summarizes."""
+    declared = manifest['rows']
+    _require_fields(declared, ROW_SUMMARY_FIELDS, f'{RECORD_MANIFEST} rows')
+    summary = row_summary(record.rows)
+    for name in ROW_SUMMARY_FIELDS:
+        if declared[name] != summary[name]:
+            raise ValueError(f'{RECORD_FILE} holds rows with {name} {summary[name]!r}, '
+                             f'{RECORD_MANIFEST} declares {declared[name]!r}')
+    if manifest['shots'] != record.shots:
+        raise ValueError(f'{RECORD_FILE} holds {record.shots} shots, '
+                         f'{RECORD_MANIFEST} declares {manifest["shots"]!r}')
+    return summary
+
+
+def load_record(record_dir) -> LoadedRecord:
+    """Open a completed collection, verifying everything before exposing its arrays.
+
+    This is the only public way to read a record: the manifest must exist, declare this
+    schema and ``status='complete'``, and report checks that passed; every declared
+    artifact must still hash to its published value; the stored arrays must pass every
+    ``L1Record`` check; the row ids must match the manifest's summary exactly; and the
+    recorded collection identity must follow from the manifest's own parent sample,
+    decoder, role, shot count, and row hash. Anything else raises a ``ValueError``
+    naming what failed, including a missing manifest, which means the collection is
+    incomplete rather than damaged.
+    """
+    directory = Path(record_dir)
+    manifest_path = directory / RECORD_MANIFEST
+    if not manifest_path.is_file():
+        raise ValueError(f'{manifest_path} is missing, so {directory} holds no completed collection')
+    manifest = read_json(manifest_path)
+    _require_fields(manifest, MANIFEST_FIELDS, str(manifest_path))
+    if manifest['schema_version'] != SCHEMA_VERSION:
+        raise ValueError(f'{manifest_path} holds schema {manifest["schema_version"]!r}, '
+                         f'expected {SCHEMA_VERSION!r}')
+    if manifest['status'] != COMPLETE_STATUS:
+        raise ValueError(f'{manifest_path} declares status {manifest["status"]!r}, '
+                         f'expected {COMPLETE_STATUS!r}')
+    _require_fields(manifest['checks'], CHECK_FIELDS, f'{RECORD_MANIFEST} checks')
+    # `is not True` rather than a truth test: a manifest is decoded JSON, and a non-empty
+    # string or list must not be able to stand in for a gate that passed.
+    if manifest['checks']['passed'] is not True:
+        raise ValueError(f'{manifest_path} records checks that did not pass')
+    _verify_artifacts(directory, manifest['artifacts'])
+
+    record = L1Record.from_arrays(_load_arrays(directory / RECORD_FILE, schema=RECORD_SCHEMA))
+    summary = _verify_rows(record, manifest)
+    identities = manifest['identities']
+    _require_fields(identities, IDENTITY_NAMES, f'{RECORD_MANIFEST} identities')
+    # Recomputed rather than trusted: a record whose declared collection identity does
+    # not follow from its own role, rows, parent, and decoder is not that collection.
+    expected = collection_identity(
+        parent_sample=identities['parent_sample'], decoder=identities['decoder'],
+        role=manifest['role'], shots=record.shots, rows_sha256=summary['sha256'])
+    if expected != identities['collection']:
+        raise ValueError(f'The collection identity {identities["collection"]!r} in {manifest_path} '
+                         f'does not follow from its role, rows, parent sample, and decoder')
+    return LoadedRecord(record=record, directory=directory,
+                        identities={name: identities[name] for name in IDENTITY_NAMES},
+                        manifest=manifest)
