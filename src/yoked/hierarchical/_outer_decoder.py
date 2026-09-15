@@ -114,5 +114,11 @@ def exact_outer_map_batch(
 
 @functools.lru_cache(maxsize=None)
 def _patterns(n: int) -> np.ndarray:
-    """All 2**n patterns as a (2**n, n) bool array whose row p has bit i equal to (p >> i) & 1."""
-    return ((np.arange(2 ** n)[:, None] >> np.arange(n)) & 1).astype(bool)
+    """All 2**n patterns as a (2**n, n) bool array whose row p has bit i equal to (p >> i) & 1.
+
+    Read-only: the cache hands the same array object to every caller for a
+    given n, so an in-place edit would otherwise corrupt it for the rest of
+    the process.
+    """
+    raw = ((np.arange(2 ** n)[:, None] >> np.arange(n)) & 1).astype(bool)
+    return readonly_array(raw, dtype=bool)

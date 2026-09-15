@@ -12,14 +12,16 @@ reported, including an equal-cost single-clear-vs-single-set case;
 candidate restriction fixes non-candidates to zero and can force a
 candidate to flip under odd parity; the batched decoder agrees with the
 single-shot decoder shot by shot and validates probabilities strictly
-inside (0, 1); and frame_adjusted_syndrome computes the residual parity
-against a fixture with known flips per sector.
+inside (0, 1); the cached pattern table is shared across calls and
+read-only, so it cannot be corrupted in place; and frame_adjusted_syndrome
+computes the residual parity against a fixture with known flips per
+sector.
 """
 import numpy as np
 import pytest
 
 from yoked.hierarchical._outer_decoder import (
-    TIE_TOLERANCE, exact_outer_map, exact_outer_map_batch, frame_adjusted_syndrome,
+    TIE_TOLERANCE, exact_outer_map, exact_outer_map_batch, frame_adjusted_syndrome, _patterns,
 )
 
 
@@ -160,6 +162,16 @@ def test_batch_and_single_agree_and_validate_probabilities():
         exact_outer_map([0.0, 0.5], 0)
     with pytest.raises(ValueError, match='inside'):
         exact_outer_map([1.0, 0.5], 0)
+
+
+def test_patterns_cache_is_shared_and_read_only():
+    # _patterns is lru_cache'd, so the same array object backs every caller
+    # for a given n; it must be read-only or an in-place edit would corrupt
+    # the shared cache for the rest of the process.
+    first, second = _patterns(3), _patterns(3)
+    assert first is second
+    with pytest.raises(ValueError):
+        first[0, 0] = True
 
 
 def test_frame_adjusted_syndrome_is_the_residual_parity():
