@@ -4,6 +4,10 @@ See docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md.
 """
 from yoked.hierarchical._calibration import CLIP, IsotonicCalibrator
 from yoked.hierarchical._cluster_gap import ClusterGapResult, ClusterGapUnionFindDecoder
+from yoked.hierarchical._collect import (
+    CircuitParameters, CollectedRows, CollectionWork, GraphChecks, L1Context, RecordChecks, SampleSet,
+    check_graphs, check_record, collect_rows,
+)
 from yoked.hierarchical._matching_gaps import ForcedWeights, MatchingGaps, signed_gaps
 from yoked.hierarchical._outer_decoder import (
     TIE_TOLERANCE, BatchOuterDecision, OuterDecision, exact_outer_map, exact_outer_map_batch,
@@ -16,6 +20,8 @@ __all__ = [
     'NUM_SECTORS', 'PatchGraph', 'PatchGraphs',
     'CLIP', 'IsotonicCalibrator',
     'ClusterGapResult', 'ClusterGapUnionFindDecoder',
+    'CircuitParameters', 'SampleSet', 'L1Context', 'CollectedRows', 'CollectionWork', 'collect_rows',
+    'GraphChecks', 'RecordChecks', 'check_graphs', 'check_record',
     'ForcedWeights', 'MatchingGaps', 'signed_gaps',
     'TIE_TOLERANCE', 'OuterDecision', 'BatchOuterDecision', 'exact_outer_map', 'exact_outer_map_batch',
     'frame_adjusted_syndrome',
