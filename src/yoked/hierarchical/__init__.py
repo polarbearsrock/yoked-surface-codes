@@ -10,6 +10,7 @@ from yoked.hierarchical._outer_decoder import (
     frame_adjusted_syndrome,
 )
 from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraph, PatchGraphs
+from yoked.hierarchical._record import L1Record, LoadedRecord, by_sector, to_columns
 
 __all__ = [
     'NUM_SECTORS', 'PatchGraph', 'PatchGraphs',
@@ -18,4 +19,5 @@ __all__ = [
     'ForcedWeights', 'MatchingGaps', 'signed_gaps',
     'TIE_TOLERANCE', 'OuterDecision', 'BatchOuterDecision', 'exact_outer_map', 'exact_outer_map_batch',
     'frame_adjusted_syndrome',
+    'L1Record', 'LoadedRecord', 'by_sector', 'to_columns',
 ]
