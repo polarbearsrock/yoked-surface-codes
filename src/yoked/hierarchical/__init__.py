@@ -2,6 +2,7 @@
 
 See docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md.
 """
+from yoked.hierarchical._calibration import CLIP, IsotonicCalibrator
 from yoked.hierarchical._cluster_gap import ClusterGapResult, ClusterGapUnionFindDecoder
 from yoked.hierarchical._matching_gaps import ForcedWeights, MatchingGaps, signed_gaps
 from yoked.hierarchical._outer_decoder import (
@@ -12,6 +13,7 @@ from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraph, PatchGraph
 
 __all__ = [
     'NUM_SECTORS', 'PatchGraph', 'PatchGraphs',
+    'CLIP', 'IsotonicCalibrator',
     'ClusterGapResult', 'ClusterGapUnionFindDecoder',
     'ForcedWeights', 'MatchingGaps', 'signed_gaps',
     'TIE_TOLERANCE', 'OuterDecision', 'BatchOuterDecision', 'exact_outer_map', 'exact_outer_map_batch',
