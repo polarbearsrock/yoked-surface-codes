@@ -24,9 +24,12 @@ For each patch i this module builds
 
 Invariants checked by ``_patch_graphs_test.py``: the split is lossless
 (merging check vertices back into the yoke vertices reproduces the six-patch
-graph), every component keeps a physical detector, a component's yoke
-membership equals its observable's sector, an observable-flipping edge is a
-boundary edge, and one mechanism never spans two patches.
+graph), every component keeps one or two physical detectors, an
+observable-flipping component keeps exactly one physical detector (checked on
+the raw DEM component in ``_validate_component``, before the DEM is ever
+imported into a graph, per spec section 4), a component's yoke membership
+equals its observable's sector, an observable-flipping edge is a boundary
+edge, and one mechanism never spans two patches.
 """
 from __future__ import annotations
 
@@ -168,6 +171,17 @@ def _validate_component(component: _Component, yoke: tuple[int, int]) -> tuple[i
         raise ValueError(f'Component {component} must keep one or two physical detectors after removing the yoke')
     if len(component.observables) > 1:
         raise ValueError(f'Component {component} flips more than one observable')
+    # This is the real gate for observable-flipping shape (spec section 4): an
+    # observable-flipping component must keep exactly one physical detector,
+    # so its boundary edge can be re-targeted to a single check vertex. Catch
+    # it here, on the raw component, rather than relying on the graph built
+    # from the imported DEM: DecodingGraph.from_dem's audit merges parallel
+    # components that share a detector-pair key using a first-label rule, so
+    # a malformed two-physical-detector component can silently merge into an
+    # existing plain edge and never surface as its own graph edge.
+    if component.observables and len(physical) != 1:
+        raise ValueError(
+            f'Observable-flipping component {component} must keep exactly one physical detector, found {len(physical)}')
     present = {d for d in component.detectors if d in yoke}
     implied = {yoke[o % NUM_SECTORS] for o in component.observables}
     if present != implied:
@@ -243,7 +257,14 @@ def _build_patch(
 
 
 def _with_check_vertices(graph: DecodingGraph) -> DecodingGraph:
-    """Re-target observable-flipping boundary edges to the sector's check vertex."""
+    """Re-target observable-flipping boundary edges to the sector's check vertex.
+
+    The real gate for observable-flipping shape is ``_validate_component``,
+    run on the raw DEM components before import. The two raises below are
+    cheap defensive guards against the imported graph disagreeing with that
+    raw-component shape; they are not expected to trigger given a DEM that
+    already passed ``_validate_component``.
+    """
     check = (graph.num_detectors, graph.num_detectors + 1)
     edges = []
     for u, v, weight, mask in graph.edges:
@@ -251,8 +272,8 @@ def _with_check_vertices(graph: DecodingGraph) -> DecodingGraph:
             edges.append((u, v, weight, mask))
             continue
         if v is not None:
-            raise ValueError('An observable-flipping edge must be a boundary edge')
+            raise ValueError('An observable-flipping edge must be a boundary edge')  # defensive
         if mask not in (1, 2):
-            raise ValueError('An edge may flip only one of the two patch observables')
+            raise ValueError('An edge may flip only one of the two patch observables')  # defensive
         edges.append((u, check[mask.bit_length() - 1], weight, mask))
     return DecodingGraph(graph.num_detectors + NUM_SECTORS, graph.num_observables, edges)
