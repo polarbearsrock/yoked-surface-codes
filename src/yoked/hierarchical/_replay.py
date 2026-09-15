@@ -17,7 +17,7 @@ the increment per distinct refined patch, from the table of section 8. Both
 sector requests on one patch share one refinement, so ``sum(M)`` (requested
 patch-sectors) and ``sum(U)`` (distinct patches) are counted separately. These
 counts describe that procedure only. They are not the calls that actually ran
-during collection -- those are ``_collect.CollectionWork``, which additionally
+during collection -- those are ``_l1.CollectionWork``, which additionally
 computes validation predictions and every score for every patch -- and they
 are not elapsed time, so no speedup follows from them.
 
@@ -323,7 +323,7 @@ class WorkCounts:
     - ``incremental_correlated_forced_calls``: forced matchings under reweighted weights (calls).
 
     This is the cost of the replay procedure, not the collection that produced
-    the record (``_collect.CollectionWork``) and not elapsed time.
+    the record (``_l1.CollectionWork``) and not elapsed time.
     """
 
     requested_patch_sectors: np.ndarray

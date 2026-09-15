@@ -28,7 +28,7 @@ import pytest
 
 from yoked.hierarchical._arrays import readonly_array
 from yoked.hierarchical._calibration import IsotonicCalibrator
-from yoked.hierarchical._collect import WORK_FIELDS, L1Context, collect_rows
+from yoked.hierarchical._l1 import WORK_FIELDS, L1Context, collect_rows
 from yoked.hierarchical._fixtures import NUM_PATCHES, yoked_fixture
 from yoked.hierarchical._policies import NoRefinement, RefineAll
 from yoked.hierarchical._record import L1Record, by_sector

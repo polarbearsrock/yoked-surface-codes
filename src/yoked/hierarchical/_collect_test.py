@@ -1,19 +1,20 @@
-"""Tests for verified sample sets, single-process L1 collection, and the graph and
-record checks.
+"""Tests for verified sample sets, the graph and record checks, and the coordinator.
 
 Checks: a generated sample's save/load round trip and the file, payload, and
 dimension verification that load performs; the imported recorded-run format and its
 rejection of a tampered file; graph equivalence on the distance-3 fixture together
-with deliberately changed edge multiplicity, mask, and weight (a difference below
-1e-9 passing and a larger one failing); collection of a few hundred fixture shots
-through both correlation branches, with valid corrections, instrumented work counts,
-and equality between one call and a partitioned serial collection; every record
-invariant failing on its own deliberately corrupted field; and the checkpointed
-coordinator, where an uninterrupted serial run, a one-chunk run, a two-worker run, a
-run stopped by ``max_chunks``, and a run interrupted at each of the four hook points
-all publish the same arrays, row ids, and retained-row work counts, while a changed
-decoder identity, role, row set, sample payload, checkpoint, or record is rejected
-instead of being collected into the same directory.
+with its exact edge count and degree statistics and with deliberately changed edge
+multiplicity, mask, and weight (a difference below 1e-9 passing and a larger one
+failing); every record invariant failing on its own deliberately corrupted field; and
+the checkpointed coordinator, where an uninterrupted serial run, a one-chunk run, a
+two-worker run, a run stopped by ``max_chunks``, and a run interrupted at each of the
+four hook points all publish the same arrays, row ids, and retained-row work counts, a
+completed directory drops a stale checkpoint and stale diagnostics without changing the
+record it returns, and a changed decoder identity, role, row set, sample payload,
+checkpoint, or record is rejected instead of being collected into the same directory.
+
+What ``collect_rows`` itself computes is checked in ``_l1_test.py``; the collection
+here uses it only as the coordinator does.
 """
 import dataclasses
 import shutil
@@ -24,11 +25,11 @@ import pytest
 from yoked.decoders._graph import DecodingGraph
 from yoked.hierarchical._collect import (
     ACTUAL_FILE, CHECKPOINT_FILE, CIRCUIT_FILE, COLLECTION_FILE, DEM_FILE, DETECTORS_FILE,
-    EDGE_WEIGHT_TOLERANCE, FAILED_CHECKS_FILE, FORCED_CALLS_PER_DECODE, RECORDED_MANIFEST, ROLES,
-    SAMPLE_MANIFEST, WEIGHT_TOLERANCE, WORK_FIELDS, CircuitParameters, CollectionSettings,
-    CollectionWork, L1Context, SampleSet, _audit_source_hashes, _Buffers, _CollectionHooks,
-    _run_chunks, check_graphs, check_record, collect_rows, collect_sample,
+    EDGE_WEIGHT_TOLERANCE, FAILED_CHECKS_FILE, RECORDED_MANIFEST, ROLES, SAMPLE_MANIFEST,
+    WEIGHT_TOLERANCE, CircuitParameters, CollectionSettings, SampleSet, _audit_source_hashes,
+    _Buffers, _CollectionHooks, _run_chunks, check_graphs, check_record, collect_sample,
 )
+from yoked.hierarchical._l1 import WORK_FIELDS, L1Context, collect_rows
 from yoked.hierarchical._matching_gaps import signed_gaps
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
 from yoked.hierarchical._provenance import (
@@ -268,13 +269,37 @@ def with_weight_change(delta):
     return transform
 
 
+FIXTURE_EDGES = 2388
+"""Edges of the distance-3, 12-round, p=0.003 joint model, and of the six rebuilt check
+graphs together. Pinned rather than compared to itself so that a split which loses or
+duplicates edges on both sides at once still fails."""
+
+FIXTURE_YOKE_DEGREES = (156, 156)
+"""Degrees of the two yoke detectors in the joint graph. Each yoke touches every patch's
+observable-flipping mechanisms, which is why its degree is an order of magnitude above
+any physical detector's; the two are equal because the X and Z sectors of this circuit
+are symmetric. The values are ``check_graphs``' own, and are those the Task 8 report
+recorded."""
+
+FIXTURE_MEDIAN_DEGREE = 6.0
+"""Median degree over all detectors, the two yokes included. A bulk distance-3 detector
+sits on six mechanisms, and two yokes among 626 detectors do not move a median."""
+
+FIXTURE_MAX_NON_YOKE_DEGREE = 8
+"""The loudest physical detector. It bounds how far a non-yoke degree may be from the
+median and is what separates a yoke from a merely busy detector."""
+
+
 def test_check_graphs_accepts_the_fixture_split(context):
     checks = check_graphs(context.dem, context.patches)
     assert checks.passed and checks.equivalent
-    assert checks.joint_edges == checks.rebuilt_edges > 0
-    assert checks.max_weight_difference <= EDGE_WEIGHT_TOLERANCE
-    assert checks.yoke_degrees[0] > checks.max_non_yoke_degree > 0
-    assert checks.median_detector_degree > 0
+    assert checks.joint_edges == checks.rebuilt_edges == FIXTURE_EDGES
+    assert checks.max_weight_difference == 0.0
+    assert checks.weight_mismatches == 0 and checks.multiplicity_mismatches == 0
+    assert checks.missing_groups == 0 and checks.extra_groups == 0
+    assert checks.yoke_degrees == FIXTURE_YOKE_DEGREES
+    assert checks.median_detector_degree == FIXTURE_MEDIAN_DEGREE
+    assert checks.max_non_yoke_degree == FIXTURE_MAX_NON_YOKE_DEGREE
     assert checks.to_json()['equivalent'] is True
 
 
@@ -308,110 +333,6 @@ def test_check_graphs_rejects_a_weight_difference_above_the_tolerance(context):
     checks = check_graphs(context.dem, corrupted(context.patches, with_weight_change(1e-6)))
     assert not checks.passed and checks.max_weight_difference > EDGE_WEIGHT_TOLERANCE
     assert checks.to_json()['weight_mismatches'] > 0
-
-
-# --- collection --------------------------------------------------------------
-
-def test_a_collected_record_holds_every_row_and_both_correlation_branches(collected, sample, context):
-    record = collected.record
-    assert record.shots == SHOTS and record.num_patches == PATCHES
-    np.testing.assert_array_equal(record.rows, np.arange(SHOTS))
-    detectors, actual = sample.rows(np.arange(SHOTS))
-    np.testing.assert_array_equal(record.actual, actual)
-    np.testing.assert_array_equal(record.yoke, detectors[:, list(context.patches.yoke_detector_ids)])
-    assert record.reweighted_patches.any() and not record.reweighted_patches.all()
-    assert (record.forced_correlated[~record.reweighted_patches]
-            == record.forced_plain[~record.reweighted_patches]).all()
-
-
-def test_collection_reproduces_one_call_when_partitioned(sample, context):
-    rows = np.arange(SHOTS)
-    single = collect_rows(context, *sample.rows(rows), rows)
-    parts = [collect_rows(context, *sample.rows(chunk), chunk) for chunk in (rows[:73], rows[73:])]
-    assert parts[0].work + parts[1].work == single.work
-    for name in ARRAY_FIELDS:
-        np.testing.assert_array_equal(
-            np.concatenate([getattr(part.record, name) for part in parts]), getattr(single.record, name))
-
-
-def test_collection_work_counts_the_calls_that_actually_ran(sample):
-    context = L1Context.from_dem_text(sample.dem_text, num_patches=PATCHES)
-    decoders = tuple(CountingDecoder(decoder) for decoder in context.decoders)
-    matchers = tuple(CountingMatcher(matcher) for matcher in context.matchers)
-    context.decoders, context.matchers = decoders, matchers
-    rows = np.arange(12)
-    work = collect_rows(context, *sample.rows(rows), rows).work
-    decodes = len(rows) * PATCHES
-    fired = sum(matcher.fired for matcher in matchers)
-    assert sum(decoder.calls for decoder in decoders) == decodes
-    assert sum(matcher.calls for matcher in matchers) == decodes
-    assert 0 < fired <= decodes
-    assert work == CollectionWork(
-        rows=len(rows), uf_decodes=decodes, dijkstra_searches=NUM_SECTORS * decodes,
-        dijkstra_states=sum(decoder.states for decoder in decoders), unforced_plain_calls=decodes,
-        plain_forced_calls=FORCED_CALLS_PER_DECODE * decodes, reweight_attempts=decodes,
-        correlated_forced_calls=FORCED_CALLS_PER_DECODE * fired, correlated_validation_calls=fired,
-        joint_decodes=len(rows))
-
-
-class CountingDecoder:
-    """A cluster-gap decoder that counts decoded syndromes and settled Dijkstra states."""
-
-    def __init__(self, inner):
-        self.inner, self.calls, self.states = inner, 0, 0
-
-    def decode_with_gaps(self, syndrome):
-        result = self.inner.decode_with_gaps(syndrome)
-        self.calls += 1
-        self.states += int(np.asarray(result.dijkstra_states).sum())
-        return result
-
-
-class CountingMatcher:
-    """A forced-weight matcher that counts calls and how often a correlation rule fired."""
-
-    def __init__(self, inner):
-        self.inner, self.calls, self.fired = inner, 0, 0
-
-    def forced_weights(self, syndrome):
-        result = self.inner.forced_weights(syndrome)
-        self.calls += 1
-        self.fired += int(result.rules_fired)
-        return result
-
-
-class BrokenDecoder:
-    """A decoder whose reported correction no longer reproduces its syndrome."""
-
-    def __init__(self, inner):
-        self.inner = inner
-
-    def decode_with_gaps(self, syndrome):
-        result = self.inner.decode_with_gaps(syndrome)
-        selected = result.selected_edges[:-1] if result.selected_edges else (0,)
-        return dataclasses.replace(result, selected_edges=selected)
-
-
-def test_an_invalid_correction_names_the_parent_row_and_patch(sample):
-    context = L1Context.from_dem_text(sample.dem_text, num_patches=PATCHES)
-    context.decoders = context.decoders[:2] + (BrokenDecoder(context.decoders[2]),) + context.decoders[3:]
-    rows = np.arange(5, 15)
-    with pytest.raises(ValueError, match=r'row 5.*patch 2'):
-        collect_rows(context, *sample.rows(rows), rows)
-
-
-def test_collection_rejects_a_detector_array_of_the_wrong_width(sample, context):
-    rows = np.arange(4)
-    detectors, actual = sample.rows(rows)
-    with pytest.raises(ValueError, match='detector'):
-        collect_rows(context, detectors[:, :-1], actual, rows)
-
-
-def test_collection_rejects_row_ids_that_are_not_increasing(sample, context):
-    rows = np.arange(4)
-    detectors, actual = sample.rows(rows)
-    with pytest.raises(ValueError, match='increasing'):
-        collect_rows(context, detectors, actual, np.array([3, 2, 1, 0]))
 
 
 # --- record checks -----------------------------------------------------------
@@ -680,6 +601,20 @@ def test_a_completed_collection_is_reloaded_without_decoding_again(reference, sa
     again = collect_sample(saved, reference.directory, evaluation_settings())
     assert_same_collection(again, reference)
     assert again.manifest['checks']['identity'] == reference.manifest['checks']['identity']
+
+
+def test_a_stale_checkpoint_beside_a_published_record_is_removed(reference, saved, tmp_path):
+    """``_publish`` unlinks both files after writing the manifest; a crash in that window
+    leaves them describing a collection that is already finished. The completed path
+    removes them and returns the published record untouched."""
+    out_dir = copied(reference.directory, tmp_path / 'stale-checkpoint')
+    (out_dir / CHECKPOINT_FILE).write_bytes(b'a checkpoint from before the manifest landed')
+    write_json_atomic(out_dir / FAILED_CHECKS_FILE, {'record': {'failures': ['check_parity']}})
+    again = collect_sample(saved, out_dir, evaluation_settings())
+    assert not (out_dir / CHECKPOINT_FILE).exists()
+    assert not (out_dir / FAILED_CHECKS_FILE).exists()
+    assert_same_collection(again, reference)
+    assert again.manifest == reference.manifest
 
 
 def test_a_changed_check_identity_rechecks_the_stored_arrays_and_republishes(reference, saved,

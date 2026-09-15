@@ -12,8 +12,10 @@ checks did not pass refused downstream; invalid knots, an altered calibrator
 artifact, an altered prediction container, a replaced record, and a missing
 completion manifest all refused; an interrupted replay publication leaving no
 manifest and rerunning cleanly; a reused replay directory returning its stored
-results without replaying again; a confirmation request refused; and a change to
-the replay sources leaving the collection identity and its reuse untouched.
+results without replaying again; a confirmation request refused; a change to the
+replay sources leaving the collection identity and its reuse untouched; and the report
+renderers printing ``unavailable`` with the denominator or eligible count beside it
+whenever a number, an interval bound, or a rate is undefined.
 """
 from __future__ import annotations
 
@@ -40,9 +42,9 @@ from yoked.hierarchical._provenance import (
 )
 from yoked.hierarchical._record import RECORD_FILE, RECORD_MANIFEST, LoadedRecord
 from yoked.hierarchical._stages import (
-    REPLAY_ARRAYS_FILE, REPLAY_MANIFEST, REPLAY_RESULTS_FILE, SAMPLE_DIRECTORY, CollectRequest,
-    _ReplayHooks, config_directory_name, load_calibrators, parse_config, stage_calibrate,
-    stage_collect, stage_replay, stage_summarize,
+    REPLAY_ARRAYS_FILE, REPLAY_MANIFEST, REPLAY_RESULTS_FILE, SAMPLE_DIRECTORY, UNAVAILABLE,
+    CollectRequest, _interval, _number, _paired_rows, _rate, _ReplayHooks, config_directory_name,
+    load_calibrators, parse_config, stage_calibrate, stage_collect, stage_replay, stage_summarize,
 )
 
 DISTANCE, ROUNDS, P = 3, 12, 0.005
@@ -531,17 +533,65 @@ def test_a_record_replaced_after_replay_is_rejected_by_the_summary(pipeline, tmp
                         seed=DEFAULT_SEED)
 
 
-def test_an_undefined_interval_is_reported_as_unavailable(pipeline, tmp_path):
-    """Every interval a summary cannot compute is printed, not omitted."""
-    markdown = stage_summarize([pipeline.replay_dir], tmp_path / 'summary.md',
-                               replicates=REPLICATES, seed=DEFAULT_SEED)
-    summary = read_json(tmp_path / 'summary.json')
-    group = summary['records'][0]['groups'][0]
-    comparison = next(iter(group['comparisons'].values()))
-    pooled = comparison['misattribution_pooled']
-    if pooled['low'] is None:
-        assert 'unavailable' in markdown
-    assert group['cells'][group['baseline']]['misattribution']['pooled']['total'] is not None
+# --- how an undefined statistic is rendered ----------------------------------
+#
+# A pilot whose bootstrap forms every interval prints none of these, so the renderers
+# are exercised directly on the inputs a degenerate population produces rather than
+# through a summary that may or may not contain one.
+
+@pytest.mark.parametrize('value', [None, float('nan')])
+def test_an_undefined_number_is_rendered_as_the_unavailable_word(value):
+    assert _number(value) == UNAVAILABLE
+
+
+def test_a_defined_number_is_rendered_with_the_reports_digits():
+    assert _number(0.3746877602) == '0.374688'
+    assert _number(0) == '0'
+
+
+@pytest.mark.parametrize('bounds', [None, (None, 0.5), (0.5, None), (float('nan'), 0.5),
+                                    (0.5, float('nan'))])
+def test_an_interval_missing_either_bound_is_rendered_as_the_unavailable_word(bounds):
+    assert _interval(bounds) == UNAVAILABLE
+
+
+def test_a_defined_interval_is_rendered_as_its_two_bounds():
+    assert _interval((-0.351237, -0.293117)) == '(-0.351237, -0.293117)'
+
+
+@pytest.mark.parametrize('value', [None, float('nan')])
+def test_an_undefined_rate_still_prints_its_denominator(value):
+    # An empty eligible population is the usual reason a rate is undefined, and the
+    # count and total are what say so; dropping them would hide the reason.
+    assert _rate({'value': value, 'count': 0, 'total': 0}) == f'{UNAVAILABLE} [0 / 0]'
+    assert _rate({'value': value, 'count': 7, 'total': 12}) == f'{UNAVAILABLE} [7 / 12]'
+
+
+def test_a_defined_rate_prints_its_value_and_denominator():
+    assert _rate({'value': 0.0655, 'count': 131, 'total': 2000}) == '0.0655 [131 / 2000]'
+
+
+def test_a_paired_row_whose_bootstrap_formed_no_interval_shows_unavailable_and_its_counts():
+    """A comparison with ``low is None`` still occupies a row, with its difference, its
+    eligible count and its zero-denominator replicate count beside the missing bound."""
+    group = {
+        'order': ['refined'],
+        'labels': {'refined': 'all_refined:mixed'},
+        'cells': {'refined': {'misattribution': {'pooled': {'value': None, 'count': 0,
+                                                            'total': 0}}}},
+        'comparisons': {'refined': {
+            'misattribution_pooled': {'difference': None, 'low': None, 'high': None,
+                                      'zero_denominator_replicates': REPLICATES},
+            'block_failure': {'difference': -0.268, 'low': -0.2885, 'high': -0.2475,
+                              'zero_denominator_replicates': 0},
+        }},
+    }
+    rows = _paired_rows(group, shots=2000)
+    assert rows == [
+        ['all_refined:mixed', 'misattribution_pooled', UNAVAILABLE, UNAVAILABLE, '0',
+         str(REPLICATES)],
+        ['all_refined:mixed', 'block_failure', '-0.268', '(-0.2885, -0.2475)', '2000', '0'],
+    ]
 
 
 # --- what a report change may not touch --------------------------------------

@@ -5,9 +5,10 @@ See docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md.
 from yoked.hierarchical._calibration import CLIP, IsotonicCalibrator
 from yoked.hierarchical._cluster_gap import ClusterGapResult, ClusterGapUnionFindDecoder
 from yoked.hierarchical._collect import (
-    ROLES, CircuitParameters, CollectedRows, CollectionSettings, CollectionWork, GraphChecks,
-    L1Context, RecordChecks, SampleSet, check_graphs, check_record, collect_rows, collect_sample,
+    ROLES, CircuitParameters, CollectionSettings, GraphChecks, RecordChecks, SampleSet,
+    check_graphs, check_record, collect_sample,
 )
+from yoked.hierarchical._l1 import CollectedRows, CollectionWork, L1Context, collect_rows
 from yoked.hierarchical._matching_gaps import ForcedWeights, MatchingGaps, signed_gaps
 from yoked.hierarchical._metrics import (
     PairedDifference, Rate, compare_endpoints, normalized_ler, paired_bootstrap, summarize_result,

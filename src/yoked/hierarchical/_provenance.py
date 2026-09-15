@@ -277,11 +277,16 @@ DECODER_SOURCES = (
     'src/yoked/hierarchical/_cluster_gap.py',
     'src/yoked/hierarchical/_matching_gaps.py',
     'src/yoked/hierarchical/_record.py',
+    # The per-row L1 path determines the record contents: which decoder runs on which
+    # patch syndrome, which column each result lands in, and what the work counters
+    # count. A record decoded by another version of it holds different numbers.
+    'src/yoked/hierarchical/_l1.py',
 )
 """Graph import, UF, the correlation compiler, the hub splitter, the cluster gap, the
-matching gaps, and the array/record conventions: everything whose change makes a
-stored L1 number mean something different. Policies, metrics, plotting, and
-calibration are deliberately absent."""
+matching gaps, the array/record conventions, and the per-row L1 evaluation: everything
+whose change makes a stored L1 number mean something different. Policies, metrics,
+plotting, and calibration are deliberately absent, and so is ``_collect.py``, whose
+sampling, gating, and scheduling belong to ``CHECK_SOURCES``."""
 
 CHECK_SOURCES = (
     'src/yoked/hierarchical/_outer_decoder.py',

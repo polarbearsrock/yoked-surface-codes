@@ -2,6 +2,7 @@
 payload hash convention, canonical JSON, atomic JSON writes, required source files,
 and which inputs each identity is sensitive and insensitive to."""
 import hashlib
+import importlib.metadata
 import inspect
 import json
 import math
@@ -195,7 +196,7 @@ def test_package_versions_reports_installed_versions():
 
 
 def test_package_versions_raises_for_an_unknown_package():
-    with pytest.raises(Exception):
+    with pytest.raises(importlib.metadata.PackageNotFoundError):
         package_versions(('not-an-installed-package',))
 
 
@@ -223,7 +224,11 @@ def test_source_hashes_raise_instead_of_omitting_a_missing_required_file():
         source_hashes(fake_group)
 
 
-def test_decoder_group_excludes_policy_calibration_and_report_sources():
+def test_decoder_group_names_the_per_row_l1_path_and_excludes_the_rest():
+    # _l1.py decides what every stored number is; _collect.py only samples, gates, and
+    # schedules, so it is validation, not decoding, and lives in the check group.
+    assert 'src/yoked/hierarchical/_l1.py' in DECODER_SOURCES
+    assert 'src/yoked/hierarchical/_collect.py' not in DECODER_SOURCES
     excluded = ('_policies.py', '_metrics.py', '_replay.py', '_calibration.py', '_outer_decoder.py')
     assert not [name for name in DECODER_SOURCES if name.endswith(excluded)]
 
@@ -231,6 +236,7 @@ def test_decoder_group_excludes_policy_calibration_and_report_sources():
 def test_check_group_names_the_validation_sources():
     assert 'src/yoked/hierarchical/_outer_decoder.py' in CHECK_SOURCES
     assert 'src/yoked/hierarchical/_collect.py' in CHECK_SOURCES
+    assert 'src/yoked/hierarchical/_l1.py' not in CHECK_SOURCES
 
 
 def test_calibration_and_replay_groups_name_their_own_sources():
@@ -318,7 +324,11 @@ def test_a_policy_or_report_change_leaves_the_collection_identity_unchanged():
         versions={'numpy': '2.5.1', 'sinter': '1.16.0'})
     edited = {**baseline_replay, 'sources': {'src/yoked/hierarchical/_policies.py': 'bb' * 32}}
     assert replay_identity(**edited) != replay_identity(**baseline_replay)
-    assert collection() == collection()
+    # The collection identity reads none of those sources, and does read the decoder's,
+    # so it moves only when the decoder does.
+    moved = decoder_identity(**replaced(DECODER_INPUTS,
+                                        sources={'src/yoked/hierarchical/_l1.py': 'ff' * 32}))
+    assert collection(decoder=moved) != collection()
 
 
 def test_a_changed_decoder_changes_the_collection_identity():

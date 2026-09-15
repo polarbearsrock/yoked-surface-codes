@@ -178,6 +178,15 @@ sample, and the decoder may not: a request that changes any of them is refused
 by name rather than merged into the directory. Use a new directory for a
 different experiment; do not relabel an existing sample.
 
+The decoder identity covers the per-row L1 path -- the patch split, the two
+decoders, the correlation rules, the record layout, and the `_l1.py` evaluation
+that fills each column -- and nothing else. Sampling, the two gates, and the
+coordinator in `_collect.py` carry a separate *check* identity, which is why
+changed validation code rechecks stored arrays in place and republishes the
+manifest instead of recollecting the rows. A change to the L1 path is the case
+that cannot be absorbed: the existing directory holds numbers a different
+decoder produced, so it is refused and the collection starts fresh.
+
 A failed gate publishes nothing. The graph gate runs before any row is decoded
 and stops the collection outright; the record gate runs before publication,
 leaves `failed_checks.json` and the checkpoint in place, and publishes no
@@ -380,7 +389,9 @@ export PYTHONPYCACHEPREFIX="$TMPDIR/hier-pycache"
 The suite runs on a distance-3 six-patch circuit with a few hundred shots, so it
 finishes in well under a minute. It covers the hub split and its graph equivalence
 against the joint model, the cluster gap against brute-force odd walks, the
-forced weights and their additivity, the PAV fit, the exact outer decoder, the
+forced weights and their additivity, the per-row L1 evaluation with every stored
+column pinned to an independent recomputation from the patch's own graph, the
+PAV fit, the exact outer decoder, the
 endpoint policies, replay and its work accounting, the metrics and their paired
 bootstrap, and the stage boundaries: a full pipeline through the functions and
 once through the command line, valid resume, and each way a changed request,

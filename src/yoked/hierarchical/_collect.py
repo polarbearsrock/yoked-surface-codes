@@ -1,8 +1,8 @@
-"""Verified sample sets, L1 collection, its two gates, and the checkpointed coordinator.
+"""Verified sample sets, the two collection gates, and the checkpointed coordinator.
 
 Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, sections 3, 5.3, 10.
 
-Five objects, in the order a run uses them:
+Four objects, in the order a run uses them:
 
   * ``SampleSet`` is one Stim sampling call kept verifiable. It owns the exact circuit
     and model text its shots were drawn from, the packed detector and observable
@@ -12,14 +12,6 @@ Five objects, in the order a run uses them:
     and model rather than regenerating them from today's generator. A loaded set keeps
     its payloads memory-mapped and read-only, so a 100,000-shot sample is never
     unpacked whole to decode two thousand of its rows.
-  * ``L1Context`` owns the per-process decoders: the patch split, one cluster-gap UF
-    decoder and one forced-weight matcher per patch, and the joint PyMatching matcher
-    used only for validation.
-  * ``collect_rows`` fills one ``L1Record`` for a chunk of parent rows through a single
-    implementation path, validating every UF correction against ``H c = s`` and
-    ``L c = r`` as it goes, and reports the decoder work that actually ran as a
-    ``CollectionWork``. Task 9's chunked parallel collection calls this same function,
-    which is why a ``workers=1`` run needs no process pool to reproduce a failure.
   * ``check_graphs`` and ``check_record`` are the two gates. The first is a collection
     prerequisite: the six check graphs, with check vertices mapped back onto the two
     yokes, must reproduce the imported joint graph edge for edge. The second is the
@@ -27,12 +19,21 @@ Five objects, in the order a run uses them:
     parity, and zero unexplained disagreements between the reconstructed
     MWPM-reference pipeline and joint MWPM. Neither encodes an agreement percentage;
     every invariant is exact, and a failure names the offending parent rows.
+  * ``CollectionSettings`` is one collection request: the role, the exact parent rows,
+    and the worker, chunk, and cap counts that do not enter any identity.
   * ``collect_sample`` is the coordinator: given a saved sample, an output directory,
     and a ``CollectionSettings``, it collects the requested rows in chunks, keeps one
     ``checkpoint.npz`` holding every buffer and the completion mask, and publishes a
     validated record. It returns the verified ``LoadedRecord`` when the collection is
     finished and ``None`` while rows remain, so calling it again continues where the
     last call stopped.
+
+The per-row L1 evaluation itself is ``_l1.py``: ``L1Context``, ``collect_rows``, and
+``CollectionWork``, imported here and scheduled over chunks. That split is the
+identity boundary. ``_l1.py`` belongs to ``DECODER_SOURCES``, because it determines
+what a stored record's numbers are; this module belongs to ``CHECK_SOURCES``, because
+it determines only how they were sampled, validated, and published, so changed
+validation can recheck stored arrays in place instead of rerunning L1.
 
 ``collect_rows`` validates corrections but deliberately does not call ``check_record``:
 the record checks are defined on a whole record and are what ``collect_sample`` runs,
@@ -52,14 +53,15 @@ resumptions; a changed decoder source or dependency version may not.
 ``_collect_test.py`` checks the sample round trip and each hash it verifies, the
 imported recorded-run format with a tampered file rejected, graph equivalence against
 deliberately changed edge multiplicity, mask, and weight (a difference below ``1e-9``
-passing and a larger one failing), collection of a few hundred distance-3 shots through
-both correlation branches, equality of one call with a partitioned serial collection,
-the work counts under instrumented decoders, every record invariant failing on its own
-corrupted field, and, for the coordinator, that an uninterrupted serial run, a
-one-chunk run, a two-worker run, a run stopped by ``max_chunks``, and a run interrupted
-at each of the four hook points all publish the same arrays, row ids, and retained-row
-work counts, while a changed decoder identity, role, row set, sample payload,
-checkpoint, or record is rejected rather than collected into the same directory.
+passing and a larger one failing) together with the fixture's exact degree statistics,
+every record invariant failing on its own corrupted field, and, for the coordinator,
+that an uninterrupted serial run, a one-chunk run, a two-worker run, a run stopped by
+``max_chunks``, and a run interrupted at each of the four hook points all publish the
+same arrays, row ids, and retained-row work counts, that a completed directory drops
+any stale checkpoint or diagnostics left by a crash between publication and cleanup,
+and that a changed decoder identity, role, row set, sample payload, checkpoint, or
+record is rejected rather than collected into the same directory. What
+``collect_rows`` itself produces is checked in ``_l1_test.py``.
 """
 from __future__ import annotations
 
@@ -74,18 +76,20 @@ from pathlib import Path
 from types import MappingProxyType
 
 import numpy as np
-import pymatching
 import stim
 
 import gen
 from yoked._yoked_memory_circuits import yoked_magic_memory_circuit
-from yoked.decoders._correlations import correlation_rules_from_dem
 from yoked.decoders._graph import DecodingGraph
 from yoked.hierarchical._arrays import readonly_array
-from yoked.hierarchical._cluster_gap import ClusterGapUnionFindDecoder
-from yoked.hierarchical._matching_gaps import CHECK_PATTERNS, MatchingGaps, signed_gaps
+# The per-row L1 path: this module schedules it and gates what it produced, and
+# ``_whole`` is the package's whole-number check, which lives beside the work counters
+# it validates. Nothing here may be imported the other way round; ``_l1.py`` is part of
+# the decoder identity and must not depend on sampling, gating, or the coordinator.
+from yoked.hierarchical._l1 import WORK_FIELDS, CollectionWork, L1Context, collect_rows, _whole
+from yoked.hierarchical._matching_gaps import signed_gaps
 from yoked.hierarchical._outer_decoder import exact_outer_map_batch, frame_adjusted_syndrome
-from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraph, PatchGraphs
+from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraphs
 from yoked.hierarchical._provenance import (
     AUDIT_SOURCES, CHECK_PACKAGES, CHECK_SOURCES, DECODER_PACKAGES, DECODER_SOURCES,
     MODEL_PACKAGES, RECORD_CONVENTIONS, REPOSITORY_ROOT, SAMPLE_CONVENTIONS, SAMPLING_PACKAGES,
@@ -139,10 +143,6 @@ different model under the same parameters."""
 SUPPORTED_STYLES = ('cz', 'css')
 """The two circuit styles ``yoked_magic_memory_circuit`` accepts."""
 
-FORCED_CALLS_PER_DECODE = len(CHECK_PATTERNS)
-"""Forced decodes per patch and variant. A matching count means one decoded syndrome,
-so the four-row ``decode_batch`` behind ``forced_weights`` contributes four."""
-
 EDGE_WEIGHT_TOLERANCE = 1e-9
 """Absolute nats, ``rtol=0``, for comparing a rebuilt edge weight with the joint graph's
 (spec section 10, test 1). Both sides are the same ``log1p(-p) - log(p)`` evaluated by
@@ -181,15 +181,6 @@ COLLECTED_VALUE_FIELDS = ('cluster_gap', 'dijkstra_states', 'forced_plain', 'for
 
 # --- shared value checks -----------------------------------------------------
 
-def _whole(value, name: str, *, minimum: int) -> int:
-    """A Python int from a whole, in-range value; ``True`` is a flag, not a count."""
-    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
-        raise ValueError(f'{name} must be an integer, got {value!r}')
-    if value < minimum:
-        raise ValueError(f'{name} must be at least {minimum}, got {value}')
-    return int(value)
-
-
 def _require_keys(mapping, keys, where: str) -> None:
     """Every entry a manifest must declare; a missing one is malformed, not a KeyError."""
     if not isinstance(mapping, Mapping):
@@ -206,18 +197,6 @@ def _hex_digest(value, name: str) -> str:
     return value
 
 
-def _binary(value, name: str, *, columns: int) -> np.ndarray:
-    """An (rows, columns) boolean array; 0.5 is rejected rather than cast to True."""
-    array = np.asarray(value)
-    if array.dtype.kind not in 'buif':
-        raise ValueError(f'{name} must be numeric, got dtype {array.dtype}')
-    if array.ndim != 2 or array.shape[1] != columns:
-        raise ValueError(f'{name} must have shape (shots, {columns}), got {array.shape}')
-    if array.dtype.kind != 'b' and not np.isin(array, (0, 1)).all():
-        raise ValueError(f'{name} must contain only 0 and 1')
-    return array.astype(bool, copy=False)
-
-
 def _positions(value, name: str, *, limit: int) -> np.ndarray:
     """Unique, increasing, in-range row positions, validated before any dtype narrowing."""
     array = np.asarray(value)
@@ -231,22 +210,6 @@ def _positions(value, name: str, *, limit: int) -> np.ndarray:
     if len(array) > 1 and not (np.diff(array) > 0).all():
         raise ValueError(f'{name} must be unique and increasing')
     return array.astype(np.intp)
-
-
-def _parent_rows(value, shots: int) -> np.ndarray:
-    """The parent sample row of each collected shot: whole, nonnegative, and increasing."""
-    array = np.asarray(value)
-    if array.dtype.kind not in 'iuf':
-        raise ValueError(f'rows must be an integer array of parent row ids, got dtype {array.dtype}')
-    if array.ndim != 1 or len(array) != shots:
-        raise ValueError(f'rows must have shape ({shots},), got {array.shape}')
-    if not np.isfinite(array).all() or (array.dtype.kind == 'f' and not (array == np.floor(array)).all()):
-        raise ValueError('rows must be whole numbers')
-    if (array < 0).any():
-        raise ValueError('rows must be nonnegative')
-    if shots > 1 and not (np.diff(array) > 0).all():
-        raise ValueError('rows must be unique and increasing')
-    return array.astype(np.int64)
 
 
 # --- circuit parameters ------------------------------------------------------
@@ -674,200 +637,6 @@ class SampleSet:
                    identities=identities,
                    source={'kind': 'imported', 'directory': str(directory),
                            'manifest_sha256': sha256_file(directory / RECORDED_MANIFEST)})
-
-
-# --- the per-process decoders ------------------------------------------------
-
-class L1Context:
-    """The decoders one process reuses across every chunk it collects.
-
-    Attributes: ``dem`` the joint model; ``patches`` its ``PatchGraphs`` split;
-    ``decoders`` one ``ClusterGapUnionFindDecoder`` per patch; ``matchers`` one
-    ``MatchingGaps`` per patch; ``joint`` the joint PyMatching matcher, used only for
-    the validation decode that ``check_record`` compares against.
-
-    Building one costs a model parse, the split, the correlation-rule compilation, and
-    the joint matcher, which is why a worker builds it once per process rather than once
-    per chunk. It deliberately does not run ``check_graphs``: that is a prerequisite the
-    coordinator runs once per distinct model before any worker starts.
-    """
-
-    def __init__(self, dem: stim.DetectorErrorModel, num_patches: int):
-        self.dem = dem
-        self.patches = PatchGraphs.from_yoked_dem(dem, num_patches=num_patches)
-        self.decoders = tuple(ClusterGapUnionFindDecoder(patch.graph) for patch in self.patches)
-        self.matchers = tuple(
-            MatchingGaps(patch, correlation_rules_from_dem(patch.graph, patch.local_dem))
-            for patch in self.patches)
-        self.joint = pymatching.Matching.from_detector_error_model(dem)
-
-    @classmethod
-    def from_dem_text(cls, text: str, num_patches: int) -> L1Context:
-        """Build a context from the sample's saved model text."""
-        return cls(stim.DetectorErrorModel(text), num_patches)
-
-    @property
-    def num_patches(self) -> int:
-        return len(self.patches)
-
-
-# --- collection --------------------------------------------------------------
-
-@dataclass(frozen=True)
-class CollectionWork:
-    """Decoder work that actually ran while collecting a set of rows.
-
-    Every field is a whole nonnegative count over the rows collected. Setup (building an
-    ``L1Context``) and retries are recorded by the collection stage, not here.
-
-    - ``rows``: parent rows collected.
-    - ``uf_decodes``: syndromes decoded by the cluster-gap UF decoder (calls).
-    - ``dijkstra_searches``: shortest-odd-walk searches run (calls), two per UF decode.
-    - ``dijkstra_states``: states settled by those searches (states), the soft-output
-      cost proxy.
-    - ``unforced_plain_calls``: unforced first-pass matchings on the check-free graph (calls).
-    - ``plain_forced_calls``: forced matchings under the plain weights (calls); a
-      four-row ``decode_batch`` counts as four decoded syndromes.
-    - ``reweight_attempts``: attempts to apply the correlation rules (calls), one per
-      patch and row whether or not a rule fired.
-    - ``correlated_forced_calls``: forced matchings under reweighted weights (calls),
-      run only for the patches where a rule fired.
-    - ``correlated_validation_calls``: unforced second-pass matchings under reweighted
-      weights (calls), same condition.
-    - ``joint_decodes``: joint PyMatching validation decodes on the full model (calls).
-    """
-    rows: int
-    uf_decodes: int
-    dijkstra_searches: int
-    dijkstra_states: int
-    unforced_plain_calls: int
-    plain_forced_calls: int
-    reweight_attempts: int
-    correlated_forced_calls: int
-    correlated_validation_calls: int
-    joint_decodes: int
-
-    def __post_init__(self) -> None:
-        for field in dataclasses.fields(self):
-            object.__setattr__(self, field.name, _whole(getattr(self, field.name), field.name, minimum=0))
-
-    def __add__(self, other) -> CollectionWork:
-        """Totals of two chunks, so a parallel collection sums what its workers reported."""
-        if not isinstance(other, CollectionWork):
-            return NotImplemented
-        return CollectionWork(**{name: getattr(self, name) + getattr(other, name) for name in WORK_FIELDS})
-
-    def to_json(self) -> dict:
-        return {name: getattr(self, name) for name in WORK_FIELDS}
-
-
-WORK_FIELDS = tuple(field.name for field in dataclasses.fields(CollectionWork))
-"""The work counters in declaration order."""
-
-
-@dataclass(frozen=True)
-class CollectedRows:
-    """What one ``collect_rows`` call produced: the checked ``record`` and its ``work``."""
-    record: L1Record
-    work: CollectionWork
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.record, L1Record):
-            raise TypeError(f'record must be an L1Record, got {type(self.record).__name__}')
-        if not isinstance(self.work, CollectionWork):
-            raise TypeError(f'work must be a CollectionWork, got {type(self.work).__name__}')
-
-
-def _validate_correction(patch: PatchGraph, result, syndrome: np.ndarray, *, row: int, index: int) -> None:
-    """Check ``H c = s`` and ``L c = r`` for one patch's UF correction.
-
-    The graph's endpoints give every boundary edge its own terminal beyond the real
-    detectors, so flipping both endpoints of each selected edge and then reading back
-    only the detector entries is exactly ``H c``.
-    """
-    graph = patch.graph
-    parity = np.zeros(len(graph.adjacency), dtype=bool)
-    mask = 0
-    for edge_id in result.selected_edges:
-        u, v = graph.endpoints[edge_id]
-        parity[u] ^= True
-        parity[v] ^= True
-        mask ^= graph.edges[edge_id][3]
-    if not np.array_equal(parity[:graph.num_detectors], syndrome):
-        raise ValueError(f'row {row}, patch {index}: the UF correction does not reproduce its syndrome')
-    predicted = np.array([(mask >> k) & 1 for k in range(graph.num_observables)], dtype=bool)
-    if not np.array_equal(predicted, result.prediction):
-        raise ValueError(f'row {row}, patch {index}: the UF correction flips {predicted.tolist()}, '
-                         f'its reference bits are {result.prediction.tolist()}')
-
-
-def collect_rows(context: L1Context, detectors, actual, rows) -> CollectedRows:
-    """Run L1 on a chunk of parent rows and return its record and the work that ran.
-
-    ``detectors`` (k, n_d) and ``actual`` (k, 2P) are the unpacked bits of the parent
-    rows named by ``rows``, which must be whole, nonnegative, and increasing. The patch
-    decoders never see the yoke bits: they enter the record as the ``yoke`` column and
-    are read again only by ``check_record``.
-    """
-    patches = context.patches
-    detectors = _binary(detectors, 'detectors', columns=patches.num_detectors)
-    actual = _binary(actual, 'actual', columns=patches.num_observables)
-    if len(actual) != len(detectors):
-        raise ValueError(f'detectors holds {len(detectors)} rows and actual {len(actual)}')
-    rows = _parent_rows(rows, len(detectors))
-    shots, num_patches = len(rows), len(patches)
-    columns = NUM_SECTORS * num_patches
-
-    uf_reference = np.zeros((shots, columns), dtype=bool)
-    mwpm_reference = np.zeros((shots, columns), dtype=bool)
-    correlated_prediction = np.zeros((shots, columns), dtype=bool)
-    cluster_gap = np.zeros((shots, columns), dtype=np.float64)
-    settled_states = np.zeros((shots, columns), dtype=np.int64)
-    forced_plain = np.zeros((shots, num_patches, NUM_SECTORS, NUM_SECTORS), dtype=np.float64)
-    forced_correlated = np.zeros_like(forced_plain)
-    reweighted_patches = np.zeros((shots, num_patches), dtype=bool)
-
-    # Gathered once per patch so the per-row loop only indexes: each patch reads its own
-    # detector ids out of the chunk.
-    local = [patch.local_syndromes(detectors) for patch in patches]
-    joint_mwpm = np.asarray(context.joint.decode_batch(detectors.astype(np.uint8))).astype(bool)
-
-    counts = dict.fromkeys(WORK_FIELDS, 0)
-    counts['rows'] = shots
-    counts['joint_decodes'] = shots   # decode_batch decodes one syndrome per row
-    for position in range(shots):
-        row = int(rows[position])
-        for index, patch in enumerate(patches):
-            syndrome = local[index][position]
-            result = context.decoders[index].decode_with_gaps(syndrome)
-            _validate_correction(patch, result, syndrome, row=row, index=index)
-            forced = context.matchers[index].forced_weights(syndrome)
-            sectors = slice(NUM_SECTORS * index, NUM_SECTORS * (index + 1))
-            uf_reference[position, sectors] = result.prediction
-            cluster_gap[position, sectors] = result.cluster_gap
-            settled_states[position, sectors] = result.dijkstra_states
-            mwpm_reference[position, sectors] = forced.first_pass
-            correlated_prediction[position, sectors] = forced.correlated_prediction
-            forced_plain[position, index] = forced.plain
-            forced_correlated[position, index] = forced.correlated
-            reweighted_patches[position, index] = forced.rules_fired
-            counts['uf_decodes'] += 1
-            counts['dijkstra_searches'] += len(result.dijkstra_states)
-            counts['dijkstra_states'] += int(result.dijkstra_states.sum())
-            counts['unforced_plain_calls'] += 1
-            counts['plain_forced_calls'] += FORCED_CALLS_PER_DECODE
-            counts['reweight_attempts'] += 1
-            if forced.rules_fired:
-                counts['correlated_forced_calls'] += FORCED_CALLS_PER_DECODE
-                counts['correlated_validation_calls'] += 1
-
-    record = L1Record(
-        actual=actual, yoke=detectors[:, list(patches.yoke_detector_ids)], uf_reference=uf_reference,
-        mwpm_reference=mwpm_reference, correlated_prediction=correlated_prediction,
-        joint_mwpm=joint_mwpm, cluster_gap=cluster_gap, dijkstra_states=settled_states,
-        forced_plain=forced_plain, forced_correlated=forced_correlated,
-        reweighted_patches=reweighted_patches, rows=rows)
-    return CollectedRows(record, CollectionWork(**counts))
 
 
 # --- graph checks ------------------------------------------------------------
@@ -1906,11 +1675,18 @@ def _completed(out_dir: Path, *, sample: SampleSet, settings: CollectionSettings
     the stored row ids, and the recomputed collection identity. When only the validation
     code has moved, the stored arrays are rechecked in place and the manifest
     republished with the new check identity and results.
+
+    Once the record has loaded, any checkpoint or failure diagnostics beside it are
+    removed. ``_publish`` unlinks both after writing the manifest, but a crash in that
+    window leaves files describing a collection that is now finished; a later run would
+    otherwise keep reporting a published directory as one holding pending work.
     """
     manifest_path = out_dir / RECORD_MANIFEST
     _require_same_collection(read_json(manifest_path), settings=settings, identities=identities,
                              where=str(manifest_path))
     loaded = load_record(out_dir)
+    (out_dir / CHECKPOINT_FILE).unlink(missing_ok=True)
+    (out_dir / FAILED_CHECKS_FILE).unlink(missing_ok=True)
     if loaded.manifest['checks']['identity'] == check:
         return loaded
     return _recheck(out_dir, loaded=loaded, sample=sample, check=check)
