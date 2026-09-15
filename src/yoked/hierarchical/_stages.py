@@ -2,7 +2,7 @@
 
 Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, sections 3, 6, 9, and 11.
 
-Four stages, each a function over already-verified inputs:
+Five stages, each a function over already-verified inputs:
 
   * ``stage_collect`` turns a ``CollectRequest`` into a collected record. The request
     names exactly one sample source -- a recorded four-decoder run, or the complete
@@ -11,6 +11,15 @@ Four stages, each a function over already-verified inputs:
     argument be ignored. A generated request additionally rebuilds today's circuit and
     model in memory and compares their model identity with the saved one, because a
     changed generator must not quietly hand old shots a new model.
+  * ``stage_import_baselines`` attaches a recorded four-decoder run's saved predictions
+    to a completed evaluation record as the historical baselines of section 5.3, after
+    ``_baselines.py`` has verified the run and gated it against the record. It rewrites
+    ``record.npz`` with the baseline columns and republishes the manifest last, with the
+    new record hash and a ``baselines`` block and every other field unchanged, so the
+    record's collection identity is untouched while its artifact hash is not: import
+    runs before calibration and replay on that record, and a replay made earlier is
+    refused by the summary. A repeated identical import returns without writing; a
+    differing one is refused naming the first baseline that differs.
   * ``stage_calibrate`` fits the calibrators of section 6 on a completed calibration
     record and publishes them with the exact record and manifest hashes, the five
     record identities, the fitted rows, the estimator definitions, the knot convention,
@@ -46,8 +55,10 @@ record and replay refused on a calibration record, a shared parent sample, a sha
 sampling family, and another model; invalid knots, an altered calibrator, an altered
 prediction container, a replaced record, and a missing completion manifest refused; an
 interrupted replay publication rerunning cleanly; a reused replay directory returning
-its stored results; a confirmation request refused; and a replay-source change leaving
-the collection identity untouched.
+its stored results; a confirmation request refused; a replay-source change leaving
+the collection identity untouched; and a baseline import once through the function and
+once through the command line. The import's own gates are checked beside
+``_baselines.py``.
 """
 from __future__ import annotations
 
@@ -60,6 +71,9 @@ from types import MappingProxyType
 
 import numpy as np
 
+from yoked.hierarchical._baselines import (
+    BASELINE_DECODERS, BASELINES_FIELD, attach_baselines, load_recorded_baselines,
+)
 from yoked.hierarchical._calibration import CLIP, KNOT_CONVENTION, IsotonicCalibrator
 from yoked.hierarchical._collect import (
     CIRCUIT_FILE, DEM_FILE, ROLES, SAMPLE_MANIFEST, CircuitParameters, CollectionSettings,
@@ -75,14 +89,15 @@ from yoked.hierarchical._metrics import (
 from yoked.hierarchical._outer_decoder import TIE_TOLERANCE
 from yoked.hierarchical._policies import INITIAL_ONLY, policy_from_name
 from yoked.hierarchical._provenance import (
-    CALIBRATION_PACKAGES, CALIBRATION_SOURCES, MODEL_PACKAGES, REPLAY_PACKAGES, REPLAY_SOURCES,
-    SAMPLE_CONVENTIONS, SCHEMA_VERSION, atomic_replacement, calibration_identity, canonical_json, git_commit,
-    model_identity, package_versions, read_json, replay_identity, sha256_bytes, sha256_file,
-    source_hashes, utc_now, write_json_atomic,
+    CALIBRATION_PACKAGES, CALIBRATION_SOURCES, CHECK_PACKAGES, CHECK_SOURCES, MODEL_PACKAGES,
+    REPLAY_PACKAGES, REPLAY_SOURCES, SAMPLE_CONVENTIONS, SCHEMA_VERSION, atomic_replacement,
+    calibration_identity, canonical_json, check_identity, git_commit, model_identity,
+    package_versions, read_json, replay_identity, sha256_bytes, sha256_file, source_hashes,
+    utc_now, write_json_atomic,
 )
 from yoked.hierarchical._record import (
-    COMPLETE_STATUS, IDENTITY_NAMES, RECORD_FILE, RECORD_MANIFEST, ROW_SUMMARY_FIELDS,
-    LoadedRecord, load_record,
+    COMPLETE_STATUS, IDENTITY_NAMES, RECORD_FILE, RECORD_MANIFEST, RECORD_SCHEMA,
+    ROW_SUMMARY_FIELDS, L1Record, LoadedRecord, load_record,
 )
 from yoked.hierarchical._record import _frozen, _load_arrays, _require_fields, _save_arrays
 from yoked.hierarchical._replay import (
@@ -377,6 +392,93 @@ def stage_collect(request: CollectRequest) -> LoadedRecord | None:
     settings = CollectionSettings(role=request.role, rows=rows, workers=request.workers,
                                   chunk_size=request.chunk_size, max_chunks=request.max_chunks)
     return collect_sample(sample_dir, request.out_dir, settings)
+
+
+# --- import baselines --------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _ImportHooks:
+    """Where a test may interrupt a baseline import, by raising from this callable.
+
+    ``before_manifest`` runs once the new ``record.npz`` is on disk and just before the
+    manifest is republished over it: the one window in which an interruption leaves a
+    record the manifest does not describe, which ``load_record`` then refuses. It does
+    nothing in production; ``stage_import_baselines`` defaults it to a no-op and the CLI
+    never exposes it.
+    """
+
+    before_manifest: Callable[[], None] = _no_op
+
+
+def _require_same_baselines(record: L1Record, attached: L1Record, *, where) -> None:
+    """A record that already carries baselines must carry exactly these, or say which differ.
+
+    A record holds one set of baselines: the arrays are inside ``record.npz``, whose
+    hash every downstream artifact names, so replacing them would silently invalidate
+    those artifacts. A different run belongs in a fresh collection.
+    """
+    if set(record.baselines) != set(attached.baselines):
+        raise ValueError(f'{where} already carries the baselines {sorted(record.baselines)}; this '
+                         f'import names {sorted(attached.baselines)}, and a record carries one set '
+                         f'of baselines, so import into a fresh collection instead')
+    for name, baseline in attached.baselines.items():
+        if not np.array_equal(record.baselines[name], baseline):
+            raise ValueError(f'{where} already carries the baseline {name!r} with different '
+                             f'predictions; a record carries one set of baselines, so import into '
+                             f'a fresh collection instead')
+
+
+def stage_import_baselines(record_dir, recorded_run, *, names: Iterable[str] | None = None,
+                           hooks: _ImportHooks | None = None) -> LoadedRecord:
+    """Attach a recorded run's saved predictions to a completed evaluation record.
+
+    The record is read through ``load_record`` and the run through
+    ``load_recorded_baselines``, which re-hashes its circuit, model, payload, and every
+    prediction file; ``attach_baselines`` then requires the evaluation role, the same
+    sample, yoke parity on every row, and the joint-MWPM tie rule. ``names`` selects
+    baselines from ``BASELINE_DECODERS`` and defaults to all four.
+
+    A record that already carries baselines is compared with what this import would
+    attach: identical names and arrays return the record unchanged, without writing;
+    anything else raises naming the first difference. Otherwise ``record.npz`` is
+    rewritten atomically with the baseline columns and ``manifest.json`` is republished
+    last with the new record hash and a ``baselines`` block, every other field unchanged
+    byte for byte. Returns the record re-read through ``load_record``.
+    """
+    if hooks is None:
+        hooks = _ImportHooks()
+    elif not isinstance(hooks, _ImportHooks):
+        raise TypeError(f'hooks must be an _ImportHooks, got {type(hooks).__name__}')
+    loaded = load_record(record_dir)                    # verifies every record artifact hash
+    recorded = load_recorded_baselines(recorded_run, BASELINE_DECODERS.keys() if names is None
+                                       else names)
+    attached, block = attach_baselines(loaded, recorded)
+    directory = loaded.directory
+    if loaded.record.baselines:
+        _require_same_baselines(loaded.record, attached, where=directory)
+        return loaded
+
+    _save_arrays(directory / RECORD_FILE, attached.arrays(), schema=RECORD_SCHEMA)
+    # Republished from the bytes on disk rather than from the loader's frozen view, so
+    # that every field the import does not touch is written back exactly as verified.
+    manifest = read_json(directory / RECORD_MANIFEST)
+    manifest['artifacts'] = {**manifest['artifacts'],
+                             RECORD_FILE: sha256_file(directory / RECORD_FILE)}
+    manifest[BASELINES_FIELD] = {
+        'imported_utc': utc_now(),
+        'importer': {
+            'check_identity': check_identity(sources=source_hashes(CHECK_SOURCES),
+                                             versions=package_versions(CHECK_PACKAGES)),
+            'source_sha256': source_hashes(CHECK_SOURCES),
+            'versions': package_versions(CHECK_PACKAGES),
+            'code_commit': git_commit(),
+        },
+        **block,
+    }
+    hooks.before_manifest()
+    write_json_atomic(directory / RECORD_MANIFEST, manifest)
+    return load_record(directory)
 
 
 # --- calibrate ---------------------------------------------------------------

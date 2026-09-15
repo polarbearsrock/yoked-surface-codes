@@ -13,7 +13,9 @@ artifact, an altered prediction container, a replaced record, and a missing
 completion manifest all refused; an interrupted replay publication leaving no
 manifest and rerunning cleanly; a reused replay directory returning its stored
 results without replaying again; a confirmation request refused; a change to the
-replay sources leaving the collection identity and its reuse untouched; and the report
+replay sources leaving the collection identity and its reuse untouched; the import
+stage attaching a fake recorded run's four baselines to an evaluation record once
+through ``stage_import_baselines`` and once through the command line; and the report
 renderers printing ``unavailable`` with the denominator or eligible count beside it
 whenever a number, an interval bound, or a rate is undefined.
 """
@@ -30,22 +32,26 @@ import numpy as np
 import pytest
 import stim
 
+from yoked.hierarchical._baselines import BASELINE_DECODERS, BASELINES_FIELD
+from yoked.hierarchical._baselines_test import fake_predictions, write_recorded_run_with_predictions
 from yoked.hierarchical._calibration import CLIP, KNOT_CONVENTION
 from yoked.hierarchical._collect import (
     DETECTORS_FILE, SAMPLE_MANIFEST, CircuitParameters, SampleSet, CIRCUIT_FILE, DEM_FILE,
     RECORDED_MANIFEST,
 )
+from yoked.hierarchical._l1 import L1Context
 from yoked.hierarchical._metrics import DEFAULT_SEED
 from yoked.hierarchical._provenance import (
     CALIBRATION_PACKAGES, DECODER_PACKAGES, MODEL_PACKAGES, REPLAY_SOURCES, REPOSITORY_ROOT,
     SAMPLING_PACKAGES, package_versions, read_json, sha256_file, source_hashes, write_json_atomic,
 )
-from yoked.hierarchical._record import RECORD_FILE, RECORD_MANIFEST, LoadedRecord
+from yoked.hierarchical._record import RECORD_FILE, RECORD_MANIFEST, LoadedRecord, load_record
 from yoked.hierarchical._stages import (
     REPLAY_ARRAYS_FILE, REPLAY_MANIFEST, REPLAY_RESULTS_FILE, SAMPLE_DIRECTORY, UNAVAILABLE,
     CollectRequest, _calibrator_payload_sha256, _interval, _number, _paired_rows, _rate,
     _ReplayHooks, config_directory_name,
-    load_calibrators, parse_config, stage_calibrate, stage_collect, stage_replay, stage_summarize,
+    load_calibrators, parse_config, stage_calibrate, stage_collect, stage_import_baselines,
+    stage_replay, stage_summarize,
 )
 
 DISTANCE, ROUNDS, P = 3, 12, 0.005
@@ -234,6 +240,31 @@ def test_the_command_line_runs_every_stage(tmp_path):
     assert read_json(root / 'replay' / REPLAY_MANIFEST)['status'] == 'complete'
     assert read_json(root / 'summary.manifest.json')['status'] == 'complete'
     assert 'Block failure' in (root / 'summary.md').read_text(encoding='utf-8')
+
+
+def test_the_stage_and_the_command_line_import_baselines_once_each(tmp_path):
+    sample = SampleSet.sample(PARAMETERS, seed=7, shots=CLI_SHOTS)
+    context = L1Context.from_dem_text(sample.dem_text, sample.parameters.patches)
+    run = write_recorded_run_with_predictions(sample, tmp_path / 'run',
+                                              fake_predictions(sample, context))
+    library = stage_collect(CollectRequest(out_dir=tmp_path / 'library', role='evaluation',
+                                           recorded_run=run, chunk_size=CHUNK))
+    assert library is not None and dict(library.record.baselines) == {}
+    imported = stage_import_baselines(library.directory, run)
+    assert tuple(imported.record.baselines) == tuple(BASELINE_DECODERS)
+    assert imported.manifest[BASELINES_FIELD]['names'] == tuple(BASELINE_DECODERS)
+
+    run_cli('collect', '--out', str(tmp_path / 'cli'), '--role', 'evaluation',
+            '--recorded-run', str(run), '--workers', '1', '--chunk-size', '8')
+    finished = run_cli('import-baselines', '--record', str(tmp_path / 'cli'),
+                       '--recorded-run', str(run))
+    assert f'{len(BASELINE_DECODERS)} baselines' in finished.stdout
+    loaded = load_record(tmp_path / 'cli')
+    assert tuple(loaded.record.baselines) == tuple(BASELINE_DECODERS)
+    for name in BASELINE_DECODERS:
+        np.testing.assert_array_equal(loaded.record.baselines[name], imported.record.baselines[name])
+    assert read_json(tmp_path / 'cli' / RECORD_MANIFEST)[BASELINES_FIELD]['run']['directory'] == \
+        str(run.resolve())
 
 
 def test_the_command_line_rejects_an_unusable_row_range(tmp_path):

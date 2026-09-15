@@ -291,6 +291,9 @@ sampling, gating, and scheduling belong to ``CHECK_SOURCES``."""
 CHECK_SOURCES = (
     'src/yoked/hierarchical/_outer_decoder.py',
     'src/yoked/hierarchical/_collect.py',
+    # Baseline import gates data that another run decoded and produces no L1 output, so
+    # it identifies what was verified, never what was decoded.
+    'src/yoked/hierarchical/_baselines.py',
 )
 """Validation sources, recorded as their own identity so that changed validation can
 recheck stored arrays without rerunning L1."""

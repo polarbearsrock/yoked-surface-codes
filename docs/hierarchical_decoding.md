@@ -32,7 +32,7 @@ where the final prediction is still wrong, and two configurations may only be
 compared when they share a reference, because different references define
 different eligible populations.
 
-## The four stages
+## The five stages
 
 `tools/hierarchical_experiment` is a thin argparse layer: it parses arguments,
 calls one library function, and prints a path. Every check lives in
@@ -61,6 +61,26 @@ A request names exactly one sample source: `--recorded-run`, or the complete
 `--rows` decodes every row of the call. `--role` accepts only `calibration` and
 `evaluation`; confirmation is refused, because section 3 allows it only after
 the analysis freeze and freeze verification is a later milestone.
+
+**Import baselines.** Attach the recorded run's four saved decoders to the
+evaluation record as historical baselines, after verifying them (spec section 5.3).
+
+```bash
+.venv/bin/python tools/hierarchical_experiment import-baselines --record "$OUT/evaluation" \
+    --recorded-run "$RUN"
+```
+
+The four baselines are `joint_mwpm_recorded`, `joint_uf`, `joint_correlated_mwpm`,
+and `joint_correlated_uf`, read from the run's `<stem>_predictions.npy` files;
+`--names` selects a subset. Import runs **before** calibration and replay on that
+record: it rewrites `record.npz` with the baseline columns, so the record's artifact
+hash changes while its collection identity does not, and a replay made before the
+import is refused by the summary stage. Repeating an identical import returns without
+writing; a run whose baselines differ, or a different selection of names, is refused
+naming the first difference, because a record carries one set of baselines. Only
+evaluation records accept baselines; calibration records never carry any. The
+verification the import performs is described under [Historical
+baselines](#historical-baselines).
 
 **Calibrate.** Fit one isotonic calibrator per estimator and sector on the
 calibration record, pooling the six patches of a sector into one fit.
@@ -123,8 +143,9 @@ as `unavailable` beside its counts, never as a zero.
 <collect out>/sample/       circuit.stim, model.dem, packed arrays, sample.json
 <collect out>/collection.json
 <collect out>/checkpoint.npz        only while incomplete
-<collect out>/record.npz
-<collect out>/manifest.json         completion marker, hashes, graph/record checks
+<collect out>/record.npz            plus baseline_<name> arrays after import-baselines
+<collect out>/manifest.json         completion marker, hashes, graph/record checks,
+                                    and a baselines block after import-baselines
 <calibrators>.json                  knots, verified parents and compatibility
 <replay out>/<config>/              prediction/mask/tie/work arrays, results.json
 <replay out>/replay_manifest.json    completion marker and all artifact hashes
@@ -258,6 +279,49 @@ calibrators without `payload_sha256`, are rejected explicitly. Generate new
 collection, calibration, and replay outputs in a fresh run directory using the
 saved full-call samples; do not add checksums or identity inputs to old outputs
 by hand. The saved sample format remains supported.
+
+## Historical baselines
+
+The evaluation set is the recorded four-decoder run's sample, so that run's saved
+predictions can be compared with the hierarchy on exactly the same shots (spec
+section 9). They enter the record only through `import-baselines`, and only after
+the run and the record have been verified against each other:
+
+- The run's `circuit.stim`, `model.dem`, and packed payload are re-hashed against
+  its own manifest, exactly as `collect --recorded-run` imports them, and the
+  manifest must carry the run's recorded implementation provenance (`versions`,
+  `source_sha256`, `code_commit`), which the record manifest keeps unchanged.
+- Each prediction file is loaded without pickles, must hold binary values of shape
+  `(shots, 12)`, and must reproduce the `prediction_packed_sha256` that the run's
+  `results.json` declares: the SHA-256 of the little-endian bit-packed rows.
+- The record must carry the evaluation role and the same payload, circuit, and
+  model hashes as the run. Baseline rows are mapped by the record's parent row ids.
+- Every baseline's per-sector parity must equal the sampled yoke bit on every row,
+  the rule `check_record` applies to the collector's own joint decode.
+- The recorded joint MWPM is compared with the record's recomputed `joint_mwpm`
+  column under the collector's tie rule: every disagreeing row must have equal
+  total forced cost within `COST_TOLERANCE`, so two decodes of one model differ
+  only where two optimal matchings exist. The agreement fraction, the disagreement
+  count, and the tie-explained count are recorded in the manifest.
+
+Every failure raises naming the file, field, baseline, or parent rows, and nothing
+is written. On success `record.npz` is replaced atomically and `manifest.json` is
+republished last: `artifacts.record.npz` takes the new hash, a `baselines` block
+records the run's directory, manifest and results hashes, per-baseline prediction
+hashes, the run's provenance, the importer's check identity, and the gate results,
+and every other field is unchanged byte for byte. An import interrupted between the
+two writes leaves a record the manifest does not describe, which `load_record`
+refuses; recollect the record from its saved sample in a fresh directory rather
+than editing either file.
+
+```python
+from yoked.hierarchical import load_record, load_recorded_baselines, attach_baselines
+
+recorded = load_recorded_baselines(os.environ['RUN'])          # verifies the run
+loaded = load_record(f'{out}/evaluation')
+attached, provenance = attach_baselines(loaded, recorded)     # gates, no writing
+print(sorted(attached.baselines), provenance['joint_mwpm']['agreement'])
+```
 
 ## Two kinds of work count
 
@@ -420,6 +484,7 @@ forced weights and their additivity, the per-row L1 evaluation with every stored
 column pinned to an independent recomputation from the patch's own graph, the
 PAV fit, the exact outer decoder, the
 endpoint policies, replay and its work accounting, the metrics and their paired
-bootstrap, and the stage boundaries: a full pipeline through the functions and
-once through the command line, valid resume, and each way a changed request,
-altered artifact, replaced record, or interrupted publication is refused.
+bootstrap, the baseline import against a fake recorded run with each way a run or a
+record can fail its gates, and the stage boundaries: a full pipeline through the
+functions and once through the command line, valid resume, and each way a changed
+request, altered artifact, replaced record, or interrupted publication is refused.

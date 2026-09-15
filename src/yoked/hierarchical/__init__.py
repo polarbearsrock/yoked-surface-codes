@@ -2,6 +2,9 @@
 
 See docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md.
 """
+from yoked.hierarchical._baselines import (
+    BASELINE_DECODERS, RecordedBaselines, attach_baselines, load_recorded_baselines,
+)
 from yoked.hierarchical._calibration import CLIP, IsotonicCalibrator
 from yoked.hierarchical._cluster_gap import ClusterGapResult, ClusterGapUnionFindDecoder
 from yoked.hierarchical._collect import (
@@ -26,7 +29,7 @@ from yoked.hierarchical._replay import (
 )
 from yoked.hierarchical._stages import (
     CollectRequest, config_directory_name, load_calibrators, parse_config, stage_calibrate,
-    stage_collect, stage_replay, stage_summarize,
+    stage_collect, stage_import_baselines, stage_replay, stage_summarize,
 )
 
 __all__ = [
@@ -40,11 +43,13 @@ __all__ = [
     'TIE_TOLERANCE', 'OuterDecision', 'BatchOuterDecision', 'exact_outer_map', 'exact_outer_map_batch',
     'frame_adjusted_syndrome',
     'L1Record', 'LoadedRecord', 'by_sector', 'load_record', 'to_columns',
+    'BASELINE_DECODERS', 'RecordedBaselines', 'load_recorded_baselines', 'attach_baselines',
     'NoRefinement', 'RefineAll', 'policy_from_name',
     'Estimator', 'ReplayConfig', 'ReplayResult', 'WorkCounts', 'Calibrators',
     'fit_calibrators', 'calibrated_probabilities', 'estimator_scores', 'residual_errors', 'replay',
     'Rate', 'PairedDifference', 'paired_bootstrap', 'normalized_ler',
     'summarize_result', 'compare_endpoints',
-    'CollectRequest', 'stage_collect', 'stage_calibrate', 'load_calibrators',
-    'parse_config', 'config_directory_name', 'stage_replay', 'stage_summarize',
+    'CollectRequest', 'stage_collect', 'stage_import_baselines', 'stage_calibrate',
+    'load_calibrators', 'parse_config', 'config_directory_name', 'stage_replay',
+    'stage_summarize',
 ]

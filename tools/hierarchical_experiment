@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Driver for the hierarchical L1/L2 experiment: collect, calibrate, replay, summarize.
+"""Driver for the hierarchical L1/L2 experiment: collect, import-baselines, calibrate, replay, summarize.
 
 Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, section 11.
 Usage: docs/hierarchical_decoding.md.
@@ -20,8 +20,8 @@ assert src_path.exists()
 sys.path.append(str(src_path))
 
 from yoked.hierarchical import (
-    ROLES, CircuitParameters, CollectRequest, parse_config, stage_calibrate, stage_collect,
-    stage_replay, stage_summarize,
+    BASELINE_DECODERS, ROLES, CircuitParameters, CollectRequest, parse_config, stage_calibrate,
+    stage_collect, stage_import_baselines, stage_replay, stage_summarize,
 )
 from yoked.hierarchical._metrics import DEFAULT_REPLICATES, DEFAULT_SEED
 
@@ -66,6 +66,16 @@ def build_parser() -> argparse.ArgumentParser:
     collect.add_argument('--workers', type=int, default=1)
     collect.add_argument('--chunk-size', type=int, default=64)
     collect.add_argument('--max-chunks', type=int, default=None)
+
+    import_baselines = stages.add_parser(
+        'import-baselines',
+        help="attach a recorded run's saved decoder predictions to an evaluation record")
+    import_baselines.add_argument('--record', required=True, help='evaluation record directory')
+    import_baselines.add_argument('--recorded-run', required=True,
+                                  help='directory of the recorded four-decoder run')
+    import_baselines.add_argument('--names', nargs='+', default=None,
+                                  choices=sorted(BASELINE_DECODERS),
+                                  help='baselines to import; default all four')
 
     calibrate = stages.add_parser('calibrate', help='fit calibrators on a calibration record')
     calibrate.add_argument('--record', required=True)
@@ -117,6 +127,9 @@ def main() -> None:
     args = parser.parse_args()
     if args.stage == 'collect':
         run_collect(parser, args)
+    elif args.stage == 'import-baselines':
+        record = stage_import_baselines(args.record, args.recorded_run, names=args.names)
+        print(f'{record.directory}: {len(record.record.baselines)} baselines verified and attached')
     elif args.stage == 'calibrate':
         stage_calibrate(args.record, args.out, args.estimators)
         print(f'{args.out}: calibrators fitted on {args.record}')
