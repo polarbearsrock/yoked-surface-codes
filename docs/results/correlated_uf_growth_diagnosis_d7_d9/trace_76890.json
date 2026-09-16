@@ -1,0 +1,8372 @@
+{
+  "summary": {
+    "shot": 76890,
+    "actual": 0,
+    "UF": 640,
+    "MWPM": 0,
+    "UF_cost": 54.78832775277082,
+    "MWPM_cost": 50.200688191450034,
+    "final_time": 9.196622220952506,
+    "batches": 61,
+    "logical_components": [
+      {
+        "edges": [
+          6826,
+          6861,
+          8252,
+          8273,
+          8299,
+          9731,
+          9760,
+          11166,
+          11202,
+          21408,
+          21411,
+          22824,
+          22826,
+          22829,
+          22834,
+          22852,
+          22883
+        ],
+        "vertices": [
+          1597,
+          1604,
+          1609,
+          1890,
+          1894,
+          1897,
+          2189,
+          2477,
+          4512,
+          4513,
+          4516,
+          4518,
+          4520,
+          4527,
+          4804,
+          8353,
+          8758,
+          9101
+        ],
+        "mask": 640,
+        "UF_edges": [
+          6826,
+          6861,
+          8252,
+          9731,
+          11202,
+          21411,
+          22824,
+          22826,
+          22834
+        ],
+        "MWPM_edges": [
+          8273,
+          8299,
+          9760,
+          11166,
+          21408,
+          22829,
+          22852,
+          22883
+        ],
+        "UF_cost": 30.182282639428728,
+        "MWPM_cost": 25.594643078107943
+      }
+    ],
+    "all_difference_components": [
+      {
+        "edges": [
+          6826,
+          6861,
+          8252,
+          8273,
+          8299,
+          9731,
+          9760,
+          11166,
+          11202,
+          21408,
+          21411,
+          22824,
+          22826,
+          22829,
+          22834,
+          22852,
+          22883
+        ],
+        "vertices": [
+          1597,
+          1604,
+          1609,
+          1890,
+          1894,
+          1897,
+          2189,
+          2477,
+          4512,
+          4513,
+          4516,
+          4518,
+          4520,
+          4527,
+          4804,
+          8353,
+          8758,
+          9101
+        ],
+        "mask": 640,
+        "UF_edges": [
+          6826,
+          6861,
+          8252,
+          9731,
+          11202,
+          21411,
+          22824,
+          22826,
+          22834
+        ],
+        "MWPM_edges": [
+          8273,
+          8299,
+          9760,
+          11166,
+          21408,
+          22829,
+          22852,
+          22883
+        ],
+        "UF_cost": 30.182282639428728,
+        "MWPM_cost": 25.594643078107943
+      }
+    ],
+    "blocked_MWPM_edges": [
+      {
+        "edge": 11166,
+        "endpoints": [
+          2477,
+          8758
+        ],
+        "weight": 3.390989621337702,
+        "grown": 3.3316626141256704,
+        "remaining": 0.059327007212031546,
+        "rate": 0,
+        "same_cluster": false,
+        "u": {
+          "root": 1597,
+          "size": 73,
+          "parity": 0,
+          "boundary": true,
+          "active": false,
+          "fired": [
+            1485,
+            1597,
+            1609,
+            1773,
+            1890,
+            1897,
+            2189,
+            2192,
+            2477,
+            4513,
+            4516,
+            4518,
+            4520,
+            4804
+          ],
+          "yokes": [
+            8353
+          ]
+        },
+        "v": {
+          "root": 8758,
+          "size": 1,
+          "parity": 0,
+          "boundary": true,
+          "active": false,
+          "fired": [],
+          "yokes": []
+        },
+        "in_UF": false,
+        "in_MWPM": true,
+        "in_forest": false
+      }
+    ],
+    "final_yokes": [
+      {
+        "root": 4519,
+        "size": 3,
+        "parity": 0,
+        "boundary": false,
+        "active": false,
+        "fired": [
+          4515,
+          4519
+        ],
+        "yokes": [
+          8352
+        ]
+      },
+      {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      }
+    ]
+  },
+  "edges": [
+    {
+      "edge": 6826,
+      "endpoints": [
+        1597,
+        1604
+      ],
+      "weight": 3.5316367938343936,
+      "grown": 3.5316367938343936,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": true,
+      "in_MWPM": false,
+      "in_forest": true
+    },
+    {
+      "edge": 6861,
+      "endpoints": [
+        1604,
+        1609
+      ],
+      "weight": 4.132583800265864,
+      "grown": 4.132583800265864,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": true,
+      "in_MWPM": false,
+      "in_forest": true
+    },
+    {
+      "edge": 8252,
+      "endpoints": [
+        1890,
+        8353
+      ],
+      "weight": 3.5316367938343936,
+      "grown": 3.5316367938343936,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": true,
+      "in_MWPM": false,
+      "in_forest": true
+    },
+    {
+      "edge": 8273,
+      "endpoints": [
+        1597,
+        1894
+      ],
+      "weight": 4.804375740479748,
+      "grown": 4.804375740479748,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": false,
+      "in_MWPM": true,
+      "in_forest": true
+    },
+    {
+      "edge": 8299,
+      "endpoints": [
+        1609,
+        1897
+      ],
+      "weight": 3.6783032971248018,
+      "grown": 3.6783032971248018,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": false,
+      "in_MWPM": true,
+      "in_forest": true
+    },
+    {
+      "edge": 9731,
+      "endpoints": [
+        1890,
+        1897
+      ],
+      "weight": 4.5626358833524066,
+      "grown": 4.5626358833524066,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": true,
+      "in_MWPM": false,
+      "in_forest": true
+    },
+    {
+      "edge": 9760,
+      "endpoints": [
+        1894,
+        2189
+      ],
+      "weight": 4.804375740479748,
+      "grown": 4.804375740479748,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": false,
+      "in_MWPM": true,
+      "in_forest": true
+    },
+    {
+      "edge": 11166,
+      "endpoints": [
+        2477,
+        8758
+      ],
+      "weight": 3.390989621337702,
+      "grown": 3.3316626141256704,
+      "remaining": 0.059327007212031546,
+      "rate": 0,
+      "same_cluster": false,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 8758,
+        "size": 1,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [],
+        "yokes": []
+      },
+      "in_UF": false,
+      "in_MWPM": true,
+      "in_forest": false
+    },
+    {
+      "edge": 11202,
+      "endpoints": [
+        2189,
+        2477
+      ],
+      "weight": 3.7437918741326603,
+      "grown": 3.7437918741326603,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": true,
+      "in_MWPM": false,
+      "in_forest": true
+    },
+    {
+      "edge": 21408,
+      "endpoints": [
+        4527,
+        9101
+      ],
+      "weight": 0.0,
+      "grown": 0.0,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": false,
+      "in_MWPM": true,
+      "in_forest": true
+    },
+    {
+      "edge": 21411,
+      "endpoints": [
+        4516,
+        8353
+      ],
+      "weight": 0.4273184669183472,
+      "grown": 0.4273184669183472,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": true,
+      "in_MWPM": false,
+      "in_forest": true
+    },
+    {
+      "edge": 22824,
+      "endpoints": [
+        4512,
+        4518
+      ],
+      "weight": 4.5626358833524066,
+      "grown": 4.5626358833524066,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": true,
+      "in_MWPM": false,
+      "in_forest": true
+    },
+    {
+      "edge": 22826,
+      "endpoints": [
+        4512,
+        4804
+      ],
+      "weight": 4.2069336505142685,
+      "grown": 4.2069336505142685,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": true,
+      "in_MWPM": false,
+      "in_forest": true
+    },
+    {
+      "edge": 22829,
+      "endpoints": [
+        4513,
+        4518
+      ],
+      "weight": 1.436994058160106,
+      "grown": 1.436994058160106,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": false,
+      "in_MWPM": true,
+      "in_forest": true
+    },
+    {
+      "edge": 22834,
+      "endpoints": [
+        4513,
+        4520
+      ],
+      "weight": 1.483109493223988,
+      "grown": 1.483109493223988,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": true,
+      "in_MWPM": false,
+      "in_forest": true
+    },
+    {
+      "edge": 22852,
+      "endpoints": [
+        4516,
+        4804
+      ],
+      "weight": 2.9169687371734314,
+      "grown": 2.9169687371734314,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": false,
+      "in_MWPM": true,
+      "in_forest": true
+    },
+    {
+      "edge": 22883,
+      "endpoints": [
+        4520,
+        4527
+      ],
+      "weight": 4.5626358833524066,
+      "grown": 4.5626358833524066,
+      "remaining": 0.0,
+      "rate": 0,
+      "same_cluster": true,
+      "u": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "v": {
+        "root": 1597,
+        "size": 73,
+        "parity": 0,
+        "boundary": true,
+        "active": false,
+        "fired": [
+          1485,
+          1597,
+          1609,
+          1773,
+          1890,
+          1897,
+          2189,
+          2192,
+          2477,
+          4513,
+          4516,
+          4518,
+          4520,
+          4804
+        ],
+        "yokes": [
+          8353
+        ]
+      },
+      "in_UF": false,
+      "in_MWPM": true,
+      "in_forest": true
+    }
+  ],
+  "history": [
+    {
+      "time": 0.0,
+      "completed": [
+        8292,
+        21393,
+        21408,
+        21415
+      ],
+      "added_forest": [
+        8292,
+        21393,
+        21408,
+        21415
+      ],
+      "active_before": 25,
+      "active_after": 25,
+      "changes": [
+        {
+          "edge": 21408,
+          "before": {
+            "edge": 21408,
+            "endpoints": [
+              4527,
+              9101
+            ],
+            "weight": 0.0,
+            "grown": 0.0,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 4527,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 9101,
+              "size": 1,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 21408,
+            "endpoints": [
+              4527,
+              9101
+            ],
+            "weight": 0.0,
+            "grown": 0.0,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4527,
+              "size": 2,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4527,
+              "size": 2,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "added_to_forest": true
+        },
+        {
+          "edge": 22883,
+          "before": {
+            "edge": 22883,
+            "endpoints": [
+              4520,
+              4527
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 0.0,
+            "remaining": 4.5626358833524066,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4520,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4527,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22883,
+            "endpoints": [
+              4520,
+              4527
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 0.0,
+            "remaining": 4.5626358833524066,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4520,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4527,
+              "size": 2,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 0.4273184669183472,
+      "completed": [
+        21411
+      ],
+      "added_forest": [
+        21411
+      ],
+      "active_before": 25,
+      "active_after": 25,
+      "changes": [
+        {
+          "edge": 8252,
+          "before": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 0.4273184669183472,
+            "remaining": 3.1043183269160464,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1890
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 8353,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 0.4273184669183472,
+            "remaining": 3.1043183269160464,
+            "rate": 2,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1890
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 2,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 21411,
+          "before": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4516,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4516
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 8353,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 2,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 2,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": true
+        }
+      ]
+    },
+    {
+      "time": 0.5485049686058162,
+      "completed": [
+        9734
+      ],
+      "added_forest": [
+        9734
+      ],
+      "active_before": 25,
+      "active_after": 23,
+      "changes": []
+    },
+    {
+      "time": 0.7058156737319827,
+      "completed": [
+        22820
+      ],
+      "added_forest": [
+        22820
+      ],
+      "active_before": 23,
+      "active_after": 21,
+      "changes": []
+    },
+    {
+      "time": 0.7138501864330642,
+      "completed": [
+        8265
+      ],
+      "added_forest": [
+        8265
+      ],
+      "active_before": 21,
+      "active_after": 21,
+      "changes": []
+    },
+    {
+      "time": 0.718497029080053,
+      "completed": [
+        22829
+      ],
+      "added_forest": [
+        22829
+      ],
+      "active_before": 21,
+      "active_after": 19,
+      "changes": [
+        {
+          "edge": 22824,
+          "before": {
+            "edge": 22824,
+            "endpoints": [
+              4512,
+              4518
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 0.718497029080053,
+            "remaining": 3.8441388542723534,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4518,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4518
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22824,
+            "endpoints": [
+              4512,
+              4518
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 0.718497029080053,
+            "remaining": 3.8441388542723534,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                4513,
+                4518
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22829,
+          "before": {
+            "edge": 22829,
+            "endpoints": [
+              4513,
+              4518
+            ],
+            "weight": 1.436994058160106,
+            "grown": 1.436994058160106,
+            "remaining": 0.0,
+            "rate": 2,
+            "same_cluster": false,
+            "u": {
+              "root": 4513,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4518,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4518
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22829,
+            "endpoints": [
+              4513,
+              4518
+            ],
+            "weight": 1.436994058160106,
+            "grown": 1.436994058160106,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                4513,
+                4518
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                4513,
+                4518
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": true
+        },
+        {
+          "edge": 22834,
+          "before": {
+            "edge": 22834,
+            "endpoints": [
+              4513,
+              4520
+            ],
+            "weight": 1.483109493223988,
+            "grown": 1.436994058160106,
+            "remaining": 0.04611543506388216,
+            "rate": 2,
+            "same_cluster": false,
+            "u": {
+              "root": 4513,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4520,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22834,
+            "endpoints": [
+              4513,
+              4520
+            ],
+            "weight": 1.483109493223988,
+            "grown": 1.436994058160106,
+            "remaining": 0.04611543506388216,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4513,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                4513,
+                4518
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4520,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 0.7646124641439351,
+      "completed": [
+        22834
+      ],
+      "added_forest": [
+        22834
+      ],
+      "active_before": 19,
+      "active_after": 19,
+      "changes": [
+        {
+          "edge": 22824,
+          "before": {
+            "edge": 22824,
+            "endpoints": [
+              4512,
+              4518
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 0.718497029080053,
+            "remaining": 3.8441388542723534,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                4513,
+                4518
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22824,
+            "endpoints": [
+              4512,
+              4518
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 0.718497029080053,
+            "remaining": 3.8441388542723534,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 3,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22829,
+          "before": {
+            "edge": 22829,
+            "endpoints": [
+              4513,
+              4518
+            ],
+            "weight": 1.436994058160106,
+            "grown": 1.436994058160106,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                4513,
+                4518
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                4513,
+                4518
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22829,
+            "endpoints": [
+              4513,
+              4518
+            ],
+            "weight": 1.436994058160106,
+            "grown": 1.436994058160106,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 3,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 3,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22834,
+          "before": {
+            "edge": 22834,
+            "endpoints": [
+              4513,
+              4520
+            ],
+            "weight": 1.483109493223988,
+            "grown": 1.483109493223988,
+            "remaining": 0.0,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4513,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                4513,
+                4518
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4520,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22834,
+            "endpoints": [
+              4513,
+              4520
+            ],
+            "weight": 1.483109493223988,
+            "grown": 1.483109493223988,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 3,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 3,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": true
+        }
+      ]
+    },
+    {
+      "time": 0.9532500522363229,
+      "completed": [
+        7695
+      ],
+      "added_forest": [
+        7695
+      ],
+      "active_before": 19,
+      "active_after": 17,
+      "changes": [
+        {
+          "edge": 8252,
+          "before": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 1.4791816375542985,
+            "remaining": 2.052455156280095,
+            "rate": 2,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1890
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 2,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 1.4791816375542985,
+            "remaining": 2.052455156280095,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1890
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 3,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 21411,
+          "before": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 2,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 2,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 3,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 3,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22852,
+          "before": {
+            "edge": 22852,
+            "endpoints": [
+              4516,
+              4804
+            ],
+            "weight": 2.9169687371734314,
+            "grown": 1.9065001044726457,
+            "remaining": 1.0104686327007857,
+            "rate": 2,
+            "same_cluster": false,
+            "u": {
+              "root": 4516,
+              "size": 2,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4804,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4804
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22852,
+            "endpoints": [
+              4516,
+              4804
+            ],
+            "weight": 2.9169687371734314,
+            "grown": 1.9065001044726457,
+            "remaining": 1.0104686327007857,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4516,
+              "size": 3,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4804,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4804
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 1.5349243294230155,
+      "completed": [
+        8269
+      ],
+      "added_forest": [
+        8269
+      ],
+      "active_before": 17,
+      "active_after": 15,
+      "changes": []
+    },
+    {
+      "time": 1.8391516485624009,
+      "completed": [
+        8299,
+        9756
+      ],
+      "added_forest": [
+        8299,
+        9756
+      ],
+      "active_before": 15,
+      "active_after": 11,
+      "changes": [
+        {
+          "edge": 6861,
+          "before": {
+            "edge": 6861,
+            "endpoints": [
+              1604,
+              1609
+            ],
+            "weight": 4.132583800265864,
+            "grown": 1.8391516485624009,
+            "remaining": 2.293432151703463,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1604,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1609
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 6861,
+            "endpoints": [
+              1604,
+              1609
+            ],
+            "weight": 4.132583800265864,
+            "grown": 1.8391516485624009,
+            "remaining": 2.293432151703463,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 1604,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 8299,
+          "before": {
+            "edge": 8299,
+            "endpoints": [
+              1609,
+              1897
+            ],
+            "weight": 3.6783032971248018,
+            "grown": 3.6783032971248018,
+            "remaining": 0.0,
+            "rate": 2,
+            "same_cluster": false,
+            "u": {
+              "root": 1609,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1609
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1897,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 8299,
+            "endpoints": [
+              1609,
+              1897
+            ],
+            "weight": 3.6783032971248018,
+            "grown": 3.6783032971248018,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": true
+        },
+        {
+          "edge": 9731,
+          "before": {
+            "edge": 9731,
+            "endpoints": [
+              1890,
+              1897
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 3.6783032971248018,
+            "remaining": 0.8843325862276048,
+            "rate": 2,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1890
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1897,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 9731,
+            "endpoints": [
+              1890,
+              1897
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 3.6783032971248018,
+            "remaining": 0.8843325862276048,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1890
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 1.8718959370663302,
+      "completed": [
+        11202
+      ],
+      "added_forest": [
+        11202
+      ],
+      "active_before": 11,
+      "active_after": 9,
+      "changes": [
+        {
+          "edge": 9760,
+          "before": {
+            "edge": 9760,
+            "endpoints": [
+              1894,
+              2189
+            ],
+            "weight": 4.804375740479748,
+            "grown": 1.8718959370663302,
+            "remaining": 2.932479803413418,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1894,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 2189,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                2189
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 9760,
+            "endpoints": [
+              1894,
+              2189
+            ],
+            "weight": 4.804375740479748,
+            "grown": 1.8718959370663302,
+            "remaining": 2.932479803413418,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 1894,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 2189,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                2189,
+                2477
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 11166,
+          "before": {
+            "edge": 11166,
+            "endpoints": [
+              2477,
+              8758
+            ],
+            "weight": 3.390989621337702,
+            "grown": 1.8718959370663302,
+            "remaining": 1.5190936842713718,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 2477,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                2477
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 8758,
+              "size": 1,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 11166,
+            "endpoints": [
+              2477,
+              8758
+            ],
+            "weight": 3.390989621337702,
+            "grown": 1.8718959370663302,
+            "remaining": 1.5190936842713718,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 2189,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                2189,
+                2477
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 8758,
+              "size": 1,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 11202,
+          "before": {
+            "edge": 11202,
+            "endpoints": [
+              2189,
+              2477
+            ],
+            "weight": 3.7437918741326603,
+            "grown": 3.7437918741326603,
+            "remaining": 0.0,
+            "rate": 2,
+            "same_cluster": false,
+            "u": {
+              "root": 2189,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                2189
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 2477,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                2477
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 11202,
+            "endpoints": [
+              2189,
+              2477
+            ],
+            "weight": 3.7437918741326603,
+            "grown": 3.7437918741326603,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 2189,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                2189,
+                2477
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 2189,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                2189,
+                2477
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": true
+        }
+      ]
+    },
+    {
+      "time": 1.9637186849371084,
+      "completed": [
+        22852
+      ],
+      "added_forest": [
+        22852
+      ],
+      "active_before": 9,
+      "active_after": 9,
+      "changes": [
+        {
+          "edge": 8252,
+          "before": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 2.4896502702550842,
+            "remaining": 1.0419865235793093,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1890
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 3,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 2.4896502702550842,
+            "remaining": 1.0419865235793093,
+            "rate": 2,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1890
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 21411,
+          "before": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 3,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 3,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22852,
+          "before": {
+            "edge": 22852,
+            "endpoints": [
+              4516,
+              4804
+            ],
+            "weight": 2.9169687371734314,
+            "grown": 2.9169687371734314,
+            "remaining": 0.0,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4516,
+              "size": 3,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                4516
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4804,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4804
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22852,
+            "endpoints": [
+              4516,
+              4804
+            ],
+            "weight": 2.9169687371734314,
+            "grown": 2.9169687371734314,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": true
+        }
+      ]
+    },
+    {
+      "time": 2.0516023007412247,
+      "completed": [
+        9735
+      ],
+      "added_forest": [
+        9735
+      ],
+      "active_before": 9,
+      "active_after": 7,
+      "changes": [
+        {
+          "edge": 8252,
+          "before": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 2.665417501863317,
+            "remaining": 0.8662192919710767,
+            "rate": 2,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1890
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 2.665417501863317,
+            "remaining": 0.8662192919710767,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1890,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 9731,
+          "before": {
+            "edge": 9731,
+            "endpoints": [
+              1890,
+              1897
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 3.8907539493036256,
+            "remaining": 0.6718819340487809,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1890
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 9731,
+            "endpoints": [
+              1890,
+              1897
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 3.8907539493036256,
+            "remaining": 0.6718819340487809,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1890,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 2.2355996684622914,
+      "completed": [
+        7694
+      ],
+      "added_forest": [
+        7694
+      ],
+      "active_before": 7,
+      "active_after": 5,
+      "changes": [
+        {
+          "edge": 8252,
+          "before": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 2.8494148695843835,
+            "remaining": 0.68222192425001,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1890,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 2.8494148695843835,
+            "remaining": 0.68222192425001,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1890,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 21411,
+          "before": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22826,
+          "before": {
+            "edge": 22826,
+            "endpoints": [
+              4512,
+              4804
+            ],
+            "weight": 4.2069336505142685,
+            "grown": 2.2355996684622914,
+            "remaining": 1.971333982051977,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 22826,
+            "endpoints": [
+              4512,
+              4804
+            ],
+            "weight": 4.2069336505142685,
+            "grown": 2.2355996684622914,
+            "remaining": 1.971333982051977,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22852,
+          "before": {
+            "edge": 22852,
+            "endpoints": [
+              4516,
+              4804
+            ],
+            "weight": 2.9169687371734314,
+            "grown": 2.9169687371734314,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 4,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 22852,
+            "endpoints": [
+              4516,
+              4804
+            ],
+            "weight": 2.9169687371734314,
+            "grown": 2.9169687371734314,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 2.2813179416762033,
+      "completed": [
+        22888
+      ],
+      "added_forest": [
+        22888
+      ],
+      "active_before": 5,
+      "active_after": 3,
+      "changes": []
+    },
+    {
+      "time": 3.222680683637006,
+      "completed": [
+        6212
+      ],
+      "added_forest": [
+        6212
+      ],
+      "active_before": 3,
+      "active_after": 2,
+      "changes": []
+    },
+    {
+      "time": 3.4527363236111412,
+      "completed": [
+        21395
+      ],
+      "added_forest": [
+        21395
+      ],
+      "active_before": 2,
+      "active_after": 2,
+      "changes": []
+    },
+    {
+      "time": 3.5316367938343936,
+      "completed": [
+        6826
+      ],
+      "added_forest": [
+        6826
+      ],
+      "active_before": 2,
+      "active_after": 2,
+      "changes": [
+        {
+          "edge": 6826,
+          "before": {
+            "edge": 6826,
+            "endpoints": [
+              1597,
+              1604
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 3.5316367938343936,
+            "remaining": 0.0,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 1,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1604,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 6826,
+            "endpoints": [
+              1597,
+              1604
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 3.5316367938343936,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 2,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1597,
+              "size": 2,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": true
+        },
+        {
+          "edge": 6861,
+          "before": {
+            "edge": 6861,
+            "endpoints": [
+              1604,
+              1609
+            ],
+            "weight": 4.132583800265864,
+            "grown": 1.8391516485624009,
+            "remaining": 2.293432151703463,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 1604,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 6861,
+            "endpoints": [
+              1604,
+              1609
+            ],
+            "weight": 4.132583800265864,
+            "grown": 1.8391516485624009,
+            "remaining": 2.293432151703463,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 2,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 3.574293410321478,
+      "completed": [
+        22837
+      ],
+      "added_forest": [
+        22837
+      ],
+      "active_before": 2,
+      "active_after": 2,
+      "changes": []
+    },
+    {
+      "time": 3.6783032971248013,
+      "completed": [
+        21438,
+        6795,
+        8235
+      ],
+      "added_forest": [
+        6795,
+        8235,
+        21438
+      ],
+      "active_before": 2,
+      "active_after": 2,
+      "changes": []
+    },
+    {
+      "time": 3.724418732188684,
+      "completed": [
+        21425,
+        22865
+      ],
+      "added_forest": [
+        21425,
+        22865
+      ],
+      "active_before": 2,
+      "active_after": 2,
+      "changes": []
+    },
+    {
+      "time": 3.7731515517625187,
+      "completed": [
+        22835
+      ],
+      "added_forest": [
+        22835
+      ],
+      "active_before": 2,
+      "active_after": 2,
+      "changes": []
+    },
+    {
+      "time": 4.1032046014824495,
+      "completed": [
+        8274
+      ],
+      "added_forest": [
+        8274
+      ],
+      "active_before": 2,
+      "active_after": 2,
+      "changes": []
+    },
+    {
+      "time": 4.132583800265864,
+      "completed": [
+        6797,
+        21437
+      ],
+      "added_forest": [
+        6797,
+        21437
+      ],
+      "active_before": 2,
+      "active_after": 2,
+      "changes": []
+    },
+    {
+      "time": 4.178699235329746,
+      "completed": [
+        21424
+      ],
+      "added_forest": [
+        21424
+      ],
+      "active_before": 2,
+      "active_after": 2,
+      "changes": []
+    },
+    {
+      "time": 4.294890877898412,
+      "completed": [
+        22840
+      ],
+      "added_forest": [
+        22840
+      ],
+      "active_before": 2,
+      "active_after": 2,
+      "changes": []
+    },
+    {
+      "time": 4.5626358833524066,
+      "completed": [
+        8230,
+        8271,
+        22883
+      ],
+      "added_forest": [
+        8230,
+        8271,
+        22883
+      ],
+      "active_before": 2,
+      "active_after": 1,
+      "changes": [
+        {
+          "edge": 21408,
+          "before": {
+            "edge": 21408,
+            "endpoints": [
+              4527,
+              9101
+            ],
+            "weight": 0.0,
+            "grown": 0.0,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4527,
+              "size": 2,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4527,
+              "size": 2,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 21408,
+            "endpoints": [
+              4527,
+              9101
+            ],
+            "weight": 0.0,
+            "grown": 0.0,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22824,
+          "before": {
+            "edge": 22824,
+            "endpoints": [
+              4512,
+              4518
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.516520448288524,
+            "remaining": 0.04611543506388216,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22824,
+            "endpoints": [
+              4512,
+              4518
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.516520448288524,
+            "remaining": 0.04611543506388216,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22829,
+          "before": {
+            "edge": 22829,
+            "endpoints": [
+              4513,
+              4518
+            ],
+            "weight": 1.436994058160106,
+            "grown": 1.436994058160106,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22829,
+            "endpoints": [
+              4513,
+              4518
+            ],
+            "weight": 1.436994058160106,
+            "grown": 1.436994058160106,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22834,
+          "before": {
+            "edge": 22834,
+            "endpoints": [
+              4513,
+              4520
+            ],
+            "weight": 1.483109493223988,
+            "grown": 1.483109493223988,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22834,
+            "endpoints": [
+              4513,
+              4520
+            ],
+            "weight": 1.483109493223988,
+            "grown": 1.483109493223988,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22883,
+          "before": {
+            "edge": 22883,
+            "endpoints": [
+              4520,
+              4527
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.5626358833524066,
+            "remaining": 0.0,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4513,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4527,
+              "size": 2,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22883,
+            "endpoints": [
+              4520,
+              4527
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.5626358833524066,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": true
+        }
+      ]
+    },
+    {
+      "time": 4.804375740479748,
+      "completed": [
+        8273
+      ],
+      "added_forest": [
+        8273
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": [
+        {
+          "edge": 8273,
+          "before": {
+            "edge": 8273,
+            "endpoints": [
+              1597,
+              1894
+            ],
+            "weight": 4.804375740479748,
+            "grown": 4.804375740479748,
+            "remaining": 0.0,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 8,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1894,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 8273,
+            "endpoints": [
+              1597,
+              1894
+            ],
+            "weight": 4.804375740479748,
+            "grown": 4.804375740479748,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 9,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1597,
+              "size": 9,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": true
+        },
+        {
+          "edge": 9760,
+          "before": {
+            "edge": 9760,
+            "endpoints": [
+              1894,
+              2189
+            ],
+            "weight": 4.804375740479748,
+            "grown": 1.8718959370663302,
+            "remaining": 2.932479803413418,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 1894,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 2189,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                2189,
+                2477
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 9760,
+            "endpoints": [
+              1894,
+              2189
+            ],
+            "weight": 4.804375740479748,
+            "grown": 1.8718959370663302,
+            "remaining": 2.932479803413418,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 9,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 2189,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                2189,
+                2477
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 5.625379320882071,
+      "completed": [
+        6792
+      ],
+      "added_forest": [
+        6792
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 5.825068945537856,
+      "completed": [
+        6861
+      ],
+      "added_forest": [
+        6861
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": [
+        {
+          "edge": 6861,
+          "before": {
+            "edge": 6861,
+            "endpoints": [
+              1604,
+              1609
+            ],
+            "weight": 4.132583800265864,
+            "grown": 4.132583800265863,
+            "remaining": 8.881784197001252e-16,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 10,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 6861,
+            "endpoints": [
+              1604,
+              1609
+            ],
+            "weight": 4.132583800265864,
+            "grown": 4.132583800265864,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597,
+                1609,
+                1897
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1597,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597,
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": true
+        },
+        {
+          "edge": 8299,
+          "before": {
+            "edge": 8299,
+            "endpoints": [
+              1609,
+              1897
+            ],
+            "weight": 3.6783032971248018,
+            "grown": 3.6783032971248018,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 8299,
+            "endpoints": [
+              1609,
+              1897
+            ],
+            "weight": 3.6783032971248018,
+            "grown": 3.6783032971248018,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597,
+                1609,
+                1897
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1597,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597,
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 9731,
+          "before": {
+            "edge": 9731,
+            "endpoints": [
+              1890,
+              1897
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 3.8907539493036256,
+            "remaining": 0.6718819340487809,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1890,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1609,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 9731,
+            "endpoints": [
+              1890,
+              1897
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 3.8907539493036256,
+            "remaining": 0.6718819340487809,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1890,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1597,
+              "size": 12,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597,
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 6.436150368369553,
+      "completed": [
+        6758,
+        6794,
+        8263
+      ],
+      "added_forest": [
+        6758,
+        6794,
+        8263
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 6.496950879586636,
+      "completed": [
+        9731
+      ],
+      "added_forest": [
+        9731
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": [
+        {
+          "edge": 8252,
+          "before": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 2.8494148695843835,
+            "remaining": 0.68222192425001,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1890,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 2.8494148695843835,
+            "remaining": 0.68222192425001,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 17,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597,
+                1609,
+                1890,
+                1897,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 9731,
+          "before": {
+            "edge": 9731,
+            "endpoints": [
+              1890,
+              1897
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.5626358833524066,
+            "remaining": 0.0,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1890,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1890,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1597,
+              "size": 15,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597,
+                1609,
+                1897
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 9731,
+            "endpoints": [
+              1890,
+              1897
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.5626358833524066,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 17,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597,
+                1609,
+                1890,
+                1897,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 1597,
+              "size": 17,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597,
+                1609,
+                1890,
+                1897,
+                2192
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": true
+        }
+      ]
+    },
+    {
+      "time": 7.1791728038366465,
+      "completed": [
+        8252
+      ],
+      "added_forest": [
+        8252
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": [
+        {
+          "edge": 8252,
+          "before": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 3.5316367938343936,
+            "remaining": 0.0,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 17,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1597,
+                1609,
+                1890,
+                1897,
+                2192
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 3.5316367938343936,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 22,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2192,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 22,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2192,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": true
+        },
+        {
+          "edge": 21411,
+          "before": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 22,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2192,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 22,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2192,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22826,
+          "before": {
+            "edge": 22826,
+            "endpoints": [
+              4512,
+              4804
+            ],
+            "weight": 4.2069336505142685,
+            "grown": 2.2355996684622914,
+            "remaining": 1.971333982051977,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 22826,
+            "endpoints": [
+              4512,
+              4804
+            ],
+            "weight": 4.2069336505142685,
+            "grown": 2.2355996684622914,
+            "remaining": 1.971333982051977,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 1597,
+              "size": 22,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2192,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22852,
+          "before": {
+            "edge": 22852,
+            "endpoints": [
+              4516,
+              4804
+            ],
+            "weight": 2.9169687371734314,
+            "grown": 2.9169687371734314,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4516,
+              "size": 5,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                1485,
+                1773,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 22852,
+            "endpoints": [
+              4516,
+              4804
+            ],
+            "weight": 2.9169687371734314,
+            "grown": 2.9169687371734314,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 22,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2192,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 22,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2192,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 7.209940090959195,
+      "completed": [
+        6824
+      ],
+      "added_forest": [
+        6824
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 7.3566065942496035,
+      "completed": [
+        5355,
+        9675
+      ],
+      "added_forest": [
+        5355,
+        9675
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 7.368053281041421,
+      "completed": [
+        6241
+      ],
+      "added_forest": [
+        6241
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 7.664220594100257,
+      "completed": [
+        6859,
+        9739
+      ],
+      "added_forest": [
+        6859,
+        9739
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 7.736855543893165,
+      "completed": [
+        9760
+      ],
+      "added_forest": [
+        9760
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": [
+        {
+          "edge": 9760,
+          "before": {
+            "edge": 9760,
+            "endpoints": [
+              1894,
+              2189
+            ],
+            "weight": 4.804375740479748,
+            "grown": 4.804375740479747,
+            "remaining": 8.881784197001252e-16,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 28,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2192,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 2189,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                2189,
+                2477
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 9760,
+            "endpoints": [
+              1894,
+              2189
+            ],
+            "weight": 4.804375740479748,
+            "grown": 4.804375740479748,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 30,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 30,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": true
+        },
+        {
+          "edge": 11166,
+          "before": {
+            "edge": 11166,
+            "endpoints": [
+              2477,
+              8758
+            ],
+            "weight": 3.390989621337702,
+            "grown": 1.8718959370663302,
+            "remaining": 1.5190936842713718,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 2189,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                2189,
+                2477
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 8758,
+              "size": 1,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 11166,
+            "endpoints": [
+              2477,
+              8758
+            ],
+            "weight": 3.390989621337702,
+            "grown": 1.8718959370663302,
+            "remaining": 1.5190936842713718,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 30,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 8758,
+              "size": 1,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 11202,
+          "before": {
+            "edge": 11202,
+            "endpoints": [
+              2189,
+              2477
+            ],
+            "weight": 3.7437918741326603,
+            "grown": 3.7437918741326603,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 2189,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                2189,
+                2477
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 2189,
+              "size": 2,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [
+                2189,
+                2477
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 11202,
+            "endpoints": [
+              2189,
+              2477
+            ],
+            "weight": 3.7437918741326603,
+            "grown": 3.7437918741326603,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 30,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 30,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    },
+    {
+      "time": 7.781507898607251,
+      "completed": [
+        8311,
+        9751
+      ],
+      "added_forest": [
+        8311,
+        9751
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 7.8108870973906654,
+      "completed": [
+        8237,
+        8238
+      ],
+      "added_forest": [
+        8237
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.022890947529682,
+      "completed": [
+        7681
+      ],
+      "added_forest": [
+        7681
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.094272677186801,
+      "completed": [
+        8259
+      ],
+      "added_forest": [
+        8259
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.11850109724132,
+      "completed": [
+        6890,
+        8330
+      ],
+      "added_forest": [
+        6890,
+        8330
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.123651875970214,
+      "completed": [
+        8251,
+        9691,
+        11207
+      ],
+      "added_forest": [
+        8251,
+        9691,
+        11207
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.235788401748312,
+      "completed": [
+        8342
+      ],
+      "added_forest": [
+        8342
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.240939180477207,
+      "completed": [
+        6831,
+        8225,
+        9670,
+        6836
+      ],
+      "added_forest": [
+        6831,
+        8225
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.427474678164277,
+      "completed": [
+        8200
+      ],
+      "added_forest": [
+        8200
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.48267903760455,
+      "completed": [
+        9716
+      ],
+      "added_forest": [
+        9716
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.548553180327861,
+      "completed": [
+        8335
+      ],
+      "added_forest": [
+        8335
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.577932379111274,
+      "completed": [
+        8254
+      ],
+      "added_forest": [
+        8254
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.621876432499157,
+      "completed": [
+        24292
+      ],
+      "added_forest": [
+        24292
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.665840484834856,
+      "completed": [
+        9787
+      ],
+      "added_forest": [
+        9787
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.670609252072992,
+      "completed": [
+        9134
+      ],
+      "added_forest": [
+        9134
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.69521968361827,
+      "completed": [
+        6838,
+        8194,
+        8243
+      ],
+      "added_forest": [
+        6838,
+        8194
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.907580341962198,
+      "completed": [
+        9761,
+        9789
+      ],
+      "added_forest": [
+        9761
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 8.936959540745612,
+      "completed": [
+        8278
+      ],
+      "added_forest": [
+        8278
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 9.007984462197818,
+      "completed": [
+        11247
+      ],
+      "added_forest": [
+        11247
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 9.125271766704813,
+      "completed": [
+        8184,
+        8318
+      ],
+      "added_forest": [
+        8184,
+        8318
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 9.150506785888624,
+      "completed": [
+        22826
+      ],
+      "added_forest": [
+        22826
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": [
+        {
+          "edge": 22824,
+          "before": {
+            "edge": 22824,
+            "endpoints": [
+              4512,
+              4518
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.516520448288524,
+            "remaining": 0.04611543506388216,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22824,
+            "endpoints": [
+              4512,
+              4518
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.516520448288524,
+            "remaining": 0.04611543506388216,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 58,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22826,
+          "before": {
+            "edge": 22826,
+            "endpoints": [
+              4512,
+              4804
+            ],
+            "weight": 4.2069336505142685,
+            "grown": 4.2069336505142685,
+            "remaining": 0.0,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 4512,
+              "size": 1,
+              "parity": 0,
+              "boundary": false,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            },
+            "v": {
+              "root": 1597,
+              "size": 57,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 22826,
+            "endpoints": [
+              4512,
+              4804
+            ],
+            "weight": 4.2069336505142685,
+            "grown": 4.2069336505142685,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 58,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 58,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": true
+        }
+      ]
+    },
+    {
+      "time": 9.157016114716464,
+      "completed": [
+        6821
+      ],
+      "added_forest": [
+        6821
+      ],
+      "active_before": 1,
+      "active_after": 1,
+      "changes": []
+    },
+    {
+      "time": 9.196622220952506,
+      "completed": [
+        22824
+      ],
+      "added_forest": [
+        22824
+      ],
+      "active_before": 1,
+      "active_after": 0,
+      "changes": [
+        {
+          "edge": 6826,
+          "before": {
+            "edge": 6826,
+            "endpoints": [
+              1597,
+              1604
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 3.5316367938343936,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 6826,
+            "endpoints": [
+              1597,
+              1604
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 3.5316367938343936,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 6861,
+          "before": {
+            "edge": 6861,
+            "endpoints": [
+              1604,
+              1609
+            ],
+            "weight": 4.132583800265864,
+            "grown": 4.132583800265864,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 6861,
+            "endpoints": [
+              1604,
+              1609
+            ],
+            "weight": 4.132583800265864,
+            "grown": 4.132583800265864,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 8252,
+          "before": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 3.5316367938343936,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 8252,
+            "endpoints": [
+              1890,
+              8353
+            ],
+            "weight": 3.5316367938343936,
+            "grown": 3.5316367938343936,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 8273,
+          "before": {
+            "edge": 8273,
+            "endpoints": [
+              1597,
+              1894
+            ],
+            "weight": 4.804375740479748,
+            "grown": 4.804375740479748,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 8273,
+            "endpoints": [
+              1597,
+              1894
+            ],
+            "weight": 4.804375740479748,
+            "grown": 4.804375740479748,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 8299,
+          "before": {
+            "edge": 8299,
+            "endpoints": [
+              1609,
+              1897
+            ],
+            "weight": 3.6783032971248018,
+            "grown": 3.6783032971248018,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 8299,
+            "endpoints": [
+              1609,
+              1897
+            ],
+            "weight": 3.6783032971248018,
+            "grown": 3.6783032971248018,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 9731,
+          "before": {
+            "edge": 9731,
+            "endpoints": [
+              1890,
+              1897
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.5626358833524066,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 9731,
+            "endpoints": [
+              1890,
+              1897
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.5626358833524066,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 9760,
+          "before": {
+            "edge": 9760,
+            "endpoints": [
+              1894,
+              2189
+            ],
+            "weight": 4.804375740479748,
+            "grown": 4.804375740479748,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 9760,
+            "endpoints": [
+              1894,
+              2189
+            ],
+            "weight": 4.804375740479748,
+            "grown": 4.804375740479748,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 11166,
+          "before": {
+            "edge": 11166,
+            "endpoints": [
+              2477,
+              8758
+            ],
+            "weight": 3.390989621337702,
+            "grown": 3.3316626141256704,
+            "remaining": 0.059327007212031546,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 8758,
+              "size": 1,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 11166,
+            "endpoints": [
+              2477,
+              8758
+            ],
+            "weight": 3.390989621337702,
+            "grown": 3.3316626141256704,
+            "remaining": 0.059327007212031546,
+            "rate": 0,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 8758,
+              "size": 1,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [],
+              "yokes": []
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 11202,
+          "before": {
+            "edge": 11202,
+            "endpoints": [
+              2189,
+              2477
+            ],
+            "weight": 3.7437918741326603,
+            "grown": 3.7437918741326603,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 11202,
+            "endpoints": [
+              2189,
+              2477
+            ],
+            "weight": 3.7437918741326603,
+            "grown": 3.7437918741326603,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 21408,
+          "before": {
+            "edge": 21408,
+            "endpoints": [
+              4527,
+              9101
+            ],
+            "weight": 0.0,
+            "grown": 0.0,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 21408,
+            "endpoints": [
+              4527,
+              9101
+            ],
+            "weight": 0.0,
+            "grown": 0.0,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 21411,
+          "before": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 21411,
+            "endpoints": [
+              4516,
+              8353
+            ],
+            "weight": 0.4273184669183472,
+            "grown": 0.4273184669183472,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22824,
+          "before": {
+            "edge": 22824,
+            "endpoints": [
+              4512,
+              4518
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.5626358833524066,
+            "remaining": 0.0,
+            "rate": 1,
+            "same_cluster": false,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22824,
+            "endpoints": [
+              4512,
+              4518
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.5626358833524066,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": true
+        },
+        {
+          "edge": 22826,
+          "before": {
+            "edge": 22826,
+            "endpoints": [
+              4512,
+              4804
+            ],
+            "weight": 4.2069336505142685,
+            "grown": 4.2069336505142685,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 22826,
+            "endpoints": [
+              4512,
+              4804
+            ],
+            "weight": 4.2069336505142685,
+            "grown": 4.2069336505142685,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22829,
+          "before": {
+            "edge": 22829,
+            "endpoints": [
+              4513,
+              4518
+            ],
+            "weight": 1.436994058160106,
+            "grown": 1.436994058160106,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22829,
+            "endpoints": [
+              4513,
+              4518
+            ],
+            "weight": 1.436994058160106,
+            "grown": 1.436994058160106,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22834,
+          "before": {
+            "edge": 22834,
+            "endpoints": [
+              4513,
+              4520
+            ],
+            "weight": 1.483109493223988,
+            "grown": 1.483109493223988,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22834,
+            "endpoints": [
+              4513,
+              4520
+            ],
+            "weight": 1.483109493223988,
+            "grown": 1.483109493223988,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22852,
+          "before": {
+            "edge": 22852,
+            "endpoints": [
+              4516,
+              4804
+            ],
+            "weight": 2.9169687371734314,
+            "grown": 2.9169687371734314,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 59,
+              "parity": 1,
+              "boundary": false,
+              "active": true,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4516,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "after": {
+            "edge": 22852,
+            "endpoints": [
+              4516,
+              4804
+            ],
+            "weight": 2.9169687371734314,
+            "grown": 2.9169687371734314,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        },
+        {
+          "edge": 22883,
+          "before": {
+            "edge": 22883,
+            "endpoints": [
+              4520,
+              4527
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.5626358833524066,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            },
+            "v": {
+              "root": 4513,
+              "size": 14,
+              "parity": 1,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                4513,
+                4518,
+                4520
+              ],
+              "yokes": []
+            }
+          },
+          "after": {
+            "edge": 22883,
+            "endpoints": [
+              4520,
+              4527
+            ],
+            "weight": 4.5626358833524066,
+            "grown": 4.5626358833524066,
+            "remaining": 0.0,
+            "rate": 0,
+            "same_cluster": true,
+            "u": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            },
+            "v": {
+              "root": 1597,
+              "size": 73,
+              "parity": 0,
+              "boundary": true,
+              "active": false,
+              "fired": [
+                1485,
+                1597,
+                1609,
+                1773,
+                1890,
+                1897,
+                2189,
+                2192,
+                2477,
+                4513,
+                4516,
+                4518,
+                4520,
+                4804
+              ],
+              "yokes": [
+                8353
+              ]
+            }
+          },
+          "added_to_forest": false
+        }
+      ]
+    }
+  ],
+  "UF_selected": [
+    6212,
+    11202,
+    6826,
+    6861,
+    9731,
+    9735,
+    7694,
+    8252,
+    21411,
+    22826,
+    22824,
+    22834,
+    8269,
+    9734,
+    9756,
+    21393,
+    22820,
+    22888
+  ],
+  "MWPM_selected": [
+    6212,
+    7694,
+    22852,
+    9735,
+    8299,
+    9760,
+    8273,
+    8269,
+    9734,
+    9756,
+    11166,
+    22829,
+    22883,
+    21408,
+    21393,
+    22820,
+    22888
+  ],
+  "UF_forest": [
+    8292,
+    21393,
+    21408,
+    21415,
+    21411,
+    9734,
+    22820,
+    8265,
+    22829,
+    22834,
+    7695,
+    8269,
+    8299,
+    9756,
+    11202,
+    22852,
+    9735,
+    7694,
+    22888,
+    6212,
+    21395,
+    6826,
+    22837,
+    6795,
+    8235,
+    21438,
+    21425,
+    22865,
+    22835,
+    8274,
+    6797,
+    21437,
+    21424,
+    22840,
+    8230,
+    8271,
+    22883,
+    8273,
+    6792,
+    6861,
+    6758,
+    6794,
+    8263,
+    9731,
+    8252,
+    6824,
+    5355,
+    9675,
+    6241,
+    6859,
+    9739,
+    9760,
+    8311,
+    9751,
+    8237,
+    7681,
+    8259,
+    6890,
+    8330,
+    8251,
+    9691,
+    11207,
+    8342,
+    6831,
+    8225,
+    8200,
+    9716,
+    8335,
+    8254,
+    24292,
+    9787,
+    9134,
+    6838,
+    8194,
+    9761,
+    8278,
+    11247,
+    8184,
+    8318,
+    22826,
+    6821,
+    22824
+  ]
+}

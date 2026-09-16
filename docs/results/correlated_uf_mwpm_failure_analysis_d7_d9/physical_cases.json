@@ -1,0 +1,3534 @@
+[
+  {
+    "shot": 15986,
+    "physical_events": 400,
+    "baseline": {
+      "actual_mask": 122,
+      "CUF_mask": 2298,
+      "CMWPM_mask": 122,
+      "CUF_wrong": [
+        7,
+        11
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 2603,
+          "tick": 68,
+          "gate": "DEPOLARIZE2",
+          "target_index": 460,
+          "q0": 276,
+          "pauli0": "Y",
+          "q1": 561,
+          "pauli1": "X",
+          "measurement_index": -1,
+          "id": 96,
+          "round": 7,
+          "step_in_round": 8,
+          "channel_probability": 0.003,
+          "locations": [
+            {
+              "qubit": 276,
+              "pauli": "Y",
+              "patch": 5,
+              "global_xy": [
+                43.0,
+                4.0
+              ],
+              "local_xy": [
+                3.0,
+                4.0
+              ],
+              "role": "data"
+            },
+            {
+              "qubit": 561,
+              "pauli": "X",
+              "patch": 5,
+              "global_xy": [
+                42.5,
+                3.5
+              ],
+              "local_xy": [
+                2.5,
+                3.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 5,
+          "detectors": [
+            2277,
+            2278,
+            2283,
+            2284
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 11672,
+            "endpoints": [
+              2277,
+              2284
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 0.7138501864330642,
+            "MWPM_conditioned_weight": 0.7138501864330642,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              10233
+            ],
+            "MWPM_support": [
+              10233
+            ]
+          },
+          {
+            "edge": 10233,
+            "endpoints": [
+              2278,
+              2283
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.132583800265864,
+            "UF_conditioned_weight": 4.132583800265864,
+            "MWPM_conditioned_weight": 4.132583800265864,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 122,
+          "CUF_mask": 2298,
+          "CMWPM_mask": 122,
+          "CUF_wrong": [
+            7,
+            11
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 6498,
+          "tick": 180,
+          "gate": "DEPOLARIZE1",
+          "target_index": 178,
+          "q0": 182,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 276,
+          "round": 18,
+          "step_in_round": 10,
+          "channel_probability": 0.006,
+          "locations": [
+            {
+              "qubit": 182,
+              "pauli": "Y",
+              "patch": 3,
+              "global_xy": [
+                28.0,
+                3.0
+              ],
+              "local_xy": [
+                4.0,
+                3.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 3,
+          "detectors": [
+            5354,
+            5355,
+            5362,
+            5363
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 27061,
+            "endpoints": [
+              5354,
+              5363
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 0.7138501864330642,
+            "MWPM_conditioned_weight": 0.7138501864330642,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              25622
+            ],
+            "MWPM_support": [
+              25622
+            ]
+          },
+          {
+            "edge": 25622,
+            "endpoints": [
+              5355,
+              5362
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.132583800265864,
+            "UF_conditioned_weight": 4.132583800265864,
+            "MWPM_conditioned_weight": 4.132583800265864,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": false,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 122,
+          "CUF_mask": 2298,
+          "CMWPM_mask": 122,
+          "CUF_wrong": [
+            7,
+            11
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 122,
+      "CUF_mask": 2298,
+      "CMWPM_mask": 122,
+      "CUF_wrong": [
+        7,
+        11
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_15986",
+    "source_hashes": {
+      "physical_faults.json": "994f95cb72e2d1f5d1a164f624d29c391189c11b24f93a5afa2158c6c6f59c74",
+      "fault_responses.npz": "33ebfeaa0a90821534a8145168f76045c7334d238cb7aefed0717a0d8e52bdcc",
+      "validation.json": "4ff18762934af44f75fc4cc8438b62d9f0d3483c405d10a3850337fd8d94b34b",
+      "evidence.json": "4abf9da0ccceb3f40cc36660f94662a04f6b26e7ffe9ff895ea3b4540b5dbd89"
+    },
+    "original_validation": {
+      "shot_index": 15986,
+      "physical_fault_events": 400,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 72480,
+    "physical_events": 511,
+    "baseline": {
+      "actual_mask": 537,
+      "CUF_mask": 657,
+      "CMWPM_mask": 537,
+      "CUF_wrong": [
+        3,
+        7
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 5225,
+          "tick": 150,
+          "gate": "M",
+          "target_index": 263,
+          "q0": 563,
+          "pauli0": "readout",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": 4595,
+          "id": 272,
+          "round": 15,
+          "step_in_round": 10,
+          "channel_probability": 0.015,
+          "locations": [
+            {
+              "qubit": 563,
+              "pauli": "readout",
+              "patch": 5,
+              "global_xy": [
+                42.5,
+                5.5
+              ],
+              "local_xy": [
+                2.5,
+                5.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 5,
+          "detectors": [
+            4295,
+            4583
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 21722,
+            "endpoints": [
+              4295,
+              4583
+            ],
+            "fired": [
+              false,
+              true
+            ],
+            "original_weight": 3.6783032971248018,
+            "UF_conditioned_weight": 3.6783032971248018,
+            "MWPM_conditioned_weight": 3.6783032971248018,
+            "first_U_selects": false,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 537,
+          "CUF_mask": 657,
+          "CMWPM_mask": 537,
+          "CUF_wrong": [
+            3,
+            7
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 2252,
+          "tick": 51,
+          "gate": "DEPOLARIZE1",
+          "target_index": 166,
+          "q0": 170,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 94,
+          "round": 6,
+          "step_in_round": 1,
+          "channel_probability": 0.006,
+          "locations": [
+            {
+              "qubit": 170,
+              "pauli": "Y",
+              "patch": 3,
+              "global_xy": [
+                26.0,
+                5.0
+              ],
+              "local_xy": [
+                2.0,
+                5.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 3,
+          "detectors": [
+            1598,
+            1599,
+            1606,
+            1607
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 8277,
+            "endpoints": [
+              1598,
+              1607
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 4.5626358833524066,
+            "MWPM_conditioned_weight": 0.7138501864330642,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": [
+              6838
+            ]
+          },
+          {
+            "edge": 6838,
+            "endpoints": [
+              1599,
+              1606
+            ],
+            "fired": [
+              true,
+              false
+            ],
+            "original_weight": 4.132583800265864,
+            "UF_conditioned_weight": 0.0,
+            "MWPM_conditioned_weight": 0.0,
+            "first_U_selects": false,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              8277
+            ],
+            "MWPM_support": [
+              8277
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 537,
+          "CUF_mask": 657,
+          "CMWPM_mask": 537,
+          "CUF_wrong": [
+            3,
+            7
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 537,
+      "CUF_mask": 657,
+      "CMWPM_mask": 537,
+      "CUF_wrong": [
+        3,
+        7
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_72480",
+    "source_hashes": {
+      "physical_faults.json": "2994bf270c349f013a4bc7718d5e4f0b5f7c4c9ce124cdebe028296897888ff2",
+      "fault_responses.npz": "476fc62653afcdbe568baf36830d49ee5e96ea2e12f928bf93d7639c07555d13",
+      "validation.json": "c4b54344476bd99282987f6c9a55ae40b2494e3687a51691b4bc62fa09eaa382",
+      "evidence.json": "643a9927e7065a4c8631a7d22bbdc7073bc763b3ceac30da25a6a233bf9f3e6e"
+    },
+    "original_validation": {
+      "shot_index": 72480,
+      "physical_fault_events": 511,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 73966,
+    "physical_events": 425,
+    "baseline": {
+      "actual_mask": 1934,
+      "CUF_mask": 1454,
+      "CMWPM_mask": 1934,
+      "CUF_wrong": [
+        5,
+        9
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 6171,
+          "tick": 170,
+          "gate": "DEPOLARIZE1",
+          "target_index": 270,
+          "q0": 276,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 244,
+          "round": 17,
+          "step_in_round": 10,
+          "channel_probability": 0.006,
+          "locations": [
+            {
+              "qubit": 276,
+              "pauli": "Y",
+              "patch": 5,
+              "global_xy": [
+                43.0,
+                4.0
+              ],
+              "local_xy": [
+                3.0,
+                4.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 5,
+          "detectors": [
+            5157,
+            5158,
+            5163,
+            5164
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 26072,
+            "endpoints": [
+              5157,
+              5164
+            ],
+            "fired": [
+              false,
+              false
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 0.7138501864330642,
+            "MWPM_conditioned_weight": 0.7138501864330642,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              24633
+            ],
+            "MWPM_support": [
+              24633
+            ]
+          },
+          {
+            "edge": 24633,
+            "endpoints": [
+              5158,
+              5163
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.132583800265864,
+            "UF_conditioned_weight": 4.132583800265864,
+            "MWPM_conditioned_weight": 4.132583800265864,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 1934,
+          "CUF_mask": 1454,
+          "CMWPM_mask": 1934,
+          "CUF_wrong": [
+            5,
+            9
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 3911,
+          "tick": 108,
+          "gate": "DEPOLARIZE2",
+          "target_index": 16,
+          "q0": 13,
+          "pauli0": "Z",
+          "q1": 308,
+          "pauli1": "Y",
+          "measurement_index": -1,
+          "id": 155,
+          "round": 11,
+          "step_in_round": 8,
+          "channel_probability": 0.003,
+          "locations": [
+            {
+              "qubit": 13,
+              "pauli": "Z",
+              "patch": 0,
+              "global_xy": [
+                1.0,
+                5.0
+              ],
+              "local_xy": [
+                1.0,
+                5.0
+              ],
+              "role": "data"
+            },
+            {
+              "qubit": 308,
+              "pauli": "Y",
+              "patch": 0,
+              "global_xy": [
+                0.5,
+                4.5
+              ],
+              "local_xy": [
+                0.5,
+                4.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 0,
+          "detectors": [
+            2888,
+            3176,
+            3177,
+            3182
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 14724,
+            "endpoints": [
+              3177,
+              3182
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.132583800265863,
+            "UF_conditioned_weight": 3.5316367938343936,
+            "MWPM_conditioned_weight": 3.5316367938343936,
+            "first_U_selects": false,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              14718
+            ],
+            "MWPM_support": [
+              14718
+            ]
+          },
+          {
+            "edge": 14718,
+            "endpoints": [
+              2888,
+              3176
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 3.6783032971248013,
+            "UF_conditioned_weight": 3.6783032971248013,
+            "MWPM_conditioned_weight": 3.069848658846031,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": [
+              14724
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 1934,
+          "CUF_mask": 1454,
+          "CMWPM_mask": 1934,
+          "CUF_wrong": [
+            5,
+            9
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 1934,
+      "CUF_mask": 1454,
+      "CMWPM_mask": 1934,
+      "CUF_wrong": [
+        5,
+        9
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_73966",
+    "source_hashes": {
+      "physical_faults.json": "a01711b943a3bcee91411a95e151c250ce1d23fc60fed78e8789b01e77c46481",
+      "fault_responses.npz": "50380416ff95cfaf47bf7fe3811cc4be9263a7619279467fa90a98e089170e6f",
+      "validation.json": "e12893c1f4ec962c0342a788b334ba00186641137f82be7b9c6ba6f81e3143db",
+      "evidence.json": "3e3127ee2dd0f428114e4736e18c603007bb2db26255620d5f1815c74b86b22a"
+    },
+    "original_validation": {
+      "shot_index": 73966,
+      "physical_fault_events": 425,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 76890,
+    "physical_events": 401,
+    "baseline": {
+      "actual_mask": 3236,
+      "CUF_mask": 3116,
+      "CMWPM_mask": 3236,
+      "CUF_wrong": [
+        3,
+        7
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 2592,
+          "tick": 65,
+          "gate": "DEPOLARIZE2",
+          "target_index": 296,
+          "q0": 179,
+          "pauli0": "I",
+          "q1": 468,
+          "pauli1": "Y",
+          "measurement_index": -1,
+          "id": 90,
+          "round": 7,
+          "step_in_round": 5,
+          "channel_probability": 0.003,
+          "locations": [
+            {
+              "qubit": 179,
+              "pauli": "I",
+              "patch": 3,
+              "global_xy": [
+                28.0,
+                0.0
+              ],
+              "local_xy": [
+                4.0,
+                0.0
+              ],
+              "role": "data"
+            },
+            {
+              "qubit": 468,
+              "pauli": "Y",
+              "patch": 3,
+              "global_xy": [
+                27.5,
+                0.5
+              ],
+              "local_xy": [
+                3.5,
+                0.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 3,
+          "detectors": [
+            1890,
+            1896,
+            2184,
+            2192
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 9734,
+            "endpoints": [
+              1896,
+              2184
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 3.6783032971248013,
+            "UF_conditioned_weight": 3.6783032971248013,
+            "MWPM_conditioned_weight": 3.6783032971248013,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          },
+          {
+            "edge": 9735,
+            "endpoints": [
+              1890,
+              2192
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 6.436150368369553,
+            "UF_conditioned_weight": 4.1032046014824495,
+            "MWPM_conditioned_weight": 4.1032046014824495,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              9734
+            ],
+            "MWPM_support": [
+              9734
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 3236,
+          "CUF_mask": 3236,
+          "CMWPM_mask": 3236,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 8483,
+          "tick": 246,
+          "gate": "DEPOLARIZE1",
+          "target_index": 11,
+          "q0": 95,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 354,
+          "round": 25,
+          "step_in_round": 6,
+          "channel_probability": 0.0003,
+          "locations": [
+            {
+              "qubit": 95,
+              "pauli": "Y",
+              "patch": 1,
+              "global_xy": [
+                14.0,
+                2.0
+              ],
+              "local_xy": [
+                6.0,
+                2.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 1,
+          "detectors": [
+            6999,
+            7288,
+            7294
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 35260,
+            "endpoints": [
+              7288,
+              null
+            ],
+            "fired": [
+              true,
+              null
+            ],
+            "original_weight": 3.3909896213377015,
+            "UF_conditioned_weight": 3.3909896213377015,
+            "MWPM_conditioned_weight": 3.3909896213377015,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          },
+          {
+            "edge": 35284,
+            "endpoints": [
+              6999,
+              7294
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 5.807824124402909,
+            "UF_conditioned_weight": 3.4521377501652992,
+            "MWPM_conditioned_weight": 3.4521377501652992,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              35260
+            ],
+            "MWPM_support": [
+              35260
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 3236,
+          "CUF_mask": 3116,
+          "CMWPM_mask": 3236,
+          "CUF_wrong": [
+            3,
+            7
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 3236,
+      "CUF_mask": 3236,
+      "CMWPM_mask": 3236,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_76890",
+    "source_hashes": {
+      "physical_faults.json": "d1efafac7090967038a057e960b5762884c8eba1ad6a64b04bb26f004aa548ec",
+      "fault_responses.npz": "36b5a0b8110a1dbc0e826de17f3f9847be52a4747923f5fb5264fa25eaa0d046",
+      "validation.json": "3efe06d4d9367bbf4800561e94ab00ca85e3f91ce3ef7266dca3179d52e95c15",
+      "evidence.json": "f15a395cf41b799af73a075a58eaac609981b6048b261dfe06cc7c3694545759"
+    },
+    "original_validation": {
+      "shot_index": 76890,
+      "physical_fault_events": 401,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 964,
+    "physical_events": 422,
+    "baseline": {
+      "actual_mask": 1588,
+      "CUF_mask": 2164,
+      "CMWPM_mask": 1588,
+      "CUF_wrong": [
+        6,
+        9,
+        10,
+        11
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 641,
+          "tick": 8,
+          "gate": "DEPOLARIZE2",
+          "target_index": 458,
+          "q0": 275,
+          "pauli0": "Y",
+          "q1": 560,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 4,
+          "round": 1,
+          "step_in_round": 8,
+          "channel_probability": 0.003,
+          "locations": [
+            {
+              "qubit": 275,
+              "pauli": "Y",
+              "patch": 5,
+              "global_xy": [
+                43.0,
+                3.0
+              ],
+              "local_xy": [
+                3.0,
+                3.0
+              ],
+              "role": "data"
+            },
+            {
+              "qubit": 560,
+              "pauli": "I",
+              "patch": 5,
+              "global_xy": [
+                42.5,
+                2.5
+              ],
+              "local_xy": [
+                2.5,
+                2.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 5,
+          "detectors": [
+            548,
+            549,
+            554,
+            555
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 1566,
+            "endpoints": [
+              549,
+              554
+            ],
+            "fired": [
+              false,
+              true
+            ],
+            "original_weight": 4.132583800265864,
+            "UF_conditioned_weight": 0.0,
+            "MWPM_conditioned_weight": 0.0,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              3026
+            ],
+            "MWPM_support": [
+              3026
+            ]
+          },
+          {
+            "edge": 3026,
+            "endpoints": [
+              548,
+              555
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 4.5626358833524066,
+            "MWPM_conditioned_weight": 4.5626358833524066,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": false,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 1588,
+          "CUF_mask": 2164,
+          "CMWPM_mask": 1588,
+          "CUF_wrong": [
+            6,
+            9,
+            10,
+            11
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 939,
+          "tick": 10,
+          "gate": "DEPOLARIZE1",
+          "target_index": 281,
+          "q0": 287,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 11,
+          "round": 1,
+          "step_in_round": 10,
+          "channel_probability": 0.006,
+          "locations": [
+            {
+              "qubit": 287,
+              "pauli": "Y",
+              "patch": 5,
+              "global_xy": [
+                45.0,
+                1.0
+              ],
+              "local_xy": [
+                5.0,
+                1.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 5,
+          "detectors": [
+            560,
+            561,
+            566,
+            567
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 1638,
+            "endpoints": [
+              561,
+              566
+            ],
+            "fired": [
+              true,
+              false
+            ],
+            "original_weight": 4.132583800265864,
+            "UF_conditioned_weight": 0.0,
+            "MWPM_conditioned_weight": 0.0,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              3087
+            ],
+            "MWPM_support": [
+              3087
+            ]
+          },
+          {
+            "edge": 3087,
+            "endpoints": [
+              560,
+              567
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 4.5626358833524066,
+            "MWPM_conditioned_weight": 4.5626358833524066,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 1588,
+          "CUF_mask": 2164,
+          "CMWPM_mask": 1588,
+          "CUF_wrong": [
+            6,
+            9,
+            10,
+            11
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 1588,
+      "CUF_mask": 2164,
+      "CMWPM_mask": 1588,
+      "CUF_wrong": [
+        6,
+        9,
+        10,
+        11
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_964",
+    "source_hashes": {
+      "physical_faults.json": "57c6d26e76d3b1756bc0d0359901de33adafb9bf3b6652f396196a1d1234ecc3",
+      "fault_responses.npz": "b27dbddde36ff40ee26176e4970248ff27e7144820f74e0b1fc1b603142035c3",
+      "validation.json": "61df6c0553899c7fb1eb009385cb5975ae1971f4c057e824a5a239c37cc52ead",
+      "evidence.json": "c8d5fe1bf8ff97ee48e01cb7bc6b971bf8261e6df18ee9ee3da7149d6bee5ffd"
+    },
+    "original_validation": {
+      "shot_index": 964,
+      "physical_fault_events": 422,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 128,
+    "physical_events": 399,
+    "baseline": {
+      "actual_mask": 2150,
+      "CUF_mask": 2407,
+      "CMWPM_mask": 2150,
+      "CUF_wrong": [
+        0,
+        8
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 6503,
+          "tick": 181,
+          "gate": "DEPOLARIZE1",
+          "target_index": 219,
+          "q0": 224,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 262,
+          "round": 19,
+          "step_in_round": 1,
+          "channel_probability": 0.006,
+          "locations": [
+            {
+              "qubit": 224,
+              "pauli": "Y",
+              "patch": 4,
+              "global_xy": [
+                35.0,
+                2.0
+              ],
+              "local_xy": [
+                3.0,
+                2.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 4,
+          "detectors": [
+            5395,
+            5396,
+            5401,
+            5402
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 27260,
+            "endpoints": [
+              5395,
+              5402
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 0.7138501864330642,
+            "MWPM_conditioned_weight": 0.7138501864330642,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              25821
+            ],
+            "MWPM_support": [
+              25821
+            ]
+          },
+          {
+            "edge": 25821,
+            "endpoints": [
+              5396,
+              5401
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.132583800265864,
+            "UF_conditioned_weight": 4.132583800265864,
+            "MWPM_conditioned_weight": 4.132583800265864,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 2150,
+          "CUF_mask": 2407,
+          "CMWPM_mask": 2150,
+          "CUF_wrong": [
+            0,
+            8
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 2923,
+          "tick": 76,
+          "gate": "DEPOLARIZE2",
+          "target_index": 76,
+          "q0": 41,
+          "pauli0": "Y",
+          "q1": 342,
+          "pauli1": "Z",
+          "measurement_index": -1,
+          "id": 104,
+          "round": 8,
+          "step_in_round": 6,
+          "channel_probability": 0.003,
+          "locations": [
+            {
+              "qubit": 41,
+              "pauli": "Y",
+              "patch": 0,
+              "global_xy": [
+                5.0,
+                5.0
+              ],
+              "local_xy": [
+                5.0,
+                5.0
+              ],
+              "role": "data"
+            },
+            {
+              "qubit": 342,
+              "pauli": "Z",
+              "patch": 0,
+              "global_xy": [
+                5.5,
+                4.5
+              ],
+              "local_xy": [
+                5.5,
+                4.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 0,
+          "detectors": [
+            2052,
+            2058,
+            2341,
+            2347
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 10519,
+            "endpoints": [
+              2058,
+              2341
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 6.436150368369553,
+            "UF_conditioned_weight": 2.0756628599612172,
+            "MWPM_conditioned_weight": 2.0756628599612172,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              10555
+            ],
+            "MWPM_support": [
+              10555
+            ]
+          },
+          {
+            "edge": 10555,
+            "endpoints": [
+              2052,
+              2347
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 5.625379320882071,
+            "UF_conditioned_weight": 5.625379320882071,
+            "MWPM_conditioned_weight": 5.625379320882071,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": false,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 2150,
+          "CUF_mask": 2407,
+          "CMWPM_mask": 2150,
+          "CUF_wrong": [
+            0,
+            8
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 2150,
+      "CUF_mask": 2407,
+      "CMWPM_mask": 2150,
+      "CUF_wrong": [
+        0,
+        8
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_128",
+    "source_hashes": {
+      "physical_faults.json": "a0962f9c4d2cf00b64c3a3cdf1f4d6160394ee443c16368f9e4395f07ddbb70c",
+      "fault_responses.npz": "19ec6afbdd2e171b0f4b2a8c1c8ab2ef95bda879bb8595f9289ba71c08a2b653",
+      "validation.json": "881dd91ae0cccfa050c430bb2621ae26217bdfddd85a51f7ff54ad82020bfea4",
+      "evidence.json": "68d2a4fe8ebe382e3fd25dea7cf54816c911504dc6c0604fbb3c85a56c92430e"
+    },
+    "original_validation": {
+      "shot_index": 128,
+      "physical_fault_events": 399,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 16,
+    "physical_events": 379,
+    "baseline": {
+      "actual_mask": 3826,
+      "CUF_mask": 3666,
+      "CMWPM_mask": 3826,
+      "CUF_wrong": [
+        5,
+        7
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 8822,
+          "tick": 260,
+          "gate": "M",
+          "target_index": 267,
+          "q0": 567,
+          "pauli0": "readout",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": 7767,
+          "id": 349,
+          "round": 26,
+          "step_in_round": 10,
+          "channel_probability": 0.015,
+          "locations": [
+            {
+              "qubit": 567,
+              "pauli": "readout",
+              "patch": 5,
+              "global_xy": [
+                43.5,
+                3.5
+              ],
+              "local_xy": [
+                3.5,
+                3.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 5,
+          "detectors": [
+            7467,
+            7755
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 37591,
+            "endpoints": [
+              7467,
+              7755
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 3.6783032971248018,
+            "UF_conditioned_weight": 3.6783032971248018,
+            "MWPM_conditioned_weight": 3.6783032971248018,
+            "first_U_selects": false,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 3826,
+          "CUF_mask": 3666,
+          "CMWPM_mask": 3826,
+          "CUF_wrong": [
+            5,
+            7
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 7484,
+          "tick": 211,
+          "gate": "DEPOLARIZE1",
+          "target_index": 192,
+          "q0": 196,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 283,
+          "round": 22,
+          "step_in_round": 1,
+          "channel_probability": 0.006,
+          "locations": [
+            {
+              "qubit": 196,
+              "pauli": "Y",
+              "patch": 3,
+              "global_xy": [
+                30.0,
+                3.0
+              ],
+              "local_xy": [
+                6.0,
+                3.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 3,
+          "detectors": [
+            6232,
+            6233,
+            6238
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 29980,
+            "endpoints": [
+              6232,
+              null
+            ],
+            "fired": [
+              true,
+              null
+            ],
+            "original_weight": 3.3909896213377015,
+            "UF_conditioned_weight": 3.3909896213377015,
+            "MWPM_conditioned_weight": 3.3909896213377015,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": false,
+            "native_M_selects": true,
+            "second_U_forest": false,
+            "second_U_same_cluster": false,
+            "UF_support": [],
+            "MWPM_support": []
+          },
+          {
+            "edge": 30005,
+            "endpoints": [
+              6233,
+              6238
+            ],
+            "fired": [
+              true,
+              false
+            ],
+            "original_weight": 4.294890877898411,
+            "UF_conditioned_weight": 1.5330056265791283,
+            "MWPM_conditioned_weight": 1.5330056265791283,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": false,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              29980
+            ],
+            "MWPM_support": [
+              29980
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 3826,
+          "CUF_mask": 3826,
+          "CMWPM_mask": 3826,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 3826,
+      "CUF_mask": 3826,
+      "CMWPM_mask": 3826,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_16",
+    "source_hashes": {
+      "physical_faults.json": "18de1e79aee0019d86e33eb311e2a7f8381e4169f719a7f6538f3838fdc2ce51",
+      "fault_responses.npz": "0c941a01ded373e76e1508ec0879a1da54492616bdc542abc7a68ab7813dcbcf",
+      "validation.json": "76cfac3a5bf08c3e83f87e90e4201360d65944d5d7708871749316c201d18c97",
+      "evidence.json": "04eb110aad2662d4e7fd4e1a089bfbcaba31d5e3316d440ed11509ae537902ee"
+    },
+    "original_validation": {
+      "shot_index": 16,
+      "physical_fault_events": 379,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 44875,
+    "physical_events": 408,
+    "baseline": {
+      "actual_mask": 2925,
+      "CUF_mask": 3885,
+      "CMWPM_mask": 2925,
+      "CUF_wrong": [
+        6,
+        10
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 8144,
+          "tick": 233,
+          "gate": "DEPOLARIZE2",
+          "target_index": 472,
+          "q0": 279,
+          "pauli0": "X",
+          "q1": 572,
+          "pauli1": "X",
+          "measurement_index": -1,
+          "id": 337,
+          "round": 24,
+          "step_in_round": 3,
+          "channel_probability": 0.003,
+          "locations": [
+            {
+              "qubit": 279,
+              "pauli": "X",
+              "patch": 5,
+              "global_xy": [
+                44.0,
+                0.0
+              ],
+              "local_xy": [
+                4.0,
+                0.0
+              ],
+              "role": "data"
+            },
+            {
+              "qubit": 572,
+              "pauli": "X",
+              "patch": 5,
+              "global_xy": [
+                44.5,
+                0.5
+              ],
+              "local_xy": [
+                4.5,
+                0.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 5,
+          "detectors": [
+            6888,
+            6895,
+            7184,
+            8353
+          ],
+          "observables": [
+            11
+          ]
+        },
+        "components": [
+          {
+            "edge": 34696,
+            "endpoints": [
+              6888,
+              6895
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.294890877898411,
+            "UF_conditioned_weight": 4.294890877898411,
+            "MWPM_conditioned_weight": 4.294890877898411,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          },
+          {
+            "edge": 34728,
+            "endpoints": [
+              7184,
+              8353
+            ],
+            "fired": [
+              true,
+              false
+            ],
+            "original_weight": 3.5448709026673972,
+            "UF_conditioned_weight": 2.901824695429992,
+            "MWPM_conditioned_weight": 2.901824695429992,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              34696
+            ],
+            "MWPM_support": [
+              34696
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 877,
+          "CUF_mask": 1837,
+          "CMWPM_mask": 877,
+          "CUF_wrong": [
+            6,
+            10
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 2048,
+          "CUF_mask": 2048,
+          "CMWPM_mask": 2048,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 8787,
+          "tick": 250,
+          "gate": "DEPOLARIZE1",
+          "target_index": 132,
+          "q0": 135,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 364,
+          "round": 25,
+          "step_in_round": 10,
+          "channel_probability": 0.006,
+          "locations": [
+            {
+              "qubit": 135,
+              "pauli": "Y",
+              "patch": 2,
+              "global_xy": [
+                20.0,
+                6.0
+              ],
+              "local_xy": [
+                4.0,
+                6.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 2,
+          "detectors": [
+            7325,
+            7326,
+            7333
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 35480,
+            "endpoints": [
+              7326,
+              7333
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.294890877898411,
+            "UF_conditioned_weight": 4.294890877898411,
+            "MWPM_conditioned_weight": 4.294890877898411,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": false,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          },
+          {
+            "edge": 35406,
+            "endpoints": [
+              7325,
+              null
+            ],
+            "fired": [
+              false,
+              null
+            ],
+            "original_weight": 3.390989621337702,
+            "UF_conditioned_weight": 0.0,
+            "MWPM_conditioned_weight": 0.0,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              36883
+            ],
+            "MWPM_support": [
+              36883
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 2925,
+          "CUF_mask": 3885,
+          "CMWPM_mask": 2925,
+          "CUF_wrong": [
+            6,
+            10
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 877,
+      "CUF_mask": 1837,
+      "CMWPM_mask": 877,
+      "CUF_wrong": [
+        6,
+        10
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 2048,
+      "CUF_mask": 2048,
+      "CMWPM_mask": 2048,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_44875",
+    "source_hashes": {
+      "physical_faults.json": "ac004f61fcce8ccb57de5870cdbae1424ce247dea847753a0f9d93f665e75bdd",
+      "fault_responses.npz": "7a3c96d002a74a8aeb10ebd2f9832279b2fe8769d4ee9b45d7fb47441f00bbe5",
+      "validation.json": "8cdbce24a54b700241cc10a5243de6d676f89d096ae0ed8ab56308c1abe487e7",
+      "evidence.json": "7b3a72fa63a10b6da176253fbadf55bb1d6e2a431da83f4ca69610ee4b23c41a"
+    },
+    "original_validation": {
+      "shot_index": 44875,
+      "physical_fault_events": 408,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 609,
+    "physical_events": 419,
+    "baseline": {
+      "actual_mask": 3947,
+      "CUF_mask": 3937,
+      "CMWPM_mask": 3947,
+      "CUF_wrong": [
+        1,
+        3
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 968,
+          "tick": 18,
+          "gate": "DEPOLARIZE2",
+          "target_index": 326,
+          "q0": 195,
+          "pauli0": "Y",
+          "q1": 483,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 28,
+          "round": 2,
+          "step_in_round": 8,
+          "channel_probability": 0.003,
+          "locations": [
+            {
+              "qubit": 195,
+              "pauli": "Y",
+              "patch": 3,
+              "global_xy": [
+                30.0,
+                2.0
+              ],
+              "local_xy": [
+                6.0,
+                2.0
+              ],
+              "role": "data"
+            },
+            {
+              "qubit": 483,
+              "pauli": "I",
+              "patch": 3,
+              "global_xy": [
+                29.5,
+                1.5
+              ],
+              "local_xy": [
+                5.5,
+                1.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 3,
+          "detectors": [
+            759,
+            760,
+            766
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 2620,
+            "endpoints": [
+              760,
+              null
+            ],
+            "fired": [
+              true,
+              null
+            ],
+            "original_weight": 3.3909896213377015,
+            "UF_conditioned_weight": 0.0,
+            "MWPM_conditioned_weight": 0.0,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              4082
+            ],
+            "MWPM_support": [
+              4082
+            ]
+          },
+          {
+            "edge": 4082,
+            "endpoints": [
+              759,
+              766
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 4.5626358833524066,
+            "MWPM_conditioned_weight": 4.5626358833524066,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 3947,
+          "CUF_mask": 3937,
+          "CMWPM_mask": 3947,
+          "CUF_wrong": [
+            1,
+            3
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 954,
+          "tick": 14,
+          "gate": "DEPOLARIZE1",
+          "target_index": 155,
+          "q0": 168,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 23,
+          "round": 2,
+          "step_in_round": 4,
+          "channel_probability": 0.0003,
+          "locations": [
+            {
+              "qubit": 168,
+              "pauli": "Y",
+              "patch": 3,
+              "global_xy": [
+                26.0,
+                3.0
+              ],
+              "local_xy": [
+                2.0,
+                3.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 3,
+          "detectors": [
+            444,
+            445,
+            452,
+            741
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 2507,
+            "endpoints": [
+              444,
+              741
+            ],
+            "fired": [
+              true,
+              false
+            ],
+            "original_weight": 5.625379320882071,
+            "UF_conditioned_weight": 5.625379320882071,
+            "MWPM_conditioned_weight": 3.069848658846031,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": false,
+            "native_M_selects": true,
+            "second_U_forest": false,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": [
+              953
+            ]
+          },
+          {
+            "edge": 953,
+            "endpoints": [
+              445,
+              452
+            ],
+            "fired": [
+              true,
+              false
+            ],
+            "original_weight": 4.132583800265864,
+            "UF_conditioned_weight": 4.132583800265864,
+            "MWPM_conditioned_weight": 4.132583800265864,
+            "first_U_selects": false,
+            "first_M_selects": true,
+            "second_U_selects": false,
+            "native_M_selects": false,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 3947,
+          "CUF_mask": 3937,
+          "CMWPM_mask": 3947,
+          "CUF_wrong": [
+            1,
+            3
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 3947,
+      "CUF_mask": 3937,
+      "CMWPM_mask": 3947,
+      "CUF_wrong": [
+        1,
+        3
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_609",
+    "source_hashes": {
+      "physical_faults.json": "b2e47c7a11a07201426863ec67e2ece014e33a79ebcaa570edf51caacbc8d69c",
+      "fault_responses.npz": "9a7309179e97382ce76c03b9e4db014dd27f9e2c0d912a8cabc0701a25f9b2e9",
+      "validation.json": "842dcd001070a3615b506780f9befbc949cc1ebf5be7a35aeed6e63ba9f58133",
+      "evidence.json": "aeb56751343599cd07ab371f3152e0b28d6c04f737b26e5f37e0547893df70cb"
+    },
+    "original_validation": {
+      "shot_index": 609,
+      "physical_fault_events": 419,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 68871,
+    "physical_events": 421,
+    "baseline": {
+      "actual_mask": 142,
+      "CUF_mask": 399,
+      "CMWPM_mask": 142,
+      "CUF_wrong": [
+        0,
+        8
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 2258,
+          "tick": 53,
+          "gate": "DEPOLARIZE2",
+          "target_index": 376,
+          "q0": 223,
+          "pauli0": "X",
+          "q1": 517,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 69,
+          "round": 6,
+          "step_in_round": 3,
+          "channel_probability": 0.003,
+          "locations": [
+            {
+              "qubit": 223,
+              "pauli": "X",
+              "patch": 4,
+              "global_xy": [
+                35.0,
+                1.0
+              ],
+              "local_xy": [
+                3.0,
+                1.0
+              ],
+              "role": "data"
+            },
+            {
+              "qubit": 517,
+              "pauli": "I",
+              "patch": 4,
+              "global_xy": [
+                35.5,
+                1.5
+              ],
+              "local_xy": [
+                3.5,
+                1.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 4,
+          "detectors": [
+            1650,
+            1945
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 8533,
+            "endpoints": [
+              1650,
+              1945
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 5.625379320882071,
+            "UF_conditioned_weight": 5.625379320882071,
+            "MWPM_conditioned_weight": 5.625379320882071,
+            "first_U_selects": false,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 142,
+          "CUF_mask": 399,
+          "CMWPM_mask": 142,
+          "CUF_wrong": [
+            0,
+            8
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 1920,
+          "tick": 40,
+          "gate": "DEPOLARIZE1",
+          "target_index": 209,
+          "q0": 214,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 51,
+          "round": 4,
+          "step_in_round": 10,
+          "channel_probability": 0.006,
+          "locations": [
+            {
+              "qubit": 214,
+              "pauli": "Y",
+              "patch": 4,
+              "global_xy": [
+                33.0,
+                6.0
+              ],
+              "local_xy": [
+                1.0,
+                6.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 4,
+          "detectors": [
+            1353,
+            1359,
+            1360
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 7048,
+            "endpoints": [
+              1353,
+              1360
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 4.5626358833524066,
+            "MWPM_conditioned_weight": 4.5626358833524066,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          },
+          {
+            "edge": 5568,
+            "endpoints": [
+              1359,
+              null
+            ],
+            "fired": [
+              true,
+              null
+            ],
+            "original_weight": 3.3909896213377015,
+            "UF_conditioned_weight": 0.0,
+            "MWPM_conditioned_weight": 0.0,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              7048
+            ],
+            "MWPM_support": [
+              7048
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 142,
+          "CUF_mask": 399,
+          "CMWPM_mask": 142,
+          "CUF_wrong": [
+            0,
+            8
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 142,
+      "CUF_mask": 399,
+      "CMWPM_mask": 142,
+      "CUF_wrong": [
+        0,
+        8
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_68871",
+    "source_hashes": {
+      "physical_faults.json": "0b494007b2339066b469b44d0adcf81d1c49d7a48ff58d0c8c4527789ee7a34d",
+      "fault_responses.npz": "070ac9723748a92c4962d5658df024442c2e2b31769c90433fea79888b995c9c",
+      "validation.json": "213a11882172a2bfa6dca09b9c817aea6dfbcd0e36875ef0da817062d5aa9d9d",
+      "evidence.json": "3140bf99f9aa3eca2c374fb9edd9abc2f692064fdfcca8805df9edf5db4bf641"
+    },
+    "original_validation": {
+      "shot_index": 68871,
+      "physical_fault_events": 421,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 78,
+    "physical_events": 433,
+    "baseline": {
+      "actual_mask": 42,
+      "CUF_mask": 1082,
+      "CMWPM_mask": 42,
+      "CUF_wrong": [
+        4,
+        10
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 5219,
+          "tick": 148,
+          "gate": "DEPOLARIZE2",
+          "target_index": 222,
+          "q0": 134,
+          "pauli0": "Y",
+          "q1": 424,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 202,
+          "round": 15,
+          "step_in_round": 8,
+          "channel_probability": 0.003,
+          "locations": [
+            {
+              "qubit": 134,
+              "pauli": "Y",
+              "patch": 2,
+              "global_xy": [
+                20.0,
+                5.0
+              ],
+              "local_xy": [
+                4.0,
+                5.0
+              ],
+              "role": "data"
+            },
+            {
+              "qubit": 424,
+              "pauli": "I",
+              "patch": 2,
+              "global_xy": [
+                19.5,
+                4.5
+              ],
+              "local_xy": [
+                3.5,
+                4.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 2,
+          "detectors": [
+            4444,
+            4445,
+            4452,
+            4453
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 22513,
+            "endpoints": [
+              4444,
+              4453
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 4.5626358833524066,
+            "MWPM_conditioned_weight": 4.5626358833524066,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          },
+          {
+            "edge": 21074,
+            "endpoints": [
+              4445,
+              4452
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 4.132583800265864,
+            "UF_conditioned_weight": 0.0,
+            "MWPM_conditioned_weight": 0.0,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              22513
+            ],
+            "MWPM_support": [
+              22513
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 42,
+          "CUF_mask": 1082,
+          "CMWPM_mask": 42,
+          "CUF_wrong": [
+            4,
+            10
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 3233,
+          "tick": 81,
+          "gate": "DEPOLARIZE1",
+          "target_index": 97,
+          "q0": 99,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 116,
+          "round": 9,
+          "step_in_round": 1,
+          "channel_probability": 0.006,
+          "locations": [
+            {
+              "qubit": 99,
+              "pauli": "Y",
+              "patch": 1,
+              "global_xy": [
+                14.0,
+                6.0
+              ],
+              "local_xy": [
+                6.0,
+                6.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 1,
+          "detectors": [
+            2395,
+            2396
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 10811,
+            "endpoints": [
+              2396,
+              null
+            ],
+            "fired": [
+              true,
+              null
+            ],
+            "original_weight": 4.1201938710927015,
+            "UF_conditioned_weight": 4.1201938710927015,
+            "MWPM_conditioned_weight": 1.4009104486645316,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": [
+              10762
+            ]
+          },
+          {
+            "edge": 10762,
+            "endpoints": [
+              2395,
+              null
+            ],
+            "fired": [
+              true,
+              null
+            ],
+            "original_weight": 3.433482966389722,
+            "UF_conditioned_weight": 0.4611795975222628,
+            "MWPM_conditioned_weight": 0.4611795975222628,
+            "first_U_selects": false,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              10811
+            ],
+            "MWPM_support": [
+              10811
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 42,
+          "CUF_mask": 42,
+          "CMWPM_mask": 42,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 42,
+      "CUF_mask": 1082,
+      "CMWPM_mask": 42,
+      "CUF_wrong": [
+        4,
+        10
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_78",
+    "source_hashes": {
+      "physical_faults.json": "3f37d86ec029f17cae6baa8329f8c8b82eb0ea92e837b42dc105ff03b06e9518",
+      "fault_responses.npz": "b9c0f784fa0c1820a5fae82148d36a9b6a40218cb8877b00d025c388e707ec25",
+      "validation.json": "cdad104b17644741f47c9e7c3fdb585a3718b015177a34c9e883226bd9abb408",
+      "evidence.json": "bb9af4aacea9b5d947640a46fbdda47cd8449d24685724945fe1ef99a8a0cb17"
+    },
+    "original_validation": {
+      "shot_index": 78,
+      "physical_fault_events": 433,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 93829,
+    "physical_events": 413,
+    "baseline": {
+      "actual_mask": 3842,
+      "CUF_mask": 1826,
+      "CMWPM_mask": 3842,
+      "CUF_wrong": [
+        5,
+        11
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 6847,
+          "tick": 196,
+          "gate": "DEPOLARIZE2",
+          "target_index": 398,
+          "q0": 234,
+          "pauli0": "Y",
+          "q1": 521,
+          "pauli1": "Z",
+          "measurement_index": -1,
+          "id": 280,
+          "round": 20,
+          "step_in_round": 6,
+          "channel_probability": 0.003,
+          "locations": [
+            {
+              "qubit": 234,
+              "pauli": "Y",
+              "patch": 4,
+              "global_xy": [
+                36.0,
+                5.0
+              ],
+              "local_xy": [
+                4.0,
+                5.0
+              ],
+              "role": "data"
+            },
+            {
+              "qubit": 521,
+              "pauli": "Z",
+              "patch": 4,
+              "global_xy": [
+                35.5,
+                5.5
+              ],
+              "local_xy": [
+                3.5,
+                5.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 4,
+          "detectors": [
+            5692,
+            5693,
+            5988,
+            5989
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 28756,
+            "endpoints": [
+              5692,
+              5989
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 5.625379320882071,
+            "UF_conditioned_weight": 5.625379320882071,
+            "MWPM_conditioned_weight": 5.625379320882071,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          },
+          {
+            "edge": 28751,
+            "endpoints": [
+              5693,
+              5988
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 6.436150368369554,
+            "UF_conditioned_weight": 2.0756628599612172,
+            "MWPM_conditioned_weight": 2.0756628599612172,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              28756
+            ],
+            "MWPM_support": [
+              28756
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 3842,
+          "CUF_mask": 1826,
+          "CMWPM_mask": 3842,
+          "CUF_wrong": [
+            5,
+            11
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 4571,
+          "tick": 130,
+          "gate": "M",
+          "target_index": 130,
+          "q0": 430,
+          "pauli0": "readout",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": 3886,
+          "id": 183,
+          "round": 13,
+          "step_in_round": 10,
+          "channel_probability": 0.015,
+          "locations": [
+            {
+              "qubit": 430,
+              "pauli": "readout",
+              "patch": 2,
+              "global_xy": [
+                20.5,
+                2.5
+              ],
+              "local_xy": [
+                4.5,
+                2.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 2,
+          "detectors": [
+            3586,
+            3874
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 18180,
+            "endpoints": [
+              3586,
+              3874
+            ],
+            "fired": [
+              true,
+              true
+            ],
+            "original_weight": 3.6783032971248018,
+            "UF_conditioned_weight": 3.6783032971248018,
+            "MWPM_conditioned_weight": 3.6783032971248018,
+            "first_U_selects": false,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 3842,
+          "CUF_mask": 1826,
+          "CMWPM_mask": 3842,
+          "CUF_wrong": [
+            5,
+            11
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 3842,
+      "CUF_mask": 1826,
+      "CMWPM_mask": 3842,
+      "CUF_wrong": [
+        5,
+        11
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_93829",
+    "source_hashes": {
+      "physical_faults.json": "a6dd05d5105637818e9f5319e6a40beaa91a16d96d8ab81816e473dd3ef5d705",
+      "fault_responses.npz": "d7d6e23c4e11be1f7f6866743506745bb1d3f1e988c15ded41efb129c10180bb",
+      "validation.json": "927301eb35b30bf6be421cf935144f5415719af20ff09a344037c0afc82865aa",
+      "evidence.json": "eaeb7b8d391cb1318355cb7f66d811c248f7037c6974646cd7103da2166bb660"
+    },
+    "original_validation": {
+      "shot_index": 93829,
+      "physical_fault_events": 413,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  },
+  {
+    "shot": 991,
+    "physical_events": 463,
+    "baseline": {
+      "actual_mask": 2131,
+      "CUF_mask": 81,
+      "CMWPM_mask": 2131,
+      "CUF_wrong": [
+        1,
+        11
+      ],
+      "CMWPM_wrong": []
+    },
+    "focus": [
+      {
+        "fault": {
+          "instruction_index": 1596,
+          "tick": 31,
+          "gate": "X_ERROR",
+          "target_index": 182,
+          "q0": 482,
+          "pauli0": "X",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 57,
+          "round": 4,
+          "step_in_round": 1,
+          "channel_probability": 0.006,
+          "locations": [
+            {
+              "qubit": 482,
+              "pauli": "X",
+              "patch": 3,
+              "global_xy": [
+                29.5,
+                0.5
+              ],
+              "local_xy": [
+                5.5,
+                0.5
+              ],
+              "role": "check_ancilla"
+            }
+          ],
+          "patch": 3,
+          "detectors": [
+            1046,
+            1334
+          ],
+          "observables": []
+        },
+        "components": [
+          {
+            "edge": 5490,
+            "endpoints": [
+              1046,
+              1334
+            ],
+            "fired": [
+              true,
+              false
+            ],
+            "original_weight": 3.7437918741326603,
+            "UF_conditioned_weight": 3.7437918741326603,
+            "MWPM_conditioned_weight": 3.7437918741326603,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": []
+          }
+        ],
+        "removed": {
+          "actual_mask": 2131,
+          "CUF_mask": 81,
+          "CMWPM_mask": 2131,
+          "CUF_wrong": [
+            1,
+            11
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 0,
+          "CUF_mask": 0,
+          "CMWPM_mask": 0,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      },
+      {
+        "fault": {
+          "instruction_index": 1928,
+          "tick": 42,
+          "gate": "DEPOLARIZE1",
+          "target_index": 80,
+          "q0": 186,
+          "pauli0": "Y",
+          "q1": -1,
+          "pauli1": "I",
+          "measurement_index": -1,
+          "id": 82,
+          "round": 5,
+          "step_in_round": 2,
+          "channel_probability": 0.0003,
+          "locations": [
+            {
+              "qubit": 186,
+              "pauli": "Y",
+              "patch": 3,
+              "global_xy": [
+                29.0,
+                0.0
+              ],
+              "local_xy": [
+                5.0,
+                0.0
+              ],
+              "role": "data"
+            }
+          ],
+          "patch": 3,
+          "detectors": [
+            1327,
+            1328,
+            1334,
+            8353
+          ],
+          "observables": [
+            7
+          ]
+        },
+        "components": [
+          {
+            "edge": 6924,
+            "endpoints": [
+              1327,
+              1334
+            ],
+            "fired": [
+              true,
+              false
+            ],
+            "original_weight": 4.5626358833524066,
+            "UF_conditioned_weight": 1.483109493223988,
+            "MWPM_conditioned_weight": 1.483109493223988,
+            "first_U_selects": false,
+            "first_M_selects": false,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [
+              5448
+            ],
+            "MWPM_support": [
+              5448
+            ]
+          },
+          {
+            "edge": 5448,
+            "endpoints": [
+              1328,
+              8353
+            ],
+            "fired": [
+              true,
+              false
+            ],
+            "original_weight": 3.5448709026673972,
+            "UF_conditioned_weight": 3.5448709026673972,
+            "MWPM_conditioned_weight": 3.222680683637006,
+            "first_U_selects": true,
+            "first_M_selects": true,
+            "second_U_selects": true,
+            "native_M_selects": true,
+            "second_U_forest": true,
+            "second_U_same_cluster": true,
+            "UF_support": [],
+            "MWPM_support": [
+              5485
+            ]
+          }
+        ],
+        "removed": {
+          "actual_mask": 2259,
+          "CUF_mask": 209,
+          "CMWPM_mask": 2259,
+          "CUF_wrong": [
+            1,
+            11
+          ],
+          "CMWPM_wrong": []
+        },
+        "alone": {
+          "actual_mask": 128,
+          "CUF_mask": 128,
+          "CMWPM_mask": 128,
+          "CUF_wrong": [],
+          "CMWPM_wrong": []
+        }
+      }
+    ],
+    "both_removed": {
+      "actual_mask": 2259,
+      "CUF_mask": 209,
+      "CMWPM_mask": 2259,
+      "CUF_wrong": [
+        1,
+        11
+      ],
+      "CMWPM_wrong": []
+    },
+    "pair_alone": {
+      "actual_mask": 128,
+      "CUF_mask": 128,
+      "CMWPM_mask": 128,
+      "CUF_wrong": [],
+      "CMWPM_wrong": []
+    },
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_991",
+    "source_hashes": {
+      "physical_faults.json": "10ad2e81fc4286ad910edf668cf84c7b80f0a2bc255514d21421d3e9ca18dc84",
+      "fault_responses.npz": "8507e4a720fdb2bfdd774047797ec8e41b83fa8e60a9c6981cee5a171cd9cfb8",
+      "validation.json": "1f9a5118924f46c4f03140a17c7ddea2ed9f48aee4e978944bbe90494fb22ef2",
+      "evidence.json": "97b511d6938a80e5d1b25c07f492401021e3120af6652314f0a9d88dfb5e62f9"
+    },
+    "original_validation": {
+      "shot_index": 991,
+      "physical_fault_events": 463,
+      "aggregate_response_matches_saved_shot": true,
+      "xor_of_individual_responses_matches_saved_shot": true,
+      "noiseless_control_has_no_flips": true,
+      "forced_circuit_matches_saved_shot": true,
+      "forced_circuit_seeds": [
+        1,
+        123456
+      ],
+      "forced_shots_per_seed": 4,
+      "individual_fault_response_method": "Stim FlipSimulator with stabilizer randomization disabled; one instance per fault, plus an ideal and an all-faults instance",
+      "forced_circuit_validation_method": "Ordinary Stim detector sampler with stabilizer randomization enabled; all logged channels replaced with deterministic Pauli errors and readout flips",
+      "original_batch_replay": {}
+    }
+  }
+]

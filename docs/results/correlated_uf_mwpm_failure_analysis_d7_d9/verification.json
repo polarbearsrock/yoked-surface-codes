@@ -1,0 +1,7 @@
+{
+  "saved_and_rebuilt_predictions_checked": 269,
+  "independent_DFS_zero_cycle_certificates": 16,
+  "population_counts_and_uniform_selections_verified": true,
+  "two_reduced_circuits_replayed_with_both_decoders": true,
+  "source_hashes_verified": true
+}

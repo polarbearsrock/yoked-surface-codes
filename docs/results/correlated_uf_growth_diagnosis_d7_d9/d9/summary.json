@@ -1,0 +1,52 @@
+{
+  "distance": 9,
+  "failures": 128,
+  "controls": 128,
+  "same_weight_MWPM_repairs": 105,
+  "missing_connection_categories": {
+    "ordinary_or_yoke": 86,
+    "boundary_only": 19
+  },
+  "single_missing_boundary": 19,
+  "variants": {
+    "0.0": {
+      "failure_repairs": 0,
+      "control_regressions": 0,
+      "ordinary_peel_failure_repairs": 0,
+      "mean_added_edges": 0.0
+    },
+    "0.1": {
+      "failure_repairs": 0,
+      "control_regressions": 0,
+      "ordinary_peel_failure_repairs": 0,
+      "mean_added_edges": 0.89453125
+    },
+    "0.25": {
+      "failure_repairs": 4,
+      "control_regressions": 0,
+      "ordinary_peel_failure_repairs": 0,
+      "mean_added_edges": 6.00390625
+    },
+    "0.5": {
+      "failure_repairs": 7,
+      "control_regressions": 0,
+      "ordinary_peel_failure_repairs": 1,
+      "mean_added_edges": 23.18359375
+    },
+    "1.0": {
+      "failure_repairs": 16,
+      "control_regressions": 1,
+      "ordinary_peel_failure_repairs": 5,
+      "mean_added_edges": 41.82421875
+    },
+    "all": {
+      "failure_repairs": 31,
+      "control_regressions": 3,
+      "ordinary_peel_failure_repairs": 11,
+      "mean_added_edges": 2142.69140625
+    }
+  },
+  "original_tree_DP_failure_repairs": 0,
+  "original_tree_DP_control_regressions": 0,
+  "independent_tree_cost_checks": 24
+}

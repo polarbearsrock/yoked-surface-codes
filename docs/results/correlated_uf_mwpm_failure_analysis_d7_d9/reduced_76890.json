@@ -1,0 +1,722 @@
+{
+  "source_shot": 76890,
+  "original_events": 401,
+  "original": {
+    "actual_mask": 3236,
+    "CUF_mask": 3116,
+    "CMWPM_mask": 3236,
+    "CUF_wrong": [
+      3,
+      7
+    ],
+    "CMWPM_wrong": [],
+    "qualifies": true
+  },
+  "retained_events": 10,
+  "fault_ids": [
+    72,
+    74,
+    80,
+    90,
+    91,
+    103,
+    204,
+    208,
+    209,
+    212
+  ],
+  "faults": [
+    {
+      "instruction_index": 2258,
+      "tick": 53,
+      "gate": "DEPOLARIZE2",
+      "target_index": 78,
+      "q0": 43,
+      "pauli0": "Z",
+      "q1": 345,
+      "pauli1": "Z",
+      "measurement_index": -1,
+      "id": 72,
+      "round": 6,
+      "step_in_round": 3,
+      "channel_probability": 0.003,
+      "locations": [
+        {
+          "qubit": 43,
+          "pauli": "Z",
+          "patch": 0,
+          "global_xy": [
+            6.0,
+            0.0
+          ],
+          "local_xy": [
+            6.0,
+            0.0
+          ],
+          "role": "data"
+        },
+        {
+          "qubit": 345,
+          "pauli": "Z",
+          "patch": 0,
+          "global_xy": [
+            6.5,
+            0.5
+          ],
+          "local_xy": [
+            6.5,
+            0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 0,
+      "detectors": [
+        1478,
+        1485,
+        1773
+      ],
+      "observables": []
+    },
+    {
+      "instruction_index": 2269,
+      "tick": 56,
+      "gate": "DEPOLARIZE2",
+      "target_index": 286,
+      "q0": 169,
+      "pauli0": "Z",
+      "q1": 465,
+      "pauli1": "Z",
+      "measurement_index": -1,
+      "id": 74,
+      "round": 6,
+      "step_in_round": 6,
+      "channel_probability": 0.003,
+      "locations": [
+        {
+          "qubit": 169,
+          "pauli": "Z",
+          "patch": 3,
+          "global_xy": [
+            26.0,
+            4.0
+          ],
+          "local_xy": [
+            2.0,
+            4.0
+          ],
+          "role": "data"
+        },
+        {
+          "qubit": 465,
+          "pauli": "Z",
+          "patch": 3,
+          "global_xy": [
+            26.5,
+            3.5
+          ],
+          "local_xy": [
+            2.5,
+            3.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 3,
+      "detectors": [
+        1597,
+        1605,
+        1893,
+        1894
+      ],
+      "observables": []
+    },
+    {
+      "instruction_index": 2282,
+      "tick": 60,
+      "gate": "M",
+      "target_index": 169,
+      "q0": 469,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 1909,
+      "id": 80,
+      "round": 6,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 469,
+          "pauli": "readout",
+          "patch": 3,
+          "global_xy": [
+            27.5,
+            1.5
+          ],
+          "local_xy": [
+            3.5,
+            1.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 3,
+      "detectors": [
+        1609,
+        1897
+      ],
+      "observables": []
+    },
+    {
+      "instruction_index": 2592,
+      "tick": 65,
+      "gate": "DEPOLARIZE2",
+      "target_index": 296,
+      "q0": 179,
+      "pauli0": "I",
+      "q1": 468,
+      "pauli1": "Y",
+      "measurement_index": -1,
+      "id": 90,
+      "round": 7,
+      "step_in_round": 5,
+      "channel_probability": 0.003,
+      "locations": [
+        {
+          "qubit": 179,
+          "pauli": "I",
+          "patch": 3,
+          "global_xy": [
+            28.0,
+            0.0
+          ],
+          "local_xy": [
+            4.0,
+            0.0
+          ],
+          "role": "data"
+        },
+        {
+          "qubit": 468,
+          "pauli": "Y",
+          "patch": 3,
+          "global_xy": [
+            27.5,
+            0.5
+          ],
+          "local_xy": [
+            3.5,
+            0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 3,
+      "detectors": [
+        1890,
+        1896,
+        2184,
+        2192
+      ],
+      "observables": []
+    },
+    {
+      "instruction_index": 2596,
+      "tick": 66,
+      "gate": "DEPOLARIZE2",
+      "target_index": 302,
+      "q0": 177,
+      "pauli0": "Z",
+      "q1": 472,
+      "pauli1": "Z",
+      "measurement_index": -1,
+      "id": 91,
+      "round": 7,
+      "step_in_round": 6,
+      "channel_probability": 0.003,
+      "locations": [
+        {
+          "qubit": 177,
+          "pauli": "Z",
+          "patch": 3,
+          "global_xy": [
+            27.0,
+            5.0
+          ],
+          "local_xy": [
+            3.0,
+            5.0
+          ],
+          "role": "data"
+        },
+        {
+          "qubit": 472,
+          "pauli": "Z",
+          "patch": 3,
+          "global_xy": [
+            27.5,
+            4.5
+          ],
+          "local_xy": [
+            3.5,
+            4.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 3,
+      "detectors": [
+        1894,
+        1900,
+        2188,
+        2189
+      ],
+      "observables": []
+    },
+    {
+      "instruction_index": 2930,
+      "tick": 78,
+      "gate": "DEPOLARIZE2",
+      "target_index": 296,
+      "q0": 178,
+      "pauli0": "Z",
+      "q1": 467,
+      "pauli1": "X",
+      "measurement_index": -1,
+      "id": 103,
+      "round": 8,
+      "step_in_round": 8,
+      "channel_probability": 0.003,
+      "locations": [
+        {
+          "qubit": 178,
+          "pauli": "Z",
+          "patch": 3,
+          "global_xy": [
+            27.0,
+            6.0
+          ],
+          "local_xy": [
+            3.0,
+            6.0
+          ],
+          "role": "data"
+        },
+        {
+          "qubit": 467,
+          "pauli": "X",
+          "patch": 3,
+          "global_xy": [
+            26.5,
+            5.5
+          ],
+          "local_xy": [
+            2.5,
+            5.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 3,
+      "detectors": [
+        2477
+      ],
+      "observables": []
+    },
+    {
+      "instruction_index": 5517,
+      "tick": 150,
+      "gate": "DEPOLARIZE1",
+      "target_index": 209,
+      "q0": 214,
+      "pauli0": "Y",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": -1,
+      "id": 204,
+      "round": 15,
+      "step_in_round": 10,
+      "channel_probability": 0.006,
+      "locations": [
+        {
+          "qubit": 214,
+          "pauli": "Y",
+          "patch": 4,
+          "global_xy": [
+            33.0,
+            6.0
+          ],
+          "local_xy": [
+            1.0,
+            6.0
+          ],
+          "role": "data"
+        }
+      ],
+      "patch": 4,
+      "detectors": [
+        4521,
+        4527,
+        4528
+      ],
+      "observables": []
+    },
+    {
+      "instruction_index": 5522,
+      "tick": 151,
+      "gate": "DEPOLARIZE1",
+      "target_index": 199,
+      "q0": 204,
+      "pauli0": "Y",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": -1,
+      "id": 208,
+      "round": 16,
+      "step_in_round": 1,
+      "channel_probability": 0.006,
+      "locations": [
+        {
+          "qubit": 204,
+          "pauli": "Y",
+          "patch": 4,
+          "global_xy": [
+            32.0,
+            3.0
+          ],
+          "local_xy": [
+            0.0,
+            3.0
+          ],
+          "role": "data"
+        }
+      ],
+      "patch": 4,
+      "detectors": [
+        4513,
+        4518,
+        4519,
+        8352
+      ],
+      "observables": [
+        8
+      ]
+    },
+    {
+      "instruction_index": 5522,
+      "tick": 151,
+      "gate": "DEPOLARIZE1",
+      "target_index": 208,
+      "q0": 213,
+      "pauli0": "X",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": -1,
+      "id": 209,
+      "round": 16,
+      "step_in_round": 1,
+      "channel_probability": 0.006,
+      "locations": [
+        {
+          "qubit": 213,
+          "pauli": "X",
+          "patch": 4,
+          "global_xy": [
+            33.0,
+            5.0
+          ],
+          "local_xy": [
+            1.0,
+            5.0
+          ],
+          "role": "data"
+        }
+      ],
+      "patch": 4,
+      "detectors": [
+        4520,
+        4527
+      ],
+      "observables": []
+    },
+    {
+      "instruction_index": 5528,
+      "tick": 153,
+      "gate": "DEPOLARIZE2",
+      "target_index": 336,
+      "q0": 201,
+      "pauli0": "I",
+      "q1": 496,
+      "pauli1": "Y",
+      "measurement_index": -1,
+      "id": 212,
+      "round": 16,
+      "step_in_round": 3,
+      "channel_probability": 0.003,
+      "locations": [
+        {
+          "qubit": 201,
+          "pauli": "I",
+          "patch": 4,
+          "global_xy": [
+            32.0,
+            0.0
+          ],
+          "local_xy": [
+            0.0,
+            0.0
+          ],
+          "role": "data"
+        },
+        {
+          "qubit": 496,
+          "pauli": "Y",
+          "patch": 4,
+          "global_xy": [
+            32.5,
+            0.5
+          ],
+          "local_xy": [
+            0.5,
+            0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 4,
+      "detectors": [
+        4515,
+        4516,
+        4804,
+        8352
+      ],
+      "observables": [
+        8
+      ]
+    }
+  ],
+  "reduced": {
+    "actual_mask": 0,
+    "CUF_mask": 640,
+    "CMWPM_mask": 0,
+    "CUF_wrong": [
+      7,
+      9
+    ],
+    "CMWPM_wrong": [],
+    "qualifies": true
+  },
+  "single_deletions": {
+    "72": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "74": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "80": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "90": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "91": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "103": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "204": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "208": {
+      "actual_mask": 256,
+      "CUF_mask": 256,
+      "CMWPM_mask": 256,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "209": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "212": {
+      "actual_mask": 256,
+      "CUF_mask": 256,
+      "CMWPM_mask": 256,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    }
+  },
+  "individual_faults": {
+    "72": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "74": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "80": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "90": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "91": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "103": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "204": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "208": {
+      "actual_mask": 256,
+      "CUF_mask": 256,
+      "CMWPM_mask": 256,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "209": {
+      "actual_mask": 0,
+      "CUF_mask": 0,
+      "CMWPM_mask": 0,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    },
+    "212": {
+      "actual_mask": 256,
+      "CUF_mask": 256,
+      "CMWPM_mask": 256,
+      "CUF_wrong": [],
+      "CMWPM_wrong": [],
+      "qualifies": false
+    }
+  },
+  "defect_ids": [
+    1478,
+    1485,
+    1597,
+    1605,
+    1609,
+    1773,
+    1890,
+    1893,
+    1896,
+    1897,
+    1900,
+    2184,
+    2188,
+    2189,
+    2192,
+    2477,
+    4513,
+    4515,
+    4516,
+    4518,
+    4519,
+    4520,
+    4521,
+    4528,
+    4804
+  ],
+  "actual_observables": [],
+  "swap_wrong": {
+    "UU": [
+      7,
+      9
+    ],
+    "UM": [],
+    "MU": [
+      7,
+      9
+    ],
+    "MM_rebuilt": []
+  },
+  "second_U_partition_allows_truth": false,
+  "forced_stim_samples_verified": 8,
+  "source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_76890",
+  "physical_source_sha256": "d1efafac7090967038a057e960b5762884c8eba1ad6a64b04bb26f004aa548ec",
+  "response_source_sha256": "36b5a0b8110a1dbc0e826de17f3f9847be52a4747923f5fb5264fa25eaa0d046",
+  "script_sha256": "4725725149c8b940dc09dd3ae2bff9cf34f25a126031a6b913997c9d454d9770",
+  "predicate_evaluations": 236,
+  "seconds": 20.794695131480694
+}

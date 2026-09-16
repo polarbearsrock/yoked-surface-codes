@@ -1,0 +1,530 @@
+{
+  "cases": [
+    {
+      "case": "trace_44875",
+      "distance": 7,
+      "reduced": true,
+      "actual": 1024,
+      "UF_mask": 64,
+      "single_missing_edge": 27131,
+      "augmented_peeling_mask": 64,
+      "augmented_DP_mask": 1024,
+      "augmented_DP_cost": 49.04607537160125,
+      "independent_matching_cost": 49.04607537160125,
+      "total_MWPM_cost": 49.04607537160125,
+      "tie_order_checks": [
+        {
+          "order": "reverse",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_0",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_1",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_2",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_3",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": true
+        },
+        {
+          "order": "seeded_shuffle_4",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_5",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_6",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_7",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_8",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_9",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_10",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_11",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_12",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_13",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": true
+        },
+        {
+          "order": "seeded_shuffle_14",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_15",
+          "mask": 64,
+          "same_partition": true,
+          "same_forest_edges": false
+        }
+      ],
+      "schedules": {
+        "standard": {
+          "mask": 64,
+          "cost": 53.03158316113611,
+          "time": 7.3581671638150015,
+          "batches": 56
+        },
+        "passive_yoke": {
+          "mask": 1024,
+          "cost": 49.04607537160125,
+          "time": 7.551816174268929,
+          "batches": 42
+        },
+        "frontier_normalized": {
+          "mask": 1024,
+          "cost": 49.04607537160125,
+          "time": 2208.080510606867,
+          "batches": 49
+        }
+      }
+    },
+    {
+      "case": "trace_76890",
+      "distance": 7,
+      "reduced": true,
+      "actual": 0,
+      "UF_mask": 640,
+      "single_missing_edge": 11166,
+      "augmented_peeling_mask": 640,
+      "augmented_DP_mask": 0,
+      "augmented_DP_cost": 50.200688191450034,
+      "independent_matching_cost": 50.200688191450034,
+      "total_MWPM_cost": 50.200688191450034,
+      "tie_order_checks": [
+        {
+          "order": "reverse",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_0",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_1",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_2",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_3",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_4",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_5",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_6",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_7",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_8",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_9",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_10",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_11",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_12",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_13",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_14",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_15",
+          "mask": 640,
+          "same_partition": true,
+          "same_forest_edges": false
+        }
+      ],
+      "schedules": {
+        "standard": {
+          "mask": 640,
+          "cost": 54.78832775277082,
+          "time": 9.196622220952506,
+          "batches": 61
+        },
+        "passive_yoke": {
+          "mask": 0,
+          "cost": 53.944480065582695,
+          "time": 9.255949228164539,
+          "batches": 57
+        },
+        "frontier_normalized": {
+          "mask": 0,
+          "cost": 53.944480065582695,
+          "time": 1571.0000815272922,
+          "batches": 62
+        }
+      }
+    },
+    {
+      "case": "full_d7_6463",
+      "distance": 7,
+      "reduced": false,
+      "actual": 3088,
+      "UF_mask": 3345,
+      "single_missing_edge": 25918,
+      "augmented_peeling_mask": 3088,
+      "augmented_DP_mask": 3088,
+      "augmented_DP_cost": 1378.5840325774145,
+      "independent_matching_cost": 1378.5840325774145,
+      "total_MWPM_cost": 1356.7515481868306,
+      "tie_order_checks": [
+        {
+          "order": "reverse",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_0",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_1",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_2",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_3",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_4",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_5",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_6",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_7",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_8",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_9",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_10",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_11",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_12",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_13",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_14",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_15",
+          "mask": 3345,
+          "same_partition": true,
+          "same_forest_edges": false
+        }
+      ]
+    },
+    {
+      "case": "full_d9_34624",
+      "distance": 9,
+      "reduced": false,
+      "actual": 2010,
+      "UF_mask": 1370,
+      "single_missing_edge": 51712,
+      "augmented_peeling_mask": 1370,
+      "augmented_DP_mask": 2010,
+      "augmented_DP_cost": 3262.9957373075595,
+      "independent_matching_cost": 3262.9957373075595,
+      "total_MWPM_cost": 3230.0842660839257,
+      "tie_order_checks": [
+        {
+          "order": "reverse",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_0",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_1",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_2",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_3",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_4",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_5",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_6",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_7",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_8",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_9",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_10",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_11",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_12",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_13",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_14",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        },
+        {
+          "order": "seeded_shuffle_15",
+          "mask": 1370,
+          "same_partition": true,
+          "same_forest_edges": false
+        }
+      ]
+    }
+  ],
+  "passive_yoke_counterexample": {
+    "fired_detectors": [
+      8352
+    ],
+    "standard_valid_correction": [
+      32,
+      77,
+      111,
+      151,
+      186,
+      223,
+      228
+    ],
+    "passive_result": {
+      "valid": false,
+      "reason": "Unresolved odd cluster with no growing frontier"
+    }
+  }
+}

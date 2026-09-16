@@ -1,0 +1,66 @@
+{
+  "distance": 7,
+  "population": {
+    "shots": 100000,
+    "both_pass": 73300,
+    "uf_only_fails": 12915,
+    "mwpm_only_fails": 3470,
+    "both_fail": 10315,
+    "wrong_bit_counts": {
+      "2": 12289,
+      "4": 624,
+      "6": 2
+    },
+    "X_only": 6148,
+    "Z_only": 6150,
+    "both_sectors": 617
+  },
+  "sample_seed": 20260922,
+  "sample_summary": {
+    "shots": 128,
+    "UM_correct": 110,
+    "MU_correct": 48,
+    "MM_rebuilt_correct": 128,
+    "both_swaps_correct": 36,
+    "neither_swap_correct": 6,
+    "partition_excludes_truth": 128,
+    "forest_excludes_truth": 128,
+    "weight_deficit_median": 28.7735086768256,
+    "weight_deficit_positive": 128
+  },
+  "inputs": {
+    "circuit_sha256": "8cfa9bb9eaf6db86dfc9ffcfefa4582eb29932d11dc1fd911239ef1425841ff9",
+    "code_commit": null,
+    "dem_sha256": "9b06141668bef9b334df78e4700853f60505a71f3c4185746d0261e7e3790e0a",
+    "directory": "/data2/s2chitni/.tmp/ysc-four-decoders-d7-p003-100k-adapter",
+    "manifest_sha256": "7e7ebeb905b0b9e9993a46ca17cac90e14563a6b14a306d3b463b121f2cfee6b",
+    "parent_shots": 100000,
+    "payload_sha256": "f789a3f4cec39e5a5418cacb4e7bbd959dd47749f6c566ae93318c04ccc40a79",
+    "results_sha256": "5352841b9688f61146210ad1543f2b40170ca2c35182fc89e00b325f78933d36",
+    "source_sha256": {
+      "src/yoked/decoders/_correlated_union_find.py": "62a56ce8bed3fba3fe4dae5bba931fa069ade6f253f63fc1be94779f1ba7bee2",
+      "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+      "src/yoked/decoders/_union_find.py": "8482635867c74233465d68152dd153c56adf3b7323d5573926400bad7e436b59"
+    },
+    "versions": {
+      "numpy": "2.5.1",
+      "pymatching": "2.4.0",
+      "scipy": "1.18.0",
+      "sinter": "1.16.0",
+      "stim": "1.16.0"
+    }
+  },
+  "source_hashes": {
+    "src/yoked/decoders/_union_find.py": "48e230589b8cb9d3144e1a52d8a1bc15179b0787c5878c817e61af5f9ea304ce",
+    "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+    "src/yoked/decoders/_correlated_union_find.py": "ec024111661b81f528432c8ee67fda34c61a8e586945997fa0db709f863dabd4",
+    "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+    "src/yoked/hierarchical/_matching_gaps.py": "7a7456ac2cabfeb5d96aa30434ed8422e3520ac371cc1caa3bd5ffa41a9c516d"
+  },
+  "analysis_script_sha256": "724ab32c01477c420733e2b0746b80f15b64dc42cba38cb4f6c3881e5a8ee0cd",
+  "versions": {
+    "stim": "1.16.0",
+    "pymatching": "2.4.0",
+    "numpy": "2.5.1"
+  }
+}

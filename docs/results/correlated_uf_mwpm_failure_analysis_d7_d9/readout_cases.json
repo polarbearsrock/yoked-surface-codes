@@ -1,0 +1,1444 @@
+[
+  {
+    "shot": 16,
+    "fault": {
+      "instruction_index": 4244,
+      "tick": 120,
+      "gate": "M",
+      "target_index": 100,
+      "q0": 400,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 3568,
+      "id": 146,
+      "round": 12,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 400,
+          "pauli": "readout",
+          "patch": 2,
+          "global_xy": [
+            16.5,
+            0.5
+          ],
+          "local_xy": [
+            0.5,
+            0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 2,
+      "detectors": [
+        3268,
+        3556
+      ],
+      "observables": []
+    },
+    "edge": 16612,
+    "original_U_wrong": [
+      5,
+      7
+    ],
+    "after_removal_U_wrong": [
+      5,
+      7
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_16",
+    "source_sha256": "18de1e79aee0019d86e33eb311e2a7f8381e4169f719a7f6538f3838fdc2ce51"
+  },
+  {
+    "shot": 78,
+    "fault": {
+      "instruction_index": 7187,
+      "tick": 210,
+      "gate": "M",
+      "target_index": 115,
+      "q0": 415,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 6175,
+      "id": 321,
+      "round": 21,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 415,
+          "pauli": "readout",
+          "patch": 2,
+          "global_xy": [
+            18.5,
+            1.5
+          ],
+          "local_xy": [
+            2.5,
+            1.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 2,
+      "detectors": [
+        5875,
+        6163
+      ],
+      "observables": []
+    },
+    "edge": 29617,
+    "original_U_wrong": [
+      4,
+      10
+    ],
+    "after_removal_U_wrong": [],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_78",
+    "source_sha256": "3f37d86ec029f17cae6baa8329f8c8b82eb0ea92e837b42dc105ff03b06e9518"
+  },
+  {
+    "shot": 78,
+    "fault": {
+      "instruction_index": 7841,
+      "tick": 230,
+      "gate": "M",
+      "target_index": 115,
+      "q0": 415,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 6751,
+      "id": 352,
+      "round": 23,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 415,
+          "pauli": "readout",
+          "patch": 2,
+          "global_xy": [
+            18.5,
+            1.5
+          ],
+          "local_xy": [
+            2.5,
+            1.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 2,
+      "detectors": [
+        6451,
+        6739
+      ],
+      "observables": []
+    },
+    "edge": 32497,
+    "original_U_wrong": [
+      4,
+      10
+    ],
+    "after_removal_U_wrong": [],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_78",
+    "source_sha256": "3f37d86ec029f17cae6baa8329f8c8b82eb0ea92e837b42dc105ff03b06e9518"
+  },
+  {
+    "shot": 78,
+    "fault": {
+      "instruction_index": 8168,
+      "tick": 240,
+      "gate": "M",
+      "target_index": 106,
+      "q0": 406,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 7030,
+      "id": 365,
+      "round": 24,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 406,
+          "pauli": "readout",
+          "patch": 2,
+          "global_xy": [
+            17.5,
+            0.5
+          ],
+          "local_xy": [
+            1.5,
+            0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 2,
+      "detectors": [
+        6730,
+        7018
+      ],
+      "observables": []
+    },
+    "edge": 33897,
+    "original_U_wrong": [
+      4,
+      10
+    ],
+    "after_removal_U_wrong": [],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_78",
+    "source_sha256": "3f37d86ec029f17cae6baa8329f8c8b82eb0ea92e837b42dc105ff03b06e9518"
+  },
+  {
+    "shot": 78,
+    "fault": {
+      "instruction_index": 8495,
+      "tick": 250,
+      "gate": "M",
+      "target_index": 243,
+      "q0": 543,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 7455,
+      "id": 381,
+      "round": 25,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 543,
+          "pauli": "readout",
+          "patch": 5,
+          "global_xy": [
+            40.5,
+            -0.5
+          ],
+          "local_xy": [
+            0.5,
+            -0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 5,
+      "detectors": [
+        7155,
+        7443
+      ],
+      "observables": []
+    },
+    "edge": 36050,
+    "original_U_wrong": [
+      4,
+      10
+    ],
+    "after_removal_U_wrong": [
+      4,
+      10
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      0
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_78",
+    "source_sha256": "3f37d86ec029f17cae6baa8329f8c8b82eb0ea92e837b42dc105ff03b06e9518"
+  },
+  {
+    "shot": 78,
+    "fault": {
+      "instruction_index": 8822,
+      "tick": 260,
+      "gate": "M",
+      "target_index": 243,
+      "q0": 543,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 7743,
+      "id": 396,
+      "round": 26,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 543,
+          "pauli": "readout",
+          "patch": 5,
+          "global_xy": [
+            40.5,
+            -0.5
+          ],
+          "local_xy": [
+            0.5,
+            -0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 5,
+      "detectors": [
+        7443,
+        7731
+      ],
+      "observables": []
+    },
+    "edge": 37490,
+    "original_U_wrong": [
+      4,
+      10
+    ],
+    "after_removal_U_wrong": [
+      4,
+      10
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      0,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_78",
+    "source_sha256": "3f37d86ec029f17cae6baa8329f8c8b82eb0ea92e837b42dc105ff03b06e9518"
+  },
+  {
+    "shot": 128,
+    "fault": {
+      "instruction_index": 2609,
+      "tick": 70,
+      "gate": "M",
+      "target_index": 14,
+      "q0": 314,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 2042,
+      "id": 93,
+      "round": 7,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 314,
+          "pauli": "readout",
+          "patch": 0,
+          "global_xy": [
+            1.5,
+            4.5
+          ],
+          "local_xy": [
+            1.5,
+            4.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 0,
+      "detectors": [
+        1742,
+        2030
+      ],
+      "observables": []
+    },
+    "edge": 8961,
+    "original_U_wrong": [
+      0,
+      8
+    ],
+    "after_removal_U_wrong": [
+      0,
+      8
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_128",
+    "source_sha256": "a0962f9c4d2cf00b64c3a3cdf1f4d6160394ee443c16368f9e4395f07ddbb70c"
+  },
+  {
+    "shot": 128,
+    "fault": {
+      "instruction_index": 9149,
+      "tick": 270,
+      "gate": "M",
+      "target_index": 220,
+      "q0": 520,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 8008,
+      "id": 382,
+      "round": 27,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 520,
+          "pauli": "readout",
+          "patch": 4,
+          "global_xy": [
+            35.5,
+            4.5
+          ],
+          "local_xy": [
+            3.5,
+            4.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 4,
+      "detectors": [
+        7708,
+        7996
+      ],
+      "observables": []
+    },
+    "edge": 38796,
+    "original_U_wrong": [
+      0,
+      8
+    ],
+    "after_removal_U_wrong": [
+      0,
+      8
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_128",
+    "source_sha256": "a0962f9c4d2cf00b64c3a3cdf1f4d6160394ee443c16368f9e4395f07ddbb70c"
+  },
+  {
+    "shot": 964,
+    "fault": {
+      "instruction_index": 1955,
+      "tick": 50,
+      "gate": "M",
+      "target_index": 258,
+      "q0": 558,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 1710,
+      "id": 58,
+      "round": 5,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 558,
+          "pauli": "readout",
+          "patch": 5,
+          "global_xy": [
+            42.5,
+            0.5
+          ],
+          "local_xy": [
+            2.5,
+            0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 5,
+      "detectors": [
+        1410,
+        1698
+      ],
+      "observables": []
+    },
+    "edge": 7291,
+    "original_U_wrong": [
+      6,
+      9,
+      10,
+      11
+    ],
+    "after_removal_U_wrong": [
+      6,
+      9,
+      10,
+      11
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_964",
+    "source_sha256": "57c6d26e76d3b1756bc0d0359901de33adafb9bf3b6652f396196a1d1234ecc3"
+  },
+  {
+    "shot": 964,
+    "fault": {
+      "instruction_index": 5552,
+      "tick": 160,
+      "gate": "M",
+      "target_index": 251,
+      "q0": 551,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 4871,
+      "id": 215,
+      "round": 16,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 551,
+          "pauli": "readout",
+          "patch": 5,
+          "global_xy": [
+            41.5,
+            1.5
+          ],
+          "local_xy": [
+            1.5,
+            1.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 5,
+      "detectors": [
+        4571,
+        4859
+      ],
+      "observables": []
+    },
+    "edge": 23102,
+    "original_U_wrong": [
+      6,
+      9,
+      10,
+      11
+    ],
+    "after_removal_U_wrong": [
+      9,
+      11
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      0
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_964",
+    "source_sha256": "57c6d26e76d3b1756bc0d0359901de33adafb9bf3b6652f396196a1d1234ecc3"
+  },
+  {
+    "shot": 964,
+    "fault": {
+      "instruction_index": 6533,
+      "tick": 190,
+      "gate": "M",
+      "target_index": 258,
+      "q0": 558,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 5742,
+      "id": 261,
+      "round": 19,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 558,
+          "pauli": "readout",
+          "patch": 5,
+          "global_xy": [
+            42.5,
+            0.5
+          ],
+          "local_xy": [
+            2.5,
+            0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 5,
+      "detectors": [
+        5442,
+        5730
+      ],
+      "observables": []
+    },
+    "edge": 27451,
+    "original_U_wrong": [
+      6,
+      9,
+      10,
+      11
+    ],
+    "after_removal_U_wrong": [
+      9,
+      11
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_964",
+    "source_sha256": "57c6d26e76d3b1756bc0d0359901de33adafb9bf3b6652f396196a1d1234ecc3"
+  },
+  {
+    "shot": 964,
+    "fault": {
+      "instruction_index": 6533,
+      "tick": 190,
+      "gate": "M",
+      "target_index": 282,
+      "q0": 582,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 5766,
+      "id": 262,
+      "round": 19,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 582,
+          "pauli": "readout",
+          "patch": 5,
+          "global_xy": [
+            45.5,
+            4.5
+          ],
+          "local_xy": [
+            5.5,
+            4.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 5,
+      "detectors": [
+        5466,
+        5754
+      ],
+      "observables": []
+    },
+    "edge": 27591,
+    "original_U_wrong": [
+      6,
+      9,
+      10,
+      11
+    ],
+    "after_removal_U_wrong": [
+      9,
+      11
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_964",
+    "source_sha256": "57c6d26e76d3b1756bc0d0359901de33adafb9bf3b6652f396196a1d1234ecc3"
+  },
+  {
+    "shot": 15986,
+    "fault": {
+      "instruction_index": 2609,
+      "tick": 70,
+      "gate": "M",
+      "target_index": 224,
+      "q0": 524,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 2252,
+      "id": 102,
+      "round": 7,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 524,
+          "pauli": "readout",
+          "patch": 4,
+          "global_xy": [
+            36.5,
+            0.5
+          ],
+          "local_xy": [
+            4.5,
+            0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 4,
+      "detectors": [
+        1952,
+        2240
+      ],
+      "observables": []
+    },
+    "edge": 10007,
+    "original_U_wrong": [
+      7,
+      11
+    ],
+    "after_removal_U_wrong": [
+      7,
+      11
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      0
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_15986",
+    "source_sha256": "994f95cb72e2d1f5d1a164f624d29c391189c11b24f93a5afa2158c6c6f59c74"
+  },
+  {
+    "shot": 15986,
+    "fault": {
+      "instruction_index": 5879,
+      "tick": 170,
+      "gate": "M",
+      "target_index": 183,
+      "q0": 483,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 5091,
+      "id": 256,
+      "round": 17,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 483,
+          "pauli": "readout",
+          "patch": 3,
+          "global_xy": [
+            29.5,
+            1.5
+          ],
+          "local_xy": [
+            5.5,
+            1.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 3,
+      "detectors": [
+        4791,
+        5079
+      ],
+      "observables": []
+    },
+    "edge": 24214,
+    "original_U_wrong": [
+      7,
+      11
+    ],
+    "after_removal_U_wrong": [
+      7,
+      11
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_15986",
+    "source_sha256": "994f95cb72e2d1f5d1a164f624d29c391189c11b24f93a5afa2158c6c6f59c74"
+  },
+  {
+    "shot": 44875,
+    "fault": {
+      "instruction_index": 6533,
+      "tick": 190,
+      "gate": "M",
+      "target_index": 167,
+      "q0": 467,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 5651,
+      "id": 271,
+      "round": 19,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 467,
+          "pauli": "readout",
+          "patch": 3,
+          "global_xy": [
+            26.5,
+            5.5
+          ],
+          "local_xy": [
+            2.5,
+            5.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 3,
+      "detectors": [
+        5351,
+        5639
+      ],
+      "observables": []
+    },
+    "edge": 27002,
+    "original_U_wrong": [
+      6,
+      10
+    ],
+    "after_removal_U_wrong": [],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      0,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_44875",
+    "source_sha256": "ac004f61fcce8ccb57de5870cdbae1424ce247dea847753a0f9d93f665e75bdd"
+  },
+  {
+    "shot": 44875,
+    "fault": {
+      "instruction_index": 8168,
+      "tick": 240,
+      "gate": "M",
+      "target_index": 103,
+      "q0": 403,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 7027,
+      "id": 346,
+      "round": 24,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 403,
+          "pauli": "readout",
+          "patch": 2,
+          "global_xy": [
+            16.5,
+            3.5
+          ],
+          "local_xy": [
+            0.5,
+            3.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 2,
+      "detectors": [
+        6727,
+        7015
+      ],
+      "observables": []
+    },
+    "edge": 33871,
+    "original_U_wrong": [
+      6,
+      10
+    ],
+    "after_removal_U_wrong": [
+      6,
+      10
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_44875",
+    "source_sha256": "ac004f61fcce8ccb57de5870cdbae1424ce247dea847753a0f9d93f665e75bdd"
+  },
+  {
+    "shot": 68871,
+    "fault": {
+      "instruction_index": 8822,
+      "tick": 260,
+      "gate": "M",
+      "target_index": 222,
+      "q0": 522,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 7722,
+      "id": 384,
+      "round": 26,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 522,
+          "pauli": "readout",
+          "patch": 4,
+          "global_xy": [
+            35.5,
+            6.5
+          ],
+          "local_xy": [
+            3.5,
+            6.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 4,
+      "detectors": [
+        7422,
+        7710
+      ],
+      "observables": []
+    },
+    "edge": 37403,
+    "original_U_wrong": [
+      0,
+      8
+    ],
+    "after_removal_U_wrong": [],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_68871",
+    "source_sha256": "0b494007b2339066b469b44d0adcf81d1c49d7a48ff58d0c8c4527789ee7a34d"
+  },
+  {
+    "shot": 68871,
+    "fault": {
+      "instruction_index": 9149,
+      "tick": 270,
+      "gate": "M",
+      "target_index": 227,
+      "q0": 527,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 8015,
+      "id": 398,
+      "round": 27,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 527,
+          "pauli": "readout",
+          "patch": 4,
+          "global_xy": [
+            36.5,
+            3.5
+          ],
+          "local_xy": [
+            4.5,
+            3.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 4,
+      "detectors": [
+        7715,
+        8003
+      ],
+      "observables": []
+    },
+    "edge": 38825,
+    "original_U_wrong": [
+      0,
+      8
+    ],
+    "after_removal_U_wrong": [
+      0,
+      8
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_68871",
+    "source_sha256": "0b494007b2339066b469b44d0adcf81d1c49d7a48ff58d0c8c4527789ee7a34d"
+  },
+  {
+    "shot": 72480,
+    "fault": {
+      "instruction_index": 5225,
+      "tick": 150,
+      "gate": "M",
+      "target_index": 4,
+      "q0": 304,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 4336,
+      "id": 269,
+      "round": 15,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 304,
+          "pauli": "readout",
+          "patch": 0,
+          "global_xy": [
+            0.5,
+            0.5
+          ],
+          "local_xy": [
+            0.5,
+            0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 0,
+      "detectors": [
+        4036,
+        4324
+      ],
+      "observables": []
+    },
+    "edge": 20452,
+    "original_U_wrong": [
+      3,
+      7
+    ],
+    "after_removal_U_wrong": [
+      3,
+      7
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_72480",
+    "source_sha256": "2994bf270c349f013a4bc7718d5e4f0b5f7c4c9ce124cdebe028296897888ff2"
+  },
+  {
+    "shot": 72480,
+    "fault": {
+      "instruction_index": 5879,
+      "tick": 170,
+      "gate": "M",
+      "target_index": 68,
+      "q0": 368,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 4976,
+      "id": 298,
+      "round": 17,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 368,
+          "pauli": "readout",
+          "patch": 1,
+          "global_xy": [
+            10.5,
+            2.5
+          ],
+          "local_xy": [
+            2.5,
+            2.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 1,
+      "detectors": [
+        4676,
+        4964
+      ],
+      "observables": []
+    },
+    "edge": 23624,
+    "original_U_wrong": [
+      3,
+      7
+    ],
+    "after_removal_U_wrong": [
+      2,
+      6
+    ],
+    "after_removal_M_wrong": [
+      2,
+      6
+    ],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      0,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_72480",
+    "source_sha256": "2994bf270c349f013a4bc7718d5e4f0b5f7c4c9ce124cdebe028296897888ff2"
+  },
+  {
+    "shot": 73966,
+    "fault": {
+      "instruction_index": 8168,
+      "tick": 240,
+      "gate": "M",
+      "target_index": 233,
+      "q0": 533,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 7157,
+      "id": 361,
+      "round": 24,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 533,
+          "pauli": "readout",
+          "patch": 4,
+          "global_xy": [
+            37.5,
+            3.5
+          ],
+          "local_xy": [
+            5.5,
+            3.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 4,
+      "detectors": [
+        6857,
+        7145
+      ],
+      "observables": []
+    },
+    "edge": 34546,
+    "original_U_wrong": [
+      5,
+      9
+    ],
+    "after_removal_U_wrong": [],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_73966",
+    "source_sha256": "a01711b943a3bcee91411a95e151c250ce1d23fc60fed78e8789b01e77c46481"
+  },
+  {
+    "shot": 76890,
+    "fault": {
+      "instruction_index": 2282,
+      "tick": 60,
+      "gate": "M",
+      "target_index": 169,
+      "q0": 469,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 1909,
+      "id": 80,
+      "round": 6,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 469,
+          "pauli": "readout",
+          "patch": 3,
+          "global_xy": [
+            27.5,
+            1.5
+          ],
+          "local_xy": [
+            3.5,
+            1.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 3,
+      "detectors": [
+        1609,
+        1897
+      ],
+      "observables": []
+    },
+    "edge": 8299,
+    "original_U_wrong": [
+      3,
+      7
+    ],
+    "after_removal_U_wrong": [],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_76890",
+    "source_sha256": "d1efafac7090967038a057e960b5762884c8eba1ad6a64b04bb26f004aa548ec"
+  },
+  {
+    "shot": 76890,
+    "fault": {
+      "instruction_index": 2936,
+      "tick": 80,
+      "gate": "M",
+      "target_index": 166,
+      "q0": 466,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 2482,
+      "id": 111,
+      "round": 8,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 466,
+          "pauli": "readout",
+          "patch": 3,
+          "global_xy": [
+            26.5,
+            4.5
+          ],
+          "local_xy": [
+            2.5,
+            4.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 3,
+      "detectors": [
+        2182,
+        2470
+      ],
+      "observables": []
+    },
+    "edge": 11156,
+    "original_U_wrong": [
+      3,
+      7
+    ],
+    "after_removal_U_wrong": [
+      3,
+      7
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      1
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_76890",
+    "source_sha256": "d1efafac7090967038a057e960b5762884c8eba1ad6a64b04bb26f004aa548ec"
+  },
+  {
+    "shot": 76890,
+    "fault": {
+      "instruction_index": 7187,
+      "tick": 210,
+      "gate": "M",
+      "target_index": 80,
+      "q0": 380,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 6140,
+      "id": 288,
+      "round": 21,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 380,
+          "pauli": "readout",
+          "patch": 1,
+          "global_xy": [
+            12.5,
+            0.5
+          ],
+          "local_xy": [
+            4.5,
+            0.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 1,
+      "detectors": [
+        5840,
+        6128
+      ],
+      "observables": []
+    },
+    "edge": 29447,
+    "original_U_wrong": [
+      3,
+      7
+    ],
+    "after_removal_U_wrong": [
+      3,
+      7
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      0
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_76890",
+    "source_sha256": "d1efafac7090967038a057e960b5762884c8eba1ad6a64b04bb26f004aa548ec"
+  },
+  {
+    "shot": 93829,
+    "fault": {
+      "instruction_index": 6860,
+      "tick": 200,
+      "gate": "M",
+      "target_index": 265,
+      "q0": 565,
+      "pauli0": "readout",
+      "q1": -1,
+      "pauli1": "I",
+      "measurement_index": 6037,
+      "id": 290,
+      "round": 20,
+      "step_in_round": 10,
+      "channel_probability": 0.015,
+      "locations": [
+        {
+          "qubit": 565,
+          "pauli": "readout",
+          "patch": 5,
+          "global_xy": [
+            43.5,
+            1.5
+          ],
+          "local_xy": [
+            3.5,
+            1.5
+          ],
+          "role": "check_ancilla"
+        }
+      ],
+      "patch": 5,
+      "detectors": [
+        5737,
+        6025
+      ],
+      "observables": []
+    },
+    "edge": 28939,
+    "original_U_wrong": [
+      5,
+      11
+    ],
+    "after_removal_U_wrong": [
+      5,
+      9
+    ],
+    "after_removal_M_wrong": [],
+    "alone_U_wrong": [],
+    "alone_M_wrong": [],
+    "syndrome_at_fault_detectors": [
+      1,
+      0
+    ],
+    "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_93829",
+    "source_sha256": "a6dd05d5105637818e9f5319e6a40beaa91a16d96d8ab81816e473dd3ef5d705"
+  }
+]
