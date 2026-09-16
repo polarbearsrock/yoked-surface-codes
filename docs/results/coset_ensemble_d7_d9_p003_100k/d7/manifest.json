@@ -1,0 +1,10 @@
+{
+  "baseline_matches": 100000,
+  "candidates_checked": 2400000,
+  "candidates_sha256": "6d858553c7fcaff5b07186b562aa7ed1483889a22b9dbdb53fc5750de67fd9cb",
+  "identity": "b2a88a1c2e3ab2da19f7658f1bae278ead8f06e0733c328e8d7e7a750e5c51a5",
+  "request_sha256": "7fd0b4076dcb52257ccd661ae0ff8f18526f63d21eed6617f0733bacb2e036be",
+  "shots": 100000,
+  "wall_seconds_this_invocation": 388.21571345068514,
+  "workers": 96
+}

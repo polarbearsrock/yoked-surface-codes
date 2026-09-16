@@ -1,0 +1,143 @@
+{
+  "affinity_cpus": 128,
+  "constructor_timing": false,
+  "distances": {
+    "7": {
+      "row_seed": 2026091607,
+      "rows": [
+        1859,
+        2943,
+        3239,
+        5383,
+        11523,
+        16634,
+        20052,
+        21291,
+        24077,
+        28260,
+        29983,
+        32651,
+        36678,
+        41070,
+        47258,
+        50017,
+        55488,
+        65085,
+        67488,
+        71903,
+        72098,
+        78598,
+        78736,
+        79701,
+        90906,
+        91529,
+        91597,
+        91909,
+        92788,
+        94461,
+        97195,
+        97380
+      ],
+      "seconds": {
+        "correlated_mwpm": {
+          "mean": 0.0027396890000000004,
+          "median": 0.002551065,
+          "p95": 0.004374490949999999,
+          "total": 0.087670048
+        },
+        "correlated_uf": {
+          "mean": 0.1612522290625,
+          "median": 0.1624135045,
+          "p95": 0.20130117515,
+          "total": 5.16007133
+        },
+        "coset_ensemble_k24": {
+          "mean": 0.20124912303125,
+          "median": 0.2025807185,
+          "p95": 0.23467908915000002,
+          "total": 6.439971937
+        }
+      }
+    },
+    "9": {
+      "row_seed": 2026091609,
+      "rows": [
+        961,
+        2994,
+        6655,
+        8637,
+        10170,
+        12183,
+        13007,
+        15788,
+        16045,
+        16933,
+        25974,
+        27033,
+        27467,
+        29798,
+        30555,
+        30600,
+        31761,
+        32653,
+        35419,
+        35662,
+        43280,
+        50125,
+        52317,
+        66971,
+        68872,
+        73012,
+        74915,
+        75221,
+        77884,
+        78436,
+        92305,
+        94116
+      ],
+      "seconds": {
+        "correlated_mwpm": {
+          "mean": 0.0071511708750000005,
+          "median": 0.006576809000000001,
+          "p95": 0.009572472850000001,
+          "total": 0.22883746800000002
+        },
+        "correlated_uf": {
+          "mean": 0.4315002284375,
+          "median": 0.4200924855,
+          "p95": 0.48778829485,
+          "total": 13.80800731
+        },
+        "coset_ensemble_k24": {
+          "mean": 0.5097877548125,
+          "median": 0.5159947395,
+          "p95": 0.57380790215,
+          "total": 16.313208154
+        }
+      }
+    }
+  },
+  "numerical_threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "order": "rotating decoder order per shot",
+  "platform": "Linux-4.18.0-553.50.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "python": "3.14.5",
+  "source_sha256": {
+    "docs/results/coset_ensemble_d7_d9_p003_100k/benchmark.py": "7f657533a72cf954078c962b12fe9815c6110687821d9fb2946a66d12e9b97e6",
+    "src/yoked/decoders/_correlated_union_find.py": "ec024111661b81f528432c8ee67fda34c61a8e586945997fa0db709f863dabd4",
+    "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+    "src/yoked/decoders/_coset_ensemble.py": "d42b17ac421e4c2d041323efc3100df3067cb065c0ae870a487d2114c5aba493",
+    "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+    "src/yoked/decoders/_union_find.py": "7f781b806745064589a8564a595b9b092bce68b5baaafb7fe14bb51e1c6319b2"
+  },
+  "versions": {
+    "numpy": "2.5.1",
+    "pymatching": "2.4.0",
+    "sinter": "1.16.0",
+    "stim": "1.16.0"
+  },
+  "warmup": 1,
+  "warning": "Python UF versus native PyMatching; software only, no hardware latency inference"
+}

@@ -61,8 +61,8 @@ class UnionFindDecoder:
 
         Shared by ``_decode`` and ``decode_with_growth_costs`` so both entry
         points make exactly one growth-and-peel pass per syndrome and agree
-        on the resulting correction. ``_Growth`` stays private: only this
-        module reads its settled edge costs.
+        on the resulting correction. The ensemble decoder also uses the final
+        partition; ``_Growth`` remains private to the decoder implementation.
         """
         syndrome = self._validate(syndrome, 1)
         growth = _Growth(self.graph, syndrome)

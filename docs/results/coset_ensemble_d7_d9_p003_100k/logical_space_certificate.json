@@ -1,0 +1,98 @@
+{
+  "distances": {
+    "7": {
+      "failures_repairable_within_partitions": 0,
+      "independently_checked_rank_zero_rows": [
+        1859,
+        2943,
+        3239,
+        5382,
+        11523,
+        16634,
+        20052,
+        21291,
+        24076,
+        28261,
+        29984,
+        32651,
+        36678,
+        41071,
+        47258,
+        50018,
+        55489,
+        65085,
+        67488,
+        71904,
+        72098,
+        78599,
+        78736,
+        79701,
+        90906,
+        91529,
+        91597,
+        91909,
+        92788,
+        94461,
+        97195,
+        97380
+      ],
+      "nonzero_rank_cases": [
+        {
+          "actual": 4009,
+          "admissible_logical_masks": [
+            3489,
+            3499
+          ],
+          "baseline": 3489,
+          "basis": [
+            10
+          ],
+          "correlated_mwpm": 3499,
+          "logical_rank": 1,
+          "shot": 26816,
+          "truth_reachable": false
+        }
+      ]
+    },
+    "9": {
+      "failures_repairable_within_partitions": 0,
+      "independently_checked_rank_zero_rows": [
+        961,
+        2994,
+        6655,
+        8637,
+        10170,
+        12183,
+        13007,
+        15788,
+        16045,
+        16933,
+        25974,
+        27033,
+        27467,
+        29798,
+        30555,
+        30600,
+        31761,
+        32653,
+        35419,
+        35662,
+        43280,
+        50125,
+        52317,
+        66971,
+        68872,
+        73012,
+        74915,
+        75221,
+        77884,
+        78436,
+        92305,
+        94116
+      ],
+      "nonzero_rank_cases": []
+    }
+  },
+  "helper_sha256": "724ab32c01477c420733e2b0746b80f15b64dc42cba38cb4f6c3881e5a8ee0cd",
+  "independent_helper": "/data2/s2chitni/yoked-surface-codes/docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/analyze.py"
+}

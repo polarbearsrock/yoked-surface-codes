@@ -1,0 +1,28 @@
+{
+  "previous_work_commit": "e94dfe1dbfa45fee92fb837fb294b8a8ebfc40fe",
+  "report_sha256": "85464d21ba60053d2c9316652a062507fb7f3afc92475a3e4d2deb2bfa7c548f",
+  "artifacts": {
+    "benchmark.json": "2540b549ec287bf4a3c9224c4d0add2d0e96b034d668c3e8be0818ac561960b6",
+    "benchmark.py": "7f657533a72cf954078c962b12fe9815c6110687821d9fb2946a66d12e9b97e6",
+    "certify.py": "6b146cfc0f2c1d32612e5f4d985e888428e6fc2f1418345979b242ddc5931cfa",
+    "comparison.json": "22a4b8bcbe8c1aee0be5ae6bd6f2cbc154e149b0eef6f0fb91e23cc0b9782f05",
+    "d7/manifest.json": "b1124e5558ca518debcf8ca04adace8285a52748b054f304c16b0317b35c812e",
+    "d7/predictions_and_diagnostics.npz": "19593fbdb07c8d2a466aba42b3ab601c8e4281369229284ebd6c0701a53df0ee",
+    "d7/request.json": "7fd0b4076dcb52257ccd661ae0ff8f18526f63d21eed6617f0733bacb2e036be",
+    "d7/summary.json": "3a87dee53523f5543fe36919925342564fedc5a55c51e00f1800e014fd97c081",
+    "d9/manifest.json": "49fa48495c167d3372c3b9b355dfdacaca2174c2ba182dc6134269593ce005e3",
+    "d9/predictions_and_diagnostics.npz": "fb831d0f9df7d84fb88a00d0c410c863eb3c4fb4d55507e1f17095d065ecb0eb",
+    "d9/request.json": "eae36b7b08a24fd28b52d5f7f89bb29336d7d4210be83ffe810a795c0a08bd02",
+    "d9/summary.json": "6222898f5f69dba2e00def96a878dc786db79e593c2924b27f96bab4520f6e6d",
+    "logical_space_certificate.json": "6b416f1eefc76d9e1058f0699de25d086dcdd24e63b1392cc5430ad682896e8d",
+    "report.py": "25a576c3b073b19e5ea992668112ed4dbc9ed4dd6aabbe307570968dd26e012e",
+    "run.py": "b4ce58d4b4d73b98c9b08c7e0072e65fd7f394ff24754135e4e6cd9c40f45579",
+    "tables.md": "3004e83fc752e5146bc855b9d5f996bfcc281fb2e000b5524a48d8f8876a6268",
+    "verification.json": "1d0b036b291d8c28b409d74271eb8b24c8ffe1bb07aa61455a0776f4a01bafd1"
+  },
+  "decoder_sources": {
+    "src/yoked/decoders/_coset_ensemble.py": "d42b17ac421e4c2d041323efc3100df3067cb065c0ae870a487d2114c5aba493",
+    "src/yoked/decoders/_coset_ensemble_test.py": "83fb84fda337fc073b857558b3312ddfb39ea033425cafe344bf367a92cfe5cd",
+    "src/yoked/decoders/__init__.py": "d434931435558f736045b268b5dc413a90c6899947bd1bb52755a1b5cedc5804"
+  }
+}

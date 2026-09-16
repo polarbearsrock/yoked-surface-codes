@@ -1,0 +1,414 @@
+{
+  "analysis_source_sha256": {
+    "docs/results/coset_ensemble_d7_d9_p003_100k/report.py": "25a576c3b073b19e5ea992668112ed4dbc9ed4dd6aabbe307570968dd26e012e",
+    "src/yoked/hierarchical/_uf_soft_analysis.py": "6cbcad363ef3013fb6811059445abf6c68311cc3bc199d0e6f2764cf9d938880"
+  },
+  "bootstrap": {
+    "replicates": 10000,
+    "seed": 43,
+    "unit": "whole shot"
+  },
+  "collection": {
+    "baseline_matches": 100000,
+    "candidates_checked": 2400000,
+    "candidates_sha256": "6d858553c7fcaff5b07186b562aa7ed1483889a22b9dbdb53fc5750de67fd9cb",
+    "identity": "b2a88a1c2e3ab2da19f7658f1bae278ead8f06e0733c328e8d7e7a750e5c51a5",
+    "request_sha256": "7fd0b4076dcb52257ccd661ae0ff8f18526f63d21eed6617f0733bacb2e036be",
+    "shots": 100000,
+    "wall_seconds_this_invocation": 388.21571345068514,
+    "workers": 96
+  },
+  "diagnostics": {
+    "all_candidates_equal_baseline_shots": 99999,
+    "baseline_failures_with_correct_candidate": 0,
+    "baseline_successes_without_correct_candidate": 0,
+    "candidate_size_improved_shots": 6,
+    "candidate_weight_improved_shots": 0,
+    "logical_diversity_histogram": {
+      "1": 99999,
+      "2": 1
+    },
+    "logical_diversity_rows": [
+      26816
+    ],
+    "logical_rank_histogram": {
+      "0": 99999,
+      "1": 1
+    },
+    "mean_minimum_size_change": 42.15143,
+    "mean_minimum_weight_change": 207.26951016256072,
+    "oracle_failures_within_sampled_candidates": 23230,
+    "physical_diversity_histogram": {
+      "24": 100000
+    },
+    "rank_positive_rows": [
+      26816
+    ]
+  },
+  "ensemble_seed": 20260916,
+  "input_sample_sha256": "f789a3f4cec39e5a5418cacb4e7bbd959dd47749f6c566ae93318c04ccc40a79",
+  "methods": {
+    "ensemble_size_k1": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "ensemble_size_k16": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "ensemble_size_k24": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "ensemble_size_k4": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "ensemble_size_k8": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "ensemble_weight_k1": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "ensemble_weight_k16": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "ensemble_weight_k24": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "ensemble_weight_k4": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "ensemble_weight_k8": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "joint_correlated_mwpm": {
+      "block_rate": 0.13785,
+      "failures": 13785,
+      "ler_ci95": [
+        0.0008757653479171124,
+        0.0009059893470790836
+      ],
+      "ler_ratio_to_correlated_uf": 0.557089743824489,
+      "normalized_ler": 0.0008907858999728235,
+      "paired_block_difference_ci95": [
+        -0.09693025000000001,
+        -0.09198999999999999
+      ],
+      "paired_ratio_ci95": [
+        0.5482937370153712,
+        0.5658143161598164
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    },
+    "joint_correlated_uf": {
+      "block_rate": 0.2323,
+      "failures": 23230,
+      "ler_ci95": [
+        0.0015778171938954921,
+        0.001620022004461541
+      ],
+      "ler_ratio_to_correlated_uf": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "paired_block_difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "paired_ratio_ci95": [
+        1.0,
+        1.0
+      ],
+      "ratio_undefined_replicates": 0,
+      "shots": 100000
+    }
+  },
+  "normalization": {
+    "pieces": 168,
+    "values": 8
+  },
+  "paired_to_correlated_uf": {
+    "ensemble_size_k1": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 1,
+      "regressions": 0,
+      "repairs": 0
+    },
+    "ensemble_size_k16": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 0,
+      "regressions": 0,
+      "repairs": 0
+    },
+    "ensemble_size_k24": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 1,
+      "regressions": 0,
+      "repairs": 0
+    },
+    "ensemble_size_k4": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 1,
+      "regressions": 0,
+      "repairs": 0
+    },
+    "ensemble_size_k8": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 1,
+      "regressions": 0,
+      "repairs": 0
+    },
+    "ensemble_weight_k1": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 1,
+      "regressions": 0,
+      "repairs": 0
+    },
+    "ensemble_weight_k16": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 0,
+      "regressions": 0,
+      "repairs": 0
+    },
+    "ensemble_weight_k24": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 0,
+      "regressions": 0,
+      "repairs": 0
+    },
+    "ensemble_weight_k4": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 0,
+      "regressions": 0,
+      "repairs": 0
+    },
+    "ensemble_weight_k8": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 0,
+      "regressions": 0,
+      "repairs": 0
+    },
+    "joint_correlated_mwpm": {
+      "both_correct": 73300,
+      "both_fail": 10315,
+      "different_logical_predictions": 20210,
+      "regressions": 3470,
+      "repairs": 12915
+    },
+    "joint_correlated_uf": {
+      "both_correct": 76770,
+      "both_fail": 23230,
+      "different_logical_predictions": 0,
+      "regressions": 0,
+      "repairs": 0
+    }
+  },
+  "parameters": {
+    "distance": 7,
+    "noise": "si1000",
+    "p": 0.003,
+    "patches": 6,
+    "rounds": 28,
+    "style": "cz",
+    "yokes": 2
+  },
+  "raw_directory": "/data2/s2chitni/.tmp/coset-ensemble-d7-d9-100k-a8hHNP/d7",
+  "runtime_under_parallel_load": {
+    "decode_seconds": {
+      "mean": 0.36430321530012416,
+      "median": 0.36508375313133,
+      "p95": 0.5072618529200553,
+      "sum": 36430.321530012414
+    },
+    "validation_seconds": {
+      "mean": 0.0015928862549364567,
+      "median": 0.0016359882429242134,
+      "p95": 0.0018814686220139263,
+      "sum": 159.28862549364567
+    }
+  },
+  "shots": 100000,
+  "verification": {
+    "all_candidates_syndrome_checked": true,
+    "input_hashes_checked": true,
+    "saved_baseline_bit_identical": true,
+    "source_hashes_checked": true,
+    "votes_independently_recomputed": true
+  }
+}

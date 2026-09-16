@@ -1,0 +1,17 @@
+{
+  "shots_per_distance": 100000,
+  "candidate_corrections_checked": 4800000,
+  "fresh_baseline_predictions_verified": 200000,
+  "all_counts_and_ler_recomputed": true,
+  "all_ensemble_failure_vectors_equal_baseline": true,
+  "decoder_and_analysis_hashes_verified": true,
+  "independent_rank_zero_controls": 64,
+  "independent_positive_rank_cases": 1,
+  "checkpoint_resume_with_different_worker_count_passed": true,
+  "corrupt_checkpoint_rejected": true,
+  "decoder_tests": {
+    "command": "PYTHONPATH=src .venv/bin/python -m pytest -q -p no:cacheprovider src/yoked/decoders",
+    "passed": 136,
+    "skipped": 1
+  }
+}

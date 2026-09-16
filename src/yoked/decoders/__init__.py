@@ -1,4 +1,5 @@
 from yoked.decoders._correlated_union_find import CorrelatedUnionFindDecoder
+from yoked.decoders._coset_ensemble import CosetEnsembleDecoder
 from yoked.decoders._fusion_blossom import FusionBlossomUnionFindDecoder
 from yoked.decoders._graph import DecodingGraph
 from yoked.decoders._sinter import (
@@ -10,6 +11,7 @@ __all__ = [
     'DecodingGraph',
     'UnionFindDecoder',
     'CorrelatedUnionFindDecoder',
+    'CosetEnsembleDecoder',
     'InvalidSyndromeError',
     'SinterUnionFindDecoder',
     'SinterCorrelatedUnionFindDecoder',

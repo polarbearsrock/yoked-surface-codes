@@ -1,0 +1,54 @@
+{
+  "identity": "b2a88a1c2e3ab2da19f7658f1bae278ead8f06e0733c328e8d7e7a750e5c51a5",
+  "request": {
+    "boundaries": "one free-parity virtual vertex per final cluster",
+    "chunk_size": 32,
+    "fast_paths": "none; all 24 candidates generated for every shot",
+    "input_run": {
+      "circuit_sha256": "8cfa9bb9eaf6db86dfc9ffcfefa4582eb29932d11dc1fd911239ef1425841ff9",
+      "dem_sha256": "9b06141668bef9b334df78e4700853f60505a71f3c4185746d0261e7e3790e0a",
+      "directory": "/data2/s2chitni/.tmp/ysc-four-decoders-d7-p003-100k-adapter",
+      "payload_sha256": "f789a3f4cec39e5a5418cacb4e7bbd959dd47749f6c566ae93318c04ccc40a79"
+    },
+    "parameters": {
+      "distance": 7,
+      "noise": "si1000",
+      "p": 0.003,
+      "patches": 6,
+      "rounds": 28,
+      "style": "cz",
+      "yokes": 2
+    },
+    "prefixes": [
+      1,
+      4,
+      8,
+      16,
+      24
+    ],
+    "priority_rng": "PCG64; fixed per candidate across shots",
+    "protocol": "correlated UF with final-pass ensemble; all internal edges",
+    "record_dir": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d7/evaluation",
+    "record_manifest_sha256": "7b0032fa56c219a31db5b3c36e0914b963e21aae2303b9d2e75f9fd37fc34860",
+    "schema": "coset-ensemble/1",
+    "scores": [
+      "size",
+      "weight"
+    ],
+    "seed": 20260916,
+    "shots": 100000,
+    "source_sha256": {
+      "docs/results/coset_ensemble_d7_d9_p003_100k/run.py": "b4ce58d4b4d73b98c9b08c7e0072e65fd7f394ff24754135e4e6cd9c40f45579",
+      "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+      "src/yoked/decoders/_coset_ensemble.py": "d42b17ac421e4c2d041323efc3100df3067cb065c0ae870a487d2114c5aba493",
+      "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+      "src/yoked/decoders/_union_find.py": "7f781b806745064589a8564a595b9b092bce68b5baaafb7fe14bb51e1c6319b2"
+    },
+    "versions": {
+      "numpy": "2.5.1",
+      "pymatching": "2.4.0",
+      "sinter": "1.16.0",
+      "stim": "1.16.0"
+    }
+  }
+}
