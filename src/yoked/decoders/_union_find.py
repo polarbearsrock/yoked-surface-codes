@@ -74,6 +74,15 @@ class UnionFindDecoder:
         correction, _ = self._decode_state(syndrome)
         return correction
 
+    def decode_to_edge_ids(self, syndrome: np.ndarray) -> tuple[int, ...]:
+        """Return correction edge ids, in graph order, using this decoder's passes.
+
+        This exposes the correction without settling growth costs when a consumer
+        only needs to sum its weights. Subclasses overriding ``_decode`` retain
+        their decoding semantics here, just as they do in ``decode``.
+        """
+        return self._decode(syndrome).selected_edges
+
     def decode_with_growth_costs(self, syndrome: np.ndarray) -> GrowthDecodeResult:
         """Decode and additionally report each edge's remaining growth cost.
 

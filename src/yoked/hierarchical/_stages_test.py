@@ -64,8 +64,9 @@ from yoked.hierarchical._metrics import (
     DEFAULT_SEED, block_failures, bootstrap_rate, normalized_ler, paired_block_failure,
 )
 from yoked.hierarchical._provenance import (
-    CALIBRATION_PACKAGES, DECODER_PACKAGES, MODEL_PACKAGES, REPLAY_SOURCES, REPOSITORY_ROOT,
-    SAMPLING_PACKAGES, package_versions, read_json, sha256_file, source_hashes, write_json_atomic,
+    CALIBRATION_PACKAGES, DECODER_PACKAGES, MODEL_PACKAGES, REPLAY_PACKAGES, REPLAY_SOURCES,
+    REPOSITORY_ROOT, SAMPLING_PACKAGES, package_versions, read_json, sha256_file,
+    source_hashes, write_json_atomic,
 )
 from yoked.hierarchical._record import (
     RECORD_FILE, RECORD_MANIFEST, RECORD_SCHEMA, LoadedRecord, _save_arrays, load_record,
@@ -1159,12 +1160,16 @@ def test_a_baseline_row_whose_statistics_are_undefined_shows_unavailable_and_its
 
 # --- what a report change may not touch --------------------------------------
 
-def test_a_replay_source_change_leaves_the_collection_identity_alone(pipeline, tmp_path,
-                                                                     monkeypatch):
+def test_the_mwpm_backend_source_invalidates_only_replay_and_reuses_the_calibrator(
+        pipeline, tmp_path, monkeypatch):
+    backend = 'src/yoked/hierarchical/_outer_mwpm.py'
+    calibrator_before = pipeline.calibrators.read_bytes()
+
     def moved(requested):
         digests = source_hashes(requested)
         if requested is REPLAY_SOURCES:
-            digests[next(iter(digests))] = 'ff' * 32
+            assert backend in digests
+            digests[backend] = 'ff' * 32
         return digests
 
     before = read_json(pipeline.replay_dir / REPLAY_MANIFEST)['identity']
@@ -1175,11 +1180,40 @@ def test_a_replay_source_change_leaves_the_collection_identity_alone(pipeline, t
     assert again.identities == pipeline.calibration.identities
     assert sha256_file(pipeline.calibration.directory / RECORD_FILE) == \
         pipeline.calibration.manifest['artifacts'][RECORD_FILE]
+    with pytest.raises(ValueError, match='new output directory'):
+        stage_replay(pipeline.evaluation.directory, pipeline.calibrators,
+                     pipeline.replay_dir, CONFIGS)
     replayed = stage_replay(pipeline.evaluation.directory, pipeline.calibrators,
                             tmp_path / 'after-change', CONFIGS)
+    assert pipeline.calibrators.read_bytes() == calibrator_before
+    load_calibrators(pipeline.calibrators)
     assert sorted(replayed) == sorted(
         read_json(tmp_path / 'after-change' / REPLAY_MANIFEST)['configurations'])
     assert read_json(tmp_path / 'after-change' / REPLAY_MANIFEST)['identity'] != before
+
+
+def test_a_pymatching_replay_version_change_reuses_the_existing_calibrator(
+        pipeline, tmp_path, monkeypatch):
+    calibrator_before = pipeline.calibrators.read_bytes()
+    replay_before = read_json(pipeline.replay_dir / REPLAY_MANIFEST)['identity']
+
+    def upgraded(group):
+        versions = package_versions(group)
+        if group is REPLAY_PACKAGES:
+            assert 'pymatching' in versions
+            versions['pymatching'] += '-changed'
+        return versions
+
+    monkeypatch.setattr('yoked.hierarchical._stages.package_versions', upgraded)
+    with pytest.raises(ValueError, match='new output directory'):
+        stage_replay(pipeline.evaluation.directory, pipeline.calibrators,
+                     pipeline.replay_dir, CONFIGS)
+    fresh = tmp_path / 'after-pymatching-change'
+    replayed = stage_replay(pipeline.evaluation.directory, pipeline.calibrators, fresh, CONFIGS)
+    assert sorted(replayed) == sorted(read_json(fresh / REPLAY_MANIFEST)['configurations'])
+    assert read_json(fresh / REPLAY_MANIFEST)['identity'] != replay_before
+    assert pipeline.calibrators.read_bytes() == calibrator_before
+    load_calibrators(pipeline.calibrators)
 
 
 def test_a_calibration_application_change_invalidates_replay_but_keeps_l1(pipeline, tmp_path,

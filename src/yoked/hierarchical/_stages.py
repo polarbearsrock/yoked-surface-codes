@@ -123,10 +123,13 @@ from yoked.hierarchical._provenance import (
     utc_now, write_json_atomic,
 )
 from yoked.hierarchical._record import (
-    COMPLETE_STATUS, IDENTITY_NAMES, RECORD_FILE, RECORD_MANIFEST, RECORD_SCHEMA,
-    ROW_SUMMARY_FIELDS, L1Record, LoadedRecord, load_record,
+    BASELINE_AUDIT_FIELD, BASELINE_AUDIT_HASH, BASELINE_AUDIT_SCHEMA, COMPLETE_STATUS,
+    IDENTITY_NAMES, RECORD_FILE, RECORD_MANIFEST, RECORD_SCHEMA, ROW_SUMMARY_FIELDS,
+    L1Record, LoadedRecord, baseline_attachment_sha256, load_record,
 )
-from yoked.hierarchical._record import _frozen, _load_arrays, _require_fields, _save_arrays
+from yoked.hierarchical._record import (
+    _frozen, _load_arrays, _load_record, _require_fields, _save_arrays,
+)
 from yoked.hierarchical._replay import (
     CONFIG_SEPARATOR, ESTIMATOR_SEPARATOR, Calibrators, Estimator, ReplayConfig, ReplayResult,
     WorkCounts, fit_calibrators, replay,
@@ -194,7 +197,8 @@ RESULT_FIELDS = ('config', 'reference', 'pieces', 'initial_estimator', 'refined_
 """What a configuration's ``results.json`` declares about itself, beyond the metrics that
 ``summarize_result`` computes. The summary groups cells by these fields."""
 
-TIE_RULE = f'log-weight ties within {TIE_TOLERANCE} break to the lowest binary pattern'
+TIE_RULE = (f'PyMatching MWPM with original-weight precision checks; log-weight ties within '
+            f'{TIE_TOLERANCE} break to the lowest binary pattern')
 """The tie rule L2 actually applies, recorded inside the replay identity: the same
 probabilities under another tie rule are a different decoder, and nothing in the stored
 predictions would say so."""
@@ -603,7 +607,8 @@ def _import_manifest(directory: Path, block: Mapping) -> dict:
     """
     manifest = read_json(directory / RECORD_MANIFEST)
     sources, versions = source_hashes(CHECK_SOURCES), package_versions(CHECK_PACKAGES)
-    manifest[BASELINES_FIELD] = {
+    audit = {
+        'schema_version': BASELINE_AUDIT_SCHEMA,
         'imported_utc': utc_now(),
         'importer': {
             'check_identity': check_identity(sources=sources, versions=versions),
@@ -613,7 +618,17 @@ def _import_manifest(directory: Path, block: Mapping) -> dict:
         },
         **block,
     }
+    audit[BASELINE_AUDIT_HASH] = baseline_attachment_sha256(audit)
+    manifest[BASELINES_FIELD] = audit
     return manifest
+
+
+def _require_same_baseline_provenance(existing: Mapping, offered: Mapping, *, where) -> None:
+    """An idempotent import must name the same verified run and gate results."""
+    for name in ('names', 'row_mapping', 'run', 'decoders', 'yoke_parity', 'joint_mwpm'):
+        if canonical_json(existing.get(name)) != canonical_json(offered.get(name)):
+            raise ValueError(f'{where} already carries baselines with different {name!r} '
+                             'provenance; import into a fresh collection instead')
 
 
 def _publish_import(directory: Path, arrays: Mapping[str, np.ndarray], manifest: dict,
@@ -668,13 +683,21 @@ def stage_import_baselines(record_dir, recorded_run, *, names: Iterable[str] | N
         raise TypeError(f'hooks must be an _ImportHooks, got {type(hooks).__name__}')
     directory = Path(record_dir)
     _restore_interrupted_import(directory)
-    loaded = load_record(directory)                     # verifies every record artifact hash
+    loaded = _load_record(directory, allow_legacy_baselines=True)
     recorded = load_recorded_baselines(recorded_run, BASELINE_DECODERS.keys() if names is None
                                        else names)
     attached, block = attach_baselines(loaded, recorded)
     if loaded.record.baselines:
         _require_same_baselines(loaded.record, attached, where=directory)
-        return loaded
+        existing = read_json(directory / RECORD_MANIFEST)[BASELINE_AUDIT_FIELD]
+        legacy = 'schema_version' not in existing and BASELINE_AUDIT_HASH not in existing
+        if not legacy:
+            _require_same_baseline_provenance(existing, block, where=directory)
+            return load_record(directory)
+        # Old M2 records can only acquire the binding by re-verifying their arrays against
+        # the original run. The record bytes and collection identity stay unchanged.
+        write_json_atomic(directory / RECORD_MANIFEST, _import_manifest(directory, block))
+        return load_record(directory)
     _publish_import(directory, attached.arrays(), _import_manifest(directory, block), hooks)
     return load_record(directory)
 

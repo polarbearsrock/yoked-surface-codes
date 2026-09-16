@@ -94,17 +94,30 @@ class ClusterGapUnionFindDecoder:
     def decode_with_gaps(self, syndrome: np.ndarray) -> ClusterGapResult:
         decoded = self._uf.decode_with_growth_costs(syndrome)
         selected, mask = decoded.selected_edges, decoded.observable_mask
-        costs = decoded.remaining_costs
+        gaps, states = self.gaps_from_costs(decoded.remaining_costs)
+        prediction = np.array([(mask >> k) & 1 for k in range(self.graph.num_observables)], dtype=bool)
+        return ClusterGapResult(prediction, gaps, states, selected)
+
+    def gaps_from_costs(self, costs, *, max_gap: float = math.inf) -> tuple[np.ndarray, np.ndarray]:
+        """Reuse this topology for settled growth costs, optionally stopping early.
+
+        Return gaps censored at ``max_gap`` and actual settled-state counts. A
+        value at the cap means 'at least this much', including a disconnected
+        logical path. Reweighted costs must retain the graph's edge ids.
+        """
+        costs = np.asarray(costs, dtype=np.float64)
+        if costs.shape != (len(self.graph.edges),) or not np.isfinite(costs).all() or (costs < 0).any():
+            raise ValueError('Expected one finite nonnegative cost per edge')
+        if math.isnan(max_gap) or max_gap < 0:
+            raise ValueError('max_gap must be nonnegative')
         gaps, states = [], []
         for observable in range(self.graph.num_observables):
-            gap, settled = self._shortest_odd_walk(costs, observable)
+            gap, settled = self._shortest_odd_walk(costs, observable, max_gap=max_gap)
             gaps.append(gap)
             states.append(settled)
-        prediction = np.array([(mask >> k) & 1 for k in range(self.graph.num_observables)], dtype=bool)
-        return ClusterGapResult(prediction, np.array(gaps, dtype=np.float64),
-                                np.array(states, dtype=np.int64), selected)
+        return np.array(gaps, dtype=np.float64), np.array(states, dtype=np.int64)
 
-    def _shortest_odd_walk(self, costs: np.ndarray, observable: int) -> tuple[float, int]:
+    def _shortest_odd_walk(self, costs: np.ndarray, observable: int, *, max_gap: float = math.inf) -> tuple[float, int]:
         """Dijkstra over states 2 * vertex + parity from (B, 0) to (B, 1)."""
         adjacency = self._adjacency[observable]
         start, target = 2 * self._boundary, 2 * self._boundary + 1
@@ -115,6 +128,8 @@ class ClusterGapUnionFindDecoder:
             d, state = heapq.heappop(heap)
             if d > distance.get(state, math.inf):
                 continue  # a stale entry superseded by a shorter one
+            if d >= max_gap:
+                return max_gap, settled
             settled += 1
             if state == target:
                 return d, settled
@@ -123,7 +138,7 @@ class ClusterGapUnionFindDecoder:
                 flips = (self.graph.edges[e][3] >> observable) & 1
                 next_state = 2 * other + (parity ^ flips)
                 candidate = d + costs[e]
-                if candidate < distance.get(next_state, math.inf):
+                if candidate < max_gap and candidate < distance.get(next_state, math.inf):
                     distance[next_state] = candidate
                     heapq.heappush(heap, (candidate, next_state))
-        return math.inf, settled
+        return max_gap, settled

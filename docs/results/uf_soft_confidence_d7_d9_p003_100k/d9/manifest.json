@@ -1,0 +1,16 @@
+{
+  "artifacts": {
+    "calibrators.json": "bc7638449e52db1cc9f5c689175a73bce5d8d608b47ecf1aec983b7bcd22c7f3",
+    "confidence_rom.json": "ec94211b8b7bda6bbdca48514a62fb1d2c09a626812ea121360eb0bff1cd4b00",
+    "predictions.npz": "5abd231ca2aecc581c5f9c3997ded598dafa091bbee03ffd53f47ce9e97d6ab5",
+    "probabilities.npz": "05d499ab42aee9fe318f98561826dae9adc5e942e4be003f6c47a214f02e717d",
+    "results.json": "415c1184592a40a27eae9320d0aeae230bf516ee002971f89179132332d6dde0"
+  },
+  "inputs": {
+    "/data2/s2chitni/.tmp/hier-d9-p003-m2/calibration/manifest.json": "ac6410275c5a170980ffd97f41304688c05e7c13363624b1b825a294c9bae8dc",
+    "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d9/evaluation/manifest.json": "0071f86474b8bfd596c4e37925c8b607c2f71961e1dd01000fe7cb0c77154de4",
+    "/data2/s2chitni/.tmp/uf-soft-d7-d9-100k-QV55RQ/d9/calibration/manifest.json": "7ea64ee13aafa76ee052eaa33eb7d9d94a5baba38951a6fa95b474692d61408d",
+    "/data2/s2chitni/.tmp/uf-soft-d7-d9-100k-QV55RQ/d9/evaluation/manifest.json": "c8061b112535dd09e612aab44592dda6bc96c458ed7a917b86bb331ffedbdb93"
+  },
+  "schema": "UFSoftAnalysis/1"
+}

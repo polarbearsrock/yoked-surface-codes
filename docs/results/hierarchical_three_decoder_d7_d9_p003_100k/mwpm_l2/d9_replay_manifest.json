@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "uf_cluster_gap_to_gap_correlated_all_refined_mixed/arrays.npz": "372367bfd4d4c17970e82e7ad9e046517040b953edf4e995235aa96573c64db8",
+    "uf_cluster_gap_to_gap_correlated_all_refined_mixed/results.json": "835c84fb6a2d1c1cc267a50a68aadaf9ac4dbd3743156c052b427399a7b294fc"
+  },
+  "calibrators": {
+    "identity": "ccdc1f68a1fa457a9dea4132bac0dae44eaa5340957358ba7400d057853b6d2e",
+    "path": "/data2/s2chitni/.tmp/hier-d9-p003-m2/calibrators_full.json",
+    "sha256": "382eaff951e5150cccdf09e2a6b17bbaf7d36e699bc9494f967f2927b4002ff3"
+  },
+  "code_commit": "b58f9f58b9acc79ca1a41fd0c8e588fedd82f60e",
+  "configurations": [
+    "uf:cluster_gap->gap_correlated:all_refined:mixed"
+  ],
+  "created_utc": "2026-09-16T00:54:30Z",
+  "identity": "da007102e53c8b95f2487cfcdca4dc103ede539abb07d35d3e649d15b1867f7f",
+  "record": {
+    "directory": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d9/evaluation",
+    "identities": {
+      "collection": "2d0984a04c42896dc8c5f70f7100f9e191cbb35a841aaabad9d7cf8adb636543",
+      "decoder": "79fafa60cf62051e5132dc38d881e515b969bd703616ed3ddaac5a137ac2fa67",
+      "model": "73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d",
+      "parent_sample": "d1bc5fcf04da0c265f67b23637ee518f730cebc86700d04db09fec097a5130f1",
+      "sampling_family": "51918c6cd9505f780bd9ef6a6b029a52bb3f68ae81a6ea195f4dbe185668bf69"
+    },
+    "manifest_sha256": "0071f86474b8bfd596c4e37925c8b607c2f71961e1dd01000fe7cb0c77154de4",
+    "record_sha256": "5f061fa6e81988b25e1f2cf926d45f21c68ce2e31ed6ad0fab8b9f4ea7e4a5c8",
+    "role": "evaluation",
+    "rows": {
+      "count": 100000,
+      "sha256": "baa5f49fbad78af4964d9ec7eaf2d6327b2d2ca1f4dcf54e2394dfff2e36d58e",
+      "start": 0,
+      "stop": 100000
+    }
+  },
+  "schema_version": "hierarchical-l1-l2/1",
+  "source_sha256": {
+    "src/yoked/hierarchical/_calibration.py": "de5c0eb4383253596aaf861f976571fb8d7ea6d9ac8cd071a9f49caa8ad0020a",
+    "src/yoked/hierarchical/_metrics.py": "3d47195d293a8f58e4c45ba69b4b08bc4050ae18073d9d0b8149c616845e73fc",
+    "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+    "src/yoked/hierarchical/_outer_mwpm.py": "5f9c95f35d57d6b7937ed2c3896e77aae839897c226f8817aeac9a6cadd92703",
+    "src/yoked/hierarchical/_policies.py": "6817ae7076278544dbec646b9197c12b79558d52cd885d4b585c145ecabbc27e",
+    "src/yoked/hierarchical/_replay.py": "28aaa148a72c00cc76aafb3e0cb86341109606ee9da0a966d71dc0375229e1b5"
+  },
+  "stage": "replay",
+  "status": "complete",
+  "tie_rule": "PyMatching MWPM with original-weight precision checks; log-weight ties within 1e-09 break to the lowest binary pattern",
+  "versions": {
+    "numpy": "2.5.1",
+    "pymatching": "2.4.0",
+    "sinter": "1.16.0"
+  },
+  "work_convention": "replay-procedure calls: initial work per patch and incremental work per distinct refined patch, in the eleven WorkCounts fields; neither the collection work that produced the record nor elapsed time"
+}

@@ -5,11 +5,11 @@ Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, sections 6
 An estimator is a pair (reference decoder, score). Replay reads the stored
 record, maps the initial estimator's scores to q0 and the refined estimator's
 to q1 with the calibrators fitted on the calibration record, asks the policy
-for the request mask M, and runs the exact L2 of section 7 per sector on
+for the request mask M, and runs the MWPM L2 of section 7 per sector on
 ``q = where(M, q1, q0)`` with the frame-adjusted syndrome
 ``sigma = y XOR parity(r)``. The final prediction is ``f = r XOR x``, whose
 sector parity is the yoke bit by construction; replay checks that on every
-row. Nothing here re-runs a decoder: every score already sits in the record.
+row. L1 is not rerun: every score already sits in the record.
 
 ``WorkCounts`` records, per shot, the matching and search calls the specified
 replay procedure would need: the fixed initial work of the estimator pair and
@@ -40,7 +40,8 @@ import numpy as np
 from yoked.hierarchical._arrays import readonly_array
 from yoked.hierarchical._calibration import IsotonicCalibrator
 from yoked.hierarchical._matching_gaps import signed_gaps
-from yoked.hierarchical._outer_decoder import exact_outer_map_batch, frame_adjusted_syndrome
+from yoked.hierarchical._outer_decoder import frame_adjusted_syndrome
+from yoked.hierarchical._outer_mwpm import mwpm_outer_map_batch
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
 from yoked.hierarchical._policies import DeterministicPolicy
 from yoked.hierarchical._record import REFERENCE_NAMES, L1Record, by_sector, to_columns
@@ -70,9 +71,8 @@ SEARCHES_PER_UF_DECODE = 2
 """The cluster gap runs one parity-augmented search per sector."""
 
 REPLAY_BATCH_SHOTS = 4096
-"""Shots per L2 enumeration call. The decoder builds a (batch, 2**P, P) candidate
-intermediate, which is about 1.6 MB at this batch size with the experiment's six
-patches, so a 100,000-shot record never materializes a large temporary."""
+"""Shots per L2 call. Each shot has its own weighted matching graph; batching bounds
+the probability and result arrays without sharing weights between shots."""
 
 
 # --- estimators ---------------------------------------------------------------
@@ -455,7 +455,7 @@ class ReplayResult:
 
 def _outer_patterns(q: np.ndarray, sigma: np.ndarray, requested: np.ndarray,
                     restricted: bool) -> tuple[np.ndarray, np.ndarray]:
-    """Run the exact L2 of section 7 per sector, in bounded batches of shots."""
+    """Run MWPM L2 per sector, in bounded batches of shots."""
     shots = q.shape[0]
     patterns = np.zeros(q.shape, dtype=bool)
     ties = np.zeros((shots, NUM_SECTORS), dtype=bool)
@@ -463,7 +463,7 @@ def _outer_patterns(q: np.ndarray, sigma: np.ndarray, requested: np.ndarray,
         for start in range(0, shots, REPLAY_BATCH_SHOTS):
             rows = slice(start, min(start + REPLAY_BATCH_SHOTS, shots))
             candidates = requested[rows, sector, :] if restricted else None
-            decision = exact_outer_map_batch(q[rows, sector, :], sigma[rows, sector], candidates)
+            decision = mwpm_outer_map_batch(q[rows, sector, :], sigma[rows, sector], candidates)
             patterns[rows, sector, :] = decision.patterns
             ties[rows, sector] = decision.tied
     return patterns, ties

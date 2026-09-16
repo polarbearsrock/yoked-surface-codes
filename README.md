@@ -42,7 +42,7 @@ is available separately as an optional dependency and explicit decoder choice. S
 
 The `yoked.hierarchical` package decodes a 1D yoked block in two layers: L1
 decodes each patch on its own and stores reference bits with soft outputs, and
-an exact outer decoder (L2) uses the calibrated residual-error probabilities and
+a weighted-MWPM outer decoder (L2) uses the calibrated residual-error probabilities and
 the yoke parities to decide which patches to correct. `tools/hierarchical_experiment`
 drives it in four verified stages -- collect, calibrate, replay, summarize -- each
 publishing a manifest that the next one checks before reading. See

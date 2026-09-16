@@ -63,8 +63,8 @@ from yoked.hierarchical._collect import (
 )
 from yoked.hierarchical._l1 import _whole
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
-from yoked.hierarchical._provenance import read_json, sha256_bytes, sha256_file
-from yoked.hierarchical._record import L1Record, LoadedRecord
+from yoked.hierarchical._provenance import read_json, sha256_file
+from yoked.hierarchical._record import L1Record, LoadedRecord, baseline_prediction_sha256
 
 BASELINE_DECODERS = MappingProxyType({
     'joint_mwpm_recorded': 'mwpm',
@@ -129,8 +129,7 @@ def packed_prediction_sha256(prediction) -> str:
     if array.dtype.kind not in _NUMERIC_KINDS or (array.dtype.kind != 'b'
                                                   and not np.isin(array, (0, 1)).all()):
         raise ValueError('a prediction array must contain only 0 and 1')
-    packed = np.packbits(array.astype(bool), axis=1, bitorder='little')
-    return sha256_bytes(np.ascontiguousarray(packed))
+    return baseline_prediction_sha256(array)
 
 
 def _baseline_names(names: Iterable[str]) -> tuple[str, ...]:
@@ -434,8 +433,9 @@ def attach_baselines(loaded: LoadedRecord, recorded: RecordedBaselines) -> tuple
         },
         'decoders': {name: {'stem': BASELINE_DECODERS[name],
                             'file': prediction_file(BASELINE_DECODERS[name]),
-                            'prediction_packed_sha256': recorded.prediction_sha256[name]}
-                     for name in baselines},
+                            'prediction_packed_sha256': recorded.prediction_sha256[name],
+                            'mapped_prediction_sha256': baseline_prediction_sha256(baseline)}
+                     for name, baseline in baselines.items()},
         'yoke_parity': {'rows': record.shots, 'violations': 0},
         'joint_mwpm': joint,
     }

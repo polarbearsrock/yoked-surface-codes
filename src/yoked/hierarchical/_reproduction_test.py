@@ -187,6 +187,26 @@ def test_a_float_changed_by_one_ulp_is_a_mismatch_because_the_comparison_is_exac
     assert check.mismatched_rows['forced_plain'] == (CHANGED_ROW,)
 
 
+def test_float_sign_of_zero_is_compared_bit_for_bit(full, subset):
+    index = first_entry(subset, 'cluster_gap', CHANGED_POSITION)
+    positive = np.array(subset.cluster_gap)
+    positive[index] = 0.0
+    full_gaps = np.array(full.cluster_gap)
+    full_position = POSITIONS[CHANGED_POSITION]
+    full_index = (full_position,) + index[1:]
+    full_gaps[full_index] = 0.0
+    full = dataclasses.replace(full, cluster_gap=full_gaps)
+
+    negative = positive.copy()
+    negative[index] = -0.0
+    assert positive[index] == negative[index]
+    assert positive[index].view(np.uint64) != negative[index].view(np.uint64)
+
+    check = subset_reproduction(full, dataclasses.replace(subset, cluster_gap=negative))
+    assert check.equal['cluster_gap'] is False
+    assert check.mismatched_rows['cluster_gap'] == (CHANGED_ROW,)
+
+
 def test_a_row_changed_on_several_arrays_is_one_unmatched_row(full, subset):
     damaged = dataclasses.replace(
         subset,

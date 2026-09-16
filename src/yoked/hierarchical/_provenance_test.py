@@ -15,12 +15,13 @@ import pytest
 
 from yoked.hierarchical import _provenance
 from yoked.hierarchical._provenance import (
-    AUDIT_SOURCES, CALIBRATION_SOURCES, CHECK_SOURCES, DECODER_SOURCES, RECORD_CONVENTIONS,
-    REPLAY_SOURCES, REPOSITORY_ROOT, SAMPLE_CONVENTIONS, atomic_replacement, calibration_identity,
-    canonical_json, check_identity, collection_identity, decoder_identity, git_commit, json_ready,
-    model_identity, package_versions, packed_sample_hash, parent_sample_identity, read_json,
-    replay_identity, row_ids_sha256, sampling_family_identity, sha256_bytes, sha256_file,
-    source_hashes, utc_now, write_json_atomic,
+    AUDIT_SOURCES, CALIBRATION_PACKAGES, CALIBRATION_SOURCES, CHECK_SOURCES,
+    DECODER_PACKAGES, DECODER_SOURCES, RECORD_CONVENTIONS, REPLAY_PACKAGES, REPLAY_SOURCES,
+    REPOSITORY_ROOT, SAMPLE_CONVENTIONS, atomic_replacement, calibration_identity,
+    canonical_json, check_identity, collection_identity, decoder_identity, git_commit,
+    json_ready, model_identity, package_versions, packed_sample_hash, parent_sample_identity,
+    read_json, replay_identity, row_ids_sha256, sampling_family_identity, sha256_bytes,
+    sha256_file, source_hashes, utc_now, write_json_atomic,
 )
 
 MODEL_INPUTS = dict(
@@ -244,6 +245,17 @@ def test_calibration_and_replay_groups_name_their_own_sources():
     assert 'src/yoked/hierarchical/_calibration.py' in REPLAY_SOURCES
     assert 'src/yoked/hierarchical/_policies.py' in REPLAY_SOURCES
     assert 'src/yoked/hierarchical/_metrics.py' in REPLAY_SOURCES
+
+
+def test_the_mwpm_outer_backend_belongs_only_to_replay_provenance():
+    backend = 'src/yoked/hierarchical/_outer_mwpm.py'
+    assert backend in REPLAY_SOURCES
+    assert backend not in DECODER_SOURCES
+    assert backend not in CHECK_SOURCES
+    assert backend not in CALIBRATION_SOURCES
+    assert 'pymatching' in REPLAY_PACKAGES
+    assert 'pymatching' in DECODER_PACKAGES
+    assert 'pymatching' not in CALIBRATION_PACKAGES
 
 
 def test_audit_group_covers_the_cli_and_every_circuit_generator_source():

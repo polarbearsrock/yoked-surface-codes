@@ -8,6 +8,11 @@ under `$TMPDIR`; only reports are committed.
 The design this implements is
 [the hierarchical L1/L2 spec](superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md).
 
+The [UF-only confidence experiment](uf_soft_confidence_experiment.md) replaces
+L1 matching-based confidence with UF class-cost gaps and bounded cluster gaps,
+while retaining the fixed UF reference and the MWPM L2 backend. Its separate
+`tools/uf_soft_experiment` driver reuses verified calibration/evaluation records.
+
 ## The fixed-reference model
 
 A shot is decoded in two layers. **L1** decodes each of the six surface-code
@@ -21,7 +26,7 @@ patch-sector:
 
 **L2** never re-decodes. It receives the calibrated residual-error probability
 `q[i, s] = P(r[i, s] is wrong)` of each patch and the frame-adjusted syndrome
-`sigma[s] = y[s] XOR parity(r[:, s])`, and returns the maximum-weight residual
+`sigma[s] = y[s] XOR parity(r[:, s])`, and uses weighted MWPM to return the maximum-weight residual
 pattern `x` of the required parity. The final prediction is `f = r XOR x`.
 
 The reference is *fixed*: it is decided once by L1 and stored, and every
@@ -107,6 +112,15 @@ evaluation records accept baselines; calibration records never carry any. An
 import interrupted while publishing is put back by the next `import-baselines`
 call. The verification the import performs is described under [Historical
 baselines](#historical-baselines).
+
+The attachment has its own integrity digest covering the import provenance and
+gate results, with a packed hash for each baseline's mapped prediction array.
+`load_record` verifies this binding every time it opens an imported record.
+Older M2 attachments must first be upgraded by repeating `import-baselines`
+with their original recorded run. This re-verifies the saved predictions and
+gates, then updates only the manifest; the record bytes and collection identity
+stay unchanged. Replay outputs that name the old manifest need a fresh output
+directory.
 
 **Calibrate.** Fit one isotonic calibrator per estimator and sector on the
 calibration record, pooling the six patches of a sector into one fit.
@@ -469,12 +483,12 @@ delta = signed_gaps(forced.plain, cluster.prediction)   # (2,) nats: delta_X, de
 
 A negative gap means the matcher prefers the complement of the reference bit.
 
-**Exact L2 for one sector.** `exact_outer_map_batch` returns a
+**MWPM L2 for one sector.** `mwpm_outer_map_batch` returns a
 `BatchOuterDecision` with `patterns` of shape `(shots, patches)` and `tied` of
 shape `(shots,)`; both are owned, read-only arrays.
 
 ```python
-from yoked.hierarchical import BatchOuterDecision, exact_outer_map_batch, frame_adjusted_syndrome
+from yoked.hierarchical import BatchOuterDecision, mwpm_outer_map_batch, frame_adjusted_syndrome
 
 yoke = np.array([[True, False]])                        # y_X fired, y_Z did not
 reference = np.zeros((1, 12), dtype=bool)
@@ -482,7 +496,7 @@ sigma = frame_adjusted_syndrome(yoke, reference)        # (1, 2)
 assert sigma.tolist() == [[True, False]]
 
 q = np.array([[0.30, 0.02, 0.02, 0.02, 0.02, 0.02]])
-decision = exact_outer_map_batch(q, sigma[:, 0])
+decision = mwpm_outer_map_batch(q, sigma[:, 0])
 assert isinstance(decision, BatchOuterDecision)
 assert decision.patterns.tolist() == [[True, False, False, False, False, False]]
 assert decision.tied.tolist() == [False]
@@ -493,6 +507,22 @@ Odd parity with all probabilities below one half flips exactly the most likely
 patch. With `sigma = 0` the answer is usually no flip, but multiple flips are
 allowed and do occur once a probability exceeds one half. Log-weight ties within
 `TIE_TOLERANCE` break to the lowest binary pattern and are reported in `tied`.
+
+The matcher uses a separate two-edge path for each patch, weighted by its
+absolute log odds after preflipping probabilities above one half. This keeps
+patch labels distinct and supports multiple residual flips. Original-weight
+checks repair numerical quantization, and polynomial tie resolution preserves
+the documented choice among tied patterns. The exhaustive `exact_outer_map`
+and `exact_outer_map_batch` functions remain available as validation oracles;
+production replay calls MWPM and does not enumerate patterns.
+Fresh collection still uses enumeration in its independent small-block
+correctness gate; that validation does not produce the replay predictions.
+
+This backend change needs only a new replay output directory. Reuse the saved
+L1 record and calibrator artifact directly; no new shots or calibration fit
+are required. Replay manifests include the MWPM source hash, PyMatching
+version, and tie rule. Existing operation counters describe L1 work and remain
+unchanged; they are not a count of L2 matcher calls or a latency measurement.
 
 **Calibrate a score.** The direction is fixed by definition: every score is
 decreasing in the residual-error probability.

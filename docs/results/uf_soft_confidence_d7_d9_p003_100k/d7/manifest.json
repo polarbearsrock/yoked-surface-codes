@@ -1,0 +1,16 @@
+{
+  "artifacts": {
+    "calibrators.json": "8f4c305cd56691c0e7bf2a7461ff10f033ddca76acaaaf1d7171e04a5a2807e3",
+    "confidence_rom.json": "d74f1a7ff33fe46922ba944fdc4066ef2d79a35a3e044bc430674c800c024652",
+    "predictions.npz": "98755006c211f90dd64c268595ea9796349f68b1b15db0ccda0c207870f958e0",
+    "probabilities.npz": "a2d185d7321d52a4306fa926b08e34dd1daf0e3ef78758ca65557b9019ff0705",
+    "results.json": "25ddc8e00f32774b82dfc08df585230030a70f5bf8d63ffe57c173ea7b79442d"
+  },
+  "inputs": {
+    "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d7/calibration/manifest.json": "d4fd4fb11c87b81a6a23d55b0527b9621f7e7e09cd1313c382db78811542b3ca",
+    "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d7/evaluation/manifest.json": "7b0032fa56c219a31db5b3c36e0914b963e21aae2303b9d2e75f9fd37fc34860",
+    "/data2/s2chitni/.tmp/uf-soft-d7-d9-100k-QV55RQ/d7/calibration/manifest.json": "496b824ad0f540c7b2d706eb4363b7136742ed8cef5ac3120b127ad99f92ab6c",
+    "/data2/s2chitni/.tmp/uf-soft-d7-d9-100k-QV55RQ/d7/evaluation/manifest.json": "1882ff846ac35efa8d3bb56f677e3a4c13652113c83ada83de1be713344f4fba"
+  },
+  "schema": "UFSoftAnalysis/1"
+}

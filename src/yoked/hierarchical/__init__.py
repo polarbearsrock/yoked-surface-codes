@@ -20,6 +20,7 @@ from yoked.hierarchical._outer_decoder import (
     TIE_TOLERANCE, BatchOuterDecision, OuterDecision, exact_outer_map, exact_outer_map_batch,
     frame_adjusted_syndrome,
 )
+from yoked.hierarchical._outer_mwpm import mwpm_outer_map, mwpm_outer_map_batch
 from yoked.hierarchical._patch_graphs import NUM_SECTORS, PatchGraph, PatchGraphs
 from yoked.hierarchical._policies import NoRefinement, RefineAll, policy_from_name
 from yoked.hierarchical._record import L1Record, LoadedRecord, by_sector, load_record, to_columns
@@ -42,6 +43,7 @@ __all__ = [
     'GraphChecks', 'RecordChecks', 'check_graphs', 'check_record',
     'ForcedWeights', 'MatchingGaps', 'signed_gaps',
     'TIE_TOLERANCE', 'OuterDecision', 'BatchOuterDecision', 'exact_outer_map', 'exact_outer_map_batch',
+    'mwpm_outer_map', 'mwpm_outer_map_batch',
     'frame_adjusted_syndrome',
     'L1Record', 'LoadedRecord', 'by_sector', 'load_record', 'to_columns',
     'BASELINE_DECODERS', 'RecordedBaselines', 'load_recorded_baselines', 'attach_baselines',

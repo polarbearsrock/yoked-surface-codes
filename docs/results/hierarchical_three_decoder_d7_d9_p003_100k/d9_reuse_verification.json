@@ -1,0 +1,12 @@
+{
+  "all_replay_arrays_exactly_equal": true,
+  "evaluation_record_npz_unchanged": true,
+  "failed_shots": {
+    "hierarchical_uf": 6820,
+    "joint_correlated_mwpm": 6925,
+    "joint_correlated_uf": 14247,
+    "joint_mwpm_recorded": 25660,
+    "joint_uf": 39847
+  },
+  "old_root": "/data2/s2chitni/.tmp/hier-d9-p003-m2"
+}

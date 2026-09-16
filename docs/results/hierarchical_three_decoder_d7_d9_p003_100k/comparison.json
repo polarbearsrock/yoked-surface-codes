@@ -1,0 +1,1223 @@
+{
+  "bootstrap": {
+    "replicates": 10000,
+    "seed": 43
+  },
+  "distance_ratios": {
+    "correlated_mwpm": {
+      "95_ci": [
+        2.5938371757511134,
+        2.749475733792282
+      ],
+      "estimate": 2.669545965803971
+    },
+    "correlated_uf": {
+      "95_ci": [
+        2.1782894297524233,
+        2.2750878498924103
+      ],
+      "estimate": 2.226245182880857
+    },
+    "hierarchical_uf": {
+      "95_ci": [
+        2.5816773426348045,
+        2.7389659494168246
+      ],
+      "estimate": 2.6593514657466453
+    }
+  },
+  "distances": {
+    "d7": {
+      "bootstrap": {
+        "method": "empirical multinomial over 8 joint failure states",
+        "replicates": 10000,
+        "seed": 43
+      },
+      "decoders": {
+        "correlated_mwpm": {
+          "block_failure_95_ci": [
+            0.1357,
+            0.13998025
+          ],
+          "block_failure_rate": 0.13785,
+          "block_failures": 13785,
+          "label": "Correlated MWPM",
+          "normalized_ler": 0.0008907858999728235,
+          "normalized_ler_95_ci": [
+            0.0008756952564858977,
+            0.0009057796566282195
+          ],
+          "shots": 100000
+        },
+        "correlated_uf": {
+          "block_failure_95_ci": [
+            0.22969,
+            0.23494
+          ],
+          "block_failure_rate": 0.2323,
+          "block_failures": 23230,
+          "label": "Correlated UF",
+          "normalized_ler": 0.001598998922251682,
+          "normalized_ler_95_ci": [
+            0.001578136307529343,
+            0.001620182797855363
+          ],
+          "shots": 100000
+        },
+        "hierarchical_uf": {
+          "block_failure_95_ci": [
+            0.13321,
+            0.13747
+          ],
+          "block_failure_rate": 0.13537,
+          "block_failures": 13537,
+          "label": "Hierarchical UF + correlated gap",
+          "normalized_ler": 0.0008733827499732838,
+          "normalized_ler_95_ci": [
+            0.0008582707742260665,
+            0.0008881156441570282
+          ],
+          "paired_block_difference_vs_correlated_mwpm": {
+            "95_ci": [
+              -0.0034299999999999886,
+              -0.0015300000000000036
+            ],
+            "estimate": -0.00248000000000001,
+            "joint_outcomes": {
+              "baseline_fails_hierarchical_succeeds": 1298,
+              "baseline_succeeds_hierarchical_fails": 1050,
+              "both_fail": 12487,
+              "both_succeed": 85165
+            }
+          },
+          "paired_block_difference_vs_correlated_uf": {
+            "95_ci": [
+              -0.09935,
+              -0.09455
+            ],
+            "estimate": -0.09693000000000002,
+            "joint_outcomes": {
+              "baseline_fails_hierarchical_succeeds": 12964,
+              "baseline_succeeds_hierarchical_fails": 3271,
+              "both_fail": 10266,
+              "both_succeed": 73499
+            }
+          },
+          "paired_ler_ratio_vs_correlated_mwpm": {
+            "95_ci": [
+              0.9731479466227776,
+              0.9878878695630327
+            ],
+            "estimate": 0.9804631505729147
+          },
+          "paired_ler_ratio_vs_correlated_uf": {
+            "95_ci": [
+              0.5377472564705237,
+              0.5546588192951829
+            ],
+            "estimate": 0.5462059653820164
+          },
+          "shots": 100000
+        }
+      },
+      "distance": 7,
+      "joint_failure_state_counts": [
+        72877,
+        622,
+        12288,
+        676,
+        423,
+        2848,
+        627,
+        9639
+      ],
+      "pieces": 168,
+      "provenance": {
+        "calibration": {
+          "code_commit": "b58f9f58b9acc79ca1a41fd0c8e588fedd82f60e",
+          "identity": "86c09f589609b9e418102d18b633b0ca962ce769796af4585975ea9ceaeff5fd",
+          "parent_shots": 50000,
+          "path": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d7/calibrators.json",
+          "payload_sha256": "7f5501f91c1dc31dc63cbd55995f61717e9d248eeecccafa9b8aba36a685dc13",
+          "record": {
+            "directory": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d7/calibration",
+            "identities": {
+              "collection": "5a31ce62cb0119fc5f78dbfeb72906f4fa315203b78312568e19ae0366a1cdc3",
+              "decoder": "7c5545f08b31c79cb18d2a3a44af088cdf1ada5c38623eadeb6acfaab5606d9f",
+              "model": "11ef813196c28aca75613911e321596681b9f1e6db6a9e240040774123aa457e",
+              "parent_sample": "010cdb2220a7a416c79fa07470af53f521dd63f4e0050de7e87364ebc341a2e6",
+              "sampling_family": "1a3ab23935e6fe0440745d065517699197c83893023bceb2e9e3668d18b0a319"
+            },
+            "manifest_sha256": "d4fd4fb11c87b81a6a23d55b0527b9621f7e7e09cd1313c382db78811542b3ca",
+            "record_sha256": "8459667c58b8eb88e51b9d2ca0930500a7096d65d9e2b0f09fd83cd303c91716",
+            "role": "calibration",
+            "rows": {
+              "count": 50000,
+              "sha256": "33236cc6bd19fa6b89e06d441d3fcd8eb37dc8540f6a4f2b627b20af10894a41",
+              "start": 0,
+              "stop": 50000
+            }
+          },
+          "record_source_sha256": {
+            "audit": {
+              "missing": [],
+              "src/gen/__init__.py": "a6b1b0c23a282265350cf0cc1352d092790d19803d21e57ac48e9ca45b67ab97",
+              "src/gen/_circuit_util.py": "ba14ce21bd8b531ab89b2eebcca7b06976f0740560ec558aa9066f3f532eccd5",
+              "src/gen/_circuit_util_test.py": "5b171bd62399c3c596850698557c554c59da16b593244ba65ca3f6457ad640f6",
+              "src/gen/_core/__init__.py": "94baf73265a9c37f90bc828b00d222acf14e719d70ea2564364da5e1a94ef56e",
+              "src/gen/_core/_builder.py": "925ccf683463327f9ee07e6dea7a5cd59e117e86efe3b2394933a9f93e368eb4",
+              "src/gen/_core/_builder_test.py": "617229217dbf3c6ceb09abdd609a129c778944ffe87052cc2243ed0f09d5acbc",
+              "src/gen/_core/_measurement_tracker.py": "cafd64a79af977ef64ad65234066f365c4f3a103a4351411f0fc15d1d1cfdf39",
+              "src/gen/_core/_noise.py": "1f89e007b1a3d7ed554b484171238e43d7cd38fb9b4427fa7dad2a2b7c71badc",
+              "src/gen/_core/_noise_test.py": "ce401c051b893c31b27c2f004f277d47dc0bd8c69aa33a6b476f963f8781d338",
+              "src/gen/_core/_patch.py": "a7f2d2035bbc8b24f72354cc6a7b1abe9bca360e68f6e5c3ff182acd5c67bebb",
+              "src/gen/_core/_patch_test.py": "942ba14b5b81ae861981e3f1c3da063692c333f37a61c9676229b1e956af950d",
+              "src/gen/_core/_tile.py": "dfd51f9da14030d02b9d4a65961e36e76c64b4d4a94699df7fe256a5c9b6b0e7",
+              "src/gen/_core/_tile_test.py": "43fdd5b5d19158d6840678448a7b93b7959afe2bbe9f82a93c575592b35b10e6",
+              "src/gen/_core/_util.py": "1cffa3048b3cb4d65d4974b2422b8577368b6bdaf207da0db32b54f8c1ddae63",
+              "src/gen/_core/_util_test.py": "619cb191611398ce3081f1c4b2848e48ae3c2bc2227c83fc8592eac4b59990b5",
+              "src/gen/_flows/__init__.py": "9fe5ac8972e3b245492485e3e91672bd5df5174a5abd9dd55fe7a3341e4eb8ef",
+              "src/gen/_flows/_chunk.py": "31ac2819e680745476333e94770e7743141f4c6dab5655e7dd0631f112bb0626",
+              "src/gen/_flows/_chunk_test.py": "d2fb2fcb32fae1a0ad56a8fcca1dad5cc6eaafb759ea2f47547d67839a2db8a6",
+              "src/gen/_flows/_flow.py": "24336be6588a932c6039ee2291f76c57e7ff191b8d5c0e69c5d65f6c51fe23a1",
+              "src/gen/_flows/_flow_test.py": "a3deb4957858d3464d453ed34933b4a0c9166736907438236173796b97361353",
+              "src/gen/_flows/_flow_util.py": "2462fd17005e358611bab08e4269de9b2b786aac417e62b4b6bd41ec6d079391",
+              "src/gen/_flows/_flow_util_test.py": "79c82398c6a6a7a5a3d4d14ea64eeb1b2e877ded91cd692ac30c6d662d3b7dd8",
+              "src/gen/_flows/_flow_verifier.py": "946a986fba17a7ef801dc87aa50b4870b845d25b8d9dd78146f2882ebb04e44c",
+              "src/gen/_flows/_flow_verifier_test.py": "4c9ab6d6991a3e18b033591a6b6049cae401576e0e538e75c0e81817ac7fdb95",
+              "src/gen/_flows/_pauli_string.py": "054e2238d47902daa73e617c2e94410496642d085e283f37800966eb1026361b",
+              "src/gen/_flows/_pauli_string_test.py": "6a4025c48038d56783e1c1634f851c6950882b5a07b55ce8ac018f4987c5559b",
+              "src/gen/_interaction_planner.py": "74db7b094c0929ea9ad1f12f4e7b883c7ab6b85362bda031be167252ea891a16",
+              "src/gen/_interaction_planner_test.py": "c6499da8339c8a943fe021dde06c0e29064b75431c98dc9a19c6332efe05953b",
+              "src/gen/_layers/__init__.py": "bea8756879b0754758897fdf29cb66a728aeedad7c09ba5028464e96bdf5b8b9",
+              "src/gen/_layers/_data.py": "4f114ef7a4a96471d193dd8e17b31b4203de301c77938e76a4c24d89d80ce598",
+              "src/gen/_layers/_det_obs_annotation_layer.py": "7b9bdcd0251569613b077c35212ca383241e15cd20cd6696d05f2f48ea5cfa41",
+              "src/gen/_layers/_empty_layer.py": "c1235559ffb0f1c100230edcb7c3bda37ba88a09b66943882f09e6cb29103520",
+              "src/gen/_layers/_feedback_layer.py": "ae75b28452dcb91158b09b4f99765bcd7447face7bfb6a124ea6827c15aad44f",
+              "src/gen/_layers/_feedback_layer_test.py": "252ae96799c1da4a0bdb9f2431a5f0dd57143c38dd82a84481fd2f59a5537982",
+              "src/gen/_layers/_interact_layer.py": "097db41ee16e470bd05b13053524922d35525005e8a6465871a0376e6dd586f3",
+              "src/gen/_layers/_interact_swap_layer.py": "fde9f21466d017b118d8ccd73c1c86f8db210e760e8094d61203758d53d7d1fe",
+              "src/gen/_layers/_iswap_layer.py": "e0210c7e097a45c5317ce264073691a1f6d77ccb75f12e64ae9b54f79a1f54fa",
+              "src/gen/_layers/_layer.py": "78c90f48266539f5e6dc94e1c74b73c86545605e85a9330ad395dfb8775d7df3",
+              "src/gen/_layers/_layer_circuit.py": "0f0cf01383fe4151f53c9c99576e60d259bacc7b158060c90215e781ef50b7e4",
+              "src/gen/_layers/_layer_circuit_test.py": "4bd0f80eaa82ab9e5ebacdf3b6105b5693d4bc4b6ecee130e36d659daf01d542",
+              "src/gen/_layers/_loop_layer.py": "88197eb252452e27ed85146ddc662ed74fa02827b6095a1203886c9afb1ce452",
+              "src/gen/_layers/_measure_layer.py": "3d06e0cbc9123d14805567daa2adbf5b8a68bcbd312640bf4d934f1ea87a5c0a",
+              "src/gen/_layers/_mpp_layer.py": "3cdad867cbae3fa7965c1dfa51207decaaa1f78d0d526e335945e260fe84a23a",
+              "src/gen/_layers/_noise_layer.py": "1301ecafe9840a57fbef67563cd4c5e7e4b35ac09fb78af74402502bae6ff582",
+              "src/gen/_layers/_qubit_coord_annotation_layer.py": "f90c9d633d816cfd2fbe73d66f0e4cc280b5ebb54821c666cb94e94e84830b01",
+              "src/gen/_layers/_reset_layer.py": "0935d884c38b50164914cc79db1ba4e1bb46abcae0f34f9dfcd6f688366127f0",
+              "src/gen/_layers/_rotation_layer.py": "93e6888c7853a79385be9be52147231b00aedfc251d81d3c004dc282b002ba5e",
+              "src/gen/_layers/_shift_coord_annotation_layer.py": "36bf6618ee0c7e4778d12e2d1d66036d39471d1af43f60ea2eac6e4d8cd48e14",
+              "src/gen/_layers/_sqrt_pp_layer.py": "0a4373a766b0b87ad567a0e66d2dced95287c22cdd9431cac67646c72a8f40a3",
+              "src/gen/_layers/_swap_layer.py": "f92158160b119475d600ff8e74874a1333c4c2b13412dbffd918dc88083360be",
+              "src/gen/_layers/_transpile.py": "f7e9e400341e927a6adb4a097155a362644cd2a8f5cb2fab4accdabb4819ecd3",
+              "src/gen/_layers/_transpile_test.py": "60a4ba91b90ea88e2f4c15a07c43fb4834d7ee3dd5225334942212aa7958f225",
+              "src/gen/_main_util.py": "c363a3ea8249da8cf09d559f9c62be76246d155f0e326041941ed3d0be433df4",
+              "src/gen/_plaq_problem.py": "6b792f1ae5ca480a24937c8a454f2f531fdf4b40b17f33606de5426c7954ac12",
+              "src/gen/_stabilizer_code.py": "beea6c7ab8cd80b6f7713a8581bc27932dadbdd11f609aaaeb9a7c89cac9634c",
+              "src/gen/_surf/__init__.py": "f7644c5a75b41bea5b86420be91744e42afa79da4adf14e1cc43f01ea33a3987",
+              "src/gen/_surf/_closed_curve.py": "83c3cde969686f5daa3f5063183e60e51f0333fb59174e1c4391a7d1a34e7bf3",
+              "src/gen/_surf/_closed_curve_test.py": "26d3e50cf84e9fe76a142fc203db654f4f0297baf96ec0d01de11a1d4bcc0b49",
+              "src/gen/_surf/_css_observable_boundary_pair.py": "0a52bdf26cde38e1f5d0765f98376d0f0c0760cd1e31c902cceef5f1bb2c4bd4",
+              "src/gen/_surf/_geo.py": "55c72196cbc185b1ecd354ee1de8b6c4304c78679046401d9883c7ef2d110db6",
+              "src/gen/_surf/_geo_test.py": "2e733b45443444a93a2e33e83602594287853cb23519ddd0ee2df872f05a5cf8",
+              "src/gen/_surf/_open_curve.py": "3d83a6d2f341603a745dbdaf6fc7d88c9c9a0cd6f5a5e4b5ee93802f2080fc91",
+              "src/gen/_surf/_open_curve_test.py": "50d98aa6312ec76e6bb0dfcda0d7039f0374906e303ad330e2ed69b2516c743b",
+              "src/gen/_surf/_order.py": "6021fc5ae02fbe8362f2a399762c11b404c04855899862376412a8e58f1ec825",
+              "src/gen/_surf/_patch_outline.py": "6fd943ead29edfacc70be9e642765a16b7833de139433d5a7538f4e48f1f65d2",
+              "src/gen/_surf/_patch_outline_test.py": "482d01c58e6a4318b930a69bceabb81ea4200c6dba61d46bfe4a4dd2d6f21bb8",
+              "src/gen/_surf/_patch_transition_outline.py": "f6fca52567c08bfabaf79000c685d9af0abf9077cef4bc3ce4e10e7b65430db3",
+              "src/gen/_surf/_patch_transition_outline_test.py": "4f1e905f3b46d67f85a63be5dc350ceef78b03802fe0b3d996b8259bef7c515f",
+              "src/gen/_surf/_path_outline.py": "1835d4b6bf923c485cb3c48478fab372738d5cc90d83120d24c64ff86666a07d",
+              "src/gen/_surf/_step_outline.py": "24cc9a49d8a4edc38c9f7286568abe63dd1405fcbb723ffedcf170a785edfbe8",
+              "src/gen/_surf/_step_outline_test.py": "a4aac379e738b1831964202505488d8ef6fb870e2697d0d5a674be79f5ce9380",
+              "src/gen/_surf/_step_sequence_outline.py": "e17db6cbdb46ec074c15ff837cb3ee4391457fd631f4555685b2162234e344f9",
+              "src/gen/_surf/_surface_code.py": "eeaa3a9b82f46d3c2bee8cc4138b3b4452b6112085aa831eedf9c20f055e746b",
+              "src/gen/_surf/_surface_code_test.py": "5c4c4daafe20faeb31ec98b4b391f2d5cc3df5c8272db92d57fb2ab9031a6197",
+              "src/gen/_surf/_trans.py": "c1f807e945618700d21f2932f806c7164a564a521a8d494e248155175fc3d93c",
+              "src/gen/_surf/_viz_gltf_3d.py": "421209c4bf41302e9f99c036321a1a6466ca9679695567f89e59ba0892631dc5",
+              "src/gen/_surf/_viz_gltf_3d_test.py": "e43a6ba5e2d8506b6ce00bb0ffa380fd57f2f0e0765f7ecded20b2caa4e1acfb",
+              "src/gen/_surf/_viz_patch_outline_svg.py": "760751c7c133d89e3a60ec1d86e491fad9481b8fa665734791cbb0aa5bccd4a5",
+              "src/gen/_surf/_viz_sequence_3d.py": "f14b4500fb9bddab5affad691f0752423ad61fab4fb47cf957eb41a9f656a883",
+              "src/gen/_util.py": "6248d9466fe126be7767fa430796c182e32633a019a6c7d59f81dd1993bdc2f2",
+              "src/gen/_util_test.py": "51039ee8ed117f6bd082762a45f8a5af508b1e6d07bfa60d0c105f401396d138",
+              "src/gen/_viz_circuit_html.py": "e771a8c551a7c2606829fab96d3c011f81d58aed98548d4514a228008468ac3f",
+              "src/gen/_viz_patch_svg.py": "384d248d12f276b5233317eca1f44584dda21a4bf5e7b5bd9ffa2009475c0cef",
+              "src/yoked/_yoked_memory_circuits.py": "d8230b5892ad53b9e42ebbd1c947d8cd31c484397bf194ea83c502616ad7b759",
+              "src/yoked/hierarchical/_stages.py": "506795c329029625bcbeef160cb2b03c734d55b944c65ff1eaae6eccf255452a",
+              "tools/hierarchical_experiment": "6196cb7cc991e8d022d5b510cdf77606674f93e92e311c7d77991e62ad8759d2"
+            },
+            "check": {
+              "src/yoked/hierarchical/_baselines.py": "4eddfab51ca4d60a815e2f8f7b4c2b88b745636ffd528f35331eedcdd34e2729",
+              "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+              "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+              "src/yoked/hierarchical/_reproduction.py": "9b3cab9c3cf76e753afe1d3ebc631a0a6096bdd9874a23ada5d3258a64e87259"
+            },
+            "decoder": {
+              "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+              "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+              "src/yoked/decoders/_union_find.py": "14f90a29c034f0b30f09af8ef77ce7ecb1d5c7c65db6cfd1d18db8c887022eda",
+              "src/yoked/hierarchical/_arrays.py": "e8e8de153fc76896ea599ca0de0ea80c173fbd4fde8b86cd4f0415b6fef880ab",
+              "src/yoked/hierarchical/_cluster_gap.py": "9fe77c15e2cce2cfbab9667fac21d2fa8bc093a37a00e330c49ad0ea006200c2",
+              "src/yoked/hierarchical/_l1.py": "36751cdad5b4a423a7607cb3fdac9812dff1e16de80221454b284765de785460",
+              "src/yoked/hierarchical/_matching_gaps.py": "7a7456ac2cabfeb5d96aa30434ed8422e3520ac371cc1caa3bd5ffa41a9c516d",
+              "src/yoked/hierarchical/_patch_graphs.py": "958c9b8d2a3c884c5d10426154370a6d7e588a8bab22b4e0f91f8ea369b78387",
+              "src/yoked/hierarchical/_record.py": "c7814affa410b8022f021eb999ef282c331da4750d7b94ba3e27ed12dcc23f17"
+            }
+          },
+          "record_versions": {
+            "check": {
+              "numpy": "2.5.1",
+              "pymatching": "2.4.0"
+            },
+            "decoder": {
+              "numpy": "2.5.1",
+              "pymatching": "2.4.0",
+              "scipy": "1.18.0",
+              "stim": "1.16.0"
+            }
+          },
+          "sample_identity_inputs": {
+            "circuit_sha256": "8cfa9bb9eaf6db86dfc9ffcfefa4582eb29932d11dc1fd911239ef1425841ff9",
+            "dem_sha256": "9b06141668bef9b334df78e4700853f60505a71f3c4185746d0261e7e3790e0a",
+            "model_versions": {
+              "stim": "1.16.0"
+            },
+            "num_detectors": 8354,
+            "num_observables": 12,
+            "parameters": {
+              "distance": 7,
+              "noise": "si1000",
+              "p": 0.003,
+              "patches": 6,
+              "rounds": 28,
+              "style": "cz",
+              "yokes": 2
+            },
+            "parent_shots": 50000,
+            "payload_sha256": "7fa45ee18b594b6fa740a95abd3dd3893782b2f875cadb6907d672085b300563",
+            "sampling_versions": {
+              "stim": "1.16.0"
+            },
+            "seed": 142
+          },
+          "seed": 142,
+          "sha256": "802f359e2e13c862ffc343e0e353d0bfa15ae93198f6841ed9b3d8579ca29149",
+          "source_sha256": {
+            "src/yoked/hierarchical/_calibration.py": "de5c0eb4383253596aaf861f976571fb8d7ea6d9ac8cd071a9f49caa8ad0020a",
+            "src/yoked/hierarchical/_replay.py": "7a2639d9bd5fb035bb664de49b1852a779a0093fbf9df8a7ccf1484976858b8a"
+          },
+          "versions": {
+            "numpy": "2.5.1"
+          }
+        },
+        "collection_identity": "7ec0455b5b3fe7e54497452fb79fdd2e773884470cfdb2d46a1a90177d01ce33",
+        "evaluation": {
+          "baseline_attachment": {
+            "attachment_sha256": "9f0aad1f65bed0ca6aa1ca546e3b0955a34f264fa1a65ce8ae330bdcc9137aa8",
+            "decoders": {
+              "joint_correlated_mwpm": {
+                "file": "correlated_mwpm_predictions.npy",
+                "mapped_prediction_sha256": "2bdc5fb4de646242d374556282c6754cf172196ee6d537b6f1ac49575c6216f6",
+                "prediction_packed_sha256": "2bdc5fb4de646242d374556282c6754cf172196ee6d537b6f1ac49575c6216f6",
+                "stem": "correlated_mwpm"
+              },
+              "joint_correlated_uf": {
+                "file": "correlated_uf_predictions.npy",
+                "mapped_prediction_sha256": "86fa9b2318d0851334435bf5de7575bc1fadb3bd1030ca01a953182538bff208",
+                "prediction_packed_sha256": "86fa9b2318d0851334435bf5de7575bc1fadb3bd1030ca01a953182538bff208",
+                "stem": "correlated_uf"
+              },
+              "joint_mwpm_recorded": {
+                "file": "mwpm_predictions.npy",
+                "mapped_prediction_sha256": "893c380ed46739df29471dd1a25100faa53fa527257c39e2eb54a6cdbab8be9e",
+                "prediction_packed_sha256": "893c380ed46739df29471dd1a25100faa53fa527257c39e2eb54a6cdbab8be9e",
+                "stem": "mwpm"
+              },
+              "joint_uf": {
+                "file": "uf_predictions.npy",
+                "mapped_prediction_sha256": "db26cc881cd178af8e6fd198f9c85d5e235433a95d757f0805f836eeca8d5bce",
+                "prediction_packed_sha256": "db26cc881cd178af8e6fd198f9c85d5e235433a95d757f0805f836eeca8d5bce",
+                "stem": "uf"
+              }
+            },
+            "imported_utc": "2026-09-16T00:21:40Z",
+            "importer": {
+              "check_identity": "8d303fcdb464ab439df48aca3c2197c79437b193ef768dbba049a4a4044f171f",
+              "code_commit": "b58f9f58b9acc79ca1a41fd0c8e588fedd82f60e",
+              "source_sha256": {
+                "src/yoked/hierarchical/_baselines.py": "4eddfab51ca4d60a815e2f8f7b4c2b88b745636ffd528f35331eedcdd34e2729",
+                "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+                "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+                "src/yoked/hierarchical/_reproduction.py": "9b3cab9c3cf76e753afe1d3ebc631a0a6096bdd9874a23ada5d3258a64e87259"
+              },
+              "versions": {
+                "numpy": "2.5.1",
+                "pymatching": "2.4.0"
+              }
+            },
+            "joint_mwpm": {
+              "agreement": 1.0,
+              "baseline": "joint_mwpm_recorded",
+              "compared_with": "joint_mwpm",
+              "cost_tolerance": 1e-06,
+              "disagreements": 0,
+              "max_disagreement_cost_difference": 0.0,
+              "tie_explained": 0
+            },
+            "names": [
+              "joint_mwpm_recorded",
+              "joint_uf",
+              "joint_correlated_mwpm",
+              "joint_correlated_uf"
+            ],
+            "row_mapping": "the record's parent row ids index the run's prediction rows",
+            "run": {
+              "circuit_sha256": "8cfa9bb9eaf6db86dfc9ffcfefa4582eb29932d11dc1fd911239ef1425841ff9",
+              "code_commit": null,
+              "dem_sha256": "9b06141668bef9b334df78e4700853f60505a71f3c4185746d0261e7e3790e0a",
+              "directory": "/data2/s2chitni/.tmp/ysc-four-decoders-d7-p003-100k-adapter",
+              "manifest_sha256": "7e7ebeb905b0b9e9993a46ca17cac90e14563a6b14a306d3b463b121f2cfee6b",
+              "parent_shots": 100000,
+              "payload_sha256": "f789a3f4cec39e5a5418cacb4e7bbd959dd47749f6c566ae93318c04ccc40a79",
+              "results_sha256": "5352841b9688f61146210ad1543f2b40170ca2c35182fc89e00b325f78933d36",
+              "source_sha256": {
+                "src/yoked/decoders/_correlated_union_find.py": "62a56ce8bed3fba3fe4dae5bba931fa069ade6f253f63fc1be94779f1ba7bee2",
+                "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+                "src/yoked/decoders/_union_find.py": "8482635867c74233465d68152dd153c56adf3b7323d5573926400bad7e436b59"
+              },
+              "versions": {
+                "numpy": "2.5.1",
+                "pymatching": "2.4.0",
+                "scipy": "1.18.0",
+                "sinter": "1.16.0",
+                "stim": "1.16.0"
+              }
+            },
+            "schema_version": "BaselineAttachment/hierarchical-l1-l2/1",
+            "yoke_parity": {
+              "rows": 100000,
+              "violations": 0
+            }
+          },
+          "identities": {
+            "collection": "7ec0455b5b3fe7e54497452fb79fdd2e773884470cfdb2d46a1a90177d01ce33",
+            "decoder": "7c5545f08b31c79cb18d2a3a44af088cdf1ada5c38623eadeb6acfaab5606d9f",
+            "model": "11ef813196c28aca75613911e321596681b9f1e6db6a9e240040774123aa457e",
+            "parent_sample": "d705c41f9b75c6bff58a5efc9ca318b6b9159fb4e5292d7d8165b6e5513214d0",
+            "sampling_family": "fcdec3a03babb46176c646176c0445dac01ef1068274eaf3abaf3db7abcdf76d"
+          },
+          "parent_shots": 100000,
+          "rows": {
+            "count": 100000,
+            "sha256": "baa5f49fbad78af4964d9ec7eaf2d6327b2d2ca1f4dcf54e2394dfff2e36d58e",
+            "start": 0,
+            "stop": 100000
+          },
+          "sample_identity_inputs": {
+            "circuit_sha256": "8cfa9bb9eaf6db86dfc9ffcfefa4582eb29932d11dc1fd911239ef1425841ff9",
+            "dem_sha256": "9b06141668bef9b334df78e4700853f60505a71f3c4185746d0261e7e3790e0a",
+            "model_versions": {
+              "stim": "1.16.0"
+            },
+            "num_detectors": 8354,
+            "num_observables": 12,
+            "parameters": {
+              "distance": 7,
+              "noise": "si1000",
+              "p": 0.003,
+              "patches": 6,
+              "rounds": 28,
+              "style": "cz",
+              "yokes": 2
+            },
+            "parent_shots": 100000,
+            "payload_sha256": "f789a3f4cec39e5a5418cacb4e7bbd959dd47749f6c566ae93318c04ccc40a79",
+            "sampling_versions": {
+              "stim": "1.16.0"
+            },
+            "seed": 42
+          },
+          "seed": 42,
+          "source_sha256": {
+            "audit": {
+              "missing": [],
+              "src/gen/__init__.py": "a6b1b0c23a282265350cf0cc1352d092790d19803d21e57ac48e9ca45b67ab97",
+              "src/gen/_circuit_util.py": "ba14ce21bd8b531ab89b2eebcca7b06976f0740560ec558aa9066f3f532eccd5",
+              "src/gen/_circuit_util_test.py": "5b171bd62399c3c596850698557c554c59da16b593244ba65ca3f6457ad640f6",
+              "src/gen/_core/__init__.py": "94baf73265a9c37f90bc828b00d222acf14e719d70ea2564364da5e1a94ef56e",
+              "src/gen/_core/_builder.py": "925ccf683463327f9ee07e6dea7a5cd59e117e86efe3b2394933a9f93e368eb4",
+              "src/gen/_core/_builder_test.py": "617229217dbf3c6ceb09abdd609a129c778944ffe87052cc2243ed0f09d5acbc",
+              "src/gen/_core/_measurement_tracker.py": "cafd64a79af977ef64ad65234066f365c4f3a103a4351411f0fc15d1d1cfdf39",
+              "src/gen/_core/_noise.py": "1f89e007b1a3d7ed554b484171238e43d7cd38fb9b4427fa7dad2a2b7c71badc",
+              "src/gen/_core/_noise_test.py": "ce401c051b893c31b27c2f004f277d47dc0bd8c69aa33a6b476f963f8781d338",
+              "src/gen/_core/_patch.py": "a7f2d2035bbc8b24f72354cc6a7b1abe9bca360e68f6e5c3ff182acd5c67bebb",
+              "src/gen/_core/_patch_test.py": "942ba14b5b81ae861981e3f1c3da063692c333f37a61c9676229b1e956af950d",
+              "src/gen/_core/_tile.py": "dfd51f9da14030d02b9d4a65961e36e76c64b4d4a94699df7fe256a5c9b6b0e7",
+              "src/gen/_core/_tile_test.py": "43fdd5b5d19158d6840678448a7b93b7959afe2bbe9f82a93c575592b35b10e6",
+              "src/gen/_core/_util.py": "1cffa3048b3cb4d65d4974b2422b8577368b6bdaf207da0db32b54f8c1ddae63",
+              "src/gen/_core/_util_test.py": "619cb191611398ce3081f1c4b2848e48ae3c2bc2227c83fc8592eac4b59990b5",
+              "src/gen/_flows/__init__.py": "9fe5ac8972e3b245492485e3e91672bd5df5174a5abd9dd55fe7a3341e4eb8ef",
+              "src/gen/_flows/_chunk.py": "31ac2819e680745476333e94770e7743141f4c6dab5655e7dd0631f112bb0626",
+              "src/gen/_flows/_chunk_test.py": "d2fb2fcb32fae1a0ad56a8fcca1dad5cc6eaafb759ea2f47547d67839a2db8a6",
+              "src/gen/_flows/_flow.py": "24336be6588a932c6039ee2291f76c57e7ff191b8d5c0e69c5d65f6c51fe23a1",
+              "src/gen/_flows/_flow_test.py": "a3deb4957858d3464d453ed34933b4a0c9166736907438236173796b97361353",
+              "src/gen/_flows/_flow_util.py": "2462fd17005e358611bab08e4269de9b2b786aac417e62b4b6bd41ec6d079391",
+              "src/gen/_flows/_flow_util_test.py": "79c82398c6a6a7a5a3d4d14ea64eeb1b2e877ded91cd692ac30c6d662d3b7dd8",
+              "src/gen/_flows/_flow_verifier.py": "946a986fba17a7ef801dc87aa50b4870b845d25b8d9dd78146f2882ebb04e44c",
+              "src/gen/_flows/_flow_verifier_test.py": "4c9ab6d6991a3e18b033591a6b6049cae401576e0e538e75c0e81817ac7fdb95",
+              "src/gen/_flows/_pauli_string.py": "054e2238d47902daa73e617c2e94410496642d085e283f37800966eb1026361b",
+              "src/gen/_flows/_pauli_string_test.py": "6a4025c48038d56783e1c1634f851c6950882b5a07b55ce8ac018f4987c5559b",
+              "src/gen/_interaction_planner.py": "74db7b094c0929ea9ad1f12f4e7b883c7ab6b85362bda031be167252ea891a16",
+              "src/gen/_interaction_planner_test.py": "c6499da8339c8a943fe021dde06c0e29064b75431c98dc9a19c6332efe05953b",
+              "src/gen/_layers/__init__.py": "bea8756879b0754758897fdf29cb66a728aeedad7c09ba5028464e96bdf5b8b9",
+              "src/gen/_layers/_data.py": "4f114ef7a4a96471d193dd8e17b31b4203de301c77938e76a4c24d89d80ce598",
+              "src/gen/_layers/_det_obs_annotation_layer.py": "7b9bdcd0251569613b077c35212ca383241e15cd20cd6696d05f2f48ea5cfa41",
+              "src/gen/_layers/_empty_layer.py": "c1235559ffb0f1c100230edcb7c3bda37ba88a09b66943882f09e6cb29103520",
+              "src/gen/_layers/_feedback_layer.py": "ae75b28452dcb91158b09b4f99765bcd7447face7bfb6a124ea6827c15aad44f",
+              "src/gen/_layers/_feedback_layer_test.py": "252ae96799c1da4a0bdb9f2431a5f0dd57143c38dd82a84481fd2f59a5537982",
+              "src/gen/_layers/_interact_layer.py": "097db41ee16e470bd05b13053524922d35525005e8a6465871a0376e6dd586f3",
+              "src/gen/_layers/_interact_swap_layer.py": "fde9f21466d017b118d8ccd73c1c86f8db210e760e8094d61203758d53d7d1fe",
+              "src/gen/_layers/_iswap_layer.py": "e0210c7e097a45c5317ce264073691a1f6d77ccb75f12e64ae9b54f79a1f54fa",
+              "src/gen/_layers/_layer.py": "78c90f48266539f5e6dc94e1c74b73c86545605e85a9330ad395dfb8775d7df3",
+              "src/gen/_layers/_layer_circuit.py": "0f0cf01383fe4151f53c9c99576e60d259bacc7b158060c90215e781ef50b7e4",
+              "src/gen/_layers/_layer_circuit_test.py": "4bd0f80eaa82ab9e5ebacdf3b6105b5693d4bc4b6ecee130e36d659daf01d542",
+              "src/gen/_layers/_loop_layer.py": "88197eb252452e27ed85146ddc662ed74fa02827b6095a1203886c9afb1ce452",
+              "src/gen/_layers/_measure_layer.py": "3d06e0cbc9123d14805567daa2adbf5b8a68bcbd312640bf4d934f1ea87a5c0a",
+              "src/gen/_layers/_mpp_layer.py": "3cdad867cbae3fa7965c1dfa51207decaaa1f78d0d526e335945e260fe84a23a",
+              "src/gen/_layers/_noise_layer.py": "1301ecafe9840a57fbef67563cd4c5e7e4b35ac09fb78af74402502bae6ff582",
+              "src/gen/_layers/_qubit_coord_annotation_layer.py": "f90c9d633d816cfd2fbe73d66f0e4cc280b5ebb54821c666cb94e94e84830b01",
+              "src/gen/_layers/_reset_layer.py": "0935d884c38b50164914cc79db1ba4e1bb46abcae0f34f9dfcd6f688366127f0",
+              "src/gen/_layers/_rotation_layer.py": "93e6888c7853a79385be9be52147231b00aedfc251d81d3c004dc282b002ba5e",
+              "src/gen/_layers/_shift_coord_annotation_layer.py": "36bf6618ee0c7e4778d12e2d1d66036d39471d1af43f60ea2eac6e4d8cd48e14",
+              "src/gen/_layers/_sqrt_pp_layer.py": "0a4373a766b0b87ad567a0e66d2dced95287c22cdd9431cac67646c72a8f40a3",
+              "src/gen/_layers/_swap_layer.py": "f92158160b119475d600ff8e74874a1333c4c2b13412dbffd918dc88083360be",
+              "src/gen/_layers/_transpile.py": "f7e9e400341e927a6adb4a097155a362644cd2a8f5cb2fab4accdabb4819ecd3",
+              "src/gen/_layers/_transpile_test.py": "60a4ba91b90ea88e2f4c15a07c43fb4834d7ee3dd5225334942212aa7958f225",
+              "src/gen/_main_util.py": "c363a3ea8249da8cf09d559f9c62be76246d155f0e326041941ed3d0be433df4",
+              "src/gen/_plaq_problem.py": "6b792f1ae5ca480a24937c8a454f2f531fdf4b40b17f33606de5426c7954ac12",
+              "src/gen/_stabilizer_code.py": "beea6c7ab8cd80b6f7713a8581bc27932dadbdd11f609aaaeb9a7c89cac9634c",
+              "src/gen/_surf/__init__.py": "f7644c5a75b41bea5b86420be91744e42afa79da4adf14e1cc43f01ea33a3987",
+              "src/gen/_surf/_closed_curve.py": "83c3cde969686f5daa3f5063183e60e51f0333fb59174e1c4391a7d1a34e7bf3",
+              "src/gen/_surf/_closed_curve_test.py": "26d3e50cf84e9fe76a142fc203db654f4f0297baf96ec0d01de11a1d4bcc0b49",
+              "src/gen/_surf/_css_observable_boundary_pair.py": "0a52bdf26cde38e1f5d0765f98376d0f0c0760cd1e31c902cceef5f1bb2c4bd4",
+              "src/gen/_surf/_geo.py": "55c72196cbc185b1ecd354ee1de8b6c4304c78679046401d9883c7ef2d110db6",
+              "src/gen/_surf/_geo_test.py": "2e733b45443444a93a2e33e83602594287853cb23519ddd0ee2df872f05a5cf8",
+              "src/gen/_surf/_open_curve.py": "3d83a6d2f341603a745dbdaf6fc7d88c9c9a0cd6f5a5e4b5ee93802f2080fc91",
+              "src/gen/_surf/_open_curve_test.py": "50d98aa6312ec76e6bb0dfcda0d7039f0374906e303ad330e2ed69b2516c743b",
+              "src/gen/_surf/_order.py": "6021fc5ae02fbe8362f2a399762c11b404c04855899862376412a8e58f1ec825",
+              "src/gen/_surf/_patch_outline.py": "6fd943ead29edfacc70be9e642765a16b7833de139433d5a7538f4e48f1f65d2",
+              "src/gen/_surf/_patch_outline_test.py": "482d01c58e6a4318b930a69bceabb81ea4200c6dba61d46bfe4a4dd2d6f21bb8",
+              "src/gen/_surf/_patch_transition_outline.py": "f6fca52567c08bfabaf79000c685d9af0abf9077cef4bc3ce4e10e7b65430db3",
+              "src/gen/_surf/_patch_transition_outline_test.py": "4f1e905f3b46d67f85a63be5dc350ceef78b03802fe0b3d996b8259bef7c515f",
+              "src/gen/_surf/_path_outline.py": "1835d4b6bf923c485cb3c48478fab372738d5cc90d83120d24c64ff86666a07d",
+              "src/gen/_surf/_step_outline.py": "24cc9a49d8a4edc38c9f7286568abe63dd1405fcbb723ffedcf170a785edfbe8",
+              "src/gen/_surf/_step_outline_test.py": "a4aac379e738b1831964202505488d8ef6fb870e2697d0d5a674be79f5ce9380",
+              "src/gen/_surf/_step_sequence_outline.py": "e17db6cbdb46ec074c15ff837cb3ee4391457fd631f4555685b2162234e344f9",
+              "src/gen/_surf/_surface_code.py": "eeaa3a9b82f46d3c2bee8cc4138b3b4452b6112085aa831eedf9c20f055e746b",
+              "src/gen/_surf/_surface_code_test.py": "5c4c4daafe20faeb31ec98b4b391f2d5cc3df5c8272db92d57fb2ab9031a6197",
+              "src/gen/_surf/_trans.py": "c1f807e945618700d21f2932f806c7164a564a521a8d494e248155175fc3d93c",
+              "src/gen/_surf/_viz_gltf_3d.py": "421209c4bf41302e9f99c036321a1a6466ca9679695567f89e59ba0892631dc5",
+              "src/gen/_surf/_viz_gltf_3d_test.py": "e43a6ba5e2d8506b6ce00bb0ffa380fd57f2f0e0765f7ecded20b2caa4e1acfb",
+              "src/gen/_surf/_viz_patch_outline_svg.py": "760751c7c133d89e3a60ec1d86e491fad9481b8fa665734791cbb0aa5bccd4a5",
+              "src/gen/_surf/_viz_sequence_3d.py": "f14b4500fb9bddab5affad691f0752423ad61fab4fb47cf957eb41a9f656a883",
+              "src/gen/_util.py": "6248d9466fe126be7767fa430796c182e32633a019a6c7d59f81dd1993bdc2f2",
+              "src/gen/_util_test.py": "51039ee8ed117f6bd082762a45f8a5af508b1e6d07bfa60d0c105f401396d138",
+              "src/gen/_viz_circuit_html.py": "e771a8c551a7c2606829fab96d3c011f81d58aed98548d4514a228008468ac3f",
+              "src/gen/_viz_patch_svg.py": "384d248d12f276b5233317eca1f44584dda21a4bf5e7b5bd9ffa2009475c0cef",
+              "src/yoked/_yoked_memory_circuits.py": "d8230b5892ad53b9e42ebbd1c947d8cd31c484397bf194ea83c502616ad7b759",
+              "src/yoked/hierarchical/_stages.py": "506795c329029625bcbeef160cb2b03c734d55b944c65ff1eaae6eccf255452a",
+              "tools/hierarchical_experiment": "6196cb7cc991e8d022d5b510cdf77606674f93e92e311c7d77991e62ad8759d2"
+            },
+            "check": {
+              "src/yoked/hierarchical/_baselines.py": "4eddfab51ca4d60a815e2f8f7b4c2b88b745636ffd528f35331eedcdd34e2729",
+              "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+              "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+              "src/yoked/hierarchical/_reproduction.py": "9b3cab9c3cf76e753afe1d3ebc631a0a6096bdd9874a23ada5d3258a64e87259"
+            },
+            "decoder": {
+              "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+              "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+              "src/yoked/decoders/_union_find.py": "14f90a29c034f0b30f09af8ef77ce7ecb1d5c7c65db6cfd1d18db8c887022eda",
+              "src/yoked/hierarchical/_arrays.py": "e8e8de153fc76896ea599ca0de0ea80c173fbd4fde8b86cd4f0415b6fef880ab",
+              "src/yoked/hierarchical/_cluster_gap.py": "9fe77c15e2cce2cfbab9667fac21d2fa8bc093a37a00e330c49ad0ea006200c2",
+              "src/yoked/hierarchical/_l1.py": "36751cdad5b4a423a7607cb3fdac9812dff1e16de80221454b284765de785460",
+              "src/yoked/hierarchical/_matching_gaps.py": "7a7456ac2cabfeb5d96aa30434ed8422e3520ac371cc1caa3bd5ffa41a9c516d",
+              "src/yoked/hierarchical/_patch_graphs.py": "958c9b8d2a3c884c5d10426154370a6d7e588a8bab22b4e0f91f8ea369b78387",
+              "src/yoked/hierarchical/_record.py": "c7814affa410b8022f021eb999ef282c331da4750d7b94ba3e27ed12dcc23f17"
+            }
+          },
+          "versions": {
+            "check": {
+              "numpy": "2.5.1",
+              "pymatching": "2.4.0"
+            },
+            "decoder": {
+              "numpy": "2.5.1",
+              "pymatching": "2.4.0",
+              "scipy": "1.18.0",
+              "stim": "1.16.0"
+            }
+          }
+        },
+        "parameters": {
+          "distance": 7,
+          "p": 0.003,
+          "patches": 6,
+          "rounds": 28,
+          "yokes": 2
+        },
+        "record_manifest_sha256": "7b0032fa56c219a31db5b3c36e0914b963e21aae2303b9d2e75f9fd37fc34860",
+        "record_sha256": "14e94c2011c7a64b15bc9a45da7bfad1c5ab0939c0eeb39af7fa0c6a38685ff0",
+        "replay": {
+          "artifacts": {
+            "uf_cluster_gap_to_gap_correlated_all_refined_mixed/arrays.npz": "f946571a6d1437dda8d6014055f2ee9fed8455af2610649bd20051b8629692bd",
+            "uf_cluster_gap_to_gap_correlated_all_refined_mixed/results.json": "5a72aab2c0c6cd1620f1660a8483fc1443f66aead682b46f98b0b0c0c3c38525"
+          },
+          "calibrators": {
+            "identity": "86c09f589609b9e418102d18b633b0ca962ce769796af4585975ea9ceaeff5fd",
+            "path": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d7/calibrators.json",
+            "sha256": "802f359e2e13c862ffc343e0e353d0bfa15ae93198f6841ed9b3d8579ca29149"
+          },
+          "code_commit": "b58f9f58b9acc79ca1a41fd0c8e588fedd82f60e",
+          "configurations": [
+            "uf:cluster_gap->gap_correlated:all_refined:mixed"
+          ],
+          "identity": "c6b0499b261c2bb07635dda2d9878b35f2c18de76cd1275fc42baa9b4e4871cc",
+          "record": {
+            "directory": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d7/evaluation",
+            "identities": {
+              "collection": "7ec0455b5b3fe7e54497452fb79fdd2e773884470cfdb2d46a1a90177d01ce33",
+              "decoder": "7c5545f08b31c79cb18d2a3a44af088cdf1ada5c38623eadeb6acfaab5606d9f",
+              "model": "11ef813196c28aca75613911e321596681b9f1e6db6a9e240040774123aa457e",
+              "parent_sample": "d705c41f9b75c6bff58a5efc9ca318b6b9159fb4e5292d7d8165b6e5513214d0",
+              "sampling_family": "fcdec3a03babb46176c646176c0445dac01ef1068274eaf3abaf3db7abcdf76d"
+            },
+            "manifest_sha256": "7b0032fa56c219a31db5b3c36e0914b963e21aae2303b9d2e75f9fd37fc34860",
+            "record_sha256": "14e94c2011c7a64b15bc9a45da7bfad1c5ab0939c0eeb39af7fa0c6a38685ff0",
+            "role": "evaluation",
+            "rows": {
+              "count": 100000,
+              "sha256": "baa5f49fbad78af4964d9ec7eaf2d6327b2d2ca1f4dcf54e2394dfff2e36d58e",
+              "start": 0,
+              "stop": 100000
+            }
+          },
+          "source_sha256": {
+            "src/yoked/hierarchical/_calibration.py": "de5c0eb4383253596aaf861f976571fb8d7ea6d9ac8cd071a9f49caa8ad0020a",
+            "src/yoked/hierarchical/_metrics.py": "3d47195d293a8f58e4c45ba69b4b08bc4050ae18073d9d0b8149c616845e73fc",
+            "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+            "src/yoked/hierarchical/_policies.py": "6817ae7076278544dbec646b9197c12b79558d52cd885d4b585c145ecabbc27e",
+            "src/yoked/hierarchical/_replay.py": "7a2639d9bd5fb035bb664de49b1852a779a0093fbf9df8a7ccf1484976858b8a"
+          },
+          "versions": {
+            "numpy": "2.5.1",
+            "sinter": "1.16.0"
+          }
+        },
+        "replay_identity": "c6b0499b261c2bb07635dda2d9878b35f2c18de76cd1275fc42baa9b4e4871cc",
+        "replay_manifest_sha256": "d9f22317dbe903327dfc77abe48d73004676acb1fc89b6472ce06f1bb6a73746",
+        "root": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d7",
+        "shots": 100000
+      },
+      "values": 8
+    },
+    "d9": {
+      "bootstrap": {
+        "method": "empirical multinomial over 8 joint failure states",
+        "replicates": 10000,
+        "seed": 43
+      },
+      "decoders": {
+        "correlated_mwpm": {
+          "block_failure_95_ci": [
+            0.06767,
+            0.07085
+          ],
+          "block_failure_rate": 0.06925,
+          "block_failures": 6925,
+          "label": "Correlated MWPM",
+          "normalized_ler": 0.00033368442101522344,
+          "normalized_ler_95_ci": [
+            0.0003257644229882617,
+            0.0003417200598363479
+          ],
+          "shots": 100000
+        },
+        "correlated_uf": {
+          "block_failure_95_ci": [
+            0.14027,
+            0.14466
+          ],
+          "block_failure_rate": 0.14247,
+          "block_failures": 14247,
+          "label": "Correlated UF",
+          "normalized_ler": 0.0007182492452078026,
+          "normalized_ler_95_ci": [
+            0.0007061641517182027,
+            0.0007303140874728165
+          ],
+          "shots": 100000
+        },
+        "hierarchical_uf": {
+          "block_failure_95_ci": [
+            0.06666,
+            0.06981
+          ],
+          "block_failure_rate": 0.0682,
+          "block_failures": 6820,
+          "label": "Hierarchical UF + correlated gap",
+          "normalized_ler": 0.0003284194515928984,
+          "normalized_ler_95_ci": [
+            0.0003207095252453218,
+            0.0003364951303446162
+          ],
+          "paired_block_difference_vs_correlated_mwpm": {
+            "95_ci": [
+              -0.001770250000000007,
+              -0.00032999999999999696
+            ],
+            "estimate": -0.0010500000000000093,
+            "joint_outcomes": {
+              "baseline_fails_hierarchical_succeeds": 732,
+              "baseline_succeeds_hierarchical_fails": 627,
+              "both_fail": 6193,
+              "both_succeed": 92448
+            }
+          },
+          "paired_block_difference_vs_correlated_uf": {
+            "95_ci": [
+              -0.07631,
+              -0.07221999999999999
+            ],
+            "estimate": -0.07427000000000002,
+            "joint_outcomes": {
+              "baseline_fails_hierarchical_succeeds": 9516,
+              "baseline_succeeds_hierarchical_fails": 2089,
+              "both_fail": 4731,
+              "both_succeed": 83664
+            }
+          },
+          "paired_ler_ratio_vs_correlated_mwpm": {
+            "95_ci": [
+              0.9735271714883201,
+              0.9950622751681759
+            ],
+            "estimate": 0.984221710422361
+          },
+          "paired_ler_ratio_vs_correlated_uf": {
+            "95_ci": [
+              0.4471957375514437,
+              0.46766716821277143
+            ],
+            "estimate": 0.4572499780321811
+          },
+          "shots": 100000
+        }
+      },
+      "distance": 9,
+      "joint_failure_state_counts": [
+        83277,
+        387,
+        9171,
+        345,
+        276,
+        1813,
+        351,
+        4380
+      ],
+      "pieces": 216,
+      "provenance": {
+        "calibration": {
+          "code_commit": "44c3bce9af4cc44e7e004f02a378a946529b7774",
+          "identity": "ccdc1f68a1fa457a9dea4132bac0dae44eaa5340957358ba7400d057853b6d2e",
+          "parent_shots": 50000,
+          "path": "/data2/s2chitni/.tmp/hier-d9-p003-m2/calibrators_full.json",
+          "payload_sha256": "fb3cfbb03716a2af403fb7b7d38c305892aae377582063f2df9f185f408efbf7",
+          "record": {
+            "directory": "/data2/s2chitni/.tmp/hier-d9-p003-m2/calibration",
+            "identities": {
+              "collection": "3839df3b5248343d6dd1b0344e060eea6390c2a4baf71bb3164af3dd8bfe3255",
+              "decoder": "79fafa60cf62051e5132dc38d881e515b969bd703616ed3ddaac5a137ac2fa67",
+              "model": "73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d",
+              "parent_sample": "e9ace633bc9ff34b2dc228d63393f4daf58c4f4acbde3c678669b8b9645d8398",
+              "sampling_family": "060a8f93813c288d32cf5b8801cfd74c052df1c08092c1e07df152c4d5498933"
+            },
+            "manifest_sha256": "ac6410275c5a170980ffd97f41304688c05e7c13363624b1b825a294c9bae8dc",
+            "record_sha256": "ec042a53bf7a226ab3f8fef315878e4ac0c0e8f1dc0d8b4a56e0ce714ce335bf",
+            "role": "calibration",
+            "rows": {
+              "count": 50000,
+              "sha256": "33236cc6bd19fa6b89e06d441d3fcd8eb37dc8540f6a4f2b627b20af10894a41",
+              "start": 0,
+              "stop": 50000
+            }
+          },
+          "record_source_sha256": {
+            "audit": {
+              "missing": [],
+              "src/gen/__init__.py": "a6b1b0c23a282265350cf0cc1352d092790d19803d21e57ac48e9ca45b67ab97",
+              "src/gen/_circuit_util.py": "ba14ce21bd8b531ab89b2eebcca7b06976f0740560ec558aa9066f3f532eccd5",
+              "src/gen/_circuit_util_test.py": "5b171bd62399c3c596850698557c554c59da16b593244ba65ca3f6457ad640f6",
+              "src/gen/_core/__init__.py": "94baf73265a9c37f90bc828b00d222acf14e719d70ea2564364da5e1a94ef56e",
+              "src/gen/_core/_builder.py": "925ccf683463327f9ee07e6dea7a5cd59e117e86efe3b2394933a9f93e368eb4",
+              "src/gen/_core/_builder_test.py": "617229217dbf3c6ceb09abdd609a129c778944ffe87052cc2243ed0f09d5acbc",
+              "src/gen/_core/_measurement_tracker.py": "cafd64a79af977ef64ad65234066f365c4f3a103a4351411f0fc15d1d1cfdf39",
+              "src/gen/_core/_noise.py": "1f89e007b1a3d7ed554b484171238e43d7cd38fb9b4427fa7dad2a2b7c71badc",
+              "src/gen/_core/_noise_test.py": "ce401c051b893c31b27c2f004f277d47dc0bd8c69aa33a6b476f963f8781d338",
+              "src/gen/_core/_patch.py": "a7f2d2035bbc8b24f72354cc6a7b1abe9bca360e68f6e5c3ff182acd5c67bebb",
+              "src/gen/_core/_patch_test.py": "942ba14b5b81ae861981e3f1c3da063692c333f37a61c9676229b1e956af950d",
+              "src/gen/_core/_tile.py": "dfd51f9da14030d02b9d4a65961e36e76c64b4d4a94699df7fe256a5c9b6b0e7",
+              "src/gen/_core/_tile_test.py": "43fdd5b5d19158d6840678448a7b93b7959afe2bbe9f82a93c575592b35b10e6",
+              "src/gen/_core/_util.py": "1cffa3048b3cb4d65d4974b2422b8577368b6bdaf207da0db32b54f8c1ddae63",
+              "src/gen/_core/_util_test.py": "619cb191611398ce3081f1c4b2848e48ae3c2bc2227c83fc8592eac4b59990b5",
+              "src/gen/_flows/__init__.py": "9fe5ac8972e3b245492485e3e91672bd5df5174a5abd9dd55fe7a3341e4eb8ef",
+              "src/gen/_flows/_chunk.py": "31ac2819e680745476333e94770e7743141f4c6dab5655e7dd0631f112bb0626",
+              "src/gen/_flows/_chunk_test.py": "d2fb2fcb32fae1a0ad56a8fcca1dad5cc6eaafb759ea2f47547d67839a2db8a6",
+              "src/gen/_flows/_flow.py": "24336be6588a932c6039ee2291f76c57e7ff191b8d5c0e69c5d65f6c51fe23a1",
+              "src/gen/_flows/_flow_test.py": "a3deb4957858d3464d453ed34933b4a0c9166736907438236173796b97361353",
+              "src/gen/_flows/_flow_util.py": "2462fd17005e358611bab08e4269de9b2b786aac417e62b4b6bd41ec6d079391",
+              "src/gen/_flows/_flow_util_test.py": "79c82398c6a6a7a5a3d4d14ea64eeb1b2e877ded91cd692ac30c6d662d3b7dd8",
+              "src/gen/_flows/_flow_verifier.py": "946a986fba17a7ef801dc87aa50b4870b845d25b8d9dd78146f2882ebb04e44c",
+              "src/gen/_flows/_flow_verifier_test.py": "4c9ab6d6991a3e18b033591a6b6049cae401576e0e538e75c0e81817ac7fdb95",
+              "src/gen/_flows/_pauli_string.py": "054e2238d47902daa73e617c2e94410496642d085e283f37800966eb1026361b",
+              "src/gen/_flows/_pauli_string_test.py": "6a4025c48038d56783e1c1634f851c6950882b5a07b55ce8ac018f4987c5559b",
+              "src/gen/_interaction_planner.py": "74db7b094c0929ea9ad1f12f4e7b883c7ab6b85362bda031be167252ea891a16",
+              "src/gen/_interaction_planner_test.py": "c6499da8339c8a943fe021dde06c0e29064b75431c98dc9a19c6332efe05953b",
+              "src/gen/_layers/__init__.py": "bea8756879b0754758897fdf29cb66a728aeedad7c09ba5028464e96bdf5b8b9",
+              "src/gen/_layers/_data.py": "4f114ef7a4a96471d193dd8e17b31b4203de301c77938e76a4c24d89d80ce598",
+              "src/gen/_layers/_det_obs_annotation_layer.py": "7b9bdcd0251569613b077c35212ca383241e15cd20cd6696d05f2f48ea5cfa41",
+              "src/gen/_layers/_empty_layer.py": "c1235559ffb0f1c100230edcb7c3bda37ba88a09b66943882f09e6cb29103520",
+              "src/gen/_layers/_feedback_layer.py": "ae75b28452dcb91158b09b4f99765bcd7447face7bfb6a124ea6827c15aad44f",
+              "src/gen/_layers/_feedback_layer_test.py": "252ae96799c1da4a0bdb9f2431a5f0dd57143c38dd82a84481fd2f59a5537982",
+              "src/gen/_layers/_interact_layer.py": "097db41ee16e470bd05b13053524922d35525005e8a6465871a0376e6dd586f3",
+              "src/gen/_layers/_interact_swap_layer.py": "fde9f21466d017b118d8ccd73c1c86f8db210e760e8094d61203758d53d7d1fe",
+              "src/gen/_layers/_iswap_layer.py": "e0210c7e097a45c5317ce264073691a1f6d77ccb75f12e64ae9b54f79a1f54fa",
+              "src/gen/_layers/_layer.py": "78c90f48266539f5e6dc94e1c74b73c86545605e85a9330ad395dfb8775d7df3",
+              "src/gen/_layers/_layer_circuit.py": "0f0cf01383fe4151f53c9c99576e60d259bacc7b158060c90215e781ef50b7e4",
+              "src/gen/_layers/_layer_circuit_test.py": "4bd0f80eaa82ab9e5ebacdf3b6105b5693d4bc4b6ecee130e36d659daf01d542",
+              "src/gen/_layers/_loop_layer.py": "88197eb252452e27ed85146ddc662ed74fa02827b6095a1203886c9afb1ce452",
+              "src/gen/_layers/_measure_layer.py": "3d06e0cbc9123d14805567daa2adbf5b8a68bcbd312640bf4d934f1ea87a5c0a",
+              "src/gen/_layers/_mpp_layer.py": "3cdad867cbae3fa7965c1dfa51207decaaa1f78d0d526e335945e260fe84a23a",
+              "src/gen/_layers/_noise_layer.py": "1301ecafe9840a57fbef67563cd4c5e7e4b35ac09fb78af74402502bae6ff582",
+              "src/gen/_layers/_qubit_coord_annotation_layer.py": "f90c9d633d816cfd2fbe73d66f0e4cc280b5ebb54821c666cb94e94e84830b01",
+              "src/gen/_layers/_reset_layer.py": "0935d884c38b50164914cc79db1ba4e1bb46abcae0f34f9dfcd6f688366127f0",
+              "src/gen/_layers/_rotation_layer.py": "93e6888c7853a79385be9be52147231b00aedfc251d81d3c004dc282b002ba5e",
+              "src/gen/_layers/_shift_coord_annotation_layer.py": "36bf6618ee0c7e4778d12e2d1d66036d39471d1af43f60ea2eac6e4d8cd48e14",
+              "src/gen/_layers/_sqrt_pp_layer.py": "0a4373a766b0b87ad567a0e66d2dced95287c22cdd9431cac67646c72a8f40a3",
+              "src/gen/_layers/_swap_layer.py": "f92158160b119475d600ff8e74874a1333c4c2b13412dbffd918dc88083360be",
+              "src/gen/_layers/_transpile.py": "f7e9e400341e927a6adb4a097155a362644cd2a8f5cb2fab4accdabb4819ecd3",
+              "src/gen/_layers/_transpile_test.py": "60a4ba91b90ea88e2f4c15a07c43fb4834d7ee3dd5225334942212aa7958f225",
+              "src/gen/_main_util.py": "c363a3ea8249da8cf09d559f9c62be76246d155f0e326041941ed3d0be433df4",
+              "src/gen/_plaq_problem.py": "6b792f1ae5ca480a24937c8a454f2f531fdf4b40b17f33606de5426c7954ac12",
+              "src/gen/_stabilizer_code.py": "beea6c7ab8cd80b6f7713a8581bc27932dadbdd11f609aaaeb9a7c89cac9634c",
+              "src/gen/_surf/__init__.py": "f7644c5a75b41bea5b86420be91744e42afa79da4adf14e1cc43f01ea33a3987",
+              "src/gen/_surf/_closed_curve.py": "83c3cde969686f5daa3f5063183e60e51f0333fb59174e1c4391a7d1a34e7bf3",
+              "src/gen/_surf/_closed_curve_test.py": "26d3e50cf84e9fe76a142fc203db654f4f0297baf96ec0d01de11a1d4bcc0b49",
+              "src/gen/_surf/_css_observable_boundary_pair.py": "0a52bdf26cde38e1f5d0765f98376d0f0c0760cd1e31c902cceef5f1bb2c4bd4",
+              "src/gen/_surf/_geo.py": "55c72196cbc185b1ecd354ee1de8b6c4304c78679046401d9883c7ef2d110db6",
+              "src/gen/_surf/_geo_test.py": "2e733b45443444a93a2e33e83602594287853cb23519ddd0ee2df872f05a5cf8",
+              "src/gen/_surf/_open_curve.py": "3d83a6d2f341603a745dbdaf6fc7d88c9c9a0cd6f5a5e4b5ee93802f2080fc91",
+              "src/gen/_surf/_open_curve_test.py": "50d98aa6312ec76e6bb0dfcda0d7039f0374906e303ad330e2ed69b2516c743b",
+              "src/gen/_surf/_order.py": "6021fc5ae02fbe8362f2a399762c11b404c04855899862376412a8e58f1ec825",
+              "src/gen/_surf/_patch_outline.py": "6fd943ead29edfacc70be9e642765a16b7833de139433d5a7538f4e48f1f65d2",
+              "src/gen/_surf/_patch_outline_test.py": "482d01c58e6a4318b930a69bceabb81ea4200c6dba61d46bfe4a4dd2d6f21bb8",
+              "src/gen/_surf/_patch_transition_outline.py": "f6fca52567c08bfabaf79000c685d9af0abf9077cef4bc3ce4e10e7b65430db3",
+              "src/gen/_surf/_patch_transition_outline_test.py": "4f1e905f3b46d67f85a63be5dc350ceef78b03802fe0b3d996b8259bef7c515f",
+              "src/gen/_surf/_path_outline.py": "1835d4b6bf923c485cb3c48478fab372738d5cc90d83120d24c64ff86666a07d",
+              "src/gen/_surf/_step_outline.py": "24cc9a49d8a4edc38c9f7286568abe63dd1405fcbb723ffedcf170a785edfbe8",
+              "src/gen/_surf/_step_outline_test.py": "a4aac379e738b1831964202505488d8ef6fb870e2697d0d5a674be79f5ce9380",
+              "src/gen/_surf/_step_sequence_outline.py": "e17db6cbdb46ec074c15ff837cb3ee4391457fd631f4555685b2162234e344f9",
+              "src/gen/_surf/_surface_code.py": "eeaa3a9b82f46d3c2bee8cc4138b3b4452b6112085aa831eedf9c20f055e746b",
+              "src/gen/_surf/_surface_code_test.py": "5c4c4daafe20faeb31ec98b4b391f2d5cc3df5c8272db92d57fb2ab9031a6197",
+              "src/gen/_surf/_trans.py": "c1f807e945618700d21f2932f806c7164a564a521a8d494e248155175fc3d93c",
+              "src/gen/_surf/_viz_gltf_3d.py": "421209c4bf41302e9f99c036321a1a6466ca9679695567f89e59ba0892631dc5",
+              "src/gen/_surf/_viz_gltf_3d_test.py": "e43a6ba5e2d8506b6ce00bb0ffa380fd57f2f0e0765f7ecded20b2caa4e1acfb",
+              "src/gen/_surf/_viz_patch_outline_svg.py": "760751c7c133d89e3a60ec1d86e491fad9481b8fa665734791cbb0aa5bccd4a5",
+              "src/gen/_surf/_viz_sequence_3d.py": "f14b4500fb9bddab5affad691f0752423ad61fab4fb47cf957eb41a9f656a883",
+              "src/gen/_util.py": "6248d9466fe126be7767fa430796c182e32633a019a6c7d59f81dd1993bdc2f2",
+              "src/gen/_util_test.py": "51039ee8ed117f6bd082762a45f8a5af508b1e6d07bfa60d0c105f401396d138",
+              "src/gen/_viz_circuit_html.py": "e771a8c551a7c2606829fab96d3c011f81d58aed98548d4514a228008468ac3f",
+              "src/gen/_viz_patch_svg.py": "384d248d12f276b5233317eca1f44584dda21a4bf5e7b5bd9ffa2009475c0cef",
+              "src/yoked/_yoked_memory_circuits.py": "d8230b5892ad53b9e42ebbd1c947d8cd31c484397bf194ea83c502616ad7b759",
+              "src/yoked/hierarchical/_stages.py": "6842ace79fd0b5a1a57691432fbe84f1d729e0b40162de583f7efe8c62e277b9",
+              "tools/hierarchical_experiment": "6196cb7cc991e8d022d5b510cdf77606674f93e92e311c7d77991e62ad8759d2"
+            },
+            "check": {
+              "src/yoked/hierarchical/_baselines.py": "ba0c5e9122b1ebebb1dcf8b4be261010d9dd609a8480bc1b2861bb97de95d642",
+              "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+              "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+              "src/yoked/hierarchical/_reproduction.py": "1e0125fad12424e954160447e40e4c1e25a42f7df190f1392d176f1f196180bd"
+            },
+            "decoder": {
+              "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+              "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+              "src/yoked/decoders/_union_find.py": "14f90a29c034f0b30f09af8ef77ce7ecb1d5c7c65db6cfd1d18db8c887022eda",
+              "src/yoked/hierarchical/_arrays.py": "e8e8de153fc76896ea599ca0de0ea80c173fbd4fde8b86cd4f0415b6fef880ab",
+              "src/yoked/hierarchical/_cluster_gap.py": "9fe77c15e2cce2cfbab9667fac21d2fa8bc093a37a00e330c49ad0ea006200c2",
+              "src/yoked/hierarchical/_l1.py": "36751cdad5b4a423a7607cb3fdac9812dff1e16de80221454b284765de785460",
+              "src/yoked/hierarchical/_matching_gaps.py": "7a7456ac2cabfeb5d96aa30434ed8422e3520ac371cc1caa3bd5ffa41a9c516d",
+              "src/yoked/hierarchical/_patch_graphs.py": "958c9b8d2a3c884c5d10426154370a6d7e588a8bab22b4e0f91f8ea369b78387",
+              "src/yoked/hierarchical/_record.py": "70fb214dfa4c754ed2538a68c6af31e2a8f62a7dd777e38c63b49b7df1c7e387"
+            }
+          },
+          "record_versions": {
+            "check": {
+              "numpy": "2.5.1",
+              "pymatching": "2.4.0"
+            },
+            "decoder": {
+              "numpy": "2.5.1",
+              "pymatching": "2.4.0",
+              "scipy": "1.18.0",
+              "stim": "1.16.0"
+            }
+          },
+          "sample_identity_inputs": {
+            "circuit_sha256": "d6f1f852b5d12ca2816c2411fe0dcfb0d2948ea50d6eb12655a9cfd775976d2b",
+            "dem_sha256": "858edcae41ba5f5ead2862d28dd517d5f22734b1ebd17c0dc12139ecd6a6278a",
+            "model_versions": {
+              "stim": "1.16.0"
+            },
+            "num_detectors": 17762,
+            "num_observables": 12,
+            "parameters": {
+              "distance": 9,
+              "noise": "si1000",
+              "p": 0.003,
+              "patches": 6,
+              "rounds": 36,
+              "style": "cz",
+              "yokes": 2
+            },
+            "parent_shots": 50000,
+            "payload_sha256": "05f2cdf043a4974a2a972213ee3042f05fe16e254b408b59b1b585b2f8507f2f",
+            "sampling_versions": {
+              "stim": "1.16.0"
+            },
+            "seed": 142
+          },
+          "seed": 142,
+          "sha256": "382eaff951e5150cccdf09e2a6b17bbaf7d36e699bc9494f967f2927b4002ff3",
+          "source_sha256": {
+            "src/yoked/hierarchical/_calibration.py": "de5c0eb4383253596aaf861f976571fb8d7ea6d9ac8cd071a9f49caa8ad0020a",
+            "src/yoked/hierarchical/_replay.py": "7a2639d9bd5fb035bb664de49b1852a779a0093fbf9df8a7ccf1484976858b8a"
+          },
+          "versions": {
+            "numpy": "2.5.1"
+          }
+        },
+        "collection_identity": "2d0984a04c42896dc8c5f70f7100f9e191cbb35a841aaabad9d7cf8adb636543",
+        "evaluation": {
+          "baseline_attachment": {
+            "attachment_sha256": "7a7e95dad581267eb413f0cb1fefcfb688a305c45919559a9428af58e4cfa375",
+            "decoders": {
+              "joint_correlated_mwpm": {
+                "file": "correlated_mwpm_predictions.npy",
+                "mapped_prediction_sha256": "deb795e0f7087716282de87dd1b3b75cb0af77a4b70fd40a4e3235e8bc7f7d20",
+                "prediction_packed_sha256": "deb795e0f7087716282de87dd1b3b75cb0af77a4b70fd40a4e3235e8bc7f7d20",
+                "stem": "correlated_mwpm"
+              },
+              "joint_correlated_uf": {
+                "file": "correlated_uf_predictions.npy",
+                "mapped_prediction_sha256": "3e26339a37a839a490a2a70adb73a928aaab81941b8a932b3038e30ebf033877",
+                "prediction_packed_sha256": "3e26339a37a839a490a2a70adb73a928aaab81941b8a932b3038e30ebf033877",
+                "stem": "correlated_uf"
+              },
+              "joint_mwpm_recorded": {
+                "file": "mwpm_predictions.npy",
+                "mapped_prediction_sha256": "f081813d6ec90e9bfc0431bb544e1e193e3d0d1ed39f96bde2c4b896a227e666",
+                "prediction_packed_sha256": "f081813d6ec90e9bfc0431bb544e1e193e3d0d1ed39f96bde2c4b896a227e666",
+                "stem": "mwpm"
+              },
+              "joint_uf": {
+                "file": "uf_predictions.npy",
+                "mapped_prediction_sha256": "48390885502a6e0d5c5081af3c1e2cb2ff49d95c0f5697045af366e7a7e5c078",
+                "prediction_packed_sha256": "48390885502a6e0d5c5081af3c1e2cb2ff49d95c0f5697045af366e7a7e5c078",
+                "stem": "uf"
+              }
+            },
+            "imported_utc": "2026-09-16T00:15:40Z",
+            "importer": {
+              "check_identity": "8d303fcdb464ab439df48aca3c2197c79437b193ef768dbba049a4a4044f171f",
+              "code_commit": "b58f9f58b9acc79ca1a41fd0c8e588fedd82f60e",
+              "source_sha256": {
+                "src/yoked/hierarchical/_baselines.py": "4eddfab51ca4d60a815e2f8f7b4c2b88b745636ffd528f35331eedcdd34e2729",
+                "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+                "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+                "src/yoked/hierarchical/_reproduction.py": "9b3cab9c3cf76e753afe1d3ebc631a0a6096bdd9874a23ada5d3258a64e87259"
+              },
+              "versions": {
+                "numpy": "2.5.1",
+                "pymatching": "2.4.0"
+              }
+            },
+            "joint_mwpm": {
+              "agreement": 1.0,
+              "baseline": "joint_mwpm_recorded",
+              "compared_with": "joint_mwpm",
+              "cost_tolerance": 1e-06,
+              "disagreements": 0,
+              "max_disagreement_cost_difference": 0.0,
+              "tie_explained": 0
+            },
+            "names": [
+              "joint_mwpm_recorded",
+              "joint_uf",
+              "joint_correlated_mwpm",
+              "joint_correlated_uf"
+            ],
+            "row_mapping": "the record's parent row ids index the run's prediction rows",
+            "run": {
+              "circuit_sha256": "d6f1f852b5d12ca2816c2411fe0dcfb0d2948ea50d6eb12655a9cfd775976d2b",
+              "code_commit": "10dc867b632edcf011f802f0f8a6e05ca769c659",
+              "dem_sha256": "858edcae41ba5f5ead2862d28dd517d5f22734b1ebd17c0dc12139ecd6a6278a",
+              "directory": "/data2/s2chitni/.tmp/ysc-four-decoders-d9-p003-100k-7efr23ha",
+              "manifest_sha256": "77d44c3579dcb7baed6fd5352bc4ff4c43b4f282091f8f650082af06810872d5",
+              "parent_shots": 100000,
+              "payload_sha256": "d55da8f4c9b8287fa0af64f8382de755a243a774030499e108c348b665e102f5",
+              "results_sha256": "a5a780305a4b3561c517f32b953c812b5aba5c085858decb7f1af3007c39af23",
+              "source_sha256": {
+                "src/yoked/decoders/_correlated_union_find.py": "62a56ce8bed3fba3fe4dae5bba931fa069ade6f253f63fc1be94779f1ba7bee2",
+                "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+                "src/yoked/decoders/_union_find.py": "8482635867c74233465d68152dd153c56adf3b7323d5573926400bad7e436b59"
+              },
+              "versions": {
+                "numpy": "2.5.1",
+                "pymatching": "2.4.0",
+                "scipy": "1.18.0",
+                "sinter": "1.16.0",
+                "stim": "1.16.0"
+              }
+            },
+            "schema_version": "BaselineAttachment/hierarchical-l1-l2/1",
+            "yoke_parity": {
+              "rows": 100000,
+              "violations": 0
+            }
+          },
+          "identities": {
+            "collection": "2d0984a04c42896dc8c5f70f7100f9e191cbb35a841aaabad9d7cf8adb636543",
+            "decoder": "79fafa60cf62051e5132dc38d881e515b969bd703616ed3ddaac5a137ac2fa67",
+            "model": "73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d",
+            "parent_sample": "d1bc5fcf04da0c265f67b23637ee518f730cebc86700d04db09fec097a5130f1",
+            "sampling_family": "51918c6cd9505f780bd9ef6a6b029a52bb3f68ae81a6ea195f4dbe185668bf69"
+          },
+          "parent_shots": 100000,
+          "rows": {
+            "count": 100000,
+            "sha256": "baa5f49fbad78af4964d9ec7eaf2d6327b2d2ca1f4dcf54e2394dfff2e36d58e",
+            "start": 0,
+            "stop": 100000
+          },
+          "sample_identity_inputs": {
+            "circuit_sha256": "d6f1f852b5d12ca2816c2411fe0dcfb0d2948ea50d6eb12655a9cfd775976d2b",
+            "dem_sha256": "858edcae41ba5f5ead2862d28dd517d5f22734b1ebd17c0dc12139ecd6a6278a",
+            "model_versions": {
+              "stim": "1.16.0"
+            },
+            "num_detectors": 17762,
+            "num_observables": 12,
+            "parameters": {
+              "distance": 9,
+              "noise": "si1000",
+              "p": 0.003,
+              "patches": 6,
+              "rounds": 36,
+              "style": "cz",
+              "yokes": 2
+            },
+            "parent_shots": 100000,
+            "payload_sha256": "d55da8f4c9b8287fa0af64f8382de755a243a774030499e108c348b665e102f5",
+            "sampling_versions": {
+              "stim": "1.16.0"
+            },
+            "seed": 42
+          },
+          "seed": 42,
+          "source_sha256": {
+            "audit": {
+              "missing": [],
+              "src/gen/__init__.py": "a6b1b0c23a282265350cf0cc1352d092790d19803d21e57ac48e9ca45b67ab97",
+              "src/gen/_circuit_util.py": "ba14ce21bd8b531ab89b2eebcca7b06976f0740560ec558aa9066f3f532eccd5",
+              "src/gen/_circuit_util_test.py": "5b171bd62399c3c596850698557c554c59da16b593244ba65ca3f6457ad640f6",
+              "src/gen/_core/__init__.py": "94baf73265a9c37f90bc828b00d222acf14e719d70ea2564364da5e1a94ef56e",
+              "src/gen/_core/_builder.py": "925ccf683463327f9ee07e6dea7a5cd59e117e86efe3b2394933a9f93e368eb4",
+              "src/gen/_core/_builder_test.py": "617229217dbf3c6ceb09abdd609a129c778944ffe87052cc2243ed0f09d5acbc",
+              "src/gen/_core/_measurement_tracker.py": "cafd64a79af977ef64ad65234066f365c4f3a103a4351411f0fc15d1d1cfdf39",
+              "src/gen/_core/_noise.py": "1f89e007b1a3d7ed554b484171238e43d7cd38fb9b4427fa7dad2a2b7c71badc",
+              "src/gen/_core/_noise_test.py": "ce401c051b893c31b27c2f004f277d47dc0bd8c69aa33a6b476f963f8781d338",
+              "src/gen/_core/_patch.py": "a7f2d2035bbc8b24f72354cc6a7b1abe9bca360e68f6e5c3ff182acd5c67bebb",
+              "src/gen/_core/_patch_test.py": "942ba14b5b81ae861981e3f1c3da063692c333f37a61c9676229b1e956af950d",
+              "src/gen/_core/_tile.py": "dfd51f9da14030d02b9d4a65961e36e76c64b4d4a94699df7fe256a5c9b6b0e7",
+              "src/gen/_core/_tile_test.py": "43fdd5b5d19158d6840678448a7b93b7959afe2bbe9f82a93c575592b35b10e6",
+              "src/gen/_core/_util.py": "1cffa3048b3cb4d65d4974b2422b8577368b6bdaf207da0db32b54f8c1ddae63",
+              "src/gen/_core/_util_test.py": "619cb191611398ce3081f1c4b2848e48ae3c2bc2227c83fc8592eac4b59990b5",
+              "src/gen/_flows/__init__.py": "9fe5ac8972e3b245492485e3e91672bd5df5174a5abd9dd55fe7a3341e4eb8ef",
+              "src/gen/_flows/_chunk.py": "31ac2819e680745476333e94770e7743141f4c6dab5655e7dd0631f112bb0626",
+              "src/gen/_flows/_chunk_test.py": "d2fb2fcb32fae1a0ad56a8fcca1dad5cc6eaafb759ea2f47547d67839a2db8a6",
+              "src/gen/_flows/_flow.py": "24336be6588a932c6039ee2291f76c57e7ff191b8d5c0e69c5d65f6c51fe23a1",
+              "src/gen/_flows/_flow_test.py": "a3deb4957858d3464d453ed34933b4a0c9166736907438236173796b97361353",
+              "src/gen/_flows/_flow_util.py": "2462fd17005e358611bab08e4269de9b2b786aac417e62b4b6bd41ec6d079391",
+              "src/gen/_flows/_flow_util_test.py": "79c82398c6a6a7a5a3d4d14ea64eeb1b2e877ded91cd692ac30c6d662d3b7dd8",
+              "src/gen/_flows/_flow_verifier.py": "946a986fba17a7ef801dc87aa50b4870b845d25b8d9dd78146f2882ebb04e44c",
+              "src/gen/_flows/_flow_verifier_test.py": "4c9ab6d6991a3e18b033591a6b6049cae401576e0e538e75c0e81817ac7fdb95",
+              "src/gen/_flows/_pauli_string.py": "054e2238d47902daa73e617c2e94410496642d085e283f37800966eb1026361b",
+              "src/gen/_flows/_pauli_string_test.py": "6a4025c48038d56783e1c1634f851c6950882b5a07b55ce8ac018f4987c5559b",
+              "src/gen/_interaction_planner.py": "74db7b094c0929ea9ad1f12f4e7b883c7ab6b85362bda031be167252ea891a16",
+              "src/gen/_interaction_planner_test.py": "c6499da8339c8a943fe021dde06c0e29064b75431c98dc9a19c6332efe05953b",
+              "src/gen/_layers/__init__.py": "bea8756879b0754758897fdf29cb66a728aeedad7c09ba5028464e96bdf5b8b9",
+              "src/gen/_layers/_data.py": "4f114ef7a4a96471d193dd8e17b31b4203de301c77938e76a4c24d89d80ce598",
+              "src/gen/_layers/_det_obs_annotation_layer.py": "7b9bdcd0251569613b077c35212ca383241e15cd20cd6696d05f2f48ea5cfa41",
+              "src/gen/_layers/_empty_layer.py": "c1235559ffb0f1c100230edcb7c3bda37ba88a09b66943882f09e6cb29103520",
+              "src/gen/_layers/_feedback_layer.py": "ae75b28452dcb91158b09b4f99765bcd7447face7bfb6a124ea6827c15aad44f",
+              "src/gen/_layers/_feedback_layer_test.py": "252ae96799c1da4a0bdb9f2431a5f0dd57143c38dd82a84481fd2f59a5537982",
+              "src/gen/_layers/_interact_layer.py": "097db41ee16e470bd05b13053524922d35525005e8a6465871a0376e6dd586f3",
+              "src/gen/_layers/_interact_swap_layer.py": "fde9f21466d017b118d8ccd73c1c86f8db210e760e8094d61203758d53d7d1fe",
+              "src/gen/_layers/_iswap_layer.py": "e0210c7e097a45c5317ce264073691a1f6d77ccb75f12e64ae9b54f79a1f54fa",
+              "src/gen/_layers/_layer.py": "78c90f48266539f5e6dc94e1c74b73c86545605e85a9330ad395dfb8775d7df3",
+              "src/gen/_layers/_layer_circuit.py": "0f0cf01383fe4151f53c9c99576e60d259bacc7b158060c90215e781ef50b7e4",
+              "src/gen/_layers/_layer_circuit_test.py": "4bd0f80eaa82ab9e5ebacdf3b6105b5693d4bc4b6ecee130e36d659daf01d542",
+              "src/gen/_layers/_loop_layer.py": "88197eb252452e27ed85146ddc662ed74fa02827b6095a1203886c9afb1ce452",
+              "src/gen/_layers/_measure_layer.py": "3d06e0cbc9123d14805567daa2adbf5b8a68bcbd312640bf4d934f1ea87a5c0a",
+              "src/gen/_layers/_mpp_layer.py": "3cdad867cbae3fa7965c1dfa51207decaaa1f78d0d526e335945e260fe84a23a",
+              "src/gen/_layers/_noise_layer.py": "1301ecafe9840a57fbef67563cd4c5e7e4b35ac09fb78af74402502bae6ff582",
+              "src/gen/_layers/_qubit_coord_annotation_layer.py": "f90c9d633d816cfd2fbe73d66f0e4cc280b5ebb54821c666cb94e94e84830b01",
+              "src/gen/_layers/_reset_layer.py": "0935d884c38b50164914cc79db1ba4e1bb46abcae0f34f9dfcd6f688366127f0",
+              "src/gen/_layers/_rotation_layer.py": "93e6888c7853a79385be9be52147231b00aedfc251d81d3c004dc282b002ba5e",
+              "src/gen/_layers/_shift_coord_annotation_layer.py": "36bf6618ee0c7e4778d12e2d1d66036d39471d1af43f60ea2eac6e4d8cd48e14",
+              "src/gen/_layers/_sqrt_pp_layer.py": "0a4373a766b0b87ad567a0e66d2dced95287c22cdd9431cac67646c72a8f40a3",
+              "src/gen/_layers/_swap_layer.py": "f92158160b119475d600ff8e74874a1333c4c2b13412dbffd918dc88083360be",
+              "src/gen/_layers/_transpile.py": "f7e9e400341e927a6adb4a097155a362644cd2a8f5cb2fab4accdabb4819ecd3",
+              "src/gen/_layers/_transpile_test.py": "60a4ba91b90ea88e2f4c15a07c43fb4834d7ee3dd5225334942212aa7958f225",
+              "src/gen/_main_util.py": "c363a3ea8249da8cf09d559f9c62be76246d155f0e326041941ed3d0be433df4",
+              "src/gen/_plaq_problem.py": "6b792f1ae5ca480a24937c8a454f2f531fdf4b40b17f33606de5426c7954ac12",
+              "src/gen/_stabilizer_code.py": "beea6c7ab8cd80b6f7713a8581bc27932dadbdd11f609aaaeb9a7c89cac9634c",
+              "src/gen/_surf/__init__.py": "f7644c5a75b41bea5b86420be91744e42afa79da4adf14e1cc43f01ea33a3987",
+              "src/gen/_surf/_closed_curve.py": "83c3cde969686f5daa3f5063183e60e51f0333fb59174e1c4391a7d1a34e7bf3",
+              "src/gen/_surf/_closed_curve_test.py": "26d3e50cf84e9fe76a142fc203db654f4f0297baf96ec0d01de11a1d4bcc0b49",
+              "src/gen/_surf/_css_observable_boundary_pair.py": "0a52bdf26cde38e1f5d0765f98376d0f0c0760cd1e31c902cceef5f1bb2c4bd4",
+              "src/gen/_surf/_geo.py": "55c72196cbc185b1ecd354ee1de8b6c4304c78679046401d9883c7ef2d110db6",
+              "src/gen/_surf/_geo_test.py": "2e733b45443444a93a2e33e83602594287853cb23519ddd0ee2df872f05a5cf8",
+              "src/gen/_surf/_open_curve.py": "3d83a6d2f341603a745dbdaf6fc7d88c9c9a0cd6f5a5e4b5ee93802f2080fc91",
+              "src/gen/_surf/_open_curve_test.py": "50d98aa6312ec76e6bb0dfcda0d7039f0374906e303ad330e2ed69b2516c743b",
+              "src/gen/_surf/_order.py": "6021fc5ae02fbe8362f2a399762c11b404c04855899862376412a8e58f1ec825",
+              "src/gen/_surf/_patch_outline.py": "6fd943ead29edfacc70be9e642765a16b7833de139433d5a7538f4e48f1f65d2",
+              "src/gen/_surf/_patch_outline_test.py": "482d01c58e6a4318b930a69bceabb81ea4200c6dba61d46bfe4a4dd2d6f21bb8",
+              "src/gen/_surf/_patch_transition_outline.py": "f6fca52567c08bfabaf79000c685d9af0abf9077cef4bc3ce4e10e7b65430db3",
+              "src/gen/_surf/_patch_transition_outline_test.py": "4f1e905f3b46d67f85a63be5dc350ceef78b03802fe0b3d996b8259bef7c515f",
+              "src/gen/_surf/_path_outline.py": "1835d4b6bf923c485cb3c48478fab372738d5cc90d83120d24c64ff86666a07d",
+              "src/gen/_surf/_step_outline.py": "24cc9a49d8a4edc38c9f7286568abe63dd1405fcbb723ffedcf170a785edfbe8",
+              "src/gen/_surf/_step_outline_test.py": "a4aac379e738b1831964202505488d8ef6fb870e2697d0d5a674be79f5ce9380",
+              "src/gen/_surf/_step_sequence_outline.py": "e17db6cbdb46ec074c15ff837cb3ee4391457fd631f4555685b2162234e344f9",
+              "src/gen/_surf/_surface_code.py": "eeaa3a9b82f46d3c2bee8cc4138b3b4452b6112085aa831eedf9c20f055e746b",
+              "src/gen/_surf/_surface_code_test.py": "5c4c4daafe20faeb31ec98b4b391f2d5cc3df5c8272db92d57fb2ab9031a6197",
+              "src/gen/_surf/_trans.py": "c1f807e945618700d21f2932f806c7164a564a521a8d494e248155175fc3d93c",
+              "src/gen/_surf/_viz_gltf_3d.py": "421209c4bf41302e9f99c036321a1a6466ca9679695567f89e59ba0892631dc5",
+              "src/gen/_surf/_viz_gltf_3d_test.py": "e43a6ba5e2d8506b6ce00bb0ffa380fd57f2f0e0765f7ecded20b2caa4e1acfb",
+              "src/gen/_surf/_viz_patch_outline_svg.py": "760751c7c133d89e3a60ec1d86e491fad9481b8fa665734791cbb0aa5bccd4a5",
+              "src/gen/_surf/_viz_sequence_3d.py": "f14b4500fb9bddab5affad691f0752423ad61fab4fb47cf957eb41a9f656a883",
+              "src/gen/_util.py": "6248d9466fe126be7767fa430796c182e32633a019a6c7d59f81dd1993bdc2f2",
+              "src/gen/_util_test.py": "51039ee8ed117f6bd082762a45f8a5af508b1e6d07bfa60d0c105f401396d138",
+              "src/gen/_viz_circuit_html.py": "e771a8c551a7c2606829fab96d3c011f81d58aed98548d4514a228008468ac3f",
+              "src/gen/_viz_patch_svg.py": "384d248d12f276b5233317eca1f44584dda21a4bf5e7b5bd9ffa2009475c0cef",
+              "src/yoked/_yoked_memory_circuits.py": "d8230b5892ad53b9e42ebbd1c947d8cd31c484397bf194ea83c502616ad7b759",
+              "src/yoked/hierarchical/_stages.py": "6842ace79fd0b5a1a57691432fbe84f1d729e0b40162de583f7efe8c62e277b9",
+              "tools/hierarchical_experiment": "6196cb7cc991e8d022d5b510cdf77606674f93e92e311c7d77991e62ad8759d2"
+            },
+            "check": {
+              "src/yoked/hierarchical/_baselines.py": "ba0c5e9122b1ebebb1dcf8b4be261010d9dd609a8480bc1b2861bb97de95d642",
+              "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+              "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+              "src/yoked/hierarchical/_reproduction.py": "1e0125fad12424e954160447e40e4c1e25a42f7df190f1392d176f1f196180bd"
+            },
+            "decoder": {
+              "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+              "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+              "src/yoked/decoders/_union_find.py": "14f90a29c034f0b30f09af8ef77ce7ecb1d5c7c65db6cfd1d18db8c887022eda",
+              "src/yoked/hierarchical/_arrays.py": "e8e8de153fc76896ea599ca0de0ea80c173fbd4fde8b86cd4f0415b6fef880ab",
+              "src/yoked/hierarchical/_cluster_gap.py": "9fe77c15e2cce2cfbab9667fac21d2fa8bc093a37a00e330c49ad0ea006200c2",
+              "src/yoked/hierarchical/_l1.py": "36751cdad5b4a423a7607cb3fdac9812dff1e16de80221454b284765de785460",
+              "src/yoked/hierarchical/_matching_gaps.py": "7a7456ac2cabfeb5d96aa30434ed8422e3520ac371cc1caa3bd5ffa41a9c516d",
+              "src/yoked/hierarchical/_patch_graphs.py": "958c9b8d2a3c884c5d10426154370a6d7e588a8bab22b4e0f91f8ea369b78387",
+              "src/yoked/hierarchical/_record.py": "70fb214dfa4c754ed2538a68c6af31e2a8f62a7dd777e38c63b49b7df1c7e387"
+            }
+          },
+          "versions": {
+            "check": {
+              "numpy": "2.5.1",
+              "pymatching": "2.4.0"
+            },
+            "decoder": {
+              "numpy": "2.5.1",
+              "pymatching": "2.4.0",
+              "scipy": "1.18.0",
+              "stim": "1.16.0"
+            }
+          }
+        },
+        "parameters": {
+          "distance": 9,
+          "p": 0.003,
+          "patches": 6,
+          "rounds": 36,
+          "yokes": 2
+        },
+        "record_manifest_sha256": "0071f86474b8bfd596c4e37925c8b607c2f71961e1dd01000fe7cb0c77154de4",
+        "record_sha256": "5f061fa6e81988b25e1f2cf926d45f21c68ce2e31ed6ad0fab8b9f4ea7e4a5c8",
+        "replay": {
+          "artifacts": {
+            "uf_cluster_gap_to_gap_correlated_all_refined_mixed/arrays.npz": "372367bfd4d4c17970e82e7ad9e046517040b953edf4e995235aa96573c64db8",
+            "uf_cluster_gap_to_gap_correlated_all_refined_mixed/results.json": "835c84fb6a2d1c1cc267a50a68aadaf9ac4dbd3743156c052b427399a7b294fc"
+          },
+          "calibrators": {
+            "identity": "ccdc1f68a1fa457a9dea4132bac0dae44eaa5340957358ba7400d057853b6d2e",
+            "path": "/data2/s2chitni/.tmp/hier-d9-p003-m2/calibrators_full.json",
+            "sha256": "382eaff951e5150cccdf09e2a6b17bbaf7d36e699bc9494f967f2927b4002ff3"
+          },
+          "code_commit": "b58f9f58b9acc79ca1a41fd0c8e588fedd82f60e",
+          "configurations": [
+            "uf:cluster_gap->gap_correlated:all_refined:mixed"
+          ],
+          "identity": "89c1df72948f776801c0eca079cfef1d12bb1b8ceef5f535aba30974732e951b",
+          "record": {
+            "directory": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d9/evaluation",
+            "identities": {
+              "collection": "2d0984a04c42896dc8c5f70f7100f9e191cbb35a841aaabad9d7cf8adb636543",
+              "decoder": "79fafa60cf62051e5132dc38d881e515b969bd703616ed3ddaac5a137ac2fa67",
+              "model": "73751a5aa99ac806a4ad5007b310b9a22d3f39c6a4f609d466bf83295268cd9d",
+              "parent_sample": "d1bc5fcf04da0c265f67b23637ee518f730cebc86700d04db09fec097a5130f1",
+              "sampling_family": "51918c6cd9505f780bd9ef6a6b029a52bb3f68ae81a6ea195f4dbe185668bf69"
+            },
+            "manifest_sha256": "0071f86474b8bfd596c4e37925c8b607c2f71961e1dd01000fe7cb0c77154de4",
+            "record_sha256": "5f061fa6e81988b25e1f2cf926d45f21c68ce2e31ed6ad0fab8b9f4ea7e4a5c8",
+            "role": "evaluation",
+            "rows": {
+              "count": 100000,
+              "sha256": "baa5f49fbad78af4964d9ec7eaf2d6327b2d2ca1f4dcf54e2394dfff2e36d58e",
+              "start": 0,
+              "stop": 100000
+            }
+          },
+          "source_sha256": {
+            "src/yoked/hierarchical/_calibration.py": "de5c0eb4383253596aaf861f976571fb8d7ea6d9ac8cd071a9f49caa8ad0020a",
+            "src/yoked/hierarchical/_metrics.py": "3d47195d293a8f58e4c45ba69b4b08bc4050ae18073d9d0b8149c616845e73fc",
+            "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+            "src/yoked/hierarchical/_policies.py": "6817ae7076278544dbec646b9197c12b79558d52cd885d4b585c145ecabbc27e",
+            "src/yoked/hierarchical/_replay.py": "7a2639d9bd5fb035bb664de49b1852a779a0093fbf9df8a7ccf1484976858b8a"
+          },
+          "versions": {
+            "numpy": "2.5.1",
+            "sinter": "1.16.0"
+          }
+        },
+        "replay_identity": "89c1df72948f776801c0eca079cfef1d12bb1b8ceef5f535aba30974732e951b",
+        "replay_manifest_sha256": "c517bcd8d8a89bd16f4bb99a48970d4b81bb157e3627154ce87f68cc276619a2",
+        "root": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d9",
+        "shots": 100000
+      },
+      "values": 8
+    }
+  }
+}

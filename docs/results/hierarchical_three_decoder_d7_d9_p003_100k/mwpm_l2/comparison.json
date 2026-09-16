@@ -1,0 +1,100 @@
+{
+  "comparison": "new outer MWPM backend minus frozen enumerating backend",
+  "distances": {
+    "d7": {
+      "accuracy": {
+        "changed_failure_status_rows": 0,
+        "new_block_failures": 13537,
+        "new_normalized_ler": 0.0008733827499732838,
+        "old_block_failures": 13537,
+        "old_normalized_ler": 0.0008733827499732838
+      },
+      "calibrated_probabilities": {
+        "above_half": 87476,
+        "minimum_abs_log_odds": 0.0,
+        "shot_sectors_with_any_above_half": 73096,
+        "shot_sectors_with_any_near_half": 18,
+        "shot_sectors_with_two_or_more_near_half": 0,
+        "values": 1200000,
+        "within_tie_tolerance_of_half": 18
+      },
+      "calibrator_identity": "86c09f589609b9e418102d18b633b0ca962ce769796af4585975ea9ceaeff5fd",
+      "distance": 7,
+      "final": {
+        "different_bits": 0,
+        "different_rows": 0,
+        "first_different_rows": []
+      },
+      "map_log_weight_new_minus_old": {
+        "max_absolute": 0.0,
+        "maximum": 0.0,
+        "minimum": 0.0,
+        "sectors_above_tolerance": 0,
+        "sectors_below_minus_tolerance": 0
+      },
+      "new_replay_identity": "0ce59c15b9dfe01839e66c375726cfcdb1d4eba09c00012bfc1a1b60a3cca17d",
+      "old_replay_identity": "c6b0499b261c2bb07635dda2d9878b35f2c18de76cd1275fc42baa9b4e4871cc",
+      "parity": {
+        "new_violations": 0,
+        "old_violations": 0
+      },
+      "patches": 6,
+      "pieces": 168,
+      "shots": 100000,
+      "ties": {
+        "different_flags": 0,
+        "different_rows": 0,
+        "new_count": 0,
+        "old_count": 0
+      }
+    },
+    "d9": {
+      "accuracy": {
+        "changed_failure_status_rows": 0,
+        "new_block_failures": 6820,
+        "new_normalized_ler": 0.0003284194515928984,
+        "old_block_failures": 6820,
+        "old_normalized_ler": 0.0003284194515928984
+      },
+      "calibrated_probabilities": {
+        "above_half": 81160,
+        "minimum_abs_log_odds": 0.0,
+        "shot_sectors_with_any_above_half": 68562,
+        "shot_sectors_with_any_near_half": 158,
+        "shot_sectors_with_two_or_more_near_half": 0,
+        "values": 1200000,
+        "within_tie_tolerance_of_half": 158
+      },
+      "calibrator_identity": "ccdc1f68a1fa457a9dea4132bac0dae44eaa5340957358ba7400d057853b6d2e",
+      "distance": 9,
+      "final": {
+        "different_bits": 0,
+        "different_rows": 0,
+        "first_different_rows": []
+      },
+      "map_log_weight_new_minus_old": {
+        "max_absolute": 0.0,
+        "maximum": 0.0,
+        "minimum": 0.0,
+        "sectors_above_tolerance": 0,
+        "sectors_below_minus_tolerance": 0
+      },
+      "new_replay_identity": "da007102e53c8b95f2487cfcdca4dc103ede539abb07d35d3e649d15b1867f7f",
+      "old_replay_identity": "89c1df72948f776801c0eca079cfef1d12bb1b8ceef5f535aba30974732e951b",
+      "parity": {
+        "new_violations": 0,
+        "old_violations": 0
+      },
+      "patches": 6,
+      "pieces": 216,
+      "shots": 100000,
+      "ties": {
+        "different_flags": 0,
+        "different_rows": 0,
+        "new_count": 0,
+        "old_count": 0
+      }
+    }
+  },
+  "tie_tolerance": 1e-09
+}

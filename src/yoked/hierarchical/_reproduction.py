@@ -219,11 +219,15 @@ def _positions_in_full(full: L1Record, subset: L1Record) -> np.ndarray:
 def _differing_rows(full_array: np.ndarray, subset_array: np.ndarray) -> np.ndarray:
     """Which rows differ anywhere across the trailing axes; a ``(rows,)`` bool array.
 
-    ``!=`` is exact for every dtype a record stores: the bits and counts compare as
-    integers and the floats as values, and a record never holds NaN, the one value that
-    is unequal to itself.
+    Bits and counts compare as values. Floats compare by representation, so distinct
+    encodings such as positive and negative zero cannot pass a check described as
+    bit-for-bit reproduction. Record construction canonicalizes every float field to
+    float64 and rejects NaN, but deliberately accepts either zero sign as nonnegative.
     """
-    differs = full_array != subset_array
+    if full_array.dtype.kind == 'f':
+        differs = full_array.view(np.uint8) != subset_array.view(np.uint8)
+    else:
+        differs = full_array != subset_array
     return differs.reshape(len(differs), -1).any(axis=1)
 
 

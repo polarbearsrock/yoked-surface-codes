@@ -467,6 +467,76 @@ def test_a_second_import_returns_without_writing(pipeline, monkeypatch):
     assert (directory / RECORD_MANIFEST).read_bytes() == manifest_before
 
 
+def test_load_record_rejects_a_tampered_baseline_audit(pipeline, tmp_path):
+    directory = copied(pipeline.imported.directory, tmp_path / 'evaluation')
+    path = directory / RECORD_MANIFEST
+    manifest = read_json(path)
+    manifest[BASELINES_FIELD]['decoders']['joint_uf']['mapped_prediction_sha256'] = '00' * 32
+    write_json_atomic(path, manifest)
+    with pytest.raises(ValueError, match="baseline 'joint_uf'.*mapped prediction hash"):
+        load_record(directory)
+
+
+def test_load_and_idempotent_reimport_reject_tampered_source_prediction_provenance(
+        pipeline, tmp_path):
+    """The original review finding: audit-only damage cannot hide behind intact arrays."""
+    directory = copied(pipeline.imported.directory, tmp_path / 'evaluation')
+    path = directory / RECORD_MANIFEST
+    manifest = read_json(path)
+    entry = manifest[BASELINES_FIELD]['decoders']['joint_uf']
+    mapped = entry['mapped_prediction_sha256']
+    entry['prediction_packed_sha256'] = '00' * 32
+    write_json_atomic(path, manifest)
+
+    # The mapped record payload is untouched: only its claimed full-parent provenance
+    # changed, so the attachment digest rather than the mapped-array gate must catch it.
+    assert read_json(path)[BASELINES_FIELD]['decoders']['joint_uf'][
+        'mapped_prediction_sha256'] == mapped
+    with pytest.raises(ValueError, match='baseline attachment hashes to'):
+        load_record(directory)
+    with pytest.raises(ValueError, match='baseline attachment hashes to'):
+        stage_import_baselines(directory, pipeline.run.directory)
+
+
+def test_load_record_rejects_baseline_names_that_do_not_match_the_arrays(pipeline, tmp_path):
+    directory = copied(pipeline.imported.directory, tmp_path / 'evaluation')
+    path = directory / RECORD_MANIFEST
+    manifest = read_json(path)
+    manifest[BASELINES_FIELD]['names'].remove('joint_uf')
+    write_json_atomic(path, manifest)
+    with pytest.raises(ValueError, match='baselines names.*do not match'):
+        load_record(directory)
+
+
+def test_a_verified_reimport_upgrades_the_legacy_m2_audit_without_rewriting_the_record(
+        pipeline, tmp_path):
+    directory = copied(pipeline.imported.directory, tmp_path / 'evaluation')
+    record_before = (directory / RECORD_FILE).read_bytes()
+    manifest = read_json(directory / RECORD_MANIFEST)
+    block = manifest[BASELINES_FIELD]
+    block.pop('schema_version')
+    block.pop('attachment_sha256')
+    for entry in block['decoders'].values():
+        entry.pop('mapped_prediction_sha256')
+    write_json_atomic(directory / RECORD_MANIFEST, manifest)
+
+    with pytest.raises(ValueError, match='legacy baseline audit.*re-run import-baselines'):
+        load_record(directory)
+    upgraded = stage_import_baselines(directory, pipeline.run.directory)
+    assert (directory / RECORD_FILE).read_bytes() == record_before
+    assert upgraded.manifest[BASELINES_FIELD]['schema_version'].startswith('BaselineAttachment/')
+    assert len(upgraded.manifest[BASELINES_FIELD]['attachment_sha256']) == 64
+
+
+def test_an_idempotent_reimport_rejects_different_run_provenance(pipeline, tmp_path):
+    run = copied(pipeline.run.directory, tmp_path / 'same-predictions-different-provenance')
+    manifest = read_json(run / RECORDED_MANIFEST)
+    manifest['code_commit'] = 'bb' * 20
+    write_json_atomic(run / RECORDED_MANIFEST, manifest)
+    with pytest.raises(ValueError, match="different 'run' provenance"):
+        stage_import_baselines(pipeline.imported.directory, run)
+
+
 def test_a_differing_second_import_names_the_first_differing_baseline(pipeline, tmp_path):
     directory = copied(pipeline.imported.directory, tmp_path / 'evaluation')
     run_dir = copied(pipeline.run.directory, tmp_path / 'run')

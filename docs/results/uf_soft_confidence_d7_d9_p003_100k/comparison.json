@@ -1,0 +1,999 @@
+{
+  "benchmark": {
+    "7": {
+      "parent_rows": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "patch_samples": 192,
+      "seconds": {
+        "correlated_bounded_cluster": {
+          "mean": 0.027295819140624993,
+          "p50": 0.025156343499999956,
+          "p95": 0.047100842350001684,
+          "total": 5.2407972749999985
+        },
+        "correlated_matching_gap": {
+          "mean": 0.008967692984375062,
+          "p50": 0.008880422999998139,
+          "p95": 0.010066592100002048,
+          "total": 1.721797053000012
+        },
+        "correlated_uf_gap": {
+          "mean": 0.038249284020833274,
+          "p50": 0.0364245280000004,
+          "p95": 0.04724516349999854,
+          "total": 7.343862531999989
+        },
+        "reference_uf": {
+          "mean": 0.007755462880208508,
+          "p50": 0.007735952000000879,
+          "p95": 0.009251572500000015,
+          "total": 1.4890488730000335
+        },
+        "uf_gap": {
+          "mean": 0.02754052964583345,
+          "p50": 0.02644996899999974,
+          "p95": 0.0352909595499991,
+          "total": 5.2877816920000225
+        }
+      },
+      "timer": "time.process_time; graph setup excluded; calibration sample; parallel experiment active",
+      "topology": [
+        {
+          "check_degrees": [
+            116,
+            116
+          ],
+          "detectors": 1392,
+          "edges": 6806
+        },
+        {
+          "check_degrees": [
+            116,
+            116
+          ],
+          "detectors": 1392,
+          "edges": 6806
+        },
+        {
+          "check_degrees": [
+            116,
+            116
+          ],
+          "detectors": 1392,
+          "edges": 6806
+        },
+        {
+          "check_degrees": [
+            116,
+            116
+          ],
+          "detectors": 1392,
+          "edges": 6806
+        },
+        {
+          "check_degrees": [
+            116,
+            116
+          ],
+          "detectors": 1392,
+          "edges": 6806
+        },
+        {
+          "check_degrees": [
+            116,
+            116
+          ],
+          "detectors": 1392,
+          "edges": 6806
+        }
+      ]
+    },
+    "9": {
+      "parent_rows": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "patch_samples": 192,
+      "seconds": {
+        "correlated_bounded_cluster": {
+          "mean": 0.07154625418229225,
+          "p50": 0.06452692050000763,
+          "p95": 0.1113489560500028,
+          "total": 13.736880803000112
+        },
+        "correlated_matching_gap": {
+          "mean": 0.02277387796875019,
+          "p50": 0.02261862200000664,
+          "p95": 0.025976521049999944,
+          "total": 4.372584570000036
+        },
+        "correlated_uf_gap": {
+          "mean": 0.10447726129687529,
+          "p50": 0.09839043750000087,
+          "p95": 0.1500932284499917,
+          "total": 20.059634169000056
+        },
+        "reference_uf": {
+          "mean": 0.02097169709374987,
+          "p50": 0.01923639049999437,
+          "p95": 0.02367898909999617,
+          "total": 4.026565841999975
+        },
+        "uf_gap": {
+          "mean": 0.07183170037499971,
+          "p50": 0.07001957650000179,
+          "p95": 0.09476882890000694,
+          "total": 13.791686471999945
+        }
+      },
+      "timer": "time.process_time; graph setup excluded; calibration sample; parallel experiment active",
+      "topology": [
+        {
+          "check_degrees": [
+            185,
+            185
+          ],
+          "detectors": 2960,
+          "edges": 15122
+        },
+        {
+          "check_degrees": [
+            185,
+            185
+          ],
+          "detectors": 2960,
+          "edges": 15122
+        },
+        {
+          "check_degrees": [
+            185,
+            185
+          ],
+          "detectors": 2960,
+          "edges": 15122
+        },
+        {
+          "check_degrees": [
+            185,
+            185
+          ],
+          "detectors": 2960,
+          "edges": 15122
+        },
+        {
+          "check_degrees": [
+            185,
+            185
+          ],
+          "detectors": 2960,
+          "edges": 15122
+        },
+        {
+          "check_degrees": [
+            185,
+            185
+          ],
+          "detectors": 2960,
+          "edges": 15122
+        }
+      ]
+    }
+  },
+  "benchmark_environment": {
+    "concurrent_job": "UF-confidence collection active; CPU process_time timer",
+    "cpu": "AMD EPYC 9374F 32-Core Processor",
+    "platform": "Linux-4.18.0-553.50.1.el8_10.x86_64-x86_64-with-glibc2.28",
+    "python": "3.14.5",
+    "script_sha256": "a956a2056f85501ffc930e58839b05a7cb1b434bdbfb044f27d1da462fff5bc3",
+    "threads": {
+      "OMP_NUM_THREADS": 1,
+      "OPENBLAS_NUM_THREADS": 1
+    },
+    "versions": {
+      "numpy": "2.5.1",
+      "pymatching": "2.4.0",
+      "scipy": "1.18.0",
+      "sinter": "1.16.0",
+      "stim": "1.16.0"
+    },
+    "visible_cpus": 128
+  },
+  "distances": {
+    "7": {
+      "analysis_sources": {
+        "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+        "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+        "src/yoked/decoders/_union_find.py": "48e230589b8cb9d3144e1a52d8a1bc15179b0787c5878c817e61af5f9ea304ce",
+        "src/yoked/hierarchical/_arrays.py": "e8e8de153fc76896ea599ca0de0ea80c173fbd4fde8b86cd4f0415b6fef880ab",
+        "src/yoked/hierarchical/_calibration.py": "de5c0eb4383253596aaf861f976571fb8d7ea6d9ac8cd071a9f49caa8ad0020a",
+        "src/yoked/hierarchical/_cluster_gap.py": "6ba503a28c0e9a4fd8ff05d36512378462a7fce0885e2d0d81ed58d185ea7e9a",
+        "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+        "src/yoked/hierarchical/_l1.py": "36751cdad5b4a423a7607cb3fdac9812dff1e16de80221454b284765de785460",
+        "src/yoked/hierarchical/_matching_gaps.py": "7a7456ac2cabfeb5d96aa30434ed8422e3520ac371cc1caa3bd5ffa41a9c516d",
+        "src/yoked/hierarchical/_metrics.py": "3d47195d293a8f58e4c45ba69b4b08bc4050ae18073d9d0b8149c616845e73fc",
+        "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+        "src/yoked/hierarchical/_outer_mwpm.py": "5f9c95f35d57d6b7937ed2c3896e77aae839897c226f8817aeac9a6cadd92703",
+        "src/yoked/hierarchical/_patch_graphs.py": "958c9b8d2a3c884c5d10426154370a6d7e588a8bab22b4e0f91f8ea369b78387",
+        "src/yoked/hierarchical/_policies.py": "6817ae7076278544dbec646b9197c12b79558d52cd885d4b585c145ecabbc27e",
+        "src/yoked/hierarchical/_provenance.py": "aa950f6682e9c697949b8f5e195c808bf107166c3221e366e69b89e17dece4dc",
+        "src/yoked/hierarchical/_record.py": "c7814affa410b8022f021eb999ef282c331da4750d7b94ba3e27ed12dcc23f17",
+        "src/yoked/hierarchical/_replay.py": "28aaa148a72c00cc76aafb3e0cb86341109606ee9da0a966d71dc0375229e1b5",
+        "src/yoked/hierarchical/_uf_soft.py": "541c41971473e7480664930091e35592435616d2fa22f9f1c23ebb2e86d0b16d",
+        "src/yoked/hierarchical/_uf_soft_analysis.py": "6cbcad363ef3013fb6811059445abf6c68311cc3bc199d0e6f2764cf9d938880",
+        "src/yoked/hierarchical/_uf_soft_collect.py": "18095cff2d90a1b275532371723481722bf44ef59cecd898652f9537e1187543"
+      },
+      "bootstrap": {
+        "calibration": "fixed fitted maps",
+        "replicates": 10000,
+        "seed": 43,
+        "unit": "whole shot"
+      },
+      "calibration_features": "/data2/s2chitni/.tmp/uf-soft-d7-d9-100k-QV55RQ/d7/calibration",
+      "calibration_record": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d7/calibration",
+      "calibration_shots": 50000,
+      "diagnostics": {
+        "bounded_cluster": {
+          "above_half_fraction": 0.0024016666666666665,
+          "brier": 0.06447139794871702,
+          "l2_seconds": 5.749854624271393,
+          "one_error_misattributions": 26002,
+          "one_error_sectors": 66930,
+          "tied_sector_fraction": 0.00099
+        },
+        "cluster_gap": {
+          "above_half_fraction": 0.0024016666666666665,
+          "brier": 0.06444870920267175,
+          "l2_seconds": 5.547450006939471,
+          "one_error_misattributions": 25972,
+          "one_error_sectors": 66930,
+          "tied_sector_fraction": 0.00018
+        },
+        "correlated_bounded_cluster": {
+          "above_half_fraction": 0.0695325,
+          "brier": 0.03500771114671425,
+          "l2_seconds": 5.547519106417894,
+          "one_error_misattributions": 8744,
+          "one_error_sectors": 66930,
+          "tied_sector_fraction": 0.001005
+        },
+        "correlated_matching_gap": {
+          "above_half_fraction": 0.07289666666666667,
+          "brier": 0.030181363424884877,
+          "l2_seconds": 5.416060071438551,
+          "one_error_misattributions": 6804,
+          "one_error_sectors": 66930,
+          "tied_sector_fraction": 0.0
+        },
+        "correlated_uf_gap": {
+          "above_half_fraction": 0.05217083333333333,
+          "brier": 0.05322496174377564,
+          "l2_seconds": 5.570778149180114,
+          "one_error_misattributions": 18481,
+          "one_error_sectors": 66930,
+          "tied_sector_fraction": 0.0
+        },
+        "correlated_uf_gap_4bit": {
+          "above_half_fraction": 0.04908333333333333,
+          "brier": 0.053437988112327375,
+          "l2_seconds": 5.931310238316655,
+          "one_error_misattributions": 18751,
+          "one_error_sectors": 66930,
+          "tied_sector_fraction": 0.036295
+        },
+        "uf_gap": {
+          "above_half_fraction": 0.00037916666666666665,
+          "brier": 0.07626469929776586,
+          "l2_seconds": 5.534919481724501,
+          "one_error_misattributions": 42240,
+          "one_error_sectors": 66930,
+          "tied_sector_fraction": 1e-05
+        }
+      },
+      "evaluation_features": "/data2/s2chitni/.tmp/uf-soft-d7-d9-100k-QV55RQ/d7/evaluation",
+      "evaluation_record": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d7/evaluation",
+      "evaluation_shots": 100000,
+      "feature_sources": {
+        "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+        "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+        "src/yoked/decoders/_union_find.py": "48e230589b8cb9d3144e1a52d8a1bc15179b0787c5878c817e61af5f9ea304ce",
+        "src/yoked/hierarchical/_arrays.py": "e8e8de153fc76896ea599ca0de0ea80c173fbd4fde8b86cd4f0415b6fef880ab",
+        "src/yoked/hierarchical/_cluster_gap.py": "6ba503a28c0e9a4fd8ff05d36512378462a7fce0885e2d0d81ed58d185ea7e9a",
+        "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+        "src/yoked/hierarchical/_l1.py": "36751cdad5b4a423a7607cb3fdac9812dff1e16de80221454b284765de785460",
+        "src/yoked/hierarchical/_matching_gaps.py": "7a7456ac2cabfeb5d96aa30434ed8422e3520ac371cc1caa3bd5ffa41a9c516d",
+        "src/yoked/hierarchical/_patch_graphs.py": "958c9b8d2a3c884c5d10426154370a6d7e588a8bab22b4e0f91f8ea369b78387",
+        "src/yoked/hierarchical/_provenance.py": "aa950f6682e9c697949b8f5e195c808bf107166c3221e366e69b89e17dece4dc",
+        "src/yoked/hierarchical/_record.py": "c7814affa410b8022f021eb999ef282c331da4750d7b94ba3e27ed12dcc23f17",
+        "src/yoked/hierarchical/_uf_soft.py": "541c41971473e7480664930091e35592435616d2fa22f9f1c23ebb2e86d0b16d",
+        "src/yoked/hierarchical/_uf_soft_collect.py": "18095cff2d90a1b275532371723481722bf44ef59cecd898652f9537e1187543"
+      },
+      "methods": {
+        "bounded_cluster": {
+          "block_rate": 0.39091,
+          "failures": 39091,
+          "ler_ci95": [
+            0.0030115778374200097,
+            0.0030743100781640553
+          ],
+          "ler_ratio_to_correlated_uf": 1.9033334081282023,
+          "normalized_ler": 0.0030434280682826165,
+          "paired_block_difference_ci95": [
+            0.15529,
+            0.16202999999999998
+          ],
+          "paired_ratio_ci95": [
+            1.8776013242404777,
+            1.9307181612895794
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "cluster_gap": {
+          "block_rate": 0.39068,
+          "failures": 39068,
+          "ler_ci95": [
+            0.003009299788613287,
+            0.0030721134887873314
+          ],
+          "ler_ratio_to_correlated_uf": 1.9018371716068416,
+          "normalized_ler": 0.003041035587697527,
+          "paired_block_difference_ci95": [
+            0.15506999999999999,
+            0.16177
+          ],
+          "paired_ratio_ci95": [
+            1.8761158646469083,
+            1.92922011515962
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "correlated_bounded_cluster": {
+          "block_rate": 0.16849,
+          "failures": 16849,
+          "ler_ci95": [
+            0.0010935265076893463,
+            0.0011273476713901025
+          ],
+          "ler_ratio_to_correlated_uf": 0.6945321593954921,
+          "normalized_ler": 0.0011105561743425252,
+          "paired_block_difference_ci95": [
+            -0.06597,
+            -0.061600000000000016
+          ],
+          "paired_ratio_ci95": [
+            0.6859460705278599,
+            0.7034013927395893
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "correlated_matching_gap": {
+          "block_rate": 0.13537,
+          "failures": 13537,
+          "ler_ci95": [
+            0.0008584786264337313,
+            0.0008881876534686445
+          ],
+          "ler_ratio_to_correlated_uf": 0.5462059653820164,
+          "normalized_ler": 0.0008733827499732838,
+          "paired_block_difference_ci95": [
+            -0.09936,
+            -0.09445
+          ],
+          "paired_ratio_ci95": [
+            0.5377206458417295,
+            0.5547896186678553
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "correlated_uf_gap": {
+          "block_rate": 0.30867,
+          "failures": 30867,
+          "ler_ci95": [
+            0.0022216603487212883,
+            0.002273673861019129
+          ],
+          "ler_ratio_to_correlated_uf": 1.4056041782550648,
+          "normalized_ler": 0.00224755956614231,
+          "paired_block_difference_ci95": [
+            0.07323000000000002,
+            0.07950025000000001
+          ],
+          "paired_ratio_ci95": [
+            1.3858416992108105,
+            1.4255822855918352
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "correlated_uf_gap_4bit": {
+          "block_rate": 0.31076,
+          "failures": 31076,
+          "ler_ci95": [
+            0.0022401730832546374,
+            0.002292362357980929
+          ],
+          "ler_ratio_to_correlated_uf": 1.4174061883579152,
+          "normalized_ler": 0.002266430967577171,
+          "paired_block_difference_ci95": [
+            0.07527,
+            0.08157000000000003
+          ],
+          "paired_ratio_ci95": [
+            1.3972146028293515,
+            1.4375153897879356
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "joint_correlated_mwpm": {
+          "block_rate": 0.13785,
+          "failures": 13785,
+          "ler_ci95": [
+            0.0008755550763565045,
+            0.0009057796566282195
+          ],
+          "ler_ratio_to_correlated_uf": 0.557089743824489,
+          "normalized_ler": 0.0008907858999728235,
+          "paired_block_difference_ci95": [
+            -0.09691,
+            -0.09195
+          ],
+          "paired_ratio_ci95": [
+            0.5484085253941114,
+            0.5659277726323971
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "joint_correlated_uf": {
+          "block_rate": 0.2323,
+          "failures": 23230,
+          "ler_ci95": [
+            0.0015776576440803547,
+            0.0016199436194137302
+          ],
+          "ler_ratio_to_correlated_uf": 1.0,
+          "normalized_ler": 0.001598998922251682,
+          "paired_block_difference_ci95": [
+            0.0,
+            0.0
+          ],
+          "paired_ratio_ci95": [
+            1.0,
+            1.0
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "joint_mwpm_recorded": {
+          "block_rate": 0.33565,
+          "failures": 33565,
+          "ler_ci95": [
+            0.002469092425053443,
+            0.0025238771960591766
+          ],
+          "ler_ratio_to_correlated_uf": 1.56114901331541,
+          "normalized_ler": 0.0024962755897656175,
+          "paired_block_difference_ci95": [
+            0.10019974999999999,
+            0.10666999999999999
+          ],
+          "paired_ratio_ci95": [
+            1.539538244773908,
+            1.5842186131622618
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "joint_uf": {
+          "block_rate": 0.46684,
+          "failures": 46684,
+          "ler_ci95": [
+            0.003857021386148629,
+            0.003932926439819848
+          ],
+          "ler_ratio_to_correlated_uf": 2.4358401173909376,
+          "normalized_ler": 0.00389490572248552,
+          "paired_block_difference_ci95": [
+            0.23118974999999997,
+            0.23802025000000004
+          ],
+          "paired_ratio_ci95": [
+            2.4034253230475158,
+            2.47013827955409
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "uf_gap": {
+          "block_rate": 0.51124,
+          "failures": 51124,
+          "ler_ci95": [
+            0.00441918971169164,
+            0.004500883368394537
+          ],
+          "ler_ratio_to_correlated_uf": 2.7889666413699024,
+          "normalized_ler": 0.004459554653746367,
+          "paired_block_difference_ci95": [
+            0.27552,
+            0.28252
+          ],
+          "paired_ratio_ci95": [
+            2.75069933560317,
+            2.829458528835426
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        }
+      },
+      "parameters": {
+        "distance": 7,
+        "noise": "si1000",
+        "p": 0.003,
+        "patches": 6,
+        "rounds": 28,
+        "style": "cz",
+        "yokes": 2
+      },
+      "versions": {
+        "numpy": "2.5.1",
+        "pymatching": "2.4.0",
+        "sinter": "1.16.0",
+        "stim": "1.16.0"
+      },
+      "work": {
+        "bounded_states": 342815984,
+        "component_seconds": {
+          "bounded_search": 2268.631836607121,
+          "correlated_forced": 15281.909597789869,
+          "correlated_search": 2484.5646691629663,
+          "correlated_uf": 6730.84545505885,
+          "plain_forced": 14994.00102018565,
+          "reference_uf": 5760.751289464533,
+          "reweight": 9248.20871431753
+        },
+        "correlated_bounded_states": 359533840,
+        "forced_calls_per_weight_model_per_patch": 2,
+        "full_cluster_states": 464918303,
+        "l1_matching_solves": 0,
+        "patch_rows": 600000,
+        "reweighted_patch_rows": 600000
+      }
+    },
+    "9": {
+      "analysis_sources": {
+        "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+        "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+        "src/yoked/decoders/_union_find.py": "48e230589b8cb9d3144e1a52d8a1bc15179b0787c5878c817e61af5f9ea304ce",
+        "src/yoked/hierarchical/_arrays.py": "e8e8de153fc76896ea599ca0de0ea80c173fbd4fde8b86cd4f0415b6fef880ab",
+        "src/yoked/hierarchical/_calibration.py": "de5c0eb4383253596aaf861f976571fb8d7ea6d9ac8cd071a9f49caa8ad0020a",
+        "src/yoked/hierarchical/_cluster_gap.py": "6ba503a28c0e9a4fd8ff05d36512378462a7fce0885e2d0d81ed58d185ea7e9a",
+        "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+        "src/yoked/hierarchical/_l1.py": "36751cdad5b4a423a7607cb3fdac9812dff1e16de80221454b284765de785460",
+        "src/yoked/hierarchical/_matching_gaps.py": "7a7456ac2cabfeb5d96aa30434ed8422e3520ac371cc1caa3bd5ffa41a9c516d",
+        "src/yoked/hierarchical/_metrics.py": "3d47195d293a8f58e4c45ba69b4b08bc4050ae18073d9d0b8149c616845e73fc",
+        "src/yoked/hierarchical/_outer_decoder.py": "29e376c5caef7a8cfd78a3f0267552a6e8ef90dbf805710447689ea44ff06ce1",
+        "src/yoked/hierarchical/_outer_mwpm.py": "5f9c95f35d57d6b7937ed2c3896e77aae839897c226f8817aeac9a6cadd92703",
+        "src/yoked/hierarchical/_patch_graphs.py": "958c9b8d2a3c884c5d10426154370a6d7e588a8bab22b4e0f91f8ea369b78387",
+        "src/yoked/hierarchical/_policies.py": "6817ae7076278544dbec646b9197c12b79558d52cd885d4b585c145ecabbc27e",
+        "src/yoked/hierarchical/_provenance.py": "aa950f6682e9c697949b8f5e195c808bf107166c3221e366e69b89e17dece4dc",
+        "src/yoked/hierarchical/_record.py": "c7814affa410b8022f021eb999ef282c331da4750d7b94ba3e27ed12dcc23f17",
+        "src/yoked/hierarchical/_replay.py": "28aaa148a72c00cc76aafb3e0cb86341109606ee9da0a966d71dc0375229e1b5",
+        "src/yoked/hierarchical/_uf_soft.py": "541c41971473e7480664930091e35592435616d2fa22f9f1c23ebb2e86d0b16d",
+        "src/yoked/hierarchical/_uf_soft_analysis.py": "6cbcad363ef3013fb6811059445abf6c68311cc3bc199d0e6f2764cf9d938880",
+        "src/yoked/hierarchical/_uf_soft_collect.py": "18095cff2d90a1b275532371723481722bf44ef59cecd898652f9537e1187543"
+      },
+      "bootstrap": {
+        "calibration": "fixed fitted maps",
+        "replicates": 10000,
+        "seed": 43,
+        "unit": "whole shot"
+      },
+      "calibration_features": "/data2/s2chitni/.tmp/uf-soft-d7-d9-100k-QV55RQ/d9/calibration",
+      "calibration_record": "/data2/s2chitni/.tmp/hier-d9-p003-m2/calibration",
+      "calibration_shots": 50000,
+      "diagnostics": {
+        "bounded_cluster": {
+          "above_half_fraction": 0.0012183333333333334,
+          "brier": 0.055873656701827396,
+          "l2_seconds": 5.60635001026094,
+          "one_error_misattributions": 22231,
+          "one_error_sectors": 61295,
+          "tied_sector_fraction": 0.001165
+        },
+        "cluster_gap": {
+          "above_half_fraction": 0.0012183333333333334,
+          "brier": 0.055852087065430156,
+          "l2_seconds": 5.548734053038061,
+          "one_error_misattributions": 22179,
+          "one_error_sectors": 61295,
+          "tied_sector_fraction": 7e-05
+        },
+        "correlated_bounded_cluster": {
+          "above_half_fraction": 0.06406833333333334,
+          "brier": 0.024507981438331123,
+          "l2_seconds": 5.524988900870085,
+          "one_error_misattributions": 5229,
+          "one_error_sectors": 61295,
+          "tied_sector_fraction": 0.00139
+        },
+        "correlated_matching_gap": {
+          "above_half_fraction": 0.06763333333333334,
+          "brier": 0.01953219955894722,
+          "l2_seconds": 5.517740216106176,
+          "one_error_misattributions": 3462,
+          "one_error_sectors": 61295,
+          "tied_sector_fraction": 0.0
+        },
+        "correlated_uf_gap": {
+          "above_half_fraction": 0.0535575,
+          "brier": 0.0431923401392587,
+          "l2_seconds": 5.52381928358227,
+          "one_error_misattributions": 13712,
+          "one_error_sectors": 61295,
+          "tied_sector_fraction": 0.0
+        },
+        "correlated_uf_gap_4bit": {
+          "above_half_fraction": 0.05750333333333333,
+          "brier": 0.04333155019244479,
+          "l2_seconds": 5.824124060571194,
+          "one_error_misattributions": 13953,
+          "one_error_sectors": 61295,
+          "tied_sector_fraction": 0.02307
+        },
+        "uf_gap": {
+          "above_half_fraction": 0.00042916666666666667,
+          "brier": 0.06725298095441264,
+          "l2_seconds": 5.547079742886126,
+          "one_error_misattributions": 40085,
+          "one_error_sectors": 61295,
+          "tied_sector_fraction": 0.0
+        }
+      },
+      "evaluation_features": "/data2/s2chitni/.tmp/uf-soft-d7-d9-100k-QV55RQ/d9/evaluation",
+      "evaluation_record": "/data2/s2chitni/.tmp/hier-three-decoders-d7-d9-p003-100k-3MxG5S/d9/evaluation",
+      "evaluation_shots": 100000,
+      "feature_sources": {
+        "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+        "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+        "src/yoked/decoders/_union_find.py": "48e230589b8cb9d3144e1a52d8a1bc15179b0787c5878c817e61af5f9ea304ce",
+        "src/yoked/hierarchical/_arrays.py": "e8e8de153fc76896ea599ca0de0ea80c173fbd4fde8b86cd4f0415b6fef880ab",
+        "src/yoked/hierarchical/_cluster_gap.py": "6ba503a28c0e9a4fd8ff05d36512378462a7fce0885e2d0d81ed58d185ea7e9a",
+        "src/yoked/hierarchical/_collect.py": "f4ff8114f6f5b7cfb9fd90279410c6362f8dded8050f009b7cd078cbb26ada16",
+        "src/yoked/hierarchical/_l1.py": "36751cdad5b4a423a7607cb3fdac9812dff1e16de80221454b284765de785460",
+        "src/yoked/hierarchical/_matching_gaps.py": "7a7456ac2cabfeb5d96aa30434ed8422e3520ac371cc1caa3bd5ffa41a9c516d",
+        "src/yoked/hierarchical/_patch_graphs.py": "958c9b8d2a3c884c5d10426154370a6d7e588a8bab22b4e0f91f8ea369b78387",
+        "src/yoked/hierarchical/_provenance.py": "aa950f6682e9c697949b8f5e195c808bf107166c3221e366e69b89e17dece4dc",
+        "src/yoked/hierarchical/_record.py": "c7814affa410b8022f021eb999ef282c331da4750d7b94ba3e27ed12dcc23f17",
+        "src/yoked/hierarchical/_uf_soft.py": "541c41971473e7480664930091e35592435616d2fa22f9f1c23ebb2e86d0b16d",
+        "src/yoked/hierarchical/_uf_soft_collect.py": "18095cff2d90a1b275532371723481722bf44ef59cecd898652f9537e1187543"
+      },
+      "methods": {
+        "bounded_cluster": {
+          "block_rate": 0.32856,
+          "failures": 32856,
+          "ler_ci95": [
+            0.0018690294834021737,
+            0.0019112992273369515
+          ],
+          "ler_ratio_to_correlated_uf": 2.6320079672002974,
+          "normalized_ler": 0.0018904377358225366,
+          "paired_block_difference_ci95": [
+            0.18297999999999998,
+            0.1892
+          ],
+          "paired_ratio_ci95": [
+            2.5861529322358994,
+            2.677370143836026
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "cluster_gap": {
+          "block_rate": 0.32809,
+          "failures": 32809,
+          "ler_ci95": [
+            0.0018657841733324965,
+            0.0019077288245100688
+          ],
+          "ler_ratio_to_correlated_uf": 2.6272653016532703,
+          "normalized_ler": 0.0018870313198731115,
+          "paired_block_difference_ci95": [
+            0.18248974999999998,
+            0.18872000000000003
+          ],
+          "paired_ratio_ci95": [
+            2.5814156651561455,
+            2.672452055673919
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "correlated_bounded_cluster": {
+          "block_rate": 0.0998,
+          "failures": 9980,
+          "ler_ci95": [
+            0.0004800242501513674,
+            0.0004994009098550078
+          ],
+          "ler_ratio_to_correlated_uf": 0.6820161786288375,
+          "normalized_ler": 0.0004898576055196724,
+          "paired_block_difference_ci95": [
+            -0.044520250000000004,
+            -0.040889999999999996
+          ],
+          "paired_ratio_ci95": [
+            0.6708559713989337,
+            0.6929161866281067
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "correlated_matching_gap": {
+          "block_rate": 0.0682,
+          "failures": 6820,
+          "ler_ci95": [
+            0.00032040942743238876,
+            0.00033629430243564684
+          ],
+          "ler_ratio_to_correlated_uf": 0.4572499780321811,
+          "normalized_ler": 0.0003284194515928984,
+          "paired_block_difference_ci95": [
+            -0.07634,
+            -0.07218975
+          ],
+          "paired_ratio_ci95": [
+            0.4468058034022268,
+            0.46764626325569947
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "correlated_uf_gap": {
+          "block_rate": 0.2332,
+          "failures": 23320,
+          "ler_ci95": [
+            0.0012328370949202805,
+            0.0012660314229951952
+          ],
+          "ler_ratio_to_correlated_uf": 1.7396837907274072,
+          "normalized_ler": 0.0012495265695902091,
+          "paired_block_difference_ci95": [
+            0.08782999999999999,
+            0.09361
+          ],
+          "paired_ratio_ci95": [
+            1.708863579684125,
+            1.770863444203052
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "correlated_uf_gap_4bit": {
+          "block_rate": 0.23608,
+          "failures": 23608,
+          "ler_ci95": [
+            0.0012507731305886089,
+            0.0012842360805815911
+          ],
+          "ler_ratio_to_correlated_uf": 1.7647565414937576,
+          "normalized_ler": 0.0012675350539034236,
+          "paired_block_difference_ci95": [
+            0.09075,
+            0.09645025
+          ],
+          "paired_ratio_ci95": [
+            1.7338251361314663,
+            1.7963555741819603
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "joint_correlated_mwpm": {
+          "block_rate": 0.06925,
+          "failures": 6925,
+          "ler_ci95": [
+            0.00032566426638713786,
+            0.000341518979693034
+          ],
+          "ler_ratio_to_correlated_uf": 0.4645802599050173,
+          "normalized_ler": 0.00033368442101522344,
+          "paired_block_difference_ci95": [
+            -0.0753,
+            -0.07115
+          ],
+          "paired_ratio_ci95": [
+            0.45411611004424635,
+            0.47506345999291627
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "joint_correlated_uf": {
+          "block_rate": 0.14247,
+          "failures": 14247,
+          "ler_ci95": [
+            0.000706438426555045,
+            0.000730369257730068
+          ],
+          "ler_ratio_to_correlated_uf": 1.0,
+          "normalized_ler": 0.0007182492452078026,
+          "paired_block_difference_ci95": [
+            0.0,
+            0.0
+          ],
+          "paired_ratio_ci95": [
+            1.0,
+            1.0
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "joint_mwpm_recorded": {
+          "block_rate": 0.2566,
+          "failures": 25660,
+          "ler_ci95": [
+            0.0013806942923854093,
+            0.0014159145358360297
+          ],
+          "ler_ratio_to_correlated_uf": 1.9465465659808072,
+          "normalized_ler": 0.001398105601777555,
+          "paired_block_difference_ci95": [
+            0.11112000000000002,
+            0.11713024999999998
+          ],
+          "paired_ratio_ci95": [
+            1.9118620990672859,
+            1.981896045140446
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "joint_uf": {
+          "block_rate": 0.39847,
+          "failures": 39847,
+          "ler_ci95": [
+            0.0024041169970945354,
+            0.002454963170729907
+          ],
+          "ler_ratio_to_correlated_uf": 3.382770138313644,
+          "normalized_ler": 0.002429672098555269,
+          "paired_block_difference_ci95": [
+            0.25268999999999997,
+            0.25921
+          ],
+          "paired_ratio_ci95": [
+            3.3255023138383515,
+            3.440654552331317
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        },
+        "uf_gap": {
+          "block_rate": 0.46626,
+          "failures": 46626,
+          "ler_ci95": [
+            0.0029961123613808705,
+            0.003054570237721549
+          ],
+          "ler_ratio_to_correlated_uf": 4.212166531369199,
+          "normalized_ler": 0.0030253854318454954,
+          "paired_block_difference_ci95": [
+            0.3204,
+            0.32712024999999995
+          ],
+          "paired_ratio_ci95": [
+            4.138760243301532,
+            4.284561966797499
+          ],
+          "ratio_undefined_replicates": 0,
+          "shots": 100000
+        }
+      },
+      "parameters": {
+        "distance": 9,
+        "noise": "si1000",
+        "p": 0.003,
+        "patches": 6,
+        "rounds": 36,
+        "style": "cz",
+        "yokes": 2
+      },
+      "versions": {
+        "numpy": "2.5.1",
+        "pymatching": "2.4.0",
+        "sinter": "1.16.0",
+        "stim": "1.16.0"
+      },
+      "work": {
+        "bounded_states": 650687863,
+        "component_seconds": {
+          "bounded_search": 3323.2413029149175,
+          "correlated_forced": 28946.06319019012,
+          "correlated_search": 3523.304694466293,
+          "correlated_uf": 11160.135132234544,
+          "plain_forced": 26689.372673998587,
+          "reference_uf": 10291.591725213453,
+          "reweight": 16223.450093486346
+        },
+        "correlated_bounded_states": 668445571,
+        "forced_calls_per_weight_model_per_patch": 2,
+        "full_cluster_states": 941470103,
+        "l1_matching_solves": 0,
+        "patch_rows": 600000,
+        "reweighted_patch_rows": 600000
+      }
+    }
+  },
+  "verification": {
+    "all_artifact_and_input_hashes_verified": true,
+    "all_counts_and_ler_recomputed": true,
+    "current_analysis_sources_verified": true,
+    "previous_matching_endpoint_bit_identical": true
+  }
+}

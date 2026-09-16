@@ -384,13 +384,14 @@ q = calibrator.probability(scores)
 calibrator.to_json() / IsotonicCalibrator.from_json(...)
 ```
 
-## 7. L2: exact outer decoder for the factorized model
+## 7. L2: MWPM outer decoder for the factorized model
 
 Per sector, L2 receives six probabilities and the frame-adjusted syndrome
 `sigma[s]`. It assigns to every residual pattern `x in {0,1}^6` the weight
 `prod_i q_i^{x_i} (1 - q_i)^{1 - x_i}`, discards patterns whose parity is
-not `sigma[s]`, and returns the pattern of maximum weight. Enumeration over
-64 patterns is exact for this model. Ties are broken toward the pattern
+not `sigma[s]`, and returns the pattern of maximum weight. Production replay
+solves this objective with PyMatching MWPM. Enumeration over 64 patterns is
+retained as an independent small-system validation oracle. Ties are broken toward the pattern
 with the lowest binary value, bit `i` being patch `i`, and are counted. The final prediction is
 `f = r XOR x`, and by construction its sector parity equals the yoke bit.
 
@@ -402,6 +403,24 @@ has parity `sigma`, it is an optimum. Otherwise toggle a bit with minimum
 Handle equal costs and `q_i = 1/2` explicitly to return the lowest binary
 optimum and count ties. This rule validates enumeration without repeating
 the same brute-force algorithm.
+
+For the matching graph, first take the preferred allowed bits
+`b_i = 1[q_i > 1/2]`; restricted non-candidates stay zero. Decode the residual
+parity `sigma XOR parity(b)` with nonnegative weights `abs(lambda_i)`, then
+XOR the matching's selected patch bits into `b`. Each allowed patch has its
+own two-edge path from the parity detector through an auxiliary detector to
+the boundary. The first edge carries its log-odds cost and patch fault ID;
+the second has zero weight. Auxiliary syndromes are zero. Subdivision keeps
+distinct patch choices from being merged as parallel boundary edges.
+
+PyMatching quantizes weights and has its own tie choices. Check its result
+against the original floating-point costs. Resolve quantization discrepancies
+and the existing absolute `1e-9` tie class using the analytic parity structure;
+canonical tie resolution fixes bits from highest to lowest, choosing zero when
+a completion remains within tolerance. Production replay must not enumerate
+patterns. Collection correctness gates retain enumeration as an independent
+small-block oracle. Source hashes and the PyMatching version belong to replay provenance;
+existing L1 records and fitted calibrators remain reusable in new replay directories.
 
 Multiple flips relative to the reference are allowed, even for an unfired
 frame-adjusted yoke. For example, with
@@ -428,7 +447,8 @@ is infeasible and raises explicitly. The listed selective policies always
 provide at least one candidate when `sigma = 1`.
 
 ```python
-x, tied = exact_outer_map(q, parity, candidates=None)   # candidates: bool mask or None
+decision = mwpm_outer_map(q, parity, candidates=None)  # candidates: bool mask or None
+x, tied = decision.pattern, decision.tied
 ```
 
 ## 8. Refinement policies and offline replay
@@ -711,7 +731,8 @@ src/yoked/hierarchical/
     _cluster_gap.py        ClusterGapUnionFindDecoder, parity-augmented Dijkstra
     _matching_gaps.py      MatchingGaps, ForcedWeights, signed_gap, matcher construction
     _calibration.py        IsotonicCalibrator (PAV + interpolation)
-    _outer_decoder.py      exact_outer_map, frame adjustment
+    _outer_decoder.py      enumeration oracle, frame adjustment
+    _outer_mwpm.py         production MWPM L2, canonical ties and precision checks
     _policies.py           deterministic selections and uniform subset distributions
     _replay.py             ReplayConfig, replay results, L1Record load/save, work counts
     _metrics.py            primary metric, eta, strata, coverage, reliability, bootstrap

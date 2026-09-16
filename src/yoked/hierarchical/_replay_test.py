@@ -428,7 +428,7 @@ def test_replay_rejects_a_final_whose_sector_parity_is_not_the_yoke(monkeypatch)
         patterns = np.ones((2, 2), dtype=bool)
         tied = np.zeros((2,), dtype=bool)
 
-    monkeypatch.setattr(replay_module, 'exact_outer_map_batch', lambda *args, **kwargs: _WrongParity())
+    monkeypatch.setattr(replay_module, 'mwpm_outer_map_batch', lambda *args, **kwargs: _WrongParity())
     with pytest.raises(ValueError, match='parity'):
         replay(_endpoint_record(), _calibrators(), ReplayConfig(INITIAL, REFINED, NoRefinement()))
 

@@ -249,8 +249,8 @@ model with PyMatching."""
 CALIBRATION_PACKAGES = ('numpy',)
 """Pool-adjacent-violators and the interpolation between knots are pure NumPy."""
 
-REPLAY_PACKAGES = ('numpy', 'sinter')
-"""Replay is NumPy, and sinter performs the normalized error-rate conversion."""
+REPLAY_PACKAGES = ('numpy', 'sinter', 'pymatching')
+"""Replay uses NumPy and PyMatching L2; sinter converts normalized error rates."""
 
 SAMPLE_CONVENTIONS = MappingProxyType({
     'bit_order': 'little',
@@ -310,6 +310,7 @@ CALIBRATION_SOURCES = (
 REPLAY_SOURCES = (
     'src/yoked/hierarchical/_calibration.py',
     'src/yoked/hierarchical/_outer_decoder.py',
+    'src/yoked/hierarchical/_outer_mwpm.py',
     'src/yoked/hierarchical/_policies.py',
     'src/yoked/hierarchical/_replay.py',
     'src/yoked/hierarchical/_metrics.py',

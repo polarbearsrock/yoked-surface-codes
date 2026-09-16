@@ -55,8 +55,9 @@ import numpy as np
 from yoked.hierarchical._arrays import readonly_array
 from yoked.hierarchical._patch_graphs import NUM_SECTORS
 from yoked.hierarchical._provenance import (
-    RECORD_CONVENTIONS, SCHEMA_VERSION, atomic_replacement, collection_identity,
-    decoder_identity, read_json, row_ids_sha256, sample_identities, sha256_file,
+    RECORD_CONVENTIONS, SCHEMA_VERSION, atomic_replacement, canonical_json,
+    collection_identity, decoder_identity, read_json, row_ids_sha256, sample_identities,
+    sha256_bytes, sha256_file,
 )
 
 RECORD_FILE = 'record.npz'
@@ -98,6 +99,13 @@ field name or a baseline column."""
 BASELINE_PREFIX = 'baseline_'
 """Prefix for optional historical baselines in the flat array container, so that a
 record needs no nested structure and therefore no pickle."""
+
+BASELINE_AUDIT_SCHEMA = f'BaselineAttachment/{SCHEMA_VERSION}'
+"""Schema of the manifest block binding imported predictions to their audit trail."""
+
+BASELINE_AUDIT_FIELD = 'baselines'
+BASELINE_AUDIT_HASH = 'attachment_sha256'
+"""The optional manifest block and its canonical integrity digest."""
 
 REFERENCE_NAMES = ('uf', 'mwpm')
 """The two reference decoders an estimator can be defined against (spec section 6)."""
@@ -517,7 +525,74 @@ def _verify_rows(record: L1Record, manifest: Mapping) -> dict:
     return summary
 
 
-def load_record(record_dir) -> LoadedRecord:
+def baseline_prediction_sha256(prediction) -> str:
+    """Hash prediction bits using the recorded runs' little-endian packed convention."""
+    array = np.asarray(prediction, dtype=bool)
+    if array.ndim != 2:
+        raise ValueError(f'a baseline prediction must be two-dimensional, got {array.shape}')
+    return sha256_bytes(np.ascontiguousarray(np.packbits(array, axis=1, bitorder='little')))
+
+
+def baseline_attachment_sha256(block: Mapping) -> str:
+    """Canonical digest of a complete baseline audit block, excluding the digest itself."""
+    payload = dict(block)
+    payload.pop(BASELINE_AUDIT_HASH, None)
+    return sha256_bytes(canonical_json(payload).encode('utf-8'))
+
+
+def _verify_baseline_audit(record: L1Record, manifest: Mapping, *, allow_legacy: bool) -> bool:
+    """Bind every stored baseline to the import provenance that admitted it.
+
+    Returns true only for the old M2 block that an explicit, verified re-import may
+    upgrade. Public loading never permits that block.
+    """
+    if not record.baselines:
+        if BASELINE_AUDIT_FIELD in manifest:
+            raise ValueError(f'{RECORD_MANIFEST} declares baselines but {RECORD_FILE} holds none')
+        return False
+    if BASELINE_AUDIT_FIELD not in manifest:
+        raise ValueError(f'{RECORD_FILE} holds baselines but {RECORD_MANIFEST} declares no '
+                         f'{BASELINE_AUDIT_FIELD!r} audit block')
+    block = manifest[BASELINE_AUDIT_FIELD]
+    _require_fields(block, ('names', 'decoders'), f'{RECORD_MANIFEST} baselines')
+    legacy = 'schema_version' not in block and BASELINE_AUDIT_HASH not in block
+    if legacy:
+        if allow_legacy:
+            return True
+        raise ValueError(f'{RECORD_MANIFEST} holds a legacy baseline audit block; re-run '
+                         'import-baselines with the original recorded run to verify and upgrade it')
+    _require_fields(block, ('schema_version', BASELINE_AUDIT_HASH, 'imported_utc', 'importer',
+                            'row_mapping', 'run', 'yoke_parity', 'joint_mwpm'),
+                    f'{RECORD_MANIFEST} baselines')
+    if block['schema_version'] != BASELINE_AUDIT_SCHEMA:
+        raise ValueError(f'{RECORD_MANIFEST} baselines holds schema {block["schema_version"]!r}, '
+                         f'expected {BASELINE_AUDIT_SCHEMA!r}')
+    names = block['names']
+    if not isinstance(names, list) or not all(isinstance(name, str) and name for name in names) \
+            or len(set(names)) != len(names):
+        raise ValueError(f'{RECORD_MANIFEST} baselines.names must be distinct nonempty strings')
+    if tuple(names) != tuple(record.baselines):
+        raise ValueError(f'{RECORD_MANIFEST} baselines names {names!r} do not match '
+                         f'{RECORD_FILE} baselines {list(record.baselines)!r}')
+    decoders = block['decoders']
+    if not isinstance(decoders, Mapping) or set(decoders) != set(names):
+        raise ValueError(f'{RECORD_MANIFEST} baselines.decoders must name exactly {names!r}')
+    for name in names:
+        entry = decoders[name]
+        _require_fields(entry, ('mapped_prediction_sha256',),
+                        f'{RECORD_MANIFEST} baselines.decoders.{name}')
+        expected = baseline_prediction_sha256(record.baselines[name])
+        if entry['mapped_prediction_sha256'] != expected:
+            raise ValueError(f'{RECORD_MANIFEST} baseline {name!r} declares mapped prediction hash '
+                             f'{entry["mapped_prediction_sha256"]!r}, {RECORD_FILE} holds {expected}')
+    expected = baseline_attachment_sha256(block)
+    if block[BASELINE_AUDIT_HASH] != expected:
+        raise ValueError(f'{RECORD_MANIFEST} baseline attachment hashes to {expected}, '
+                         f'declares {block[BASELINE_AUDIT_HASH]!r}')
+    return False
+
+
+def _load_record(record_dir, *, allow_legacy_baselines: bool = False) -> LoadedRecord:
     """Open a completed collection, verifying everything before exposing its arrays.
 
     This is the only public way to read a record: the manifest must exist, declare this
@@ -588,6 +663,12 @@ def load_record(record_dir) -> LoadedRecord:
     if expected != identities['collection']:
         raise ValueError(f'The collection identity {identities["collection"]!r} in {manifest_path} '
                          f'does not follow from its role, rows, parent sample, and decoder')
+    _verify_baseline_audit(record, manifest, allow_legacy=allow_legacy_baselines)
     return LoadedRecord(record=record, directory=directory,
                         identities={name: identities[name] for name in IDENTITY_NAMES},
                         manifest=manifest)
+
+
+def load_record(record_dir) -> LoadedRecord:
+    """Open and fully verify a completed collection, including imported baselines."""
+    return _load_record(record_dir)

@@ -1,0 +1,19 @@
+{
+  "concurrent_job": "UF-confidence collection active; CPU process_time timer",
+  "cpu": "AMD EPYC 9374F 32-Core Processor",
+  "platform": "Linux-4.18.0-553.50.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "python": "3.14.5",
+  "script_sha256": "a956a2056f85501ffc930e58839b05a7cb1b434bdbfb044f27d1da462fff5bc3",
+  "threads": {
+    "OMP_NUM_THREADS": 1,
+    "OPENBLAS_NUM_THREADS": 1
+  },
+  "versions": {
+    "numpy": "2.5.1",
+    "pymatching": "2.4.0",
+    "scipy": "1.18.0",
+    "sinter": "1.16.0",
+    "stim": "1.16.0"
+  },
+  "visible_cpus": 128
+}
