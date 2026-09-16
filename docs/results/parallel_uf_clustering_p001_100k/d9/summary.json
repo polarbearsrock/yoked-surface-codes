@@ -1,0 +1,414 @@
+{
+  "correlated_mwpm": {
+    "failures": 0,
+    "normalized_ler": 0.0
+  },
+  "distance": 9,
+  "graph": {
+    "correlation_rules": 485760,
+    "detectors": 17762,
+    "edges": 90732
+  },
+  "hardware_proxies": {
+    "bridges": {
+      "maximum": [
+        3,
+        3
+      ],
+      "mean": [
+        0.0435,
+        0.03634
+      ],
+      "p95": [
+        0.0,
+        0.0
+      ],
+      "p99": [
+        1.0,
+        1.0
+      ]
+    },
+    "edge_evaluations": {
+      "maximum": [
+        143786,
+        136766
+      ],
+      "mean": [
+        112939.32888,
+        112305.59396
+      ],
+      "p95": [
+        121415.0,
+        119899.0
+      ],
+      "p99": [
+        125739.02999999998,
+        123523.05999999997
+      ]
+    },
+    "eligible_bridges": {
+      "maximum": [
+        1705,
+        867
+      ],
+      "mean": [
+        85.00478,
+        84.38308
+      ],
+      "p95": [
+        106.0,
+        107.0
+      ],
+      "p99": [
+        853.0,
+        118.0
+      ]
+    },
+    "epochs": {
+      "maximum": [
+        432,
+        313
+      ],
+      "mean": [
+        98.69803,
+        115.41481
+      ],
+      "p95": [
+        129.0,
+        141.0
+      ],
+      "p99": [
+        149.0,
+        155.0
+      ]
+    },
+    "frontier_visits": {
+      "maximum": [
+        1499005,
+        585439
+      ],
+      "mean": [
+        46852.37721,
+        27969.96976
+      ],
+      "p95": [
+        85759.09999999998,
+        37257.04999999999
+      ],
+      "p99": [
+        122493.01999999999,
+        42351.01999999999
+      ]
+    },
+    "improving_proposals": {
+      "maximum": [
+        5,
+        5
+      ],
+      "mean": [
+        0.04564,
+        0.03793
+      ],
+      "p95": [
+        0.0,
+        0.0
+      ],
+      "p99": [
+        1.0,
+        1.0
+      ]
+    },
+    "max_cluster": {
+      "maximum": [
+        2615,
+        1384
+      ],
+      "mean": [
+        52.26909,
+        24.98312
+      ],
+      "p95": [
+        115.0,
+        43.0
+      ],
+      "p99": [
+        171.00999999999476,
+        60.0
+      ]
+    },
+    "max_frontier": {
+      "maximum": [
+        5058,
+        4610
+      ],
+      "mean": [
+        1400.88488,
+        1251.38138
+      ],
+      "p95": [
+        1761.0,
+        1353.0
+      ],
+      "p99": [
+        2046.0,
+        1429.0
+      ]
+    },
+    "max_parallel_pairs": {
+      "maximum": [
+        3,
+        3
+      ],
+      "mean": [
+        0.04346,
+        0.03631
+      ],
+      "p95": [
+        0.0,
+        0.0
+      ],
+      "p99": [
+        1.0,
+        1.0
+      ]
+    },
+    "tree_depth": {
+      "maximum": [
+        22,
+        22,
+        22,
+        21,
+        21,
+        21
+      ],
+      "mean": [
+        6.05226,
+        6.05226,
+        6.05393,
+        5.88366,
+        5.88366,
+        5.88528
+      ],
+      "p95": [
+        9.0,
+        9.0,
+        9.0,
+        9.0,
+        9.0,
+        9.0
+      ],
+      "p99": [
+        11.0,
+        11.0,
+        11.0,
+        11.0,
+        11.0,
+        11.0
+      ]
+    },
+    "tree_messages": {
+      "maximum": [
+        11844,
+        6996
+      ],
+      "mean": [
+        1798.93622,
+        1691.99336
+      ],
+      "p95": [
+        2320.0,
+        1976.0
+      ],
+      "p99": [
+        3040.0,
+        2650.0
+      ]
+    }
+  },
+  "intervals": "Wilson marginal LER intervals; paired normal intervals on raw failure-rate reduction. Exploratory comparisons, no multiplicity adjustment.",
+  "parameters": {
+    "distance": 9,
+    "noise": "si1000",
+    "p": 0.001,
+    "patches": 6,
+    "rounds": 36,
+    "style": "cz",
+    "yokes": 2
+  },
+  "rows": [
+    {
+      "failure_rate_reduction": 0.0,
+      "failures": 0,
+      "logical_changes": 0,
+      "mcnemar_p": 1.0,
+      "normalized_ler": 0.0,
+      "normalized_ler_ci95": [
+        0.0,
+        1.7784230921247257e-07
+      ],
+      "paired_reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "regressed": 0,
+      "repaired": 0,
+      "shot_failure_rate": 0.0,
+      "variant": "correlated_uf"
+    },
+    {
+      "failure_rate_reduction": 0.0,
+      "failures": 0,
+      "logical_changes": 0,
+      "mcnemar_p": 1.0,
+      "normalized_ler": 0.0,
+      "normalized_ler_ci95": [
+        0.0,
+        1.7784230921247257e-07
+      ],
+      "paired_reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "regressed": 0,
+      "repaired": 0,
+      "shot_failure_rate": 0.0,
+      "variant": "uf_forest_cost"
+    },
+    {
+      "failure_rate_reduction": 0.0,
+      "failures": 0,
+      "logical_changes": 0,
+      "mcnemar_p": 1.0,
+      "normalized_ler": 0.0,
+      "normalized_ler_ci95": [
+        0.0,
+        1.7784230921247257e-07
+      ],
+      "paired_reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "regressed": 0,
+      "repaired": 0,
+      "shot_failure_rate": 0.0,
+      "variant": "uf_bridges"
+    },
+    {
+      "failure_rate_reduction": 0.0,
+      "failures": 0,
+      "logical_changes": 0,
+      "mcnemar_p": 1.0,
+      "normalized_ler": 0.0,
+      "normalized_ler_ci95": [
+        0.0,
+        1.7784230921247257e-07
+      ],
+      "paired_reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "regressed": 0,
+      "repaired": 0,
+      "shot_failure_rate": 0.0,
+      "variant": "frontier_uf"
+    },
+    {
+      "failure_rate_reduction": 0.0,
+      "failures": 0,
+      "logical_changes": 0,
+      "mcnemar_p": 1.0,
+      "normalized_ler": 0.0,
+      "normalized_ler_ci95": [
+        0.0,
+        1.7784230921247257e-07
+      ],
+      "paired_reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "regressed": 0,
+      "repaired": 0,
+      "shot_failure_rate": 0.0,
+      "variant": "frontier_forest_cost"
+    },
+    {
+      "failure_rate_reduction": 0.0,
+      "failures": 0,
+      "logical_changes": 0,
+      "mcnemar_p": 1.0,
+      "normalized_ler": 0.0,
+      "normalized_ler_ci95": [
+        0.0,
+        1.7784230921247257e-07
+      ],
+      "paired_reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "regressed": 0,
+      "repaired": 0,
+      "shot_failure_rate": 0.0,
+      "variant": "frontier_bridges"
+    }
+  ],
+  "shots": 100000,
+  "validation": {
+    "elapsed_seconds": 23.7074959538877,
+    "independent_frontier_scans": 2,
+    "independent_tree_cost_checks": 128,
+    "matching_serial_unpacked_equals_parallel_packed": true,
+    "native_elapsed_seconds": 90.36795103084296,
+    "native_outputs_bit_identical": true,
+    "production_physical_corrections": 32,
+    "results_sha256": "4882b9310c51bbdb5b01e2e170ba87356e25969993b4daa34cfa6b2ec0dbd236",
+    "rows": [
+      961,
+      2994,
+      6655,
+      8637,
+      10170,
+      12183,
+      13007,
+      15788,
+      16045,
+      16933,
+      25974,
+      27033,
+      27467,
+      29798,
+      30555,
+      30600,
+      31761,
+      32653,
+      35419,
+      35662,
+      43280,
+      50125,
+      52317,
+      66971,
+      68872,
+      73012,
+      74915,
+      75221,
+      77884,
+      78436,
+      92305,
+      94116
+    ],
+    "syndrome_checks": 600000,
+    "thread_counts": [
+      1,
+      64
+    ],
+    "truth_passed_to_native": false,
+    "yoke_parity_checks": 700000
+  },
+  "variants": [
+    "correlated_uf",
+    "uf_forest_cost",
+    "uf_bridges",
+    "frontier_uf",
+    "frontier_forest_cost",
+    "frontier_bridges"
+  ]
+}

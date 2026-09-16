@@ -1,0 +1,356 @@
+{
+  "correlated_mwpm": {
+    "failures": 13785,
+    "normalized_ler": 0.0008907858999728235
+  },
+  "distance": 7,
+  "hardware_proxies": {
+    "bridges": {
+      "maximum": [
+        6,
+        7
+      ],
+      "mean": [
+        0.78183,
+        0.68979
+      ],
+      "p95": [
+        2.0,
+        2.0
+      ],
+      "p99": [
+        3.0,
+        3.0
+      ]
+    },
+    "edge_evaluations": {
+      "maximum": [
+        120088,
+        109940
+      ],
+      "mean": [
+        76288.10516,
+        74931.61756
+      ],
+      "p95": [
+        90081.19999999995,
+        85435.0
+      ],
+      "p99": [
+        97259.0,
+        90752.01
+      ]
+    },
+    "eligible_bridges": {
+      "maximum": [
+        1155,
+        1056
+      ],
+      "mean": [
+        264.29086,
+        213.85679
+      ],
+      "p95": [
+        625.0499999999884,
+        261.0
+      ],
+      "p99": [
+        694.0,
+        562.0
+      ]
+    },
+    "epochs": {
+      "maximum": [
+        730,
+        786
+      ],
+      "mean": [
+        218.69764,
+        265.51643
+      ],
+      "p95": [
+        318.0,
+        374.0
+      ],
+      "p99": [
+        394.0,
+        465.0
+      ]
+    },
+    "frontier_visits": {
+      "maximum": [
+        1830507,
+        1584335
+      ],
+      "mean": [
+        140122.48736,
+        80891.03962
+      ],
+      "p95": [
+        346604.5499999999,
+        234775.3999999999
+      ],
+      "p99": [
+        586523.7199999975,
+        465542.8599999995
+      ]
+    },
+    "improving_proposals": {
+      "maximum": [
+        14,
+        12
+      ],
+      "mean": [
+        1.20501,
+        1.06624
+      ],
+      "p95": [
+        4.0,
+        4.0
+      ],
+      "p99": [
+        6.0,
+        5.0
+      ]
+    },
+    "max_cluster": {
+      "maximum": [
+        1734,
+        1560
+      ],
+      "mean": [
+        234.88806,
+        129.06755
+      ],
+      "p95": [
+        766.0,
+        312.0
+      ],
+      "p99": [
+        1076.0,
+        784.0
+      ]
+    },
+    "max_frontier": {
+      "maximum": [
+        4201,
+        4096
+      ],
+      "mean": [
+        1795.95532,
+        1331.46312
+      ],
+      "p95": [
+        3192.0,
+        2108.0
+      ],
+      "p99": [
+        3500.0,
+        3151.0
+      ]
+    },
+    "max_parallel_pairs": {
+      "maximum": [
+        6,
+        7
+      ],
+      "mean": [
+        0.77618,
+        0.68747
+      ],
+      "p95": [
+        2.0,
+        2.0
+      ],
+      "p99": [
+        3.0,
+        3.0
+      ]
+    },
+    "tree_depth": {
+      "maximum": [
+        35,
+        35,
+        35,
+        40,
+        40,
+        40
+      ],
+      "mean": [
+        14.54757,
+        14.54757,
+        14.64551,
+        13.42443,
+        13.42443,
+        13.49902
+      ],
+      "p95": [
+        22.0,
+        22.0,
+        22.0,
+        21.0,
+        21.0,
+        21.0
+      ],
+      "p99": [
+        25.0,
+        25.0,
+        25.0,
+        25.0,
+        25.0,
+        25.0
+      ]
+    },
+    "tree_messages": {
+      "maximum": [
+        16958,
+        14808
+      ],
+      "mean": [
+        4209.47988,
+        3677.29222
+      ],
+      "p95": [
+        6936.0,
+        5266.099999999977
+      ],
+      "p99": [
+        9652.01999999999,
+        6574.0199999999895
+      ]
+    }
+  },
+  "intervals": "Wilson marginal LER intervals; paired normal intervals on raw failure-rate reduction. Exploratory comparisons, no multiplicity adjustment.",
+  "rows": [
+    {
+      "failure_rate_reduction": 0.0,
+      "failures": 23230,
+      "logical_changes": 0,
+      "mcnemar_p": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "normalized_ler_ci95": [
+        0.001578159628254916,
+        0.00162008345338438
+      ],
+      "paired_reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "regressed": 0,
+      "repaired": 0,
+      "shot_failure_rate": 0.2323,
+      "variant": "correlated_uf"
+    },
+    {
+      "failure_rate_reduction": 0.0,
+      "failures": 23230,
+      "logical_changes": 1,
+      "mcnemar_p": 1.0,
+      "normalized_ler": 0.001598998922251682,
+      "normalized_ler_ci95": [
+        0.001578159628254916,
+        0.00162008345338438
+      ],
+      "paired_reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "regressed": 0,
+      "repaired": 0,
+      "shot_failure_rate": 0.2323,
+      "variant": "uf_forest_cost"
+    },
+    {
+      "failure_rate_reduction": 0.02165,
+      "failures": 21065,
+      "logical_changes": 6252,
+      "mcnemar_p": 1.5351106967173844e-240,
+      "normalized_ler": 0.0014283119895072138,
+      "normalized_ler_ci95": [
+        0.001408817026174014,
+        0.0014480502057587774
+      ],
+      "paired_reduction_ci95": [
+        0.020348682837875408,
+        0.02295131716212459
+      ],
+      "regressed": 1145,
+      "repaired": 3310,
+      "shot_failure_rate": 0.21065,
+      "variant": "uf_bridges"
+    },
+    {
+      "failure_rate_reduction": 0.05967,
+      "failures": 17263,
+      "logical_changes": 14612,
+      "mcnemar_p": 0.0,
+      "normalized_ler": 0.0011409476453492218,
+      "normalized_ler_ci95": [
+        0.0011238238557363944,
+        0.0011583114713641374
+      ],
+      "paired_reduction_ci95": [
+        0.05762567686260278,
+        0.06171432313739722
+      ],
+      "regressed": 2634,
+      "repaired": 8601,
+      "shot_failure_rate": 0.17263,
+      "variant": "frontier_uf"
+    },
+    {
+      "failure_rate_reduction": 0.05967,
+      "failures": 17263,
+      "logical_changes": 14612,
+      "mcnemar_p": 0.0,
+      "normalized_ler": 0.0011409476453492218,
+      "normalized_ler_ci95": [
+        0.0011238238557363944,
+        0.0011583114713641374
+      ],
+      "paired_reduction_ci95": [
+        0.05762567686260278,
+        0.06171432313739722
+      ],
+      "regressed": 2634,
+      "repaired": 8601,
+      "shot_failure_rate": 0.17263,
+      "variant": "frontier_forest_cost"
+    },
+    {
+      "failure_rate_reduction": 0.06768,
+      "failures": 16462,
+      "logical_changes": 15124,
+      "mcnemar_p": 0.0,
+      "normalized_ler": 0.0010823001813643485,
+      "normalized_ler_ci95": [
+        0.0010656818093910392,
+        0.0010991579517922734
+      ],
+      "paired_reduction_ci95": [
+        0.06559502225754768,
+        0.06976497774245233
+      ],
+      "regressed": 2503,
+      "repaired": 9271,
+      "shot_failure_rate": 0.16462,
+      "variant": "frontier_bridges"
+    }
+  ],
+  "shots": 100000,
+  "validation": {
+    "baseline_matches": 100000,
+    "elapsed_seconds": 74.2234619539231,
+    "results_sha256": "d7bbb770121ace6df2b815a366641a71149bd649a311556d83a68b4e1a7bc36c",
+    "syndrome_checks": 600000,
+    "truth_passed_to_native": false
+  },
+  "variants": [
+    "correlated_uf",
+    "uf_forest_cost",
+    "uf_bridges",
+    "frontier_uf",
+    "frontier_forest_cost",
+    "frontier_bridges"
+  ]
+}

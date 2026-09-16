@@ -1,0 +1,27 @@
+{
+  "variants": [
+    "baseline",
+    "readout",
+    "reset",
+    "data_wait",
+    "data_1q",
+    "ancilla_1q",
+    "cz"
+  ],
+  "selected_shots": 1024,
+  "all_baselines_match_saved_predictions": true,
+  "original_dem_used_for_all_variants": true,
+  "recompute_correlation_evidence": true,
+  "workers": 64,
+  "elapsed_seconds": 66.99770290683955,
+  "result_sha256": "63e740a94c0354af34cacac8a00ce2f5ae3a41d6f6a0e4bccc3beeb59b07977d",
+  "source_hashes": {
+    "src/yoked/decoders/_union_find.py": "7f781b806745064589a8564a595b9b092bce68b5baaafb7fe14bb51e1c6319b2",
+    "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+    "src/yoked/decoders/_correlated_union_find.py": "ec024111661b81f528432c8ee67fda34c61a8e586945997fa0db709f863dabd4",
+    "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459"
+  },
+  "analysis_sha256": "f793e4b79fea463472cc1aa02eefff67e4afc66c7322dc7f84d7761eea0d3996",
+  "stim_version": "1.16.0",
+  "pymatching_version": "2.4.0"
+}

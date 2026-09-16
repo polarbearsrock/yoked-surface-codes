@@ -1,0 +1,778 @@
+{
+  "distance": 9,
+  "selected_shots": 1024,
+  "population_counts": [
+    83553,
+    9522,
+    2200,
+    4725
+  ],
+  "original_population_gap": 0.07322,
+  "rows": [
+    {
+      "variant": "baseline",
+      "mean_events_removed": 0.0,
+      "uf_failure_probability": 0.14246999999999999,
+      "mwpm_failure_probability": 0.06925,
+      "gap_after": 0.07321999999999998,
+      "gap_reduction": 0.0,
+      "gap_reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "fraction_of_gap_removed": 0.0,
+      "fraction_of_gap_removed_ci95": [
+        0.0,
+        0.0
+      ],
+      "outcomes_by_stratum": [
+        [
+          256,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          256,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          256,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          256
+        ]
+      ],
+      "uf_normalized_ler": 0.0007182492452078026,
+      "uf_failure_probability_ci95": [
+        0.14246999999999999,
+        0.14246999999999999
+      ],
+      "mwpm_normalized_ler": 0.00033368442101522344,
+      "mwpm_failure_probability_ci95": [
+        0.06925,
+        0.06925
+      ]
+    },
+    {
+      "variant": "cz_data_only",
+      "mean_events_removed": 36.992790859375006,
+      "uf_failure_probability": 0.060306679687499996,
+      "mwpm_failure_probability": 0.028589375,
+      "gap_after": 0.031717304687499996,
+      "gap_reduction": 0.041502695312500004,
+      "gap_reduction_ci95": [
+        0.03175695898437499,
+        0.049611828125000035
+      ],
+      "fraction_of_gap_removed": 0.5668218425635073,
+      "fraction_of_gap_removed_ci95": [
+        0.4337197348316716,
+        0.6775720858372034
+      ],
+      "outcomes_by_stratum": [
+        [
+          255,
+          1,
+          0,
+          0
+        ],
+        [
+          170,
+          82,
+          2,
+          2
+        ],
+        [
+          161,
+          3,
+          74,
+          18
+        ],
+        [
+          113,
+          39,
+          13,
+          91
+        ]
+      ],
+      "uf_normalized_ler": 0.0002890521774345789,
+      "uf_failure_probability_ci95": [
+        0.0522228671875,
+        0.0700980625
+      ],
+      "mwpm_normalized_ler": 0.00013452124138657595,
+      "mwpm_failure_probability_ci95": [
+        0.025212197265625,
+        0.0320271103515625
+      ]
+    },
+    {
+      "variant": "cz_ancilla_only",
+      "mean_events_removed": 36.878564062500004,
+      "uf_failure_probability": 0.1155442578125,
+      "mwpm_failure_probability": 0.0499343359375,
+      "gap_after": 0.065609921875,
+      "gap_reduction": 0.007610078125000002,
+      "gap_reduction_ci95": [
+        -0.012878608398437498,
+        0.02508128808593748
+      ],
+      "fraction_of_gap_removed": 0.10393441853318769,
+      "fraction_of_gap_removed_ci95": [
+        -0.17588921603984564,
+        0.3425469555577367
+      ],
+      "outcomes_by_stratum": [
+        [
+          246,
+          8,
+          0,
+          2
+        ],
+        [
+          131,
+          121,
+          1,
+          3
+        ],
+        [
+          107,
+          7,
+          114,
+          28
+        ],
+        [
+          57,
+          38,
+          16,
+          145
+        ]
+      ],
+      "uf_normalized_ler": 0.0005726845891752541,
+      "uf_failure_probability_ci95": [
+        0.09626719921875,
+        0.1381528466796875
+      ],
+      "mwpm_normalized_ler": 0.00023788126075774407,
+      "mwpm_failure_probability_ci95": [
+        0.0418357138671875,
+        0.06085266308593746
+      ]
+    },
+    {
+      "variant": "cz_both",
+      "mean_events_removed": 112.08084109375,
+      "uf_failure_probability": 0.007673710937500001,
+      "mwpm_failure_probability": 0.003013671875,
+      "gap_after": 0.004660039062500001,
+      "gap_reduction": 0.06855996093750001,
+      "gap_reduction_ci95": [
+        0.0608389531250001,
+        0.07303542968750006
+      ],
+      "fraction_of_gap_removed": 0.9363556533392519,
+      "fraction_of_gap_removed_ci95": [
+        0.8309062158563248,
+        0.9974792363766739
+      ],
+      "outcomes_by_stratum": [
+        [
+          255,
+          1,
+          0,
+          0
+        ],
+        [
+          254,
+          2,
+          0,
+          0
+        ],
+        [
+          249,
+          2,
+          3,
+          2
+        ],
+        [
+          234,
+          8,
+          4,
+          10
+        ]
+      ],
+      "uf_normalized_ler": 3.567992155339983e-05,
+      "uf_failure_probability_ci95": [
+        0.0030390625,
+        0.015496093750000002
+      ],
+      "mwpm_normalized_ler": 1.397577761697022e-05,
+      "mwpm_failure_probability_ci95": [
+        0.0017216796875,
+        0.00446484375
+      ]
+    },
+    {
+      "variant": "cz_with_Y",
+      "mean_events_removed": 85.8061112109375,
+      "uf_failure_probability": 0.020694921875,
+      "mwpm_failure_probability": 0.01027734375,
+      "gap_after": 0.010417578125000002,
+      "gap_reduction": 0.062802421875,
+      "gap_reduction_ci95": [
+        0.05892226562500008,
+        0.06639375000000002
+      ],
+      "fraction_of_gap_removed": 0.8577222326550124,
+      "fraction_of_gap_removed_ci95": [
+        0.8047291126058466,
+        0.9067706910680144
+      ],
+      "outcomes_by_stratum": [
+        [
+          255,
+          0,
+          0,
+          1
+        ],
+        [
+          235,
+          20,
+          0,
+          1
+        ],
+        [
+          236,
+          5,
+          9,
+          6
+        ],
+        [
+          203,
+          24,
+          6,
+          23
+        ]
+      ],
+      "uf_normalized_ler": 9.693668898691499e-05,
+      "uf_failure_probability_ci95": [
+        0.014476640624999999,
+        0.02935569238281249
+      ],
+      "mwpm_normalized_ler": 4.785611405999646e-05,
+      "mwpm_failure_probability_ci95": [
+        0.0054763749999999995,
+        0.018023671875
+      ]
+    },
+    {
+      "variant": "cz_without_Y",
+      "mean_events_removed": 100.14608480468749,
+      "uf_failure_probability": 0.01847734375,
+      "mwpm_failure_probability": 0.0108887890625,
+      "gap_after": 0.0075885546875000005,
+      "gap_reduction": 0.06563144531250001,
+      "gap_reduction_ci95": [
+        0.055886390625000046,
+        0.07538843945312508
+      ],
+      "fraction_of_gap_removed": 0.896359537182464,
+      "fraction_of_gap_removed_ci95": [
+        0.7632667389374495,
+        1.02961539815795
+      ],
+      "outcomes_by_stratum": [
+        [
+          254,
+          1,
+          1,
+          0
+        ],
+        [
+          245,
+          11,
+          0,
+          0
+        ],
+        [
+          234,
+          2,
+          15,
+          5
+        ],
+        [
+          196,
+          28,
+          3,
+          29
+        ]
+      ],
+      "uf_normalized_ler": 8.644011337732849e-05,
+      "uf_failure_probability_ci95": [
+        0.012698596679687498,
+        0.026903986328124956
+      ],
+      "mwpm_normalized_ler": 5.072081187229571e-05,
+      "mwpm_failure_probability_ci95": [
+        0.0060751953125,
+        0.018657895507812473
+      ]
+    },
+    {
+      "variant": "data_wait_X",
+      "mean_events_removed": 69.9168676953125,
+      "uf_failure_probability": 0.059009765625,
+      "mwpm_failure_probability": 0.0353325390625,
+      "gap_after": 0.0236772265625,
+      "gap_reduction": 0.0495427734375,
+      "gap_reduction_ci95": [
+        0.03844278613281247,
+        0.060622500976562535
+      ],
+      "fraction_of_gap_removed": 0.6766289734703633,
+      "fraction_of_gap_removed_ci95": [
+        0.5250312227917574,
+        0.8279500269948449
+      ],
+      "outcomes_by_stratum": [
+        [
+          253,
+          1,
+          1,
+          1
+        ],
+        [
+          178,
+          72,
+          1,
+          5
+        ],
+        [
+          159,
+          9,
+          73,
+          15
+        ],
+        [
+          121,
+          32,
+          17,
+          86
+        ]
+      ],
+      "uf_normalized_ler": 0.00028261941838680915,
+      "uf_failure_probability_ci95": [
+        0.049365701171875,
+        0.07098671582031246
+      ],
+      "mwpm_normalized_ler": 0.00016689671809999584,
+      "mwpm_failure_probability_ci95": [
+        0.027067773437499998,
+        0.04639700292968749
+      ]
+    },
+    {
+      "variant": "data_wait_Y",
+      "mean_events_removed": 69.774472265625,
+      "uf_failure_probability": 0.07525894531249999,
+      "mwpm_failure_probability": 0.042299179687499994,
+      "gap_after": 0.032959765625,
+      "gap_reduction": 0.040260234375,
+      "gap_reduction_ci95": [
+        0.023980979492187512,
+        0.05493438476562501
+      ],
+      "fraction_of_gap_removed": 0.5498529687926796,
+      "fraction_of_gap_removed_ci95": [
+        0.327519523247576,
+        0.7502647468673179
+      ],
+      "outcomes_by_stratum": [
+        [
+          247,
+          4,
+          1,
+          4
+        ],
+        [
+          191,
+          63,
+          0,
+          2
+        ],
+        [
+          177,
+          13,
+          44,
+          22
+        ],
+        [
+          121,
+          29,
+          16,
+          90
+        ]
+      ],
+      "uf_normalized_ler": 0.000363943586224047,
+      "uf_failure_probability_ci95": [
+        0.057802955078125,
+        0.0950770166015625
+      ],
+      "mwpm_normalized_ler": 0.0002006126713732792,
+      "mwpm_failure_probability_ci95": [
+        0.0291925654296875,
+        0.057882762695312485
+      ]
+    },
+    {
+      "variant": "data_wait_Z",
+      "mean_events_removed": 70.06818636718751,
+      "uf_failure_probability": 0.0688208984375,
+      "mwpm_failure_probability": 0.03262609375,
+      "gap_after": 0.0361948046875,
+      "gap_reduction": 0.03702519531250001,
+      "gap_reduction_ci95": [
+        0.020883679687499955,
+        0.05168604003906248
+      ],
+      "fraction_of_gap_removed": 0.5056705177888556,
+      "fraction_of_gap_removed_ci95": [
+        0.2852182421128101,
+        0.7059005741472614
+      ],
+      "outcomes_by_stratum": [
+        [
+          250,
+          4,
+          1,
+          1
+        ],
+        [
+          181,
+          74,
+          0,
+          1
+        ],
+        [
+          175,
+          5,
+          61,
+          15
+        ],
+        [
+          122,
+          30,
+          10,
+          94
+        ]
+      ],
+      "uf_normalized_ler": 0.00033153199084645646,
+      "uf_failure_probability_ci95": [
+        0.054854904296875,
+        0.08522588769531249
+      ],
+      "mwpm_normalized_ler": 0.00015387207299144556,
+      "mwpm_failure_probability_ci95": [
+        0.024545724609375,
+        0.04340888281249998
+      ]
+    }
+  ],
+  "paired_comparisons": [
+    {
+      "first": "cz_data_only",
+      "second": "cz_ancilla_only",
+      "difference_in_gap_reduction": 0.0338926171875,
+      "ci95": [
+        0.014236960937499966,
+        0.055981193359374994
+      ]
+    },
+    {
+      "first": "cz_data_only",
+      "second": "cz_both",
+      "difference_in_gap_reduction": -0.027057265625000007,
+      "ci95": [
+        -0.03830803906250004,
+        -0.015781600585937538
+      ]
+    },
+    {
+      "first": "cz_data_only",
+      "second": "cz_with_Y",
+      "difference_in_gap_reduction": -0.021299726562499996,
+      "ci95": [
+        -0.031438356445312586,
+        -0.012502943359375058
+      ]
+    },
+    {
+      "first": "cz_data_only",
+      "second": "cz_without_Y",
+      "difference_in_gap_reduction": -0.024128750000000004,
+      "ci95": [
+        -0.037597177734375035,
+        -0.01143362207031263
+      ]
+    },
+    {
+      "first": "cz_data_only",
+      "second": "data_wait_X",
+      "difference_in_gap_reduction": -0.008040078124999996,
+      "ci95": [
+        -0.02254133007812499,
+        0.005888820312499941
+      ]
+    },
+    {
+      "first": "cz_data_only",
+      "second": "data_wait_Y",
+      "difference_in_gap_reduction": 0.001242460937500002,
+      "ci95": [
+        -0.013438019531250029,
+        0.016978879882812492
+      ]
+    },
+    {
+      "first": "cz_data_only",
+      "second": "data_wait_Z",
+      "difference_in_gap_reduction": 0.004477499999999995,
+      "ci95": [
+        -0.00999875097656252,
+        0.020199902343749986
+      ]
+    },
+    {
+      "first": "cz_ancilla_only",
+      "second": "cz_both",
+      "difference_in_gap_reduction": -0.06094988281250001,
+      "ci95": [
+        -0.08236023339843761,
+        -0.04188615625000008
+      ]
+    },
+    {
+      "first": "cz_ancilla_only",
+      "second": "cz_with_Y",
+      "difference_in_gap_reduction": -0.05519234375,
+      "ci95": [
+        -0.07573712597656251,
+        -0.03750042968750012
+      ]
+    },
+    {
+      "first": "cz_ancilla_only",
+      "second": "cz_without_Y",
+      "difference_in_gap_reduction": -0.058021367187500006,
+      "ci95": [
+        -0.080507845703125,
+        -0.03790253808593765
+      ]
+    },
+    {
+      "first": "cz_ancilla_only",
+      "second": "data_wait_X",
+      "difference_in_gap_reduction": -0.0419326953125,
+      "ci95": [
+        -0.06317024121093752,
+        -0.02321810546875007
+      ]
+    },
+    {
+      "first": "cz_ancilla_only",
+      "second": "data_wait_Y",
+      "difference_in_gap_reduction": -0.03265015625,
+      "ci95": [
+        -0.05631567187500004,
+        -0.010476951171874995
+      ]
+    },
+    {
+      "first": "cz_ancilla_only",
+      "second": "data_wait_Z",
+      "difference_in_gap_reduction": -0.029415117187500006,
+      "ci95": [
+        -0.055314,
+        -0.0062248818359375395
+      ]
+    },
+    {
+      "first": "cz_both",
+      "second": "cz_with_Y",
+      "difference_in_gap_reduction": 0.005757539062500011,
+      "ci95": [
+        -0.0027235683593749504,
+        0.011984257812499996
+      ]
+    },
+    {
+      "first": "cz_both",
+      "second": "cz_without_Y",
+      "difference_in_gap_reduction": 0.0029285156250000027,
+      "ci95": [
+        -0.005502570312499981,
+        0.00892277441406249
+      ]
+    },
+    {
+      "first": "cz_both",
+      "second": "data_wait_X",
+      "difference_in_gap_reduction": 0.01901718750000001,
+      "ci95": [
+        0.005662603515625037,
+        0.03136934375000001
+      ]
+    },
+    {
+      "first": "cz_both",
+      "second": "data_wait_Y",
+      "difference_in_gap_reduction": 0.02829972656250001,
+      "ci95": [
+        0.011690362304687557,
+        0.045669283203125
+      ]
+    },
+    {
+      "first": "cz_both",
+      "second": "data_wait_Z",
+      "difference_in_gap_reduction": 0.031534765625,
+      "ci95": [
+        0.01512840429687508,
+        0.04860899023437504
+      ]
+    },
+    {
+      "first": "cz_with_Y",
+      "second": "cz_without_Y",
+      "difference_in_gap_reduction": -0.0028290234375000084,
+      "ci95": [
+        -0.013153817382812533,
+        0.007338527343749989
+      ]
+    },
+    {
+      "first": "cz_with_Y",
+      "second": "data_wait_X",
+      "difference_in_gap_reduction": 0.0132596484375,
+      "ci95": [
+        0.0014822949218750495,
+        0.024824023437500044
+      ]
+    },
+    {
+      "first": "cz_with_Y",
+      "second": "data_wait_Y",
+      "difference_in_gap_reduction": 0.022542187499999998,
+      "ci95": [
+        0.007391088867187532,
+        0.03918106249999999
+      ]
+    },
+    {
+      "first": "cz_with_Y",
+      "second": "data_wait_Z",
+      "difference_in_gap_reduction": 0.02577722656249999,
+      "ci95": [
+        0.01079248144531262,
+        0.04225995898437494
+      ]
+    },
+    {
+      "first": "cz_without_Y",
+      "second": "data_wait_X",
+      "difference_in_gap_reduction": 0.01608867187500001,
+      "ci95": [
+        0.0014379179687500738,
+        0.030751251953125114
+      ]
+    },
+    {
+      "first": "cz_without_Y",
+      "second": "data_wait_Y",
+      "difference_in_gap_reduction": 0.025371210937500006,
+      "ci95": [
+        0.007589029296875076,
+        0.04437893359374999
+      ]
+    },
+    {
+      "first": "cz_without_Y",
+      "second": "data_wait_Z",
+      "difference_in_gap_reduction": 0.02860625,
+      "ci95": [
+        0.010801384765625126,
+        0.04717125488281247
+      ]
+    },
+    {
+      "first": "data_wait_X",
+      "second": "data_wait_Y",
+      "difference_in_gap_reduction": 0.009282539062499998,
+      "ci95": [
+        -0.00867594921875005,
+        0.02825576171874999
+      ]
+    },
+    {
+      "first": "data_wait_X",
+      "second": "data_wait_Z",
+      "difference_in_gap_reduction": 0.012517578124999991,
+      "ci95": [
+        -0.006313038085937515,
+        0.03236993652343746
+      ]
+    },
+    {
+      "first": "data_wait_Y",
+      "second": "data_wait_Z",
+      "difference_in_gap_reduction": 0.0032350390624999933,
+      "ci95": [
+        -0.016469661132812532,
+        0.022942157226562523
+      ]
+    }
+  ],
+  "bootstrap_seed": 2026091711,
+  "bootstrap_replicates": 20000,
+  "ci_method": "percentile stratified paired bootstrap; finite-population correction omitted conservatively",
+  "atom_mean_events": {
+    "readout": 259.493442421875,
+    "reset": 103.5862275,
+    "data_wait_X": 69.9168676953125,
+    "data_wait_Y": 69.774472265625,
+    "data_wait_Z": 70.06818636718751,
+    "data_1q_X": 11.337695859375,
+    "data_1q_Y": 11.2978146875,
+    "data_1q_Z": 11.188647226562498,
+    "ancilla_1q_X": 7.5859901953125,
+    "ancilla_1q_Y": 7.7551978515624995,
+    "ancilla_1q_Z": 7.731298242187499,
+    "ancilla_post_measurement_X": 17.349096445312497,
+    "ancilla_post_measurement_Y": 17.0973033203125,
+    "ancilla_post_measurement_Z": 17.311175351562497,
+    "cz_IX": 12.2911426171875,
+    "cz_IY": 12.082972265624997,
+    "cz_IZ": 12.504449179687501,
+    "cz_XI": 12.650329375,
+    "cz_XX": 12.695007929687499,
+    "cz_XY": 12.143767695312498,
+    "cz_XZ": 12.91838875,
+    "cz_YI": 12.066582187500002,
+    "cz_YX": 12.438766796874999,
+    "cz_YY": 12.364388984375001,
+    "cz_YZ": 12.1853013671875,
+    "cz_ZI": 12.275879296875,
+    "cz_ZX": 12.109429687500002,
+    "cz_ZY": 12.524331914062502,
+    "cz_ZZ": 12.701457968749999
+  }
+}

@@ -1,0 +1,290 @@
+{
+  "method": "Check archived estimates and bound rare, unseen counterfactual outcomes.\n\nInvert the finite-population hypergeometric distribution for each stratum's\nUF-only and MWPM-only outcome counts. A Bonferroni union bound over eight\nintervals gives a conservative 95% interval for each variant's population gap.\nUnlike the bootstrap, these intervals allow outcomes absent from the sample.\n",
+  "distances": {
+    "7": {
+      "readout": {
+        "gap_reduction_ci95": [
+          0.012220000000000009,
+          0.11285
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.1293806246691372,
+          1.1948120698782425
+        ]
+      },
+      "reset": {
+        "gap_reduction_ci95": [
+          -0.032909999999999995,
+          0.08861000000000001
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.34843832715722595,
+          0.9381683430386448
+        ]
+      },
+      "data_wait": {
+        "gap_reduction_ci95": [
+          0.052070000000000005,
+          0.11887
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.5512969825304394,
+          1.2585494970884066
+        ]
+      },
+      "data_1q": {
+        "gap_reduction_ci95": [
+          -0.03408999999999998,
+          0.09643
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.3609317098994175,
+          1.0209634727368977
+        ]
+      },
+      "ancilla_1q": {
+        "gap_reduction_ci95": [
+          -0.045899999999999996,
+          0.057960000000000005
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.4859714134462678,
+          0.6136580201164638
+        ]
+      },
+      "cz": {
+        "gap_reduction_ci95": [
+          0.06246000000000001,
+          0.12387000000000001
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.6613022763366861,
+          1.3114875595553204
+        ]
+      },
+      "cz_data_only": {
+        "gap_reduction_ci95": [
+          -0.04546,
+          0.09148
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.48131286394917944,
+          0.9685547908946532
+        ]
+      },
+      "cz_ancilla_only": {
+        "gap_reduction_ci95": [
+          -0.03708,
+          0.08357
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.3925886712546321,
+          0.8848067760719958
+        ]
+      },
+      "cz_both": {
+        "gap_reduction_ci95": [
+          0.03468000000000001,
+          0.11661
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.3671784012705136,
+          1.2346214928533616
+        ]
+      },
+      "cz_with_Y": {
+        "gap_reduction_ci95": [
+          0.01583000000000001,
+          0.12302
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.16760190577024892,
+          1.302488088935945
+        ]
+      },
+      "cz_without_Y": {
+        "gap_reduction_ci95": [
+          -0.004129999999999995,
+          0.11439
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.043726839597670666,
+          1.2111169931180519
+        ]
+      },
+      "data_wait_X": {
+        "gap_reduction_ci95": [
+          -0.008539999999999992,
+          0.09086000000000001
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.09041821069348853,
+          0.961990471148756
+        ]
+      },
+      "data_wait_Y": {
+        "gap_reduction_ci95": [
+          0.0003600000000000131,
+          0.12327
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.0038115404976179256,
+          1.3051349920592905
+        ]
+      },
+      "data_wait_Z": {
+        "gap_reduction_ci95": [
+          -0.009909999999999988,
+          0.10484
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.10492323980942285,
+          1.1100052938062466
+        ]
+      }
+    },
+    "9": {
+      "readout": {
+        "gap_reduction_ci95": [
+          0.024599999999999997,
+          0.09387
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.33597377765637804,
+          1.2820267686424474
+        ]
+      },
+      "reset": {
+        "gap_reduction_ci95": [
+          -0.022660000000000013,
+          0.07758
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.30947828462168825,
+          1.0595465719748702
+        ]
+      },
+      "data_wait": {
+        "gap_reduction_ci95": [
+          0.04794999999999999,
+          0.09575
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.6548757170172084,
+          1.3077028134389512
+        ]
+      },
+      "data_1q": {
+        "gap_reduction_ci95": [
+          -0.03630000000000001,
+          0.06695
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.4957661841027044,
+          0.9143676591095329
+        ]
+      },
+      "ancilla_1q": {
+        "gap_reduction_ci95": [
+          -0.04411000000000001,
+          0.05506
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.6024310297732862,
+          0.7519803332422835
+        ]
+      },
+      "cz": {
+        "gap_reduction_ci95": [
+          0.0435,
+          0.09572
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.5940999726850588,
+          1.307293089319858
+        ]
+      },
+      "cz_data_only": {
+        "gap_reduction_ci95": [
+          0.003679999999999989,
+          0.08016999999999999
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.05025949194209218,
+          1.094919420923245
+        ]
+      },
+      "cz_ancilla_only": {
+        "gap_reduction_ci95": [
+          -0.043910000000000005,
+          0.062209999999999994
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.5996995356459984,
+          0.8496312482928162
+        ]
+      },
+      "cz_both": {
+        "gap_reduction_ci95": [
+          0.04000999999999999,
+          0.09662
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.5464354001638896,
+          1.3195848128926524
+        ]
+      },
+      "cz_with_Y": {
+        "gap_reduction_ci95": [
+          0.033999999999999996,
+          0.09212
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.46435400163889645,
+          1.2581261950286806
+        ]
+      },
+      "cz_without_Y": {
+        "gap_reduction_ci95": [
+          0.030939999999999995,
+          0.1007
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.42256214149139576,
+          1.37530729308932
+        ]
+      },
+      "data_wait_X": {
+        "gap_reduction_ci95": [
+          0.008739999999999998,
+          0.09153
+        ],
+        "fraction_of_gap_removed_ci95": [
+          0.11936629336246925,
+          1.2500682873531823
+        ]
+      },
+      "data_wait_Y": {
+        "gap_reduction_ci95": [
+          -0.006650000000000003,
+          0.08907999999999999
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.09082217973231363,
+          1.2166074842939087
+        ]
+      },
+      "data_wait_Z": {
+        "gap_reduction_ci95": [
+          -0.009750000000000009,
+          0.08582999999999999
+        ],
+        "fraction_of_gap_removed_ci95": [
+          -0.1331603387052719,
+          1.172220704725485
+        ]
+      }
+    }
+  },
+  "all_archived_predictions_and_weighted_estimates_checked": true
+}

@@ -1,0 +1,37 @@
+{
+  "created_utc": "2026-09-16T22:21:37Z",
+  "files": {
+    "actual_observables_packed.npy": "c71afd69e33e9182ac0c2c1606e3f6eda08da75048046e87f01c788c3db456b5",
+    "circuit.stim": "6c2917bdc43a4e8abdae629561710f1c82849cda9d59db40938db3afdc5a6241",
+    "detectors_packed.npy": "be11dfccf54fa2a99102859a45f758120467c2720fa312117d4acf0e62775d11",
+    "model.dem": "09a20d70f6105232f2afa38ca9c03d3c6d5f29ce1f6f489c8cbbf471c66c7ccd"
+  },
+  "identities": {
+    "model": "b9a924014b3e14c0ae7068303ec058e558faa5f293bd031c6d9df81fafe65fbb",
+    "parent_sample": "12ee4bb5dba94c26b0277cc7da809b8a63a6fef739a95bc0049c9de7e1403731",
+    "sampling_family": "c1153893a67f3bf108e3c9b017c2ada88702e0528bd41d94423d8e2bcbdb68b2"
+  },
+  "num_detectors": 8354,
+  "num_observables": 12,
+  "parameters": {
+    "distance": 7,
+    "noise": "si1000",
+    "p": 0.001,
+    "patches": 6,
+    "rounds": 28,
+    "style": "cz",
+    "yokes": 2
+  },
+  "payload_sha256": "8ae7f04f557cd8a76009b04c3c6f84e49b9418d9796a88dca1e8b2d79b489537",
+  "schema_version": "SampleSet/hierarchical-l1-l2/1",
+  "seed": 42,
+  "shots": 100000,
+  "source": {
+    "directory": null,
+    "kind": "generated",
+    "manifest_sha256": null
+  },
+  "versions": {
+    "stim": "1.16.0"
+  }
+}

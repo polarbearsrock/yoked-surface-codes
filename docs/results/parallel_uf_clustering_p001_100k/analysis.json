@@ -1,0 +1,524 @@
+{
+  "distances": {
+    "7": {
+      "bridges_vs_frontier": {
+        "decoder_failures": 4,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": 0.7999955267647134,
+        "ratio_ci95_conservative": [
+          0.06894668769547814,
+          8.332695410095127
+        ],
+        "reference_failures": 5,
+        "regressed": 0,
+        "relative_gap_percent": -20.000447323528658,
+        "repaired": 1
+      },
+      "frontier_vs_mwpm": {
+        "decoder_failures": 4,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": 1.0,
+        "ratio_ci95_conservative": [
+          0.07803124402245509,
+          12.815379435860711
+        ],
+        "reference_failures": 4,
+        "regressed": 0,
+        "relative_gap_percent": 0.0,
+        "repaired": 0
+      },
+      "frontier_vs_uf": {
+        "decoder_failures": 4,
+        "exact_mcnemar_p": 0.625,
+        "normalized_ler_ratio": 0.6666592096376271,
+        "ratio_ci95_conservative": [
+          0.06193199633198508,
+          6.011562120331344
+        ],
+        "reference_failures": 6,
+        "regressed": 1,
+        "relative_gap_percent": -33.334079036237284,
+        "repaired": 3
+      },
+      "rates": {
+        "correlated_mwpm": {
+          "failures": 4,
+          "normalized_ler": 2.381005633766975e-07,
+          "normalized_ler_ci95_exact": [
+            6.487395320942113e-08,
+            6.09634259407521e-07
+          ],
+          "shots": 100000
+        },
+        "correlated_uf": {
+          "failures": 6,
+          "normalized_ler": 3.571548400360669e-07,
+          "normalized_ler_ci95_exact": [
+            1.3106858132161392e-07,
+            7.773789713061419e-07
+          ],
+          "shots": 100000
+        },
+        "frontier_bridges": {
+          "failures": 4,
+          "normalized_ler": 2.381005633766975e-07,
+          "normalized_ler_ci95_exact": [
+            6.487395320942113e-08,
+            6.09634259407521e-07
+          ],
+          "shots": 100000
+        },
+        "frontier_forest_cost": {
+          "failures": 5,
+          "normalized_ler": 2.976273684174302e-07,
+          "normalized_ler_ci95_exact": [
+            9.663812006177608e-08,
+            6.945657350376777e-07
+          ],
+          "shots": 100000
+        },
+        "frontier_uf": {
+          "failures": 5,
+          "normalized_ler": 2.976273684174302e-07,
+          "normalized_ler_ci95_exact": [
+            9.663812006177608e-08,
+            6.945657350376777e-07
+          ],
+          "shots": 100000
+        },
+        "uf_bridges": {
+          "failures": 4,
+          "normalized_ler": 2.381005633766975e-07,
+          "normalized_ler_ci95_exact": [
+            6.487395320942113e-08,
+            6.09634259407521e-07
+          ],
+          "shots": 100000
+        },
+        "uf_forest_cost": {
+          "failures": 6,
+          "normalized_ler": 3.571548400360669e-07,
+          "normalized_ler_ci95_exact": [
+            1.3106858132161392e-07,
+            7.773789713061419e-07
+          ],
+          "shots": 100000
+        }
+      },
+      "uf_vs_mwpm": {
+        "decoder_failures": 6,
+        "exact_mcnemar_p": 0.625,
+        "normalized_ler_ratio": 1.5000167785030156,
+        "ratio_ci95_conservative": [
+          0.16634611436817062,
+          16.146742543862505
+        ],
+        "reference_failures": 4,
+        "regressed": 3,
+        "relative_gap_percent": 50.00167785030156,
+        "repaired": 1
+      }
+    },
+    "9": {
+      "bridges_vs_frontier": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      },
+      "frontier_vs_mwpm": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      },
+      "frontier_vs_uf": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      },
+      "rates": {
+        "correlated_mwpm": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.7078183367491562e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.3869155823797996e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "correlated_uf": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.7078183367491562e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.3869155823797996e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "frontier_bridges": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.7078183367491562e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.3869155823797996e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "frontier_forest_cost": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.7078183367491562e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.3869155823797996e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "frontier_uf": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.7078183367491562e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.3869155823797996e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "uf_bridges": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.7078183367491562e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.3869155823797996e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "uf_forest_cost": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.7078183367491562e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.3869155823797996e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        }
+      },
+      "uf_vs_mwpm": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      }
+    },
+    "11": {
+      "bridges_vs_frontier": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      },
+      "frontier_vs_mwpm": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      },
+      "frontier_vs_uf": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      },
+      "rates": {
+        "correlated_mwpm": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.3973059365124385e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.1347491268853815e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "correlated_uf": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.3973059365124385e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.1347491268853815e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "frontier_bridges": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.3973059365124385e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.1347491268853815e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "frontier_forest_cost": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.3973059365124385e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.1347491268853815e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "frontier_uf": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.3973059365124385e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.1347491268853815e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "uf_bridges": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.3973059365124385e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.1347491268853815e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "uf_forest_cost": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.3973059365124385e-07
+          ],
+          "normalized_ler_upper95_one_sided": 1.1347491268853815e-07,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        }
+      },
+      "uf_vs_mwpm": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      }
+    },
+    "13": {
+      "bridges_vs_frontier": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      },
+      "frontier_vs_mwpm": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      },
+      "frontier_vs_uf": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      },
+      "rates": {
+        "correlated_mwpm": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.1823358037066356e-07
+          ],
+          "normalized_ler_upper95_one_sided": 9.601723460761491e-08,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "correlated_uf": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.1823358037066356e-07
+          ],
+          "normalized_ler_upper95_one_sided": 9.601723460761491e-08,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "frontier_bridges": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.1823358037066356e-07
+          ],
+          "normalized_ler_upper95_one_sided": 9.601723460761491e-08,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "frontier_forest_cost": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.1823358037066356e-07
+          ],
+          "normalized_ler_upper95_one_sided": 9.601723460761491e-08,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "frontier_uf": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.1823358037066356e-07
+          ],
+          "normalized_ler_upper95_one_sided": 9.601723460761491e-08,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "uf_bridges": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.1823358037066356e-07
+          ],
+          "normalized_ler_upper95_one_sided": 9.601723460761491e-08,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        },
+        "uf_forest_cost": {
+          "failures": 0,
+          "normalized_ler": 0.0,
+          "normalized_ler_ci95_exact": [
+            0.0,
+            1.1823358037066356e-07
+          ],
+          "normalized_ler_upper95_one_sided": 9.601723460761491e-08,
+          "shot_failure_rate_upper95_one_sided": 2.9956874019427958e-05,
+          "shots": 100000
+        }
+      },
+      "uf_vs_mwpm": {
+        "decoder_failures": 0,
+        "exact_mcnemar_p": 1.0,
+        "normalized_ler_ratio": null,
+        "ratio_ci95_conservative": [
+          0.0,
+          null
+        ],
+        "reference_failures": 0,
+        "regressed": 0,
+        "relative_gap_percent": null,
+        "repaired": 0
+      }
+    }
+  },
+  "intervals": "Exact two-sided 95% Clopper-Pearson LER intervals; exact one-sided 95% upper bounds for zero counts. Ratio intervals conservatively combine two 97.5% marginal exact intervals (Bonferroni), valid for paired observations. A null ratio is undefined because zero reference failures were observed; a null upper endpoint is unbounded. Comparisons are exploratory and unadjusted across distances/decoders.",
+  "normalization": "sinter.shot_error_rate_to_piece_error_rate(failures/100000, pieces=24*d, values=8)"
+}

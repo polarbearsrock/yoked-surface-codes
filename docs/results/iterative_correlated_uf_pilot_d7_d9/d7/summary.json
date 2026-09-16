@@ -1,0 +1,343 @@
+{
+  "distance": 7,
+  "sample_shots": 1024,
+  "strata": [
+    "both_correct",
+    "uf_only_fails",
+    "mwpm_only_fails",
+    "both_fail"
+  ],
+  "populations": [
+    73300,
+    12915,
+    3470,
+    10315
+  ],
+  "rows": [
+    {
+      "pass_number": 1,
+      "estimated_shot_failure_probability": 0.46651542968750004,
+      "estimated_normalized_ler": 0.003890977986424904,
+      "shot_failure_reduction_vs_pass2": -0.23421542968750003,
+      "reduction_ci95": [
+        -0.2785402392578124,
+        -0.19087156249999981
+      ],
+      "estimated_partition_change_fraction_vs_pass2": 0.9999999999999999,
+      "repairs_by_stratum": [
+        0,
+        75,
+        0,
+        52
+      ],
+      "regressions_by_stratum": [
+        94,
+        0,
+        176,
+        0
+      ],
+      "logical_changes_by_stratum": [
+        94,
+        207,
+        176,
+        185
+      ],
+      "conservative_reduction_ci95": [
+        -0.30922,
+        -0.16045
+      ]
+    },
+    {
+      "pass_number": 2,
+      "estimated_shot_failure_probability": 0.2323,
+      "estimated_normalized_ler": 0.001598998922251682,
+      "shot_failure_reduction_vs_pass2": 0.0,
+      "reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "estimated_partition_change_fraction_vs_pass2": 0.0,
+      "repairs_by_stratum": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "regressions_by_stratum": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "logical_changes_by_stratum": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "conservative_reduction_ci95": [
+        0,
+        0
+      ]
+    },
+    {
+      "pass_number": 3,
+      "estimated_shot_failure_probability": 0.2052501953125,
+      "estimated_normalized_ler": 0.001386561076022863,
+      "shot_failure_reduction_vs_pass2": 0.02704980468749999,
+      "reduction_ci95": [
+        0.0034085156249999532,
+        0.04857983398437497
+      ],
+      "estimated_partition_change_fraction_vs_pass2": 0.9999999999999999,
+      "repairs_by_stratum": [
+        0,
+        108,
+        0,
+        61
+      ],
+      "regressions_by_stratum": [
+        14,
+        0,
+        88,
+        0
+      ],
+      "logical_changes_by_stratum": [
+        14,
+        156,
+        88,
+        119
+      ],
+      "conservative_reduction_ci95": [
+        -0.02547,
+        0.06859
+      ]
+    },
+    {
+      "pass_number": 4,
+      "estimated_shot_failure_probability": 0.2013890625,
+      "estimated_normalized_ler": 0.001356902378874758,
+      "shot_failure_reduction_vs_pass2": 0.030910937499999992,
+      "reduction_ci95": [
+        0.019223754882812513,
+        0.041502324218749984
+      ],
+      "estimated_partition_change_fraction_vs_pass2": 0.9999999999999999,
+      "repairs_by_stratum": [
+        0,
+        65,
+        0,
+        23
+      ],
+      "regressions_by_stratum": [
+        2,
+        0,
+        40,
+        0
+      ],
+      "logical_changes_by_stratum": [
+        2,
+        88,
+        40,
+        54
+      ],
+      "conservative_reduction_ci95": [
+        -0.00318,
+        0.053
+      ]
+    },
+    {
+      "pass_number": 5,
+      "estimated_shot_failure_probability": 0.1996306640625,
+      "estimated_normalized_ler": 0.0013434489505559366,
+      "shot_failure_reduction_vs_pass2": 0.032669335937499995,
+      "reduction_ci95": [
+        0.009430063476562504,
+        0.053739331054687436
+      ],
+      "estimated_partition_change_fraction_vs_pass2": 0.9999999999999999,
+      "repairs_by_stratum": [
+        0,
+        110,
+        0,
+        65
+      ],
+      "regressions_by_stratum": [
+        13,
+        0,
+        87,
+        0
+      ],
+      "logical_changes_by_stratum": [
+        13,
+        157,
+        87,
+        119
+      ],
+      "conservative_reduction_ci95": [
+        -0.01926,
+        0.07339
+      ]
+    },
+    {
+      "pass_number": 6,
+      "estimated_shot_failure_probability": 0.202234375,
+      "estimated_normalized_ler": 0.0013633816976774682,
+      "shot_failure_reduction_vs_pass2": 0.030065625,
+      "reduction_ci95": [
+        0.016910493164062516,
+        0.04178477539062501
+      ],
+      "estimated_partition_change_fraction_vs_pass2": 0.9999999999999999,
+      "repairs_by_stratum": [
+        0,
+        69,
+        0,
+        23
+      ],
+      "regressions_by_stratum": [
+        3,
+        0,
+        40,
+        0
+      ],
+      "logical_changes_by_stratum": [
+        3,
+        94,
+        40,
+        57
+      ],
+      "conservative_reduction_ci95": [
+        -0.00608,
+        0.05442
+      ]
+    },
+    {
+      "pass_number": 7,
+      "estimated_shot_failure_probability": 0.197034765625,
+      "estimated_normalized_ler": 0.0013236485254696229,
+      "shot_failure_reduction_vs_pass2": 0.035265234374999996,
+      "reduction_ci95": [
+        0.012483471679687465,
+        0.055600639648437464
+      ],
+      "estimated_partition_change_fraction_vs_pass2": 0.9999999999999999,
+      "repairs_by_stratum": [
+        0,
+        110,
+        0,
+        64
+      ],
+      "regressions_by_stratum": [
+        12,
+        0,
+        86,
+        0
+      ],
+      "logical_changes_by_stratum": [
+        12,
+        157,
+        86,
+        119
+      ],
+      "conservative_reduction_ci95": [
+        -0.01577,
+        0.07497
+      ]
+    },
+    {
+      "pass_number": 8,
+      "estimated_shot_failure_probability": 0.19792519531250002,
+      "estimated_normalized_ler": 0.0013304322229972243,
+      "shot_failure_reduction_vs_pass2": 0.034374804687499996,
+      "reduction_ci95": [
+        0.02262598632812501,
+        0.045048920898437504
+      ],
+      "estimated_partition_change_fraction_vs_pass2": 0.9999999999999999,
+      "repairs_by_stratum": [
+        0,
+        70,
+        0,
+        25
+      ],
+      "regressions_by_stratum": [
+        2,
+        0,
+        39,
+        0
+      ],
+      "logical_changes_by_stratum": [
+        2,
+        95,
+        39,
+        57
+      ],
+      "conservative_reduction_ci95": [
+        -0.00013,
+        0.05674
+      ]
+    }
+  ],
+  "estimated_cycle_period_frequencies": {
+    "0": 0.0715837890625,
+    "1": 0.04034609375,
+    "2": 0.8506941406249999,
+    "3": 0.000135546875,
+    "4": 0.03724042968749999
+  },
+  "cycle_period_counts": {
+    "2": 862,
+    "1": 28,
+    "4": 50,
+    "0": 83,
+    "3": 1
+  },
+  "first_repeat_pass_counts": {
+    "6": 341,
+    "5": 312,
+    "3": 2,
+    "7": 176,
+    "4": 39,
+    "8": 71,
+    "0": 83
+  },
+  "uf_only_failure_diagnostics": {
+    "shots": 256,
+    "any_correct_prediction_in_passes_3_to_8": 133,
+    "stable_wrong_by_pass8": 4,
+    "nontrivial_cycle_by_pass8": 231,
+    "no_repeated_correction_by_pass8": 19
+  },
+  "bootstrap": "20,000 paired stratified resamples; intervals describe the fixed saved population and may be too narrow for rare transitions",
+  "native_matching_failures_in_full_population": 13785,
+  "validation": {
+    "all_pass2_predictions_match_saved": true,
+    "every_correction_satisfies_syndrome": true,
+    "selected_masks_recomputed": true,
+    "production_correlated_edge_checks": 8,
+    "exact_repeat_detection_on_full_physical_edge_sets": true,
+    "results_sha256": "78f1794770e2fa183b8b9aacc89c574c9e83856c15ec64ec961b693e6f4699d8",
+    "elapsed_seconds": 37.34920449741185
+  },
+  "additional_diagnostics": {
+    "logical_variation_within_cycle_counts_by_stratum": [
+      11,
+      92,
+      59,
+      83
+    ],
+    "estimated_logical_variation_within_cycle_probability": 0.1193498046875,
+    "same_logical_prediction_in_passes_2_and_3_but_later_changes_by_stratum": [
+      3,
+      17,
+      13,
+      18
+    ],
+    "pass8_relative_ler_reduction": 0.16795927471687533,
+    "uf_only_correct_at_pass1": 75,
+    "uf_only_new_correct_answer_beyond_first_two_passes": 81,
+    "uf_only_any_correct_answer_across_all_eight_passes": 156
+  },
+  "conservative_interval_method": "Exact finite-population hypergeometric inversion for repair/regression Bernoulli counts in four strata, with a Bonferroni union bound; marginal 95% per fixed pass count."
+}

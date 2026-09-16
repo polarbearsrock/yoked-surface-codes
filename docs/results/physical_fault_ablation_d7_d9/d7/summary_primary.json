@@ -1,0 +1,555 @@
+{
+  "distance": 7,
+  "selected_shots": 1024,
+  "population_counts": [
+    73300,
+    12915,
+    3470,
+    10315
+  ],
+  "original_population_gap": 0.09445,
+  "rows": [
+    {
+      "variant": "baseline",
+      "mean_events_removed": 0.0,
+      "uf_failure_probability": 0.2323,
+      "mwpm_failure_probability": 0.13785,
+      "gap_after": 0.09445,
+      "gap_reduction": 0.0,
+      "gap_reduction_ci95": [
+        0.0,
+        0.0
+      ],
+      "fraction_of_gap_removed": 0.0,
+      "fraction_of_gap_removed_ci95": [
+        0.0,
+        0.0
+      ],
+      "outcomes_by_stratum": [
+        [
+          256,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          256,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          256,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          256
+        ]
+      ],
+      "uf_normalized_ler": 0.001598998922251682,
+      "uf_failure_probability_ci95": [
+        0.2323,
+        0.2323
+      ],
+      "mwpm_normalized_ler": 0.0008907858999728235,
+      "mwpm_failure_probability_ci95": [
+        0.13785,
+        0.13785
+      ]
+    },
+    {
+      "variant": "readout",
+      "mean_events_removed": 121.7059462890625,
+      "uf_failure_probability": 0.0811142578125,
+      "mwpm_failure_probability": 0.04851250000000001,
+      "gap_after": 0.0326017578125,
+      "gap_reduction": 0.0618482421875,
+      "gap_reduction_ci95": [
+        0.04752954589843734,
+        0.07457198242187477
+      ],
+      "fraction_of_gap_removed": 0.6548252216781365,
+      "fraction_of_gap_removed_ci95": [
+        0.5032244139591037,
+        0.7895392527461594
+      ],
+      "outcomes_by_stratum": [
+        [
+          251,
+          4,
+          0,
+          1
+        ],
+        [
+          207,
+          38,
+          4,
+          7
+        ],
+        [
+          176,
+          19,
+          46,
+          15
+        ],
+        [
+          147,
+          30,
+          11,
+          68
+        ]
+      ],
+      "uf_normalized_ler": 0.0005060792789939317,
+      "uf_failure_probability_ci95": [
+        0.066874716796875,
+        0.09711447753906248
+      ],
+      "mwpm_normalized_ler": 0.00029688050651144327,
+      "mwpm_failure_probability_ci95": [
+        0.040260874023437504,
+        0.05797380859374999
+      ]
+    },
+    {
+      "variant": "reset",
+      "mean_events_removed": 48.053633203124996,
+      "uf_failure_probability": 0.1627326171875,
+      "mwpm_failure_probability": 0.09431835937500001,
+      "gap_after": 0.0684142578125,
+      "gap_reduction": 0.0260357421875,
+      "gap_reduction_ci95": [
+        0.007017475585937451,
+        0.043476791992187416
+      ],
+      "fraction_of_gap_removed": 0.2756563492588671,
+      "fraction_of_gap_removed_ci95": [
+        0.07429831218567974,
+        0.46031542606868625
+      ],
+      "outcomes_by_stratum": [
+        [
+          248,
+          6,
+          1,
+          1
+        ],
+        [
+          122,
+          123,
+          3,
+          8
+        ],
+        [
+          107,
+          9,
+          113,
+          27
+        ],
+        [
+          61,
+          36,
+          17,
+          142
+        ]
+      ],
+      "uf_normalized_ler": 0.0010685731771190587,
+      "uf_failure_probability_ci95": [
+        0.14590839843749998,
+        0.181350537109375
+      ],
+      "mwpm_normalized_ler": 0.0005931860439851722,
+      "mwpm_failure_probability_ci95": [
+        0.0843554248046875,
+        0.1056709228515625
+      ]
+    },
+    {
+      "variant": "data_wait",
+      "mean_events_removed": 98.77982499999999,
+      "uf_failure_probability": 0.0150328125,
+      "mwpm_failure_probability": 0.006054687499999999,
+      "gap_after": 0.008978125,
+      "gap_reduction": 0.08547187499999999,
+      "gap_reduction_ci95": [
+        0.07749764648437474,
+        0.0916941406249997
+      ],
+      "fraction_of_gap_removed": 0.9049430915828479,
+      "fraction_of_gap_removed_ci95": [
+        0.8205150501257251,
+        0.9708220288512408
+      ],
+      "outcomes_by_stratum": [
+        [
+          255,
+          1,
+          0,
+          0
+        ],
+        [
+          244,
+          8,
+          2,
+          2
+        ],
+        [
+          247,
+          3,
+          4,
+          2
+        ],
+        [
+          237,
+          11,
+          3,
+          5
+        ]
+      ],
+      "uf_normalized_ler": 9.024135431145996e-05,
+      "uf_failure_probability_ci95": [
+        0.0088751953125,
+        0.023007421874999996
+      ],
+      "mwpm_normalized_ler": 3.6162349798529725e-05,
+      "mwpm_failure_probability_ci95": [
+        0.003200576171875,
+        0.0092478515625
+      ]
+    },
+    {
+      "variant": "data_1q",
+      "mean_events_removed": 16.431603125,
+      "uf_failure_probability": 0.159255078125,
+      "mwpm_failure_probability": 0.0942060546875,
+      "gap_after": 0.0650490234375,
+      "gap_reduction": 0.02940097656249999,
+      "gap_reduction_ci95": [
+        0.008370493164062449,
+        0.04952111816406237
+      ],
+      "fraction_of_gap_removed": 0.31128614677077804,
+      "fraction_of_gap_removed_ci95": [
+        0.08862353799960242,
+        0.5243104093601098
+      ],
+      "outcomes_by_stratum": [
+        [
+          246,
+          8,
+          2,
+          0
+        ],
+        [
+          130,
+          120,
+          2,
+          4
+        ],
+        [
+          115,
+          7,
+          96,
+          38
+        ],
+        [
+          64,
+          25,
+          24,
+          143
+        ]
+      ],
+      "uf_normalized_ler": 0.0010433717408926402,
+      "uf_failure_probability_ci95": [
+        0.14125044921875002,
+        0.17866829101562498
+      ],
+      "mwpm_normalized_ler": 0.0005924391853164845,
+      "mwpm_failure_probability_ci95": [
+        0.08447713867187501,
+        0.10534193847656247
+      ]
+    },
+    {
+      "variant": "ancilla_1q",
+      "mean_events_removed": 34.934478515625,
+      "uf_failure_probability": 0.20913671875,
+      "mwpm_failure_probability": 0.11875468750000001,
+      "gap_after": 0.09038203125,
+      "gap_reduction": 0.004067968749999999,
+      "gap_reduction_ci95": [
+        -0.012826103515624977,
+        0.019050786132812504
+      ],
+      "fraction_of_gap_removed": 0.04307007676019056,
+      "fraction_of_gap_removed_ci95": [
+        -0.1357978138234513,
+        0.20170234126852835
+      ],
+      "outcomes_by_stratum": [
+        [
+          250,
+          6,
+          0,
+          0
+        ],
+        [
+          63,
+          190,
+          0,
+          3
+        ],
+        [
+          45,
+          3,
+          182,
+          26
+        ],
+        [
+          19,
+          16,
+          12,
+          209
+        ]
+      ],
+      "uf_normalized_ler": 0.0014165790535864975,
+      "uf_failure_probability_ci95": [
+        0.194576826171875,
+        0.22594727050781246
+      ],
+      "mwpm_normalized_ler": 0.0007582131629558786,
+      "mwpm_failure_probability_ci95": [
+        0.1137536279296875,
+        0.1236649267578125
+      ]
+    },
+    {
+      "variant": "cz",
+      "mean_events_removed": 84.2616580078125,
+      "uf_failure_probability": 0.0070263671875,
+      "mwpm_failure_probability": 0.005423828125,
+      "gap_after": 0.0016025390625,
+      "gap_reduction": 0.09284746093749997,
+      "gap_reduction_ci95": [
+        0.08735976562499975,
+        0.10035489257812479
+      ],
+      "fraction_of_gap_removed": 0.9830329374007408,
+      "fraction_of_gap_removed_ci95": [
+        0.9249313459502355,
+        1.062518714432237
+      ],
+      "outcomes_by_stratum": [
+        [
+          255,
+          0,
+          1,
+          0
+        ],
+        [
+          253,
+          3,
+          0,
+          0
+        ],
+        [
+          246,
+          3,
+          5,
+          2
+        ],
+        [
+          242,
+          10,
+          2,
+          2
+        ]
+      ],
+      "uf_normalized_ler": 4.198876138061802e-05,
+      "uf_failure_probability_ci95": [
+        0.0040022607421874995,
+        0.010449301757812493
+      ],
+      "mwpm_normalized_ler": 3.238298382646221e-05,
+      "mwpm_failure_probability_ci95": [
+        0.001348046875,
+        0.01235546875
+      ]
+    }
+  ],
+  "paired_comparisons": [
+    {
+      "first": "readout",
+      "second": "reset",
+      "difference_in_gap_reduction": 0.0358125,
+      "ci95": [
+        0.013647192382812381,
+        0.05823249023437485
+      ]
+    },
+    {
+      "first": "readout",
+      "second": "data_wait",
+      "difference_in_gap_reduction": -0.02362363281249999,
+      "ci95": [
+        -0.039467426757812445,
+        -0.008755561523437441
+      ]
+    },
+    {
+      "first": "readout",
+      "second": "data_1q",
+      "difference_in_gap_reduction": 0.03244726562500001,
+      "ci95": [
+        0.007878491210937345,
+        0.05710204589843729
+      ]
+    },
+    {
+      "first": "readout",
+      "second": "ancilla_1q",
+      "difference_in_gap_reduction": 0.0577802734375,
+      "ci95": [
+        0.03858936035156228,
+        0.07732761230468727
+      ]
+    },
+    {
+      "first": "readout",
+      "second": "cz",
+      "difference_in_gap_reduction": -0.030999218749999974,
+      "ci95": [
+        -0.04701713867187493,
+        -0.016746230468749908
+      ]
+    },
+    {
+      "first": "reset",
+      "second": "data_wait",
+      "difference_in_gap_reduction": -0.05943613281249999,
+      "ci95": [
+        -0.07953615234374974,
+        -0.04039391601562473
+      ]
+    },
+    {
+      "first": "reset",
+      "second": "data_1q",
+      "difference_in_gap_reduction": -0.003365234374999991,
+      "ci95": [
+        -0.028462431640624994,
+        0.02144280761718743
+      ]
+    },
+    {
+      "first": "reset",
+      "second": "ancilla_1q",
+      "difference_in_gap_reduction": 0.0219677734375,
+      "ci95": [
+        0.0007792773437499052,
+        0.0433636865234374
+      ]
+    },
+    {
+      "first": "reset",
+      "second": "cz",
+      "difference_in_gap_reduction": -0.06681171874999997,
+      "ci95": [
+        -0.08667641113281228,
+        -0.0483059619140623
+      ]
+    },
+    {
+      "first": "data_wait",
+      "second": "data_1q",
+      "difference_in_gap_reduction": 0.0560708984375,
+      "ci95": [
+        0.034907841796874756,
+        0.07826367675781228
+      ]
+    },
+    {
+      "first": "data_wait",
+      "second": "ancilla_1q",
+      "difference_in_gap_reduction": 0.08140390624999999,
+      "ci95": [
+        0.06469290039062464,
+        0.09922845214843722
+      ]
+    },
+    {
+      "first": "data_wait",
+      "second": "cz",
+      "difference_in_gap_reduction": -0.007375585937499984,
+      "ci95": [
+        -0.01768626953125003,
+        0.001137539062499998
+      ]
+    },
+    {
+      "first": "data_1q",
+      "second": "ancilla_1q",
+      "difference_in_gap_reduction": 0.025333007812499992,
+      "ci95": [
+        0.002290839843749908,
+        0.04915435546874982
+      ]
+    },
+    {
+      "first": "data_1q",
+      "second": "cz",
+      "difference_in_gap_reduction": -0.06344648437499999,
+      "ci95": [
+        -0.08712519042968726,
+        -0.041723740234374786
+      ]
+    },
+    {
+      "first": "ancilla_1q",
+      "second": "cz",
+      "difference_in_gap_reduction": -0.08877949218749998,
+      "ci95": [
+        -0.10683095214843724,
+        -0.07232362304687463
+      ]
+    }
+  ],
+  "bootstrap_seed": 2026091711,
+  "bootstrap_replicates": 20000,
+  "ci_method": "percentile stratified paired bootstrap; finite-population correction omitted conservatively",
+  "atom_mean_events": {
+    "readout": 121.7059462890625,
+    "reset": 48.053633203124996,
+    "data_wait_X": 33.184370507812496,
+    "data_wait_Y": 32.535209570312496,
+    "data_wait_Z": 33.060244921875,
+    "data_1q_X": 5.6062912109375,
+    "data_1q_Y": 5.3385029296875,
+    "data_1q_Z": 5.486808984375,
+    "ancilla_1q_X": 3.6366507812499997,
+    "ancilla_1q_Y": 3.4661480468750003,
+    "ancilla_1q_Z": 3.473284765625,
+    "ancilla_post_measurement_X": 8.302936523437499,
+    "ancilla_post_measurement_Y": 7.969978124999999,
+    "ancilla_post_measurement_Z": 8.0854802734375,
+    "cz_IX": 5.554859765625,
+    "cz_IY": 5.727418359374999,
+    "cz_IZ": 5.638077734375001,
+    "cz_XI": 5.57089375,
+    "cz_XX": 5.680313671875,
+    "cz_XY": 5.8235765624999996,
+    "cz_XZ": 5.4330718749999996,
+    "cz_YI": 5.5238781249999995,
+    "cz_YX": 5.741402734374999,
+    "cz_YY": 5.623469335937499,
+    "cz_YZ": 5.466136328125,
+    "cz_ZI": 5.5652328125,
+    "cz_ZX": 5.572133007812499,
+    "cz_ZY": 5.6714404296875,
+    "cz_ZZ": 5.6697535156250005
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "chunk_size": 1024,
+  "compile_command": [
+    "g++",
+    "-std=c++17",
+    "-O3",
+    "-fPIC",
+    "-shared",
+    "-fopenmp",
+    "-ffp-contract=off",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/parallel_uf_clustering_d7_d9_p003_100k/kernel.cc",
+    "-o",
+    "/data2/s2chitni/.tmp/parallel-uf-clustering-FvBHIu/build/clustering.so"
+  ],
+  "distance": 7,
+  "fields": [
+    "prediction",
+    "cost",
+    "size",
+    "epochs",
+    "edge_evaluations",
+    "frontier_visits",
+    "max_cluster",
+    "max_frontier",
+    "tree_depth",
+    "growth_time",
+    "bridges",
+    "eligible_bridges",
+    "improving_proposals",
+    "tree_messages",
+    "max_parallel_pairs"
+  ],
+  "identity": "bf08826f74703c8656d320b6941181269b29609b056e16d606ad47df65de1018",
+  "input_run": {
+    "circuit_sha256": "8cfa9bb9eaf6db86dfc9ffcfefa4582eb29932d11dc1fd911239ef1425841ff9",
+    "dem_sha256": "9b06141668bef9b334df78e4700853f60505a71f3c4185746d0261e7e3790e0a",
+    "directory": "/data2/s2chitni/.tmp/ysc-four-decoders-d7-p003-100k-adapter",
+    "payload_sha256": "f789a3f4cec39e5a5418cacb4e7bbd959dd47749f6c566ae93318c04ccc40a79"
+  },
+  "library_sha256": "d32c8e408f14a63237e6d9da57cad0d565ecdaa3a521c82243a79a2de2ca7540",
+  "parameters": {
+    "distance": 7,
+    "noise": "si1000",
+    "p": 0.003,
+    "patches": 6,
+    "rounds": 28,
+    "style": "cz",
+    "yokes": 2
+  },
+  "protocol": {
+    "bridge_policy": "Score each eligible intercluster edge by its exact forest-cost change; accept only mutually best negative-cost proposals. Each round pairs disjoint clusters.",
+    "correction": "Forest-cost controls and bridge variants use minimum-cost tree correction with free parity at each boundary vertex.",
+    "extension_rounds": 2,
+    "first_pass": "Unchanged production UF growth and peeling; its physical correction supplies all correlation weights.",
+    "growth": "Every active cluster has per-frontier-edge rate 2**(-ceil(log2(max(1,frontier_edge_count)))).",
+    "hardware": "Operation counts and dependency proxies only; event heap is a software simulator, not an FPGA implementation.",
+    "improvement_epsilon": 1e-09,
+    "remaining_growth_cap_nats": 0.5,
+    "ties": "Growth: existing anchored 1e-12 tie batches and ascending edge IDs. Bridges: (cost change,edge ID). Tree DP: parity zero on exact ties.",
+    "truth_access": "No truth or MWPM predictions enter native decoding, proposal selection, or stopping.",
+    "weight_precision": "Original double-precision log-odds weights; no weight quantization."
+  },
+  "record_manifest_sha256": "7b0032fa56c219a31db5b3c36e0914b963e21aae2303b9d2e75f9fd37fc34860",
+  "shots": 100000,
+  "sources": {
+    "experiment.py": "5e7a6decf3eaf34bc17fd549f5278a785f7723252651b28d58e86205590d6546",
+    "kernel.cc": "1a83ec7adc4b78fb23582bc8e5f4c7e857798b9b125a95ffd65a846d3c0678de"
+  },
+  "threads": 48,
+  "variants": [
+    "correlated_uf",
+    "uf_forest_cost",
+    "uf_bridges",
+    "frontier_uf",
+    "frontier_forest_cost",
+    "frontier_bridges"
+  ],
+  "versions": {
+    "numpy": "2.5.1",
+    "stim": "1.16.0"
+  }
+}

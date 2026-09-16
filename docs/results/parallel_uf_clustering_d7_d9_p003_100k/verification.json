@@ -1,0 +1,39 @@
+{
+  "checks": {
+    "actual_shots": 48,
+    "independent_normalized_scans": 4,
+    "random_graphs": 100
+  },
+  "compile_command": [
+    "g++",
+    "-std=c++17",
+    "-O3",
+    "-fPIC",
+    "-shared",
+    "-fopenmp",
+    "-ffp-contract=off",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/parallel_uf_clustering_d7_d9_p003_100k/kernel.cc",
+    "-o",
+    "/data2/s2chitni/.tmp/parallel-uf-clustering-FvBHIu/build/clustering.so"
+  ],
+  "elapsed_seconds": 51.41473692469299,
+  "production_tests": {
+    "passed": 70,
+    "suites": [
+      "src/yoked/decoders/_union_find_test.py",
+      "src/yoked/decoders/_correlated_union_find_test.py",
+      "src/yoked/decoders/_correlations_test.py"
+    ]
+  },
+  "sources": {
+    "/data2/s2chitni/yoked-surface-codes/docs/results/correlated_uf_growth_diagnosis_d7_d9/algorithms.py": "77f388110829c295cd86bd0a96bbaf950d1159873ba4d2114c597aa1a2cd7b59",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/parallel_uf_clustering_d7_d9_p003_100k/experiment.py": "5e7a6decf3eaf34bc17fd549f5278a785f7723252651b28d58e86205590d6546",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/parallel_uf_clustering_d7_d9_p003_100k/kernel.cc": "1a83ec7adc4b78fb23582bc8e5f4c7e857798b9b125a95ffd65a846d3c0678de",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/parallel_uf_clustering_d7_d9_p003_100k/verify.py": "d5268ccd48a64177dd5cbbddb738e7669014282476361dc3d5fb576822ecf7c5",
+    "src/yoked/decoders/_correlated_union_find.py": "ec024111661b81f528432c8ee67fda34c61a8e586945997fa0db709f863dabd4",
+    "src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+    "src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+    "src/yoked/decoders/_union_find.py": "7f781b806745064589a8564a595b9b092bce68b5baaafb7fe14bb51e1c6319b2"
+  },
+  "threads_bit_identical": true
+}

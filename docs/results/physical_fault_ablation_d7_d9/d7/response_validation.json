@@ -1,0 +1,196 @@
+{
+  "selected_shots": 1024,
+  "atomic_families": [
+    "readout",
+    "reset",
+    "data_wait_X",
+    "data_wait_Y",
+    "data_wait_Z",
+    "data_1q_X",
+    "data_1q_Y",
+    "data_1q_Z",
+    "ancilla_1q_X",
+    "ancilla_1q_Y",
+    "ancilla_1q_Z",
+    "ancilla_post_measurement_X",
+    "ancilla_post_measurement_Y",
+    "ancilla_post_measurement_Z",
+    "cz_IX",
+    "cz_IY",
+    "cz_IZ",
+    "cz_XI",
+    "cz_XX",
+    "cz_XY",
+    "cz_XZ",
+    "cz_YI",
+    "cz_YX",
+    "cz_YY",
+    "cz_YZ",
+    "cz_ZI",
+    "cz_ZX",
+    "cz_ZY",
+    "cz_ZZ"
+  ],
+  "aggregate_matches_saved_shots": true,
+  "xor_of_family_responses_matches_saved_shots": true,
+  "ideal_control_zero": true,
+  "post_measurement_ancilla_noise_has_zero_response": true,
+  "independent_forced_circuit_checks": [
+    {
+      "row": 271,
+      "variant": "baseline"
+    },
+    {
+      "row": 271,
+      "variant": "readout"
+    },
+    {
+      "row": 271,
+      "variant": "reset"
+    },
+    {
+      "row": 271,
+      "variant": "data_wait"
+    },
+    {
+      "row": 271,
+      "variant": "data_1q"
+    },
+    {
+      "row": 271,
+      "variant": "ancilla_1q"
+    },
+    {
+      "row": 271,
+      "variant": "cz"
+    },
+    {
+      "row": 282,
+      "variant": "baseline"
+    },
+    {
+      "row": 282,
+      "variant": "readout"
+    },
+    {
+      "row": 282,
+      "variant": "reset"
+    },
+    {
+      "row": 282,
+      "variant": "data_wait"
+    },
+    {
+      "row": 282,
+      "variant": "data_1q"
+    },
+    {
+      "row": 282,
+      "variant": "ancilla_1q"
+    },
+    {
+      "row": 282,
+      "variant": "cz"
+    },
+    {
+      "row": 556,
+      "variant": "baseline"
+    },
+    {
+      "row": 556,
+      "variant": "readout"
+    },
+    {
+      "row": 556,
+      "variant": "reset"
+    },
+    {
+      "row": 556,
+      "variant": "data_wait"
+    },
+    {
+      "row": 556,
+      "variant": "data_1q"
+    },
+    {
+      "row": 556,
+      "variant": "ancilla_1q"
+    },
+    {
+      "row": 556,
+      "variant": "cz"
+    },
+    {
+      "row": 96,
+      "variant": "baseline"
+    },
+    {
+      "row": 96,
+      "variant": "readout"
+    },
+    {
+      "row": 96,
+      "variant": "reset"
+    },
+    {
+      "row": 96,
+      "variant": "data_wait"
+    },
+    {
+      "row": 96,
+      "variant": "data_1q"
+    },
+    {
+      "row": 96,
+      "variant": "ancilla_1q"
+    },
+    {
+      "row": 96,
+      "variant": "cz"
+    }
+  ],
+  "forced_seeds": [
+    1,
+    123456
+  ],
+  "forced_samples_per_seed": 2,
+  "physical_location_inventory": [
+    {
+      "family": "ancilla_1q",
+      "probability": 0.0003,
+      "locations": 36288
+    },
+    {
+      "family": "ancilla_post_measurement",
+      "probability": 0.003,
+      "locations": 8064
+    },
+    {
+      "family": "cz",
+      "probability": 0.003,
+      "locations": 28224
+    },
+    {
+      "family": "data_1q",
+      "probability": 0.0003,
+      "locations": 54096
+    },
+    {
+      "family": "data_wait",
+      "probability": 0.006,
+      "locations": 16464
+    },
+    {
+      "family": "readout",
+      "probability": 0.015,
+      "locations": 8064
+    },
+    {
+      "family": "reset",
+      "probability": 0.006,
+      "locations": 8064
+    }
+  ],
+  "total_logged_events": 417822,
+  "responses_sha256": "c08cb35677a9070a3448f7bbc986b69942e7c9ee10de10aa0a988c3d2aa03930"
+}

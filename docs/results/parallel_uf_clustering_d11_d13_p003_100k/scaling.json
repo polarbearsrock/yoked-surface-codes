@@ -1,0 +1,266 @@
+{
+  "adjacent_distance_steps": [
+    {
+      "absolute_gap_change": -0.38434378807306413,
+      "after": 9,
+      "before": 7,
+      "correlated_mwpm": {
+        "ler_suppression": 2.669545965803971,
+        "shot_failure_suppression": 1.9906137184115524
+      },
+      "correlated_uf": {
+        "ler_suppression": 2.226245182880857,
+        "shot_failure_suppression": 1.6305187056924264
+      },
+      "frontier_bridges": {
+        "ler_suppression": 2.396636060887116,
+        "shot_failure_suppression": 1.7812161869725167
+      },
+      "relative_ratio_change": 0.11387206817535622
+    },
+    {
+      "absolute_gap_change": -0.45505784933974314,
+      "after": 11,
+      "before": 9,
+      "correlated_mwpm": {
+        "ler_suppression": 2.8415262891729274,
+        "shot_failure_suppression": 2.272727272727273
+      },
+      "correlated_uf": {
+        "ler_suppression": 2.3378277622003436,
+        "shot_failure_suppression": 1.837374258447253
+      },
+      "frontier_bridges": {
+        "ler_suppression": 2.485588659096434,
+        "shot_failure_suppression": 1.979014989293362
+      },
+      "relative_ratio_change": 0.1432005367315623
+    },
+    {
+      "absolute_gap_change": -0.5185125277542878,
+      "after": 13,
+      "before": 11,
+      "correlated_mwpm": {
+        "ler_suppression": 2.789123321888622,
+        "shot_failure_suppression": 2.3366564417177913
+      },
+      "correlated_uf": {
+        "ler_suppression": 2.293579914735292,
+        "shot_failure_suppression": 1.899093803575802
+      },
+      "frontier_bridges": {
+        "ler_suppression": 2.487453858241293,
+        "shot_failure_suppression": 2.0755555555555554
+      },
+      "relative_ratio_change": 0.1212764058508482
+    }
+  ],
+  "distances": {
+    "7": {
+      "compared_with_frontier": {
+        "net_repairs": 801,
+        "reduction_ci95": [
+          0.007013173984288933,
+          0.009006826015711067
+        ],
+        "regressed": 896,
+        "repaired": 1697,
+        "shot_failure_reduction": 0.00801
+      },
+      "compared_with_mwpm": {
+        "net_repairs": -2677,
+        "reduction_ci95": [
+          -0.028646625714018006,
+          -0.02489337428598199
+        ],
+        "regressed": 5958,
+        "repaired": 3281,
+        "shot_failure_reduction": -0.02677
+      },
+      "compared_with_uf": {
+        "net_repairs": 6768,
+        "reduction_ci95": [
+          0.06559502225754768,
+          0.06976497774245233
+        ],
+        "regressed": 2503,
+        "repaired": 9271,
+        "shot_failure_reduction": 0.06768
+      },
+      "fraction_of_uf_mwpm_gap_closed": 0.7295809659425943,
+      "frontier_minus_mwpm_ler": 0.00019151428139152493,
+      "frontier_to_mwpm_ratio": 1.2149947382388604,
+      "paired_ratio": {
+        "bootstrap_draws": 20000,
+        "bootstrap_seed": 2026091607,
+        "joint_counts_both_correct_mwpm_only_fails_frontier_only_fails_both_fail": [
+          80257,
+          3281,
+          5958,
+          10504
+        ],
+        "normalized_ler_ratio_ci95": [
+          1.198521573002244,
+          1.231674960682685
+        ]
+      },
+      "relative_excess_over_mwpm": 0.2149947382388604,
+      "relative_reduction_from_uf": 0.32313889252641115
+    },
+    "9": {
+      "compared_with_frontier": {
+        "net_repairs": 578,
+        "reduction_ci95": [
+          0.004985133808175489,
+          0.0065748661918245115
+        ],
+        "regressed": 535,
+        "repaired": 1113,
+        "shot_failure_reduction": 0.00578
+      },
+      "compared_with_mwpm": {
+        "net_repairs": -2317,
+        "reduction_ci95": [
+          -0.02476704705398983,
+          -0.02157295294601017
+        ],
+        "regressed": 4505,
+        "repaired": 2188,
+        "shot_failure_reduction": -0.02317
+      },
+      "compared_with_uf": {
+        "net_repairs": 5005,
+        "reduction_ci95": [
+          0.048299718930011525,
+          0.05180028106998847
+        ],
+        "regressed": 1610,
+        "repaired": 6615,
+        "shot_failure_reduction": 0.05005
+      },
+      "fraction_of_uf_mwpm_gap_closed": 0.6934016072349586,
+      "frontier_minus_mwpm_ler": 0.00011790695701141551,
+      "frontier_to_mwpm_ratio": 1.3533487019042951,
+      "paired_ratio": {
+        "bootstrap_draws": 20000,
+        "bootstrap_seed": 2026091609,
+        "joint_counts_both_correct_mwpm_only_fails_frontier_only_fails_both_fail": [
+          88570,
+          2188,
+          4505,
+          4737
+        ],
+        "normalized_ler_ratio_ci95": [
+          1.325472305178739,
+          1.381775543452343
+        ]
+      },
+      "relative_excess_over_mwpm": 0.3533487019042951,
+      "relative_reduction_from_uf": 0.37126090832718484
+    },
+    "11": {
+      "compared_with_frontier": {
+        "net_repairs": 345,
+        "reduction_ci95": [
+          0.0028504162497532144,
+          0.0040495837502467855
+        ],
+        "regressed": 296,
+        "repaired": 641,
+        "shot_failure_reduction": 0.00345
+      },
+      "compared_with_mwpm": {
+        "net_repairs": -1623,
+        "reduction_ci95": [
+          -0.017437375703761512,
+          -0.015022624296238492
+        ],
+        "regressed": 2722,
+        "repaired": 1099,
+        "shot_failure_reduction": -0.01623
+      },
+      "compared_with_uf": {
+        "net_repairs": 3084,
+        "reduction_ci95": [
+          0.029470397573282524,
+          0.03220960242671748
+        ],
+        "regressed": 947,
+        "repaired": 4031,
+        "shot_failure_reduction": 0.03084
+      },
+      "fraction_of_uf_mwpm_gap_closed": 0.6614690490878337,
+      "frontier_minus_mwpm_ler": 6.425247073160723e-05,
+      "frontier_to_mwpm_ratio": 1.5471489624019532,
+      "paired_ratio": {
+        "bootstrap_draws": 20000,
+        "bootstrap_seed": 2026091611,
+        "joint_counts_both_correct_mwpm_only_fails_frontier_only_fails_both_fail": [
+          94231,
+          1099,
+          2722,
+          1948
+        ],
+        "normalized_ler_ratio_ci95": [
+          1.4974252707582285,
+          1.5978816177724997
+        ]
+      },
+      "relative_excess_over_mwpm": 0.5471489624019532,
+      "relative_reduction_from_uf": 0.40863758839820696
+    },
+    "13": {
+      "compared_with_frontier": {
+        "net_repairs": 202,
+        "reduction_ci95": [
+          0.0015916640018004558,
+          0.0024483359981995446
+        ],
+        "regressed": 138,
+        "repaired": 340,
+        "shot_failure_reduction": 0.00202
+      },
+      "compared_with_mwpm": {
+        "net_repairs": -946,
+        "reduction_ci95": [
+          -0.010354123308439277,
+          -0.008565876691560722
+        ],
+        "regressed": 1518,
+        "repaired": 572,
+        "shot_failure_reduction": -0.00946
+      },
+      "compared_with_uf": {
+        "net_repairs": 1833,
+        "reduction_ci95": [
+          0.017291865668413956,
+          0.019368134331586042
+        ],
+        "regressed": 503,
+        "repaired": 2336,
+        "shot_failure_reduction": 0.01833
+      },
+      "fraction_of_uf_mwpm_gap_closed": 0.6631763368343794,
+      "frontier_minus_mwpm_ler": 3.093675971810317e-05,
+      "frontier_to_mwpm_ratio": 1.734781627877931,
+      "paired_ratio": {
+        "bootstrap_draws": 20000,
+        "bootstrap_seed": 2026091613,
+        "joint_counts_both_correct_mwpm_only_fails_frontier_only_fails_both_fail": [
+          97178,
+          572,
+          1518,
+          732
+        ],
+        "normalized_ler_ratio_ci95": [
+          1.6454367454724002,
+          1.830236309281672
+        ]
+      },
+      "relative_excess_over_mwpm": 0.7347816278779311,
+      "relative_reduction_from_uf": 0.4547288002607336
+    }
+  },
+  "intervals": "Wilson marginal LER intervals; percentile paired-shot multinomial bootstrap for LER ratios (20,000 draws). Exploratory, unadjusted.",
+  "normalization": "sinter.shot_error_rate_to_piece_error_rate(failures/100000, pieces=24*d, values=8)"
+}

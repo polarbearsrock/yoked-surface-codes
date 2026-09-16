@@ -1,0 +1,18 @@
+{
+  "detectors": {
+    "all_original_rows_identical": true,
+    "shape": [
+      100000,
+      2221
+    ],
+    "replay_sha256": "ec0f87daae8ffe4fea08912ebd5cd911c81c1a20325eb1aa6cd17f0de933b494"
+  },
+  "observables": {
+    "all_original_rows_identical": true,
+    "shape": [
+      100000,
+      2
+    ],
+    "replay_sha256": "7a92d0be0d7ddc17d1eba5739d45dde3035ec17cf8a848ddc7738a20f6496ad6"
+  }
+}

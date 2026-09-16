@@ -1,0 +1,145 @@
+{
+  "per_stratum": 256,
+  "distances": [
+    7,
+    9
+  ],
+  "selection_seed": 2026091700,
+  "atoms": [
+    "readout",
+    "reset",
+    "data_wait_X",
+    "data_wait_Y",
+    "data_wait_Z",
+    "data_1q_X",
+    "data_1q_Y",
+    "data_1q_Z",
+    "ancilla_1q_X",
+    "ancilla_1q_Y",
+    "ancilla_1q_Z",
+    "ancilla_post_measurement_X",
+    "ancilla_post_measurement_Y",
+    "ancilla_post_measurement_Z",
+    "cz_IX",
+    "cz_IY",
+    "cz_IZ",
+    "cz_XI",
+    "cz_XX",
+    "cz_XY",
+    "cz_XZ",
+    "cz_YI",
+    "cz_YX",
+    "cz_YY",
+    "cz_YZ",
+    "cz_ZI",
+    "cz_ZX",
+    "cz_ZY",
+    "cz_ZZ"
+  ],
+  "primary_variants": [
+    "readout",
+    "reset",
+    "data_wait",
+    "data_1q",
+    "ancilla_1q",
+    "cz"
+  ],
+  "variants": {
+    "readout": [
+      "readout"
+    ],
+    "reset": [
+      "reset"
+    ],
+    "data_wait": [
+      "data_wait_X",
+      "data_wait_Y",
+      "data_wait_Z"
+    ],
+    "data_1q": [
+      "data_1q_X",
+      "data_1q_Y",
+      "data_1q_Z"
+    ],
+    "ancilla_1q": [
+      "ancilla_1q_X",
+      "ancilla_1q_Y",
+      "ancilla_1q_Z",
+      "ancilla_post_measurement_X",
+      "ancilla_post_measurement_Y",
+      "ancilla_post_measurement_Z"
+    ],
+    "cz": [
+      "cz_IX",
+      "cz_IY",
+      "cz_IZ",
+      "cz_XI",
+      "cz_XX",
+      "cz_XY",
+      "cz_XZ",
+      "cz_YI",
+      "cz_YX",
+      "cz_YY",
+      "cz_YZ",
+      "cz_ZI",
+      "cz_ZX",
+      "cz_ZY",
+      "cz_ZZ"
+    ],
+    "cz_data_only": [
+      "cz_XI",
+      "cz_YI",
+      "cz_ZI"
+    ],
+    "cz_ancilla_only": [
+      "cz_IX",
+      "cz_IY",
+      "cz_IZ"
+    ],
+    "cz_both": [
+      "cz_XX",
+      "cz_XY",
+      "cz_XZ",
+      "cz_YX",
+      "cz_YY",
+      "cz_YZ",
+      "cz_ZX",
+      "cz_ZY",
+      "cz_ZZ"
+    ],
+    "cz_with_Y": [
+      "cz_IY",
+      "cz_XY",
+      "cz_YI",
+      "cz_YX",
+      "cz_YY",
+      "cz_YZ",
+      "cz_ZY"
+    ],
+    "cz_without_Y": [
+      "cz_IX",
+      "cz_IZ",
+      "cz_XI",
+      "cz_XX",
+      "cz_XZ",
+      "cz_ZI",
+      "cz_ZX",
+      "cz_ZZ"
+    ],
+    "data_wait_X": [
+      "data_wait_X"
+    ],
+    "data_wait_Y": [
+      "data_wait_Y"
+    ],
+    "data_wait_Z": [
+      "data_wait_Z"
+    ]
+  },
+  "sampling": "uniform without replacement within each of four baseline outcome strata",
+  "intervention": "remove every realized physical event in the named family; keep all others",
+  "decoding": "original DEM, full correlated UF and native correlated PyMatching",
+  "estimand": "population-weighted reduction in P(UF failure) - P(MWPM failure)",
+  "tracer": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/trace_cases",
+  "tracer_sha256": "21ac0deddbfcf13396db56cf2176d59bd62123e681d66e99851c61e4cfe7e038"
+}
