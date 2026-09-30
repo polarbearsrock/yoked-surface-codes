@@ -49,7 +49,7 @@ is imported from the recorded four-decoder run so that it decodes the original
 circuit and model rather than a regenerated one.
 
 ```bash
-cd /data2/s2chitni/yoked-surface-codes
+cd /data2/s2chitni/projects/dante/repos/yoked-surface-codes
 export PYTHONPATH=src
 export OUT="$TMPDIR/hier-d9-p003"
 export RUN=/data2/s2chitni/.tmp/ysc-four-decoders-d9-p003-100k-7efr23ha

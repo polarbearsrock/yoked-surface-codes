@@ -1,0 +1,42 @@
+{
+  "distances": [
+    7,
+    9
+  ],
+  "source_work_dir": "/data2/s2chitni/.tmp/physical-fault-ablation-d7-d9-3r3wpmuq/analysis",
+  "ordered_variants": [
+    "baseline",
+    "cz_IX",
+    "cz_IY",
+    "cz_IZ",
+    "cz_XI",
+    "cz_XX",
+    "cz_XY",
+    "cz_XZ",
+    "cz_YI",
+    "cz_YX",
+    "cz_YY",
+    "cz_YZ",
+    "cz_ZI",
+    "cz_ZX",
+    "cz_ZY",
+    "cz_ZZ",
+    "cz"
+  ],
+  "pauli_order": "data, then ancilla",
+  "selected_shots_per_distance": 1024,
+  "per_original_outcome_stratum": 256,
+  "sampling": "Reuse frozen selections from the previous physical-fault ablation",
+  "intervention": "Delete all realized CZ events of one Pauli product; preserve other faults",
+  "estimand": "Population-weighted change in P(UF failure) - P(MWPM failure)",
+  "decoding": "Original DEM, full correlated UF and native correlated MWPM; recompute both passes",
+  "interpretation": "Overlapping family deletion effects, not additive attribution or per-event harm",
+  "bootstrap_replicates": 20000,
+  "bootstrap_seed": 2026091711,
+  "comparison_scope": "Exploratory 15-Pauli comparison; marginal intervals do not establish a unique winner",
+  "source_hashes": {
+    "/data2/s2chitni/yoked-surface-codes/docs/results/cz_fault_analysis_d7_d9/analyze.py": "9baa0a31da74091c0ab4fa690bb46104a6eddadfd44f58a62d4d75e937ed9dae",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/physical_fault_ablation_d7_d9/analyze.py": "f793e4b79fea463472cc1aa02eefff67e4afc66c7322dc7f84d7761eea0d3996",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/physical_fault_ablation_d7_d9/audit.py": "4cb63dc3afbddc6f5abb6a2b2cc2246f417c934953c5b28e62749ed645bb0f7e"
+  }
+}

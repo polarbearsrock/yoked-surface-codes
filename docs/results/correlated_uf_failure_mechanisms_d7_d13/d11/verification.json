@@ -1,0 +1,32 @@
+{
+  "elapsed_seconds": 57.41290866676718,
+  "every_extracted_correction_syndrome_verified": true,
+  "full_graph_logical_rank": 10,
+  "hashes": {
+    "/data2/s2chitni/yoked-surface-codes/docs/results/correlated_uf_failure_mechanisms_d7_d13/diagnose.py": "e7f7efa3b7031dce45842fbbf46cd6889a7250ab11dabc2f4f031da53313571a",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/analyze.py": "724ab32c01477c420733e2b0746b80f15b64dc42cba38cb4f6c3881e5a8ee0cd",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/parallel_uf_clustering_d11_d13_p003_100k/d11/request.json": "3fdc00a744e59a3ac942d7d21c6799924372736620604079b7e4c85a10248cb7",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/parallel_uf_clustering_d11_d13_p003_100k/d11/results.npz": "cfacf14e50471f6ef11a5b2d6a9f9cc705da36fcdc56962f693ddd2e7014fb5f",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/parallel_uf_clustering_d7_d9_p003_100k/experiment.py": "5e7a6decf3eaf34bc17fd549f5278a785f7723252651b28d58e86205590d6546",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/parallel_uf_clustering_d7_d9_p003_100k/kernel.cc": "1a83ec7adc4b78fb23582bc8e5f4c7e857798b9b125a95ffd65a846d3c0678de",
+    "/data2/s2chitni/yoked-surface-codes/src/yoked/decoders/_correlations.py": "529dff89777f40e2fc7f120ca106997fbf56a824fa16d37e6dafbc3f6f45f459",
+    "/data2/s2chitni/yoked-surface-codes/src/yoked/decoders/_graph.py": "cd96b94202be5bf38d29644d81f060a93fe8358a0638f9953e00b71defd4d6b8",
+    "/data2/s2chitni/yoked-surface-codes/src/yoked/hierarchical/_matching_gaps.py": "7a7456ac2cabfeb5d96aa30434ed8422e3520ac371cc1caa3bd5ffa41a9c516d"
+  },
+  "input_payload_verified": true,
+  "library_sha256": "d32c8e408f14a63237e6d9da57cad0d565ecdaa3a521c82243a79a2de2ca7540",
+  "native_correlated_MWPM_reproduced": 128,
+  "native_variants_reproduced": 768,
+  "source": {
+    "circuit_sha256": "5324fb00693eb3c80287b5cb1ba652b36bc82711573c4b9e7c6220133fd83122",
+    "dem_sha256": "223f6bab6525aef1aa07b5f699a3ee87331af54b193610f71492d9d89770e537",
+    "directory": "/data2/s2chitni/.tmp/parallel-uf-distance-scaling-78VvLP/d11/sample",
+    "manifest_sha256": "009af503d9b26398a2d29c5a9dbf5d1fc14c5cd5426e55581e16327206530697",
+    "payload_sha256": "0636e32c1878d2e002b69b515bf859ef27f3b901b7499c00fcd34a282349a466"
+  },
+  "versions": {
+    "numpy": "2.5.1",
+    "pymatching": "2.4.0",
+    "stim": "1.16.0"
+  }
+}

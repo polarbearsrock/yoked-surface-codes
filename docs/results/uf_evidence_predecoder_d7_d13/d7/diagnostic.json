@@ -1,0 +1,871 @@
+{
+  "eligible": 646,
+  "rows": [
+    {
+      "actual": 3271,
+      "row": 3922,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 508,
+          "partition_allows_truth": true,
+          "partition_edges": 584
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 548,
+          "partition_allows_truth": true,
+          "partition_edges": 677
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 831,
+          "partition_allows_truth": false,
+          "partition_edges": 1301
+        }
+      }
+    },
+    {
+      "actual": 3439,
+      "row": 16060,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 445,
+          "partition_allows_truth": true,
+          "partition_edges": 529
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 469,
+          "partition_allows_truth": true,
+          "partition_edges": 589
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 675,
+          "partition_allows_truth": false,
+          "partition_edges": 1014
+        }
+      }
+    },
+    {
+      "actual": 535,
+      "row": 17393,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 813,
+          "partition_allows_truth": true,
+          "partition_edges": 1748
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 526,
+          "partition_allows_truth": false,
+          "partition_edges": 679
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 629,
+          "partition_allows_truth": false,
+          "partition_edges": 806
+        }
+      }
+    },
+    {
+      "actual": 65,
+      "row": 17517,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 617,
+          "partition_allows_truth": true,
+          "partition_edges": 963
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 741,
+          "partition_allows_truth": false,
+          "partition_edges": 1336
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1386,
+          "partition_allows_truth": false,
+          "partition_edges": 3263
+        }
+      }
+    },
+    {
+      "actual": 581,
+      "row": 18561,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 557,
+          "partition_allows_truth": true,
+          "partition_edges": 750
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 538,
+          "partition_allows_truth": true,
+          "partition_edges": 681
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 879,
+          "partition_allows_truth": false,
+          "partition_edges": 1473
+        }
+      }
+    },
+    {
+      "actual": 1400,
+      "row": 20545,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 485,
+          "partition_allows_truth": true,
+          "partition_edges": 589
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 506,
+          "partition_allows_truth": true,
+          "partition_edges": 630
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 781,
+          "partition_allows_truth": false,
+          "partition_edges": 1257
+        }
+      }
+    },
+    {
+      "actual": 2309,
+      "row": 23824,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 495,
+          "partition_allows_truth": true,
+          "partition_edges": 596
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 613,
+          "partition_allows_truth": false,
+          "partition_edges": 885
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 786,
+          "partition_allows_truth": false,
+          "partition_edges": 1179
+        }
+      }
+    },
+    {
+      "actual": 3366,
+      "row": 25559,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 569,
+          "partition_allows_truth": true,
+          "partition_edges": 709
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 624,
+          "partition_allows_truth": true,
+          "partition_edges": 855
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 909,
+          "partition_allows_truth": false,
+          "partition_edges": 1477
+        }
+      }
+    },
+    {
+      "actual": 2552,
+      "row": 26715,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 630,
+          "partition_allows_truth": true,
+          "partition_edges": 987
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 558,
+          "partition_allows_truth": true,
+          "partition_edges": 797
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 820,
+          "partition_allows_truth": false,
+          "partition_edges": 1339
+        }
+      }
+    },
+    {
+      "actual": 1318,
+      "row": 28383,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 550,
+          "partition_allows_truth": true,
+          "partition_edges": 711
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 599,
+          "partition_allows_truth": false,
+          "partition_edges": 842
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 822,
+          "partition_allows_truth": false,
+          "partition_edges": 1278
+        }
+      }
+    },
+    {
+      "actual": 2065,
+      "row": 37899,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 541,
+          "partition_allows_truth": true,
+          "partition_edges": 657
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 596,
+          "partition_allows_truth": true,
+          "partition_edges": 783
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 783,
+          "partition_allows_truth": false,
+          "partition_edges": 1098
+        }
+      }
+    },
+    {
+      "actual": 1672,
+      "row": 42259,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 697,
+          "partition_allows_truth": true,
+          "partition_edges": 1146
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 630,
+          "partition_allows_truth": true,
+          "partition_edges": 880
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1643,
+          "partition_allows_truth": false,
+          "partition_edges": 4205
+        }
+      }
+    },
+    {
+      "actual": 140,
+      "row": 43831,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 500,
+          "partition_allows_truth": true,
+          "partition_edges": 623
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 527,
+          "partition_allows_truth": true,
+          "partition_edges": 667
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 765,
+          "partition_allows_truth": false,
+          "partition_edges": 1114
+        }
+      }
+    },
+    {
+      "actual": 1732,
+      "row": 44549,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 518,
+          "partition_allows_truth": true,
+          "partition_edges": 633
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 552,
+          "partition_allows_truth": true,
+          "partition_edges": 697
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 804,
+          "partition_allows_truth": false,
+          "partition_edges": 1303
+        }
+      }
+    },
+    {
+      "actual": 1111,
+      "row": 45657,
+      "variants": {
+        "bp20_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 583,
+          "partition_allows_truth": false,
+          "partition_edges": 879
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 570,
+          "partition_allows_truth": false,
+          "partition_edges": 804
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 857,
+          "partition_allows_truth": false,
+          "partition_edges": 1439
+        }
+      }
+    },
+    {
+      "actual": 1888,
+      "row": 46843,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 517,
+          "partition_allows_truth": true,
+          "partition_edges": 681
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 519,
+          "partition_allows_truth": true,
+          "partition_edges": 678
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 692,
+          "partition_allows_truth": false,
+          "partition_edges": 960
+        }
+      }
+    },
+    {
+      "actual": 2456,
+      "row": 48775,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 554,
+          "partition_allows_truth": true,
+          "partition_edges": 680
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 617,
+          "partition_allows_truth": true,
+          "partition_edges": 812
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 793,
+          "partition_allows_truth": false,
+          "partition_edges": 1153
+        }
+      }
+    },
+    {
+      "actual": 1624,
+      "row": 51419,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 504,
+          "partition_allows_truth": true,
+          "partition_edges": 608
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 515,
+          "partition_allows_truth": true,
+          "partition_edges": 637
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 703,
+          "partition_allows_truth": false,
+          "partition_edges": 961
+        }
+      }
+    },
+    {
+      "actual": 967,
+      "row": 56873,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 498,
+          "partition_allows_truth": true,
+          "partition_edges": 585
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 509,
+          "partition_allows_truth": true,
+          "partition_edges": 604
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 909,
+          "partition_allows_truth": false,
+          "partition_edges": 1575
+        }
+      }
+    },
+    {
+      "actual": 3405,
+      "row": 57064,
+      "variants": {
+        "bp20_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 517,
+          "partition_allows_truth": false,
+          "partition_edges": 606
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 532,
+          "partition_allows_truth": false,
+          "partition_edges": 638
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1385,
+          "partition_allows_truth": false,
+          "partition_edges": 3098
+        }
+      }
+    },
+    {
+      "actual": 1604,
+      "row": 58371,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 582,
+          "partition_allows_truth": true,
+          "partition_edges": 825
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 723,
+          "partition_allows_truth": true,
+          "partition_edges": 1172
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 970,
+          "partition_allows_truth": false,
+          "partition_edges": 1737
+        }
+      }
+    },
+    {
+      "actual": 2032,
+      "row": 62731,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 482,
+          "partition_allows_truth": true,
+          "partition_edges": 619
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 509,
+          "partition_allows_truth": true,
+          "partition_edges": 677
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 744,
+          "partition_allows_truth": false,
+          "partition_edges": 1242
+        }
+      }
+    },
+    {
+      "actual": 298,
+      "row": 65801,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 574,
+          "partition_allows_truth": true,
+          "partition_edges": 809
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 569,
+          "partition_allows_truth": true,
+          "partition_edges": 733
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1563,
+          "partition_allows_truth": false,
+          "partition_edges": 3743
+        }
+      }
+    },
+    {
+      "actual": 3367,
+      "row": 67041,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 554,
+          "partition_allows_truth": true,
+          "partition_edges": 746
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 591,
+          "partition_allows_truth": false,
+          "partition_edges": 851
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 800,
+          "partition_allows_truth": false,
+          "partition_edges": 1231
+        }
+      }
+    },
+    {
+      "actual": 3083,
+      "row": 71765,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 528,
+          "partition_allows_truth": true,
+          "partition_edges": 641
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 593,
+          "partition_allows_truth": true,
+          "partition_edges": 826
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1464,
+          "partition_allows_truth": false,
+          "partition_edges": 3636
+        }
+      }
+    },
+    {
+      "actual": 1955,
+      "row": 74471,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 496,
+          "partition_allows_truth": true,
+          "partition_edges": 598
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 504,
+          "partition_allows_truth": true,
+          "partition_edges": 620
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 766,
+          "partition_allows_truth": false,
+          "partition_edges": 1203
+        }
+      }
+    },
+    {
+      "actual": 1604,
+      "row": 75198,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 517,
+          "partition_allows_truth": true,
+          "partition_edges": 665
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 574,
+          "partition_allows_truth": true,
+          "partition_edges": 822
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 719,
+          "partition_allows_truth": false,
+          "partition_edges": 1061
+        }
+      }
+    },
+    {
+      "actual": 2408,
+      "row": 82138,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 619,
+          "partition_allows_truth": true,
+          "partition_edges": 928
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 539,
+          "partition_allows_truth": true,
+          "partition_edges": 687
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1594,
+          "partition_allows_truth": false,
+          "partition_edges": 4073
+        }
+      }
+    },
+    {
+      "actual": 4028,
+      "row": 84183,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 611,
+          "partition_allows_truth": true,
+          "partition_edges": 879
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 570,
+          "partition_allows_truth": true,
+          "partition_edges": 710
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 801,
+          "partition_allows_truth": false,
+          "partition_edges": 1190
+        }
+      }
+    },
+    {
+      "actual": 1950,
+      "row": 86821,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 591,
+          "partition_allows_truth": true,
+          "partition_edges": 847
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 648,
+          "partition_allows_truth": true,
+          "partition_edges": 987
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1031,
+          "partition_allows_truth": false,
+          "partition_edges": 2082
+        }
+      }
+    },
+    {
+      "actual": 3118,
+      "row": 87408,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 562,
+          "partition_allows_truth": true,
+          "partition_edges": 687
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 590,
+          "partition_allows_truth": false,
+          "partition_edges": 784
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 815,
+          "partition_allows_truth": false,
+          "partition_edges": 1242
+        }
+      }
+    },
+    {
+      "actual": 3863,
+      "row": 93507,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 482,
+          "partition_allows_truth": true,
+          "partition_edges": 560
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 518,
+          "partition_allows_truth": true,
+          "partition_edges": 648
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 689,
+          "partition_allows_truth": false,
+          "partition_edges": 935
+        }
+      }
+    }
+  ],
+  "selection": "Uniform subset of correlated-UF-fails / correlated-MWPM-succeeds shots within the pilot; diagnostic only, not an LER estimate.",
+  "shots": 32
+}

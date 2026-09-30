@@ -1,0 +1,9 @@
+{
+  "decoded": 100000,
+  "distance": 13,
+  "elapsed_seconds": 2371.2878040252253,
+  "matching_chunks_completed": 40,
+  "overlap_verified": 5000,
+  "rate_shots_per_second": 42.17117796930913,
+  "shots": 100000
+}

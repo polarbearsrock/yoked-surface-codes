@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Driver for the hierarchical L1/L2 experiment: collect, verify-subset, import-baselines, calibrate, replay, summarize.
+"""Hierarchical decoding: direct paper configuration and collect/calibrate/replay experiments.
 
 Spec: docs/superpowers/specs/2026-09-14-hierarchical-l1-l2-design.md, section 11.
-Usage: docs/hierarchical_decoding.md.
+Usage: docs/hierarchical_decoding.md and docs/paper_hierarchical_decoding.md.
 
 This file parses arguments and prints paths. Every check and every published artifact
 belongs to ``yoked.hierarchical``, so a failure can be reproduced from Python without
@@ -20,8 +20,9 @@ assert src_path.exists()
 sys.path.append(str(src_path))
 
 from yoked.hierarchical import (
-    BASELINE_DECODERS, ROLES, CircuitParameters, CollectRequest, parse_config, stage_calibrate,
+    BASELINE_DECODERS, ROLES, CircuitParameters, CollectRequest, SampleSet, parse_config, stage_calibrate,
     stage_collect, stage_import_baselines, stage_replay, stage_summarize, stage_verify_subset,
+    stage_paper_decode,
 )
 from yoked.hierarchical._metrics import DEFAULT_REPLICATES, DEFAULT_SEED
 
@@ -50,6 +51,21 @@ def row_range(text: str) -> np.ndarray:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     stages = parser.add_subparsers(dest='stage', required=True)
+
+    paper = stages.add_parser('paper', help='native correlated MWPM + complementary gap -> plain MWPM')
+    paper.add_argument('--out', required=True, help='new output directory')
+    paper.add_argument('--sample', help='verified saved sample directory (e.g. evaluation/sample)')
+    paper.add_argument('--recorded-run', help='saved four-decoder run to decode on the same shots')
+    paper.add_argument('--distance', type=int)
+    paper.add_argument('--rounds', type=int)
+    paper.add_argument('--p', type=float, help='SI1000 noise strength')
+    paper.add_argument('--patches', type=int, default=6)
+    paper.add_argument('--seed', type=int)
+    paper.add_argument('--shots', type=int)
+    paper.add_argument('--rows', type=row_range, help='parent rows START:STOP; default all')
+    paper.add_argument('--batch-size', type=int, default=64)
+    paper.add_argument('--gap-scale', type=float, default=1.0,
+                       help='multiply complementary gaps by this factor; 0.9 reproduces the paper scaling')
 
     collect = stages.add_parser('collect', help='decode parent rows of one sample into a record')
     collect.add_argument('--out', required=True, help='collection directory')
@@ -129,10 +145,33 @@ def run_collect(parser: argparse.ArgumentParser, args: argparse.Namespace) -> No
         print(f'{record.directory}: {record.record.shots} rows collected and published')
 
 
+def run_paper(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    """Choose one sampling source, then run the direct configuration on its rows."""
+    supplied = [name for name in GENERATION_ARGUMENTS if getattr(args, name) is not None]
+    if args.sample is not None or args.recorded_run is not None:
+        if supplied or (args.sample is not None and args.recorded_run is not None):
+            parser.error('choose exactly one of --sample, --recorded-run, or generation arguments')
+        sample = (SampleSet.load(args.sample) if args.sample is not None
+                  else SampleSet.load_recorded_run(args.recorded_run))
+    else:
+        missing = [name for name in GENERATION_ARGUMENTS if getattr(args, name) is None]
+        if missing:
+            parser.error(f'paper requires --sample, --recorded-run, or all of {missing}')
+        sample = SampleSet.sample(
+            CircuitParameters(distance=args.distance, rounds=args.rounds, p=args.p, patches=args.patches),
+            seed=args.seed, shots=args.shots)
+    result = stage_paper_decode(sample, args.out, rows=args.rows, gap_scale=args.gap_scale,
+                               batch_size=args.batch_size)
+    print(f"{args.out}: {result['block_failures']} failed shots / {result['shots']}; "
+          'native correlated L1, complementary gap, plain MWPM L2')
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
-    if args.stage == 'collect':
+    if args.stage == 'paper':
+        run_paper(parser, args)
+    elif args.stage == 'collect':
         run_collect(parser, args)
     elif args.stage == 'verify-subset':
         check = stage_verify_subset(args.full, args.subset, args.out)

@@ -1,0 +1,48 @@
+{
+  "batch_decode_wall_seconds": 74.78163633216172,
+  "diagnostic_sha256": "998cabb20e601567016570de2c184d42576e509f03bb2b410ac02db8b6d7ca8b",
+  "full_syndrome_checks": 25000,
+  "ideal_yoke_prediction_checks": 25000,
+  "native_thread_counts": [
+    1,
+    32
+  ],
+  "physical_checks": [
+    {
+      "physical_corrections_checked": 5,
+      "physical_forests_checked": 5,
+      "posterior_max_absolute_difference": 7.260858581048524e-14,
+      "row": 16
+    },
+    {
+      "physical_corrections_checked": 5,
+      "physical_forests_checked": 5,
+      "posterior_max_absolute_difference": 9.43689570931383e-14,
+      "row": 17
+    },
+    {
+      "physical_corrections_checked": 5,
+      "physical_forests_checked": 5,
+      "posterior_max_absolute_difference": 7.216449660063518e-14,
+      "row": 47
+    },
+    {
+      "physical_corrections_checked": 5,
+      "physical_forests_checked": 5,
+      "posterior_max_absolute_difference": 1.2356782264077992e-13,
+      "row": 96
+    }
+  ],
+  "result_sha256": "554496d36568dd6292669bd0b2ce19838d145c714e413d07a5c5cad2382ec6ff",
+  "rows": [
+    16,
+    17,
+    47,
+    96
+  ],
+  "saved_baseline_matches": 5000,
+  "saved_mwpm_predictions_reproduced": 4,
+  "thread_results_identical_except_timing": true,
+  "total_elapsed_seconds": 111.93989775329828,
+  "truth_passed_to_native": false
+}

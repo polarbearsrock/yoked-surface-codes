@@ -47,22 +47,44 @@ def mwpm_outer_map_batch(
         raise ValueError('Expected q of shape (shots, patches) and parity of shape (shots,)')
     if not ((q > 0) & (q < 1)).all():
         raise ValueError('Probabilities must lie strictly inside (0, 1)')
+    return mwpm_outer_log_odds_batch(np.log1p(-q) - np.log(q), parity, candidates)
+
+
+def mwpm_outer_log_odds_batch(
+        log_odds: np.ndarray, parity: np.ndarray, candidates: np.ndarray | None = None,
+) -> BatchOuterDecision:
+    """Plain MWPM on residual log odds, in nats, without probability clipping.
+
+    Positive weights favor keeping the reference; negative weights favor a flip.
+    Complementary gaps can be passed directly, including very confident gaps
+    whose logistic probabilities would underflow. Uses the same parity graph,
+    precision checks, and deterministic tie convention as probability-based L2.
+    """
+    log_odds = np.asarray(log_odds, dtype=np.float64)
+    parity = np.asarray(parity)
+    if parity.dtype.kind not in 'buif' or not np.isin(parity, (0, 1)).all():
+        raise ValueError('Parity must contain binary values')
+    parity = parity.astype(bool, copy=False)
+    if log_odds.ndim != 2 or parity.shape != (log_odds.shape[0],) or not log_odds.shape[1]:
+        raise ValueError('Expected log_odds of shape (shots, patches >= 1) and parity of shape (shots,)')
+    if not np.isfinite(log_odds).all():
+        raise ValueError('Log odds must be finite')
     if candidates is None:
-        candidates = np.ones(q.shape, dtype=bool)
+        candidates = np.ones(log_odds.shape, dtype=bool)
     else:
         candidates = np.asarray(candidates)
-        if candidates.shape != q.shape:
-            raise ValueError('candidates must have the same shape as q')
+        if candidates.shape != log_odds.shape:
+            raise ValueError('candidates must have the same shape as log_odds')
         if candidates.dtype.kind not in 'buif' or not np.isin(candidates, (0, 1)).all():
             raise ValueError('Candidates must contain binary values')
         candidates = candidates.astype(bool, copy=False)
 
-    patterns = np.zeros(q.shape, dtype=bool)
-    tied = np.zeros(q.shape[0], dtype=bool)
-    for shot in range(q.shape[0]):
+    patterns = np.zeros(log_odds.shape, dtype=bool)
+    tied = np.zeros(log_odds.shape[0], dtype=bool)
+    for shot in range(log_odds.shape[0]):
         allowed = candidates[shot]
-        baseline = (q[shot] > 0.5) & allowed
-        costs = np.abs(np.log1p(-q[shot]) - np.log(q[shot]))
+        baseline = (log_odds[shot] < 0) & allowed
+        costs = np.abs(log_odds[shot])
         residual = bool(parity[shot]) ^ bool(np.count_nonzero(baseline) & 1)
         indices = np.flatnonzero(allowed)
         if residual and not len(indices):

@@ -1,0 +1,64 @@
+{
+  "distance": 9,
+  "load_average_after": "40.18 42.66 46.68 38/8810 49",
+  "load_average_before": "44.45 41.66 48.51 46/8913 49",
+  "measurement_wall_seconds": 444.05051951100177,
+  "predictions_match_accuracy_run": true,
+  "protocol": {
+    "batch_size": 1,
+    "cpu": 0,
+    "excluded": "Simulation, file I/O, object construction, compilation, and post-timing comparison",
+    "gc": "disabled only within timed measurement loops for all variants",
+    "implementation": "Current software adapters including Python overhead and built-in solver validation; not pure matching engine or hardware latency",
+    "library_sha256": "369ec5c2bf82cdfc0dcfdfcca39e5448eecfbc422c920027069c5ffeb0c3f079",
+    "order": "randomized blocks of four balanced cyclic orders",
+    "pymatching": "2.4.0",
+    "recipe_sha256": "fbe3272a5b124f0b8330cf0e431182a6d9cd5b0c54e65a44be5a1badb7364eec",
+    "scope": "Warm API call, one full six-patch block; local preparation, L1, confidence and L2; six patches serial",
+    "shots": 1000,
+    "threads": 1,
+    "timer": "time.perf_counter_ns; also process_time_ns",
+    "warmup_shots": 32
+  },
+  "raw_sha256": "30c3f365f454da056c7e475c95ca101d5b040a0b3e1c58f4e01c2bc489965854",
+  "selection_seed": 202609292909,
+  "setup_seconds": 65.06342312200286,
+  "variants": {
+    "bp5_weighted_uf_cluster_gap": {
+      "amortized_mean_us_per_patch_round": 1331.559532435185,
+      "max_ms": 703.664352,
+      "mean_ms": 287.61685900599997,
+      "mean_process_ms": 284.929196538,
+      "median_ms": 329.98642099999995,
+      "p95_ms": 343.28123185,
+      "p99_ms": 349.87594275
+    },
+    "correlated_mwpm_cluster_gap": {
+      "amortized_mean_us_per_patch_round": 30.99693311574074,
+      "max_ms": 19.942521,
+      "mean_ms": 6.695337553,
+      "mean_process_ms": 6.648646124,
+      "median_ms": 7.340767,
+      "p95_ms": 8.06782745,
+      "p99_ms": 8.3640392
+    },
+    "correlated_mwpm_complementary_gap": {
+      "amortized_mean_us_per_patch_round": 428.7043850694444,
+      "max_ms": 247.145978,
+      "mean_ms": 92.60014717499999,
+      "mean_process_ms": 91.810791884,
+      "median_ms": 101.7377595,
+      "p95_ms": 115.69676734999999,
+      "p99_ms": 121.52734349
+    },
+    "correlated_uf_cluster_gap": {
+      "amortized_mean_us_per_patch_round": 262.67364499074074,
+      "max_ms": 128.306048,
+      "mean_ms": 56.737507318,
+      "mean_process_ms": 56.349889092,
+      "median_ms": 62.597875,
+      "p95_ms": 66.3935749,
+      "p99_ms": 68.78178931
+    }
+  }
+}

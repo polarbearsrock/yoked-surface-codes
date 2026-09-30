@@ -1,6 +1,6 @@
 matplotlib ~= 3.5
 numpy
-pymatching ~= 2.1
+pymatching ~= 2.4.0
 pytest
 scipy
 sinter ~= 1.12.dev

@@ -1,0 +1,13 @@
+{
+  "affinity_cpus": 128,
+  "compiler": "g++ (GCC) 8.5.0 20210514 (Red Hat 8.5.0-28)",
+  "cpu_model": "AMD EPYC 9374F 32-Core Processor",
+  "native_threads": 32,
+  "omp_num_threads": 1,
+  "openblas_num_threads": 1,
+  "platform": "Linux-4.18.0-553.50.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "recorded_utc": "2026-09-20T07:19:57.046398+00:00",
+  "serial_benchmark_shots_per_distance": 16,
+  "timers": "std::chrono::steady_clock; seconds stored in NPZ; tables convert to milliseconds",
+  "timing_scope": "Native evidence initialization, inference and projection plus UF growth/tree construction/peeling. Excludes model compilation, Python orchestration, packed-syndrome expansion, post-solve syndrome checks and destruction of some temporary buffers. Each variant is timed in a fixed order with shared immutable graph state; this is not isolated process end-to-end latency."
+}

@@ -66,7 +66,8 @@ def frame_adjusted_syndrome(yoke: np.ndarray, reference: np.ndarray) -> np.ndarr
         if values.dtype.kind not in 'buif' or not np.isin(values, (0, 1)).all():
             raise ValueError('Expected binary values')
     yoke, reference = yoke.astype(bool), reference.astype(bool)
-    by_patch = reference.reshape(reference.shape[:-1] + (-1, 2))   # (..., patches, sectors)
+    # Spell out the patch count so an empty batch can also be reshaped.
+    by_patch = reference.reshape(reference.shape[:-1] + (reference.shape[-1] // 2, 2))
     return yoke ^ (by_patch.sum(axis=-2) % 2).astype(bool)
 
 

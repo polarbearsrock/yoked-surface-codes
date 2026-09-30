@@ -1,0 +1,37 @@
+{
+  "created_utc": "2026-09-20T07:02:32Z",
+  "files": {
+    "actual_observables_packed.npy": "4ef5b3d3dcf4caaef19e90ecb9e2b4ca9f84a74f4c8039f52389022a4d462ad4",
+    "circuit.stim": "4ac8cc84451eb54a82a584548952a10e5ec528d6fed318bf4b03273d04b8a9d8",
+    "detectors_packed.npy": "d9f3bac7dcd2868a14aa8fb6e97410094f78819aade988f60442721d1242dc5e",
+    "model.dem": "6e2b6d99f15f779b6ba6555880b172a363e2df37eeae35c04d3c84c725096d1e"
+  },
+  "identities": {
+    "model": "43f69dd6fd99b7a6ec1ca99e2267a7d3b4aa790d47423292a395b4f95391b277",
+    "parent_sample": "094b73bb5ee7d9c3353091b3224836d9d0848e8e5f7b2609e5157b3866f02e75",
+    "sampling_family": "4b73e2a98aa73c23d8fafae2c7210e9124dc82e39d611790bccf248d609c9fa6"
+  },
+  "num_detectors": 8354,
+  "num_observables": 12,
+  "parameters": {
+    "distance": 7,
+    "noise": "si1000",
+    "p": 0.003,
+    "patches": 6,
+    "rounds": 28,
+    "style": "cz",
+    "yokes": 2
+  },
+  "payload_sha256": "f789a3f4cec39e5a5418cacb4e7bbd959dd47749f6c566ae93318c04ccc40a79",
+  "schema_version": "SampleSet/hierarchical-l1-l2/1",
+  "seed": 42,
+  "shots": 100000,
+  "source": {
+    "directory": null,
+    "kind": "generated",
+    "manifest_sha256": null
+  },
+  "versions": {
+    "stim": "1.16.0"
+  }
+}

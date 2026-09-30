@@ -166,18 +166,36 @@ def test_invalid_correlation_rules(rule):
         CorrelatedUnionFindDecoder(graph, correlation_rules=[rule])
 
 
-def test_growth_costs_are_refused_but_decode_still_works():
-    # The two-pass correlated solve has no single terminated growth state to
-    # report costs from, so the inherited single-pass method must not run
-    # silently against the first, uncorrelated pass (it would then disagree
-    # with .decode() on the same object). Reuse the reviewer's reproduction:
-    # a correlated pair whose second pass changes the logical answer.
+def test_growth_costs_follow_the_second_pass_when_its_prediction_changes():
+    # Reproduce a case where returning the inherited first-pass growth state
+    # would pair confidence with the wrong logical prediction.
     graph = DecodingGraph(4, 3, [
         (0, 1, 5, 1), (1, 2, 5, 2), (2, 3, 2, 4), (0, None, 4, 1), (3, None, 5, 2), (0, 2, 4, 3),
     ])
     decoder = CorrelatedUnionFindDecoder(graph, correlation_rules=[(5, 4, 2.0)])
     syndrome = [1, 1, 0, 1]
-    with pytest.raises(NotImplementedError, match='single-pass'):
-        decoder.decode_with_growth_costs(syndrome)
-    # The decoder itself must remain usable afterwards.
+    adjusted = DecodingGraph(4, 3, [
+        (0, 1, 5, 1), (1, 2, 5, 2), (2, 3, 2, 4), (0, None, 4, 1), (3, None, 2, 2), (0, 2, 4, 3),
+    ])
+    first = UnionFindDecoder(graph).decode_with_growth_costs(syndrome)
+    expected = UnionFindDecoder(adjusted).decode_with_growth_costs(syndrome)
+    result = decoder.decode_with_growth_costs(syndrome)
+    assert result == expected
+    assert result.observable_mask != first.observable_mask
     np.testing.assert_array_equal(decoder.decode(syndrome), [True, True, False])
+    assert graph.edges[4][2] == 5  # Original weights must survive the shot.
+
+
+def test_growth_costs_reset_between_correlated_and_uncorrelated_shots():
+    decoder = CorrelatedUnionFindDecoder.from_dem(_coupled_dem())
+    shots = [[1, 1, 1, 1], [0, 0, 1, 1], [0, 0, 0, 0], [1, 1, 1, 1]]
+    for syndrome in shots:
+        result = decoder.decode_with_growth_costs(syndrome)
+        fresh = CorrelatedUnionFindDecoder.from_dem(_coupled_dem()).decode_with_growth_costs(syndrome)
+        assert result == fresh
+        assert result.selected_edges == decoder.decode_to_edge_ids(syndrome)
+        bits = [(result.observable_mask >> k) & 1 for k in range(2)]
+        np.testing.assert_array_equal(bits, decoder.decode(syndrome))
+    with pytest.raises(InvalidSyndromeError):
+        decoder.decode_with_growth_costs([1, 0, 0, 0])
+    assert decoder.decode_with_growth_costs(shots[0]) == fresh

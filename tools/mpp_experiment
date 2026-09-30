@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""Compare supplied MPP confidence with complementary gaps on identical shots."""
+import argparse
+from pathlib import Path
+import sys
+
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'src'))
+from yoked.hierarchical._collect import CircuitParameters, SampleSet
+from yoked.hierarchical._mpp_experiment import stage_mpp_compare
+
+
+def row_range(text):
+    try:
+        start, stop = map(int, text.split(':'))
+        if not 0 <= start < stop:
+            raise ValueError()
+    except ValueError:
+        raise argparse.ArgumentTypeError('rows must be a nonempty START:STOP range') from None
+    return np.arange(start, stop)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    inputs = parser.add_mutually_exclusive_group()
+    inputs.add_argument('--sample', help='verified SampleSet directory')
+    inputs.add_argument('--recorded-run', help='existing four-decoder run with saved shots')
+    for name in ('distance', 'rounds', 'shots', 'seed'):
+        parser.add_argument('--' + name, type=int)
+    parser.add_argument('--p', type=float, help='SI1000 noise strength')
+    parser.add_argument('--patches', type=int, default=6)
+    parser.add_argument('--rows', type=row_range)
+    parser.add_argument('--out', type=Path, required=True, help='new output directory')
+    parser.add_argument('--method', choices=('dijkstra', 'incremental'), default='dijkstra')
+    parser.add_argument('--batch-size', type=int, default=64)
+    parser.add_argument('--verify-scores', action='store_true', help='run the slow integer-score oracle on every shot')
+    parser.add_argument('--bootstrap-replicates', type=int, default=10000)
+    parser.add_argument('--bootstrap-seed', type=int, default=43)
+    args = parser.parse_args()
+    generation = ('distance', 'rounds', 'p', 'shots', 'seed')
+    if args.sample or args.recorded_run:
+        if any(getattr(args, name) is not None for name in generation):
+            parser.error('generation arguments cannot be combined with saved samples')
+        sample = SampleSet.load(args.sample) if args.sample else SampleSet.load_recorded_run(args.recorded_run)
+    else:
+        if any(getattr(args, name) is None for name in generation):
+            parser.error('provide --sample, --recorded-run, or all of --distance --rounds --p --shots --seed')
+        sample = SampleSet.sample(CircuitParameters(distance=args.distance, rounds=args.rounds,
+                                                    p=args.p, patches=args.patches),
+                                  seed=args.seed, shots=args.shots)
+    result = stage_mpp_compare(
+        sample, args.out, rows=args.rows, method=args.method, batch_size=args.batch_size,
+        verify_scores=args.verify_scores, replicates=args.bootstrap_replicates, seed=args.bootstrap_seed,
+        progress=lambda done, total: print(f'{done}/{total} paired shots decoded', flush=True))
+    print(f"Complementary gap: {result['complementary_gap']['block_failures']}/{result['shots']} block failures")
+    print(f"MPP: {result['mpp']['block_failures']}/{result['shots']} block failures")
+    print(f"MPP repairs: {result['paired']['mpp_repairs']}; regressions: {result['paired']['mpp_regressions']}")
+    print(f'Artifacts: {args.out}')
+
+
+if __name__ == '__main__':
+    main()

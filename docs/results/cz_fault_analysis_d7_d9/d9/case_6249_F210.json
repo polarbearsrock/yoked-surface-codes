@@ -1,0 +1,55 @@
+{
+  "distance": 9,
+  "baseline": {
+    "shot": 6249,
+    "actual": 2820,
+    "UF": 2340,
+    "MWPM": 2820
+  },
+  "event": {
+    "shot": 6249,
+    "cohort_index": 1,
+    "fault_id": 210,
+    "instruction_index": 5177,
+    "target_index": 624,
+    "tick": 88,
+    "round": 9,
+    "CZ_slot": 4,
+    "pauli": "XI",
+    "data_qubit": 359,
+    "ancilla_qubit": 837,
+    "detectors": [
+      4665,
+      4674
+    ],
+    "observables": [],
+    "unfired_footprint_detectors": [
+      4665
+    ],
+    "direct_graph_components": [
+      {
+        "edge": 24729,
+        "endpoints": [
+          4665,
+          4674
+        ],
+        "UF_same_cluster": false,
+        "UF_selected": false,
+        "MWPM_selected": true,
+        "UF_discounted": false
+      }
+    ],
+    "removed": {
+      "actual": 2820,
+      "UF": 2820,
+      "MWPM": 2820
+    },
+    "alone": {
+      "actual": 0,
+      "UF": 0,
+      "MWPM": 0
+    }
+  },
+  "selection": "Illustrative non-Y event chosen after the complete single-event analysis",
+  "event_archive_sha256": "3e4c98c99097d022d3d30aac6ac994d36f438a5f80f04f4fac3b458b09102b88"
+}

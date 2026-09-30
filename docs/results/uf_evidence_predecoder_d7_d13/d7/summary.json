@@ -1,0 +1,364 @@
+{
+  "correlated_mwpm": {
+    "failures": 713,
+    "normalized_ler": 0.0009242760455442367,
+    "shot_failure_rate": 0.1426
+  },
+  "diagnostic": {
+    "bp20_uf": {
+      "correct": 30,
+      "forest_allows_truth": 30,
+      "partition_allows_truth": 30,
+      "residual_failures_excluding_truth": 2,
+      "shots": 32
+    },
+    "bp5_uf": {
+      "correct": 24,
+      "forest_allows_truth": 24,
+      "partition_allows_truth": 24,
+      "residual_failures_excluding_truth": 8,
+      "shots": 32
+    },
+    "correlated_uf": {
+      "correct": 0,
+      "forest_allows_truth": 0,
+      "partition_allows_truth": 0,
+      "residual_failures_excluding_truth": 32,
+      "shots": 32
+    }
+  },
+  "distance": 7,
+  "intervals": "Wilson marginal intervals; paired normal intervals for raw failure-rate differences; exact McNemar p-values. Exploratory and not adjusted for multiple comparisons.",
+  "model": {
+    "detectors": 8354,
+    "directed_messages_per_iteration": 1045080,
+    "graph_component_incidences": 279648,
+    "graph_edges": 40836,
+    "grouped_mechanisms": 156546,
+    "incidences": 522540,
+    "maximum_check_degree": 8634,
+    "prior_marginal_identity_verified": true,
+    "raw_dem_mechanisms": 156882
+  },
+  "rows": [
+    {
+      "failures": 2335,
+      "mean_largest_cluster": 349.0632,
+      "mean_zero_weight_edges": 0.0,
+      "normalized_ler": 0.0038968429402270743,
+      "normalized_ler_ci95": [
+        0.0037321713896709685,
+        0.004067079839564669
+      ],
+      "serial_kernel_timing": {
+        "evidence_mean_ms": 0.0,
+        "shots": 16,
+        "total_mean_ms": 8.2545851875,
+        "total_median_ms": 8.087418999999999,
+        "uf_mean_ms": 8.2545851875
+      },
+      "shot_failure_ci95": [
+        0.45320179985974834,
+        0.48084886846862546
+      ],
+      "shot_failure_rate": 0.467,
+      "shots": 5000,
+      "variant": "plain_uf",
+      "vs_correlated_mwpm": {
+        "mcnemar_p": 0.0,
+        "regressions": 1758,
+        "repairs": 136,
+        "shot_failure_reduction": -0.3244,
+        "shot_failure_reduction_ci95": [
+          -0.33889776480029943,
+          -0.3099022351997006
+        ]
+      },
+      "vs_correlated_uf": {
+        "mcnemar_p": 2.0612761411402195e-184,
+        "regressions": 1457,
+        "repairs": 295,
+        "shot_failure_reduction": -0.2324,
+        "shot_failure_reduction_ci95": [
+          -0.2474904787596948,
+          -0.2173095212403052
+        ]
+      },
+      "vs_prior_projection": {
+        "mcnemar_p": 1.0,
+        "regressions": 15,
+        "repairs": 14,
+        "shot_failure_reduction": -0.0002,
+        "shot_failure_reduction_ci95": [
+          -0.0023109773251269185,
+          0.0019109773251269183
+        ]
+      }
+    },
+    {
+      "failures": 1173,
+      "mean_largest_cluster": 239.3848,
+      "mean_zero_weight_edges": 61.3994,
+      "normalized_ler": 0.001617449954146477,
+      "normalized_ler_ci95": [
+        0.001525504419307655,
+        0.0017143030410070592
+      ],
+      "serial_kernel_timing": {
+        "evidence_mean_ms": 8.350276749999999,
+        "shots": 16,
+        "total_mean_ms": 16.7656604375,
+        "total_median_ms": 16.774510499999998,
+        "uf_mean_ms": 8.4153836875
+      },
+      "shot_failure_ci95": [
+        0.22306099480686165,
+        0.2465465013855747
+      ],
+      "shot_failure_rate": 0.2346,
+      "shots": 5000,
+      "variant": "correlated_uf",
+      "vs_correlated_mwpm": {
+        "mcnemar_p": 3.2709815234648954e-60,
+        "regressions": 646,
+        "repairs": 186,
+        "shot_failure_reduction": -0.092,
+        "shot_failure_reduction_ci95": [
+          -0.10301568824540709,
+          -0.0809843117545929
+        ]
+      },
+      "vs_correlated_uf": {
+        "mcnemar_p": 1.0,
+        "regressions": 0,
+        "repairs": 0,
+        "shot_failure_reduction": 0.0,
+        "shot_failure_reduction_ci95": [
+          0.0,
+          0.0
+        ]
+      },
+      "vs_prior_projection": {
+        "mcnemar_p": 6.108988782746821e-184,
+        "regressions": 296,
+        "repairs": 1457,
+        "shot_failure_reduction": 0.2322,
+        "shot_failure_reduction_ci95": [
+          0.2171020661846993,
+          0.24729793381530069
+        ]
+      }
+    },
+    {
+      "failures": 2334,
+      "mean_largest_cluster": 348.479,
+      "mean_zero_weight_edges": 0.0,
+      "normalized_ler": 0.0038944215216013545,
+      "normalized_ler_ci95": [
+        0.003729825585827129,
+        0.004064581961945923
+      ],
+      "serial_kernel_timing": {
+        "evidence_mean_ms": 0.0,
+        "shots": 16,
+        "total_mean_ms": 8.281873625,
+        "total_median_ms": 8.108414000000002,
+        "uf_mean_ms": 8.281873625
+      },
+      "shot_failure_ci95": [
+        0.4530023207702064,
+        0.48064865463894535
+      ],
+      "shot_failure_rate": 0.4668,
+      "shots": 5000,
+      "variant": "prior_projection_uf",
+      "vs_correlated_mwpm": {
+        "mcnemar_p": 0.0,
+        "regressions": 1757,
+        "repairs": 136,
+        "shot_failure_reduction": -0.3242,
+        "shot_failure_reduction_ci95": [
+          -0.338695902409826,
+          -0.309704097590174
+        ]
+      },
+      "vs_correlated_uf": {
+        "mcnemar_p": 6.108988782746821e-184,
+        "regressions": 1457,
+        "repairs": 296,
+        "shot_failure_reduction": -0.2322,
+        "shot_failure_reduction_ci95": [
+          -0.24729793381530069,
+          -0.2171020661846993
+        ]
+      },
+      "vs_prior_projection": {
+        "mcnemar_p": 1.0,
+        "regressions": 0,
+        "repairs": 0,
+        "shot_failure_reduction": 0.0,
+        "shot_failure_reduction_ci95": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "failures": 734,
+      "mean_largest_cluster": 120.5552,
+      "mean_zero_weight_edges": 37.8044,
+      "normalized_ler": 0.0009540624307776691,
+      "normalized_ler_ci95": [
+        0.0008866515330957503,
+        0.0010262323093247483
+      ],
+      "serial_kernel_timing": {
+        "evidence_mean_ms": 88.91131662499998,
+        "shots": 16,
+        "total_mean_ms": 97.57077825,
+        "total_median_ms": 97.011376,
+        "uf_mean_ms": 8.659461625
+      },
+      "shot_failure_ci95": [
+        0.13726156477427964,
+        0.15688073987970874
+      ],
+      "shot_failure_rate": 0.1468,
+      "shots": 5000,
+      "variant": "bp5_uf",
+      "vs_correlated_mwpm": {
+        "mcnemar_p": 0.4281332798748016,
+        "regressions": 329,
+        "repairs": 308,
+        "shot_failure_reduction": -0.0042,
+        "shot_failure_reduction_ci95": [
+          -0.014092947732359654,
+          0.005692947732359653
+        ]
+      },
+      "vs_correlated_uf": {
+        "mcnemar_p": 3.413726731680145e-55,
+        "regressions": 193,
+        "repairs": 632,
+        "shot_failure_reduction": 0.0878,
+        "shot_failure_reduction_ci95": [
+          0.07680682284090719,
+          0.09879317715909282
+        ]
+      },
+      "vs_prior_projection": {
+        "mcnemar_p": 0.0,
+        "regressions": 103,
+        "repairs": 1703,
+        "shot_failure_reduction": 0.32,
+        "shot_failure_reduction_ci95": [
+          0.3058988930930937,
+          0.3341011069069063
+        ]
+      }
+    },
+    {
+      "failures": 681,
+      "mean_largest_cluster": 113.3858,
+      "mean_zero_weight_edges": 58.0304,
+      "normalized_ler": 0.000879200943983971,
+      "normalized_ler_ci95": [
+        0.0008148608306636218,
+        0.0009482842675174741
+      ],
+      "serial_kernel_timing": {
+        "evidence_mean_ms": 358.38940818749995,
+        "shots": 16,
+        "total_mean_ms": 366.2848449375,
+        "total_median_ms": 362.73226750000003,
+        "uf_mean_ms": 7.89543675
+      },
+      "shot_failure_ci95": [
+        0.12697151425858688,
+        0.1459870656766366
+      ],
+      "shot_failure_rate": 0.1362,
+      "shots": 5000,
+      "variant": "bp20_uf",
+      "vs_correlated_mwpm": {
+        "mcnemar_p": 0.21236231622986093,
+        "regressions": 293,
+        "repairs": 325,
+        "shot_failure_reduction": 0.0064,
+        "shot_failure_reduction_ci95": [
+          -0.0033433506358336506,
+          0.01614335063583365
+        ]
+      },
+      "vs_correlated_uf": {
+        "mcnemar_p": 1.999588121799857e-61,
+        "regressions": 218,
+        "repairs": 710,
+        "shot_failure_reduction": 0.0984,
+        "shot_failure_reduction_ci95": [
+          0.0867741285272544,
+          0.1100258714727456
+        ]
+      },
+      "vs_prior_projection": {
+        "mcnemar_p": 0.0,
+        "regressions": 163,
+        "repairs": 1816,
+        "shot_failure_reduction": 0.3306,
+        "shot_failure_reduction_ci95": [
+          0.315763340110227,
+          0.345436659889773
+        ]
+      }
+    }
+  ],
+  "shots": 5000,
+  "validation": {
+    "batch_decode_wall_seconds": 74.78163633216172,
+    "diagnostic_sha256": "998cabb20e601567016570de2c184d42576e509f03bb2b410ac02db8b6d7ca8b",
+    "full_syndrome_checks": 25000,
+    "ideal_yoke_prediction_checks": 25000,
+    "native_thread_counts": [
+      1,
+      32
+    ],
+    "physical_checks": [
+      {
+        "physical_corrections_checked": 5,
+        "physical_forests_checked": 5,
+        "posterior_max_absolute_difference": 7.260858581048524e-14,
+        "row": 16
+      },
+      {
+        "physical_corrections_checked": 5,
+        "physical_forests_checked": 5,
+        "posterior_max_absolute_difference": 9.43689570931383e-14,
+        "row": 17
+      },
+      {
+        "physical_corrections_checked": 5,
+        "physical_forests_checked": 5,
+        "posterior_max_absolute_difference": 7.216449660063518e-14,
+        "row": 47
+      },
+      {
+        "physical_corrections_checked": 5,
+        "physical_forests_checked": 5,
+        "posterior_max_absolute_difference": 1.2356782264077992e-13,
+        "row": 96
+      }
+    ],
+    "result_sha256": "554496d36568dd6292669bd0b2ce19838d145c714e413d07a5c5cad2382ec6ff",
+    "rows": [
+      16,
+      17,
+      47,
+      96
+    ],
+    "saved_baseline_matches": 5000,
+    "saved_mwpm_predictions_reproduced": 4,
+    "thread_results_identical_except_timing": true,
+    "total_elapsed_seconds": 111.93989775329828,
+    "truth_passed_to_native": false
+  }
+}

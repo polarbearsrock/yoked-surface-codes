@@ -1,0 +1,126 @@
+{
+  "events": 6179,
+  "selected_shots": 32,
+  "all_baselines_match_saved_predictions": true,
+  "family_response_XORs_match_previous_archive": true,
+  "ideal_control_zero": true,
+  "ordinary_Stim_checks": [
+    {
+      "event_index": 12,
+      "pauli": "IX"
+    },
+    {
+      "event_index": 5,
+      "pauli": "IY"
+    },
+    {
+      "event_index": 22,
+      "pauli": "IZ"
+    },
+    {
+      "event_index": 119,
+      "pauli": "XI"
+    },
+    {
+      "event_index": 3,
+      "pauli": "XX"
+    },
+    {
+      "event_index": 1,
+      "pauli": "XY"
+    },
+    {
+      "event_index": 2,
+      "pauli": "XZ"
+    },
+    {
+      "event_index": 6,
+      "pauli": "YI"
+    },
+    {
+      "event_index": 29,
+      "pauli": "YX"
+    },
+    {
+      "event_index": 44,
+      "pauli": "YY"
+    },
+    {
+      "event_index": 0,
+      "pauli": "YZ"
+    },
+    {
+      "event_index": 4,
+      "pauli": "ZI"
+    },
+    {
+      "event_index": 16,
+      "pauli": "ZX"
+    },
+    {
+      "event_index": 23,
+      "pauli": "ZY"
+    },
+    {
+      "event_index": 7,
+      "pauli": "ZZ"
+    }
+  ],
+  "forced_seeds": [
+    1,
+    123456
+  ],
+  "forced_samples_per_seed": 2,
+  "every_correction_syndrome_checked": true,
+  "elapsed_decoding_seconds": 149.29068606439978,
+  "responses_sha256": "5e661533cceaf402945fe7c2602482e14d175706a3bcd0fbd9df0e4263551457",
+  "source_log_hashes": {
+    "replay_shot_933_faults.csv": "ea713deb090883f5a6b2c7a09c03eea24749bbccdc53f42d3c211d25f2187472",
+    "replay_shot_6249_faults.csv": "9b7642405c122c785979a664385c3aada4467a2b8fdf9bf173b9aac84228a63d",
+    "replay_shot_10921_faults.csv": "b3e0852cc642f4f624e59d2dc8d5f133f517fc176a984f28c3ea3d554114a9eb",
+    "replay_shot_20640_faults.csv": "cde96c0dbb6a0e212ba2bacd43246199a68afdf7183a97efa930839d5b534cba",
+    "replay_shot_21976_faults.csv": "c53bdf525fe5b1755d82389f9da9896bcf67214274ca6cffd11911f9435ca78d",
+    "replay_shot_24437_faults.csv": "ba5328d93f7d26487a19c39027074e22d9ee07039f58caff7aa95969258d6b1b",
+    "replay_shot_26281_faults.csv": "cb39ddfcadd273604dfd0136cd3b1a2bd1108094f716fff3a98ba455fddebf3d",
+    "replay_shot_30115_faults.csv": "7c5346e47e250e19cb6e274a102ed682718bd98fa68d6b85dbc10c5bd5317477",
+    "replay_shot_31015_faults.csv": "45d39f6b253e2c35e0784c172f87d0259181f735e03da9481cae2536f74f402c",
+    "replay_shot_31870_faults.csv": "24d5821fe983a44866c314941f724dbc34e19f3e8a3c300736d03e6bae623533",
+    "replay_shot_32731_faults.csv": "acd998874fd0994450d1a11e1c483db111e7c41552fd1a193dbcf173331250b6",
+    "replay_shot_32905_faults.csv": "ea1782a5e9c15828446c40629b21a3ee771fbc0eb7e570300a2620594a89de22",
+    "replay_shot_39144_faults.csv": "398460d9f0416015893721c04840d81980ff1284d55ce61185fc30d47e5c0566",
+    "replay_shot_46013_faults.csv": "615d2822a2e73501afce9d00c173a6e953ba01cc15fa9e2945c4002e699940f7",
+    "replay_shot_46157_faults.csv": "5cbef76d0eff54ea63bcd990ba4c80869acd8feac4b93981e3ea2d222f9c99a8",
+    "replay_shot_47274_faults.csv": "1e366b58c445ae86b0d733425d4f8ca7101a841277bb4291b879b45816925340",
+    "replay_shot_51384_faults.csv": "1265e855771079d26a6c2958c3d6db02d1d697a7506e48ed18a2219160f35751",
+    "replay_shot_51632_faults.csv": "4d15789f2c87a6cdeee5a436abeda6722f304dd85ca4ba7ab633b62c78c7cf03",
+    "replay_shot_52449_faults.csv": "62a13c277d84e7fd06ff9328c1d0aba2aba38a8d84679f9ed45c178cdb4eb208",
+    "replay_shot_53458_faults.csv": "cc75fae706868b168b4b37efd6410f1cc18f6c7edd6ec8b9d515425771afe427",
+    "replay_shot_58401_faults.csv": "6f55100326674b9f5264267ebad9a0b5032c2eb89428183dd518997029c9e6a7",
+    "replay_shot_65129_faults.csv": "24c230206bcfb4cf79a908687ee96747d626d04d997d1ba71c2d90412c57ef56",
+    "replay_shot_68098_faults.csv": "f86a34acfef69b27161cae0e4adc64a96635e3269cf8cca61a0a5e51fecce4ef",
+    "replay_shot_75623_faults.csv": "9f254f6320c8dbb4e52b5f38dc820ed4f841a2f36101c8ca698410e762ebdc0f",
+    "replay_shot_76185_faults.csv": "2009826c918db77faeba9aed89e9d05cca21e44049b04fbf4dbdda9ee4575c83",
+    "replay_shot_77400_faults.csv": "8a39a805189faac96baeb95bde768b63c66ebfb22805b76481c10551a750ac78",
+    "replay_shot_78510_faults.csv": "591d202e1c3f475846cf42d6c36a1cb57c01eb6510ebf0a7d2c1b5eb4ba3fd35",
+    "replay_shot_78520_faults.csv": "debff7862f04c43747e8911e9279b329302fb8107407ca03b2613e5cf4a910cb",
+    "replay_shot_83168_faults.csv": "bf139ccecc117489e0418304ce346f68dc2a78b8a632e006ba8f466b08be16e7",
+    "replay_shot_83644_faults.csv": "ab7ae3f94b53cf33079878739da2edf73d5d6a366a2ad808f67b9e816e4ffc46",
+    "replay_shot_83653_faults.csv": "2967eb033575bc4b36faac0b273bad30e5610d0ef1a2b867bbd84033ec7f9b95",
+    "replay_shot_99043_faults.csv": "fda6028feefab4075a6b2da5087e8a6c681e5277b8083e50afcb3207bf6af049"
+  },
+  "source_hashes": {
+    "/data2/s2chitni/yoked-surface-codes/docs/results/cz_fault_analysis_d7_d9/single_events.py": "457b3cd2381a67c1467cf9baecf8855e9c8f1e446ae4f519c75a6c533f4e82fb",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/cz_fault_analysis_d7_d9/analyze.py": "9baa0a31da74091c0ab4fa690bb46104a6eddadfd44f58a62d4d75e937ed9dae",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/cz_fault_analysis_d7_d9/trace_cases.py": "ff6d51aab22eee12a03f563d16278a35b8451a667a113d1e583f401207fd2c40",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/physical_fault_ablation_d7_d9/analyze.py": "f793e4b79fea463472cc1aa02eefff67e4afc66c7322dc7f84d7761eea0d3996",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/analyze.py": "724ab32c01477c420733e2b0746b80f15b64dc42cba38cb4f6c3881e5a8ee0cd"
+  },
+  "circuit_sha256": "d6f1f852b5d12ca2816c2411fe0dcfb0d2948ea50d6eb12655a9cfd775976d2b",
+  "dem_sha256": "858edcae41ba5f5ead2862d28dd517d5f22734b1ebd17c0dc12139ecd6a6278a",
+  "inputs": {
+    "payload_sha256": "d55da8f4c9b8287fa0af64f8382de755a243a774030499e108c348b665e102f5",
+    "circuit_sha256": "d6f1f852b5d12ca2816c2411fe0dcfb0d2948ea50d6eb12655a9cfd775976d2b",
+    "dem_sha256": "858edcae41ba5f5ead2862d28dd517d5f22734b1ebd17c0dc12139ecd6a6278a"
+  },
+  "source_work_directory": "/data2/s2chitni/.tmp/physical-fault-ablation-d7-d9-3r3wpmuq/analysis/d9"
+}

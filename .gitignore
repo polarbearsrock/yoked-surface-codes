@@ -2,3 +2,11 @@
 .pytest_cache
 out
 __pycache__
+.vscode/
+.venv/
+docs/results/**/*.npz
+docs/results/**/*.npy
+docs/results/**/*.gz
+docs/results/**/source_snapshot/
+docs/results/**/shards/
+docs/results/**/checkpoints/

@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""Move raw results to scratch, retaining reports and an explicit archive index."""
+from __future__ import annotations
+
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--workspace', type=Path, required=True)
+    parser.add_argument('--apply', action='store_true')
+    args = parser.parse_args()
+    workspace = args.workspace.resolve()
+    repo = workspace / 'repos/yoked-surface-codes'
+    results = workspace / 'results'
+    stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    archive = Path(os.environ['TMPDIR']) / 'dante/archives' / f'results-{stamp}'
+    folders = [p for p in sorted(results.iterdir()) if p.is_dir() and p.name != 'summaries']
+    payloads = [p for p in sorted((repo / 'docs/results').rglob('*')) if p.is_file() and (
+        p.suffix in {'.npz', '.npy', '.gz', '.stim', '.dem'}
+        or (p.suffix == '.json' and p.stat().st_size > 1_000_000))]
+    print(json.dumps({'archive': str(archive), 'workspace_runs': len(folders),
+                      'repository_payloads': len(payloads), 'apply': args.apply}), flush=True)
+    if not args.apply:
+        return
+    archive.mkdir(parents=True, exist_ok=False)
+    index = {'created_utc': stamp, 'archive_root': str(archive),
+             'policy': 'Move, never delete; retain compact reports and recipes.',
+             'workspace_runs': [], 'repository_payloads': []}
+    json_names = {'summary.json', 'results.json', 'launch.json', 'protocol.json',
+                  'latency.json', 'validation.json', 'verification.json',
+                  'source_manifest.json', 'plot_metadata.json', 'execution_environment.json'}
+    for source in folders:
+        destination = archive / 'workspace_results' / source.name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(source), destination)
+        compact = results / 'summaries' / source.name
+        retained = []
+        file_count = byte_count = 0
+        for p in destination.rglob('*'):
+            if not p.is_file():
+                continue
+            relative = p.relative_to(destination)
+            size = p.stat().st_size
+            file_count += 1
+            byte_count += size
+            if any(part in {'source_snapshot', 'shards', 'checkpoints', 'logs', 'build'}
+                   for part in relative.parts):
+                continue
+            keep = p.suffix in {'.md', '.csv', '.png', '.svg', '.pdf'}
+            keep |= p.name in json_names and size < 1_000_000
+            if keep:
+                target = compact / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(p, target)
+                retained.append(str(relative))
+        entry = dict(original=str(source), archive=str(destination), files=file_count,
+                     bytes=byte_count, retained=retained)
+        compact.mkdir(parents=True, exist_ok=True)
+        (compact / 'ARCHIVE.json').write_text(json.dumps(entry, indent=2) + '\n')
+        index['workspace_runs'].append(entry)
+    for source in payloads:
+        relative = source.relative_to(repo)
+        destination = archive / 'repository_payloads' / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        size = source.stat().st_size
+        shutil.move(str(source), destination)
+        index['repository_payloads'].append(dict(path=str(relative), archive=str(destination),
+                                                 bytes=size, sha256=digest))
+    serialized = json.dumps(index, indent=2) + '\n'
+    (archive / 'index.json').write_text(serialized)
+    (results / 'archive_index.json').write_text(serialized)
+    (repo / 'docs/results/archive_index.json').write_text(json.dumps({
+        'created_utc': stamp, 'archive_root': str(archive),
+        'repository_payloads': index['repository_payloads'],
+        'workspace_runs': [{k: v for k, v in item.items() if k != 'retained'}
+                           for item in index['workspace_runs']],
+    }, indent=2) + '\n')
+    (results / 'README.md').write_text(
+        '# Results\n\nCompact reports and figures are in `summaries/`. '
+        'Raw shots, source snapshots, and checkpoints were moved to:\n\n'
+        f'`{archive}`\n\n'
+        '`archive_index.json` records every relocated run and repository payload. '
+        'The full archives retain their original contents. Historical absolute paths '
+        'in manifests refer to locations before this move; use the archive index to resolve them. '
+        'New experiment scratch output belongs under `$DANTE_SCRATCH/runs`.\n')
+    print(json.dumps({'archive': str(archive),
+                      'workspace_bytes_archived': sum(x['bytes'] for x in index['workspace_runs']),
+                      'repository_bytes_archived': sum(x['bytes'] for x in index['repository_payloads'])}),
+          flush=True)
+
+
+if __name__ == '__main__':
+    main()

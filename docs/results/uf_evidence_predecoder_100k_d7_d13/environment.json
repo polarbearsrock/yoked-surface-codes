@@ -1,0 +1,14 @@
+{
+  "affinity_cpus": 128,
+  "compiler": "g++ (GCC) 8.5.0 20210514 (Red Hat 8.5.0-28)",
+  "cpu_model": "AMD EPYC 9374F 32-Core Processor",
+  "matching_workers": 8,
+  "native_threads": 64,
+  "omp_places": null,
+  "omp_proc_bind": null,
+  "openblas_num_threads": "1",
+  "platform": "Linux-4.18.0-553.50.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "recorded_utc": "2026-09-20T23:58:19.556257+00:00",
+  "serial_benchmark_shots_per_distance": 16,
+  "timing_scope": "Serial native evidence initialization, inference and projection plus UF growth/tree/peeling. Excludes model setup, Python, packing, full-syndrome audit and some temporary destruction. Shared work is charged fully to each variant; fixed decoder order. Parallel per-shot durations are contended durations, not decoder latency."
+}

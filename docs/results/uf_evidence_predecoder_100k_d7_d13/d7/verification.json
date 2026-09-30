@@ -1,0 +1,51 @@
+{
+  "batch_decode_wall_seconds": 233.1349180098623,
+  "frozen_bp5_predictions_and_diagnostics_reproduced": 4,
+  "full_syndrome_checks": 200000,
+  "ideal_yoke_prediction_checks": 200000,
+  "matching_wall_seconds_until_collection": 234.61010773666203,
+  "native_thread_counts": [
+    1,
+    64
+  ],
+  "note": "Matching ran concurrently; collection wall time is not isolated matching latency.",
+  "physical_checks": [
+    {
+      "physical_corrections_checked": 2,
+      "physical_forests_checked": 2,
+      "posterior_max_absolute_difference": 1.1191048088221578e-13,
+      "row": 23497
+    },
+    {
+      "physical_corrections_checked": 2,
+      "physical_forests_checked": 2,
+      "posterior_max_absolute_difference": 4.085620730620576e-14,
+      "row": 32340
+    },
+    {
+      "physical_corrections_checked": 2,
+      "physical_forests_checked": 2,
+      "posterior_max_absolute_difference": 1.3011813848606835e-13,
+      "row": 51976
+    },
+    {
+      "physical_corrections_checked": 2,
+      "physical_forests_checked": 2,
+      "posterior_max_absolute_difference": 1.0702549957386509e-13,
+      "row": 68487
+    }
+  ],
+  "pilot_bp5_predictions_and_all_nontiming_diagnostics_reproduced": 5000,
+  "recomputed_correlated_mwpm_matches": 100000,
+  "result_sha256": "c9e67c63b2c0f4845774f6200a83c99ca1ed8192b244483e1d65268dcdb70f4a",
+  "rows": [
+    23497,
+    32340,
+    51976,
+    68487
+  ],
+  "saved_correlated_uf_predictions_reproduced": 4,
+  "thread_results_identical_except_timing": true,
+  "total_elapsed_seconds": 250.10914561059326,
+  "truth_passed_to_native": false
+}

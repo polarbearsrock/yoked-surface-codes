@@ -1,0 +1,59 @@
+{
+  "11": {
+    "independent_DFS_span_checks": 48,
+    "shots": [
+      1306,
+      13196,
+      25067,
+      40326,
+      55806,
+      69206,
+      79804,
+      89339
+    ],
+    "source_hashes_verified": true
+  },
+  "13": {
+    "independent_DFS_span_checks": 48,
+    "shots": [
+      223,
+      9896,
+      21378,
+      31232,
+      43478,
+      56679,
+      75512,
+      90845
+    ],
+    "source_hashes_verified": true
+  },
+  "7": {
+    "independent_DFS_span_checks": 48,
+    "shots": [
+      1324,
+      13469,
+      24645,
+      42098,
+      57184,
+      66618,
+      80950,
+      88212
+    ],
+    "source_hashes_verified": true
+  },
+  "9": {
+    "independent_DFS_span_checks": 48,
+    "shots": [
+      343,
+      11897,
+      22740,
+      30510,
+      49705,
+      56838,
+      67833,
+      88020
+    ],
+    "source_hashes_verified": true
+  },
+  "audit_script_sha256": "cb044ccd6d542ec6471ca50442a1393d73a9a97570de806a665feb0f0cee6cbd"
+}

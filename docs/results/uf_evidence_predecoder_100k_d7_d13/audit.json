@@ -1,0 +1,63 @@
+{
+  "distances": [
+    {
+      "distance": 7,
+      "failures": {
+        "bp5_correlated_uf": 14492,
+        "bp5_uf": 14652,
+        "correlated_mwpm": 13785,
+        "correlated_uf": 23230
+      },
+      "full_pilot_overlap_rechecked": 5000,
+      "input_and_baseline_identities_verified": true,
+      "shots": 100000,
+      "source_hashes_verified": 116
+    },
+    {
+      "distance": 9,
+      "failures": {
+        "bp5_correlated_uf": 7773,
+        "bp5_uf": 8059,
+        "correlated_mwpm": 6925,
+        "correlated_uf": 14247
+      },
+      "full_pilot_overlap_rechecked": 5000,
+      "input_and_baseline_identities_verified": true,
+      "shots": 100000,
+      "source_hashes_verified": 116
+    },
+    {
+      "distance": 11,
+      "failures": {
+        "bp5_correlated_uf": 3822,
+        "bp5_uf": 4016,
+        "correlated_mwpm": 3047,
+        "correlated_uf": 7754
+      },
+      "full_pilot_overlap_rechecked": 5000,
+      "input_and_baseline_identities_verified": true,
+      "shots": 100000,
+      "source_hashes_verified": 116
+    },
+    {
+      "distance": 13,
+      "failures": {
+        "bp5_correlated_uf": 1723,
+        "bp5_uf": 1876,
+        "correlated_mwpm": 1304,
+        "correlated_uf": 4083
+      },
+      "full_pilot_overlap_rechecked": 5000,
+      "input_and_baseline_identities_verified": true,
+      "shots": 100000,
+      "source_hashes_verified": 116
+    }
+  ],
+  "frozen_pilot_artifacts_unchanged": 36,
+  "full_syndrome_checks": 800000,
+  "overview_sha256": "cf20214a621835cb5451a256eee730831ffae5d3de96364d5e042b2b06adada1",
+  "pilot_overlap_comparisons": 20000,
+  "recomputed_correlated_mwpm_matches": 400000,
+  "status": "passed",
+  "total_shots": 400000
+}

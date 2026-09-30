@@ -1,0 +1,12 @@
+{
+  "source_work_directory": "/data2/s2chitni/.tmp/physical-fault-ablation-d7-d9-3r3wpmuq/analysis/d7",
+  "selection_unchanged": true,
+  "raw_payload_and_model_hashes_verified": true,
+  "selected_original_responses_verified": true,
+  "inputs": {
+    "selection.json": "0073b592b3adb840a8ed1dad5212487e952b79084909f08b663f644a2ee957ba",
+    "original.npz": "f7eb4d89e214c39dc99f897b8f541a7596771adc04e32e10c3a02db8888a8805",
+    "responses.npz": "c08cb35677a9070a3448f7bbc986b69942e7c9ee10de10aa0a988c3d2aa03930",
+    "response_validation.json": "44b222792797a847e8c2ec54946e0d83d4b06c49c3c6e9c9c11cb16c08ac3d11"
+  }
+}

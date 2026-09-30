@@ -1,0 +1,40 @@
+{
+  "baseline_predictions_matched": 20000,
+  "distances": [
+    {
+      "baseline_and_truth_match_archive": true,
+      "distance": 7,
+      "request_identity_matches": true,
+      "rows": 5000,
+      "source_hashes_match": true,
+      "summary_matches_arrays": true
+    },
+    {
+      "baseline_and_truth_match_archive": true,
+      "distance": 9,
+      "request_identity_matches": true,
+      "rows": 5000,
+      "source_hashes_match": true,
+      "summary_matches_arrays": true
+    },
+    {
+      "baseline_and_truth_match_archive": true,
+      "distance": 11,
+      "request_identity_matches": true,
+      "rows": 5000,
+      "source_hashes_match": true,
+      "summary_matches_arrays": true
+    },
+    {
+      "baseline_and_truth_match_archive": true,
+      "distance": 13,
+      "request_identity_matches": true,
+      "rows": 5000,
+      "source_hashes_match": true,
+      "summary_matches_arrays": true
+    }
+  ],
+  "pilot_corrections_checked": 100000,
+  "source_files_verified": 110,
+  "status": "passed"
+}

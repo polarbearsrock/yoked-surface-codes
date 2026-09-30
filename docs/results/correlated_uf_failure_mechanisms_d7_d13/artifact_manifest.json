@@ -1,0 +1,43 @@
+{
+  "complete_shot_76890": {
+    "every_correction_syndrome_checked": true,
+    "independent_forced_class_cost_checks": 2,
+    "independent_forest_optimum_checks": 1
+  },
+  "conditional_class_matching_checks": 14,
+  "files": {
+    "correlated_uf_failure_mechanisms_d7_d13.md": "f380bb9a3ffd523a6c15386f35d04a947ce91918c03fdbe730e261f9d2a742fd",
+    "correlated_uf_failure_mechanisms_d7_d13/README.md": "9150f39a1cc32e8fe5de5010061049eb42b37715da0c20d7c23f8dc4a04b0f00",
+    "correlated_uf_failure_mechanisms_d7_d13/audit.json": "3ea814550f7342dd6d21c3ba9ddeef5f0ff36bfe2cedaad4935c072a133398a0",
+    "correlated_uf_failure_mechanisms_d7_d13/audit.py": "cb044ccd6d542ec6471ca50442a1393d73a9a97570de806a665feb0f0cee6cbd",
+    "correlated_uf_failure_mechanisms_d7_d13/d11/population.json": "d6adf986c7370bfc05fd2b0309cde4906b50df0e7cf9bef8dd49139a0f79cb42",
+    "correlated_uf_failure_mechanisms_d7_d13/d11/rows.json": "b028eb039f9b060bcd012c245cc7f2f6332e7c66d87b1ab329a39a67489222d2",
+    "correlated_uf_failure_mechanisms_d7_d13/d11/selection.json": "c4a783e2e70c926c575cff8a7e0c6d07d7f1ccce1270fd2d5412e8a9f5061952",
+    "correlated_uf_failure_mechanisms_d7_d13/d11/summary.json": "2c6793767427f615bdaffdd1ea51dc8703ed989ca009051e0d3b36899d785064",
+    "correlated_uf_failure_mechanisms_d7_d13/d11/verification.json": "1c68a6bcfe28317c5a5242f2603fd0b513a88d9cc052f474fd22d23e77e1392d",
+    "correlated_uf_failure_mechanisms_d7_d13/d13/population.json": "21b2ea43772dc18f013363126dbb84621667729ab09a5ab6284457f3fbe3aa42",
+    "correlated_uf_failure_mechanisms_d7_d13/d13/rows.json": "f357b650cbb13bd29d065046587a6253e348eb99a34080c0306a6f48573c8fb2",
+    "correlated_uf_failure_mechanisms_d7_d13/d13/selection.json": "5bdd52a6a5b8d34af8d2ee317dd8f5a35e57177604924ae7241c01b44fff116a",
+    "correlated_uf_failure_mechanisms_d7_d13/d13/summary.json": "f428584b8ad450bded2183b3dd51af63f50640969d85a85b01abcacd393b7626",
+    "correlated_uf_failure_mechanisms_d7_d13/d13/verification.json": "881b119c9ead7e6a9e994cda8210284e36ec49f11960c9e2342e9760182a1b9e",
+    "correlated_uf_failure_mechanisms_d7_d13/d7/population.json": "d346e0df06412d95a92c5181b2d5d8f168d90496a30616c7cd234de36e34ee55",
+    "correlated_uf_failure_mechanisms_d7_d13/d7/rows.json": "9dbf1d5883d98cd10a540d6c36803ddd6527080b25571c1c8dfc70f24c8ba2a0",
+    "correlated_uf_failure_mechanisms_d7_d13/d7/selection.json": "f8ad478cd1bb85e5415dfe0f631bca0735c9d4ebb9adda6b0c40213466bf6cfe",
+    "correlated_uf_failure_mechanisms_d7_d13/d7/summary.json": "b47d0ce42c074967a8a6325d131840ba27b1f8df6985f8ed63378b176ba12627",
+    "correlated_uf_failure_mechanisms_d7_d13/d7/verification.json": "4676059677a9f198705cba31e7f22d2bc5c40de326c7fbdfdfd998835a895c24",
+    "correlated_uf_failure_mechanisms_d7_d13/d9/population.json": "864a653c64caae56aaecbd03fa0e7b5ee4bd4ff89a1f9307b67fc395ed0aed3c",
+    "correlated_uf_failure_mechanisms_d7_d13/d9/rows.json": "53278ae85a033cf2263bd18f98a0f241d9763649cf17845891542a2f5158566f",
+    "correlated_uf_failure_mechanisms_d7_d13/d9/selection.json": "9c449e041c9a57a9e2951a4a57b9adde537e68d76c24d82516ef690724a56003",
+    "correlated_uf_failure_mechanisms_d7_d13/d9/summary.json": "5c3abd6520bdd8954d226879abc59ee796e6406efba3a737a51cbf26b0693061",
+    "correlated_uf_failure_mechanisms_d7_d13/d9/verification.json": "5ef0d4a7940382af411e3bc8c9194d4c50ce6892236bde9f69da8dd6425affb2",
+    "correlated_uf_failure_mechanisms_d7_d13/diagnose.py": "e7f7efa3b7031dce45842fbbf46cd6889a7250ab11dabc2f4f031da53313571a",
+    "correlated_uf_failure_mechanisms_d7_d13/full_shot_76890.json": "06a5c5f5c8d39298d8ef0e33c295f1405a411ddf924ea66421450c2e9f448929",
+    "correlated_uf_failure_mechanisms_d7_d13/protocol.json": "69f774b6f109cd22c7334f6dc0ae725021f74eea345adc0b06870d9199c3fe32",
+    "correlated_uf_failure_mechanisms_d7_d13/reachable_cases.json": "647831879ba1c39c8cc59928919cbf104348008b1b43086d3a6a2643647db20b",
+    "correlated_uf_failure_mechanisms_d7_d13/reachable_cases.py": "f0092bbc92d5f7ab849176de4a94e7b1f1583b5cc09b3d7623ae76a0c27fe56e",
+    "correlated_uf_failure_mechanisms_d7_d13/summary.json": "f49efcc29d4e24a7f4ed7bd537b5a7da3c3ad58165c197a2735b9a399998d993",
+    "correlated_uf_failure_mechanisms_d7_d13/trace_76890.py": "40066e7865950d546b7f0ea8cf62eaeed400412bb30acd0dba71302d08122228"
+  },
+  "population_transition_checks": 96,
+  "selected_shots": 512
+}

@@ -1,0 +1,30 @@
+{
+  "certificate": "Test true logical label on each forest and on all original edges internal to its components.",
+  "compile_command": [
+    "g++",
+    "-std=c++17",
+    "-O3",
+    "-fPIC",
+    "-shared",
+    "-fopenmp",
+    "-ffp-contract=off",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/parallel_uf_clustering_d7_d9_p003_100k/kernel.cc",
+    "-o",
+    "/data2/s2chitni/.tmp/uf-failure-mechanisms-59ns6un8/build/clustering.so"
+  ],
+  "distances": [
+    7,
+    9,
+    11,
+    13
+  ],
+  "interventions": "Hold original UF first-pass weights fixed; run MWPM or frozen UF growth variants.",
+  "limitations": "Conditional cohorts do not estimate new decoder LER. Logical alternatives do not uniquely identify a physical history.",
+  "p": 0.003,
+  "patches": 6,
+  "population_shots_per_distance": 100000,
+  "rounds": "4d",
+  "selected_UF_only_failures_per_distance": 128,
+  "selection": "Uniform without replacement. Reuse d7/d9 selections; seed 20260915+d for d11/d13.",
+  "yokes": 2
+}

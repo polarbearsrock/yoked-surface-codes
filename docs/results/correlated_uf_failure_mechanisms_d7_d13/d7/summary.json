@@ -1,0 +1,31 @@
+{
+  "independent_forest_cost_checks": 12,
+  "median_UF_minus_MWPM_cost": 28.773508676823326,
+  "old_rows_cross_checked": 128,
+  "same_weight_MWPM_correct": 110,
+  "same_weight_MWPM_strictly_cheaper": 128,
+  "shots": 128,
+  "variants": {
+    "correlated_uf": {
+      "correct": 0,
+      "failed": 128,
+      "failures_excluded_by_forest": 128,
+      "failures_excluded_by_partition": 128,
+      "failures_with_same_weight_MWPM_correct": 110
+    },
+    "frontier_bridges": {
+      "correct": 83,
+      "failed": 45,
+      "failures_excluded_by_forest": 45,
+      "failures_excluded_by_partition": 45,
+      "failures_with_same_weight_MWPM_correct": 29
+    },
+    "frontier_uf": {
+      "correct": 78,
+      "failed": 50,
+      "failures_excluded_by_forest": 50,
+      "failures_excluded_by_partition": 50,
+      "failures_with_same_weight_MWPM_correct": 34
+    }
+  }
+}

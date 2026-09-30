@@ -1,0 +1,41 @@
+{
+  "frozen_bp5_predictions_and_diagnostics_reproduced": 4,
+  "native_thread_counts": [
+    1,
+    64
+  ],
+  "physical_checks": [
+    {
+      "physical_corrections_checked": 2,
+      "physical_forests_checked": 2,
+      "posterior_max_absolute_difference": 1.1191048088221578e-13,
+      "row": 23497
+    },
+    {
+      "physical_corrections_checked": 2,
+      "physical_forests_checked": 2,
+      "posterior_max_absolute_difference": 4.085620730620576e-14,
+      "row": 32340
+    },
+    {
+      "physical_corrections_checked": 2,
+      "physical_forests_checked": 2,
+      "posterior_max_absolute_difference": 1.3011813848606835e-13,
+      "row": 51976
+    },
+    {
+      "physical_corrections_checked": 2,
+      "physical_forests_checked": 2,
+      "posterior_max_absolute_difference": 1.0702549957386509e-13,
+      "row": 68487
+    }
+  ],
+  "rows": [
+    23497,
+    32340,
+    51976,
+    68487
+  ],
+  "saved_correlated_uf_predictions_reproduced": 4,
+  "thread_results_identical_except_timing": true
+}

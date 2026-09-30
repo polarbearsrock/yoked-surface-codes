@@ -40,6 +40,19 @@ is available separately as an optional dependency and explicit decoder choice. S
 
 ## Hierarchical L1/L2 decoding
 
+The paper-style configuration uses **native PyMatching correlated MWPM at L1,
+frozen complementary gaps as confidence, and plain MWPM at L2**. Run it with
+`tools/hierarchical_experiment paper`; see the [configuration, examples, and
+PyMatching compatibility notes](docs/paper_hierarchical_decoding.md).
+
+The optional [MPP confidence experiment](docs/mpp_confidence_experiment.md) replaces
+the complementary gap with a native cluster score while keeping correlated L1
+and plain-MWPM L2 fixed. `tools/mpp_experiment` compares both on identical shots.
+
+The [correlated-UF experiment](docs/correlated_uf_cluster_gap_experiment.md) uses
+two-pass correlated UF and full cluster gaps at L1, followed by the same plain
+MWPM at L2. It compares final block accuracy against both saved MWPM baselines.
+
 The `yoked.hierarchical` package decodes a 1D yoked block in two layers: L1
 decodes each patch on its own and stores reference bits with soft outputs, and
 a weighted-MWPM outer decoder (L2) uses the calibrated residual-error probabilities and

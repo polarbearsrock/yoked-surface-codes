@@ -1,0 +1,647 @@
+{
+  "all_rows": {
+    "decoders": {
+      "bp5_correlated_uf": {
+        "failures": 3822,
+        "normalized_ler": 0.00014796087960444737,
+        "normalized_ler_ci95": [
+          0.00014333155388557284,
+          0.00015273711080843189
+        ],
+        "normalized_ler_ratio_to_mwpm": 1.2599771001775548,
+        "raw_failure_ratio_to_mwpm": 1.2543485395470955,
+        "shot_failure_ci95": [
+          0.03704931459677966,
+          0.03942616221747753
+        ],
+        "shot_failure_rate": 0.03822,
+        "shots": 100000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": -0.00194,
+          "failure_rate_excess_ci95": [
+            -0.0027518337129870873,
+            -0.0011281662870129131
+          ],
+          "mcnemar_p": 3.1046760991970655e-06,
+          "regressions": 761,
+          "repairs": 955
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.00775,
+          "failure_rate_excess_ci95": [
+            0.006474192993043227,
+            0.009025807006956772
+          ],
+          "mcnemar_p": 9.824854142400278e-33,
+          "regressions": 2509,
+          "repairs": 1734
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": -0.03932,
+          "failure_rate_excess_ci95": [
+            -0.040940221141338926,
+            -0.037699778858661076
+          ],
+          "mcnemar_p": 0.0,
+          "regressions": 1528,
+          "repairs": 5460
+        }
+      },
+      "bp5_uf": {
+        "failures": 4016,
+        "normalized_ler": 0.0001556462978021811,
+        "normalized_ler_ci95": [
+          0.00015089310425875357,
+          0.00016054647087482277
+        ],
+        "normalized_ler_ratio_to_mwpm": 1.325423121857878,
+        "raw_failure_ratio_to_mwpm": 1.3180177223498524,
+        "shot_failure_ci95": [
+          0.0389606885519866,
+          0.041394639219393764
+        ],
+        "shot_failure_rate": 0.04016,
+        "shots": 100000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": 0.0,
+          "failure_rate_excess_ci95": [
+            0.0,
+            0.0
+          ],
+          "mcnemar_p": 1.0,
+          "regressions": 0,
+          "repairs": 0
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.00969,
+          "failure_rate_excess_ci95": [
+            0.00839260281816924,
+            0.010987397181830762
+          ],
+          "mcnemar_p": 1.032944888401415e-48,
+          "regressions": 2680,
+          "repairs": 1711
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": -0.03738,
+          "failure_rate_excess_ci95": [
+            -0.03901519377775528,
+            -0.03574480622224471
+          ],
+          "mcnemar_p": 0.0,
+          "regressions": 1681,
+          "repairs": 5419
+        }
+      },
+      "correlated_mwpm": {
+        "failures": 3047,
+        "normalized_ler": 0.00011743140377995509,
+        "normalized_ler_ci95": [
+          0.00011332648418316271,
+          0.00012168293612802028
+        ],
+        "normalized_ler_ratio_to_mwpm": 1.0,
+        "raw_failure_ratio_to_mwpm": 1.0,
+        "shot_failure_ci95": [
+          0.029422621022942793,
+          0.031553451194559434
+        ],
+        "shot_failure_rate": 0.03047,
+        "shots": 100000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": -0.00969,
+          "failure_rate_excess_ci95": [
+            -0.010987397181830762,
+            -0.00839260281816924
+          ],
+          "mcnemar_p": 1.032944888401415e-48,
+          "regressions": 1711,
+          "repairs": 2680
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.0,
+          "failure_rate_excess_ci95": [
+            0.0,
+            0.0
+          ],
+          "mcnemar_p": 1.0,
+          "regressions": 0,
+          "repairs": 0
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": -0.04707,
+          "failure_rate_excess_ci95": [
+            -0.048677850195286115,
+            -0.045462149804713886
+          ],
+          "mcnemar_p": 0.0,
+          "regressions": 1122,
+          "repairs": 5829
+        }
+      },
+      "correlated_uf": {
+        "failures": 7754,
+        "normalized_ler": 0.00030722932494042787,
+        "normalized_ler_ci95": [
+          0.0003004292200002867,
+          0.00031417789945498154
+        ],
+        "normalized_ler_ratio_to_mwpm": 2.6162450166747497,
+        "raw_failure_ratio_to_mwpm": 2.544798162126682,
+        "shot_failure_ci95": [
+          0.07589856123438195,
+          0.07921389477270173
+        ],
+        "shot_failure_rate": 0.07754,
+        "shots": 100000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": 0.03738,
+          "failure_rate_excess_ci95": [
+            0.03574480622224471,
+            0.03901519377775528
+          ],
+          "mcnemar_p": 0.0,
+          "regressions": 5419,
+          "repairs": 1681
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.04707,
+          "failure_rate_excess_ci95": [
+            0.045462149804713886,
+            0.048677850195286115
+          ],
+          "mcnemar_p": 0.0,
+          "regressions": 5829,
+          "repairs": 1122
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": 0.0,
+          "failure_rate_excess_ci95": [
+            0.0,
+            0.0
+          ],
+          "mcnemar_p": 1.0,
+          "regressions": 0,
+          "repairs": 0
+        }
+      }
+    },
+    "shots": 100000
+  },
+  "distance": 11,
+  "intervals": "Wilson marginal 95% intervals; paired normal 95% intervals for raw failure-rate excess; exact McNemar tests. Exploratory, no multiplicity adjustment.",
+  "model": {
+    "detectors": 32402,
+    "directed_messages_per_iteration": 4425864,
+    "graph_component_incidences": 1153296,
+    "graph_edges": 170292,
+    "grouped_mechanisms": 652290,
+    "incidences": 2212932,
+    "maximum_check_degree": 22014,
+    "prior_marginal_identity_verified": true,
+    "raw_dem_mechanisms": 652818
+  },
+  "non_pilot_rows": {
+    "decoders": {
+      "bp5_correlated_uf": {
+        "failures": 3626,
+        "normalized_ler": 0.00014775678415068771,
+        "normalized_ler_ci95": [
+          0.000143012540783527,
+          0.00015265566266597919
+        ],
+        "normalized_ler_ratio_to_mwpm": 1.2602991172794984,
+        "raw_failure_ratio_to_mwpm": 1.2546712802768167,
+        "shot_failure_ci95": [
+          0.03696858221956544,
+          0.03940560799637157
+        ],
+        "shot_failure_rate": 0.03816842105263158,
+        "shots": 95000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": -0.0018631578947368422,
+          "failure_rate_excess_ci95": [
+            -0.002692709074739198,
+            -0.0010336067147344863
+          ],
+          "mcnemar_p": 1.1817780761718353e-05,
+          "regressions": 720,
+          "repairs": 897
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.007747368421052631,
+          "failure_rate_excess_ci95": [
+            0.006438880902980764,
+            0.009055855939124498
+          ],
+          "mcnemar_p": 3.531891225053989e-31,
+          "regressions": 2382,
+          "repairs": 1646
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": -0.03949473684210526,
+          "failure_rate_excess_ci95": [
+            -0.04115859607381518,
+            -0.037830877610395344
+          ],
+          "mcnemar_p": 0.0,
+          "regressions": 1450,
+          "repairs": 5202
+        }
+      },
+      "bp5_uf": {
+        "failures": 3803,
+        "normalized_ler": 0.0001551370121857243,
+        "normalized_ler_ci95": [
+          0.0001502706001074161,
+          0.00016015813425318548
+        ],
+        "normalized_ler_ratio_to_mwpm": 1.3232491532547819,
+        "raw_failure_ratio_to_mwpm": 1.315916955017301,
+        "shot_failure_ci95": [
+          0.03880349570412107,
+          0.041296859628554304
+        ],
+        "shot_failure_rate": 0.04003157894736842,
+        "shots": 95000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": 0.0,
+          "failure_rate_excess_ci95": [
+            0.0,
+            0.0
+          ],
+          "mcnemar_p": 1.0,
+          "regressions": 0,
+          "repairs": 0
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.009610526315789474,
+          "failure_rate_excess_ci95": [
+            0.008280113286613235,
+            0.010940939344965712
+          ],
+          "mcnemar_p": 1.1317439439478958e-45,
+          "regressions": 2540,
+          "repairs": 1627
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": -0.03763157894736842,
+          "failure_rate_excess_ci95": [
+            -0.03931130716808325,
+            -0.035951850726653585
+          ],
+          "mcnemar_p": 0.0,
+          "regressions": 1594,
+          "repairs": 5169
+        }
+      },
+      "correlated_mwpm": {
+        "failures": 2890,
+        "normalized_ler": 0.00011723945698671745,
+        "normalized_ler_ci95": [
+          0.00011303339621060449,
+          0.00012159984490922593
+        ],
+        "normalized_ler_ratio_to_mwpm": 1.0,
+        "raw_failure_ratio_to_mwpm": 1.0,
+        "shot_failure_ci95": [
+          0.0293477904733066,
+          0.031532289426701374
+        ],
+        "shot_failure_rate": 0.030421052631578946,
+        "shots": 95000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": -0.009610526315789474,
+          "failure_rate_excess_ci95": [
+            -0.010940939344965712,
+            -0.008280113286613235
+          ],
+          "mcnemar_p": 1.1317439439478958e-45,
+          "regressions": 1627,
+          "repairs": 2540
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.0,
+          "failure_rate_excess_ci95": [
+            0.0,
+            0.0
+          ],
+          "mcnemar_p": 1.0,
+          "regressions": 0,
+          "repairs": 0
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": -0.0472421052631579,
+          "failure_rate_excess_ci95": [
+            -0.04889365992740371,
+            -0.04559055059891209
+          ],
+          "mcnemar_p": 0.0,
+          "regressions": 1066,
+          "repairs": 5554
+        }
+      },
+      "correlated_uf": {
+        "failures": 7378,
+        "normalized_ler": 0.00030774008794909324,
+        "normalized_ler_ci95": [
+          0.0003007591046277902,
+          0.00031487736028168456
+        ],
+        "normalized_ler_ratio_to_mwpm": 2.6248849649990995,
+        "raw_failure_ratio_to_mwpm": 2.552941176470588,
+        "shot_failure_ci95": [
+          0.07597826588727434,
+          0.07938220409138781
+        ],
+        "shot_failure_rate": 0.07766315789473684,
+        "shots": 95000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": 0.03763157894736842,
+          "failure_rate_excess_ci95": [
+            0.035951850726653585,
+            0.03931130716808325
+          ],
+          "mcnemar_p": 0.0,
+          "regressions": 5169,
+          "repairs": 1594
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.0472421052631579,
+          "failure_rate_excess_ci95": [
+            0.04559055059891209,
+            0.04889365992740371
+          ],
+          "mcnemar_p": 0.0,
+          "regressions": 5554,
+          "repairs": 1066
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": 0.0,
+          "failure_rate_excess_ci95": [
+            0.0,
+            0.0
+          ],
+          "mcnemar_p": 1.0,
+          "regressions": 0,
+          "repairs": 0
+        }
+      }
+    },
+    "shots": 95000
+  },
+  "pilot_rows": {
+    "decoders": {
+      "bp5_correlated_uf": {
+        "failures": 196,
+        "normalized_ler": 0.00015184102814258527,
+        "normalized_ler_ci95": [
+          0.00013195254320208516,
+          0.00017466743020599917
+        ],
+        "normalized_ler_ratio_to_mwpm": 1.2540506432066176,
+        "raw_failure_ratio_to_mwpm": 1.248407643312102,
+        "shot_failure_ci95": [
+          0.03416493726116426,
+          0.04494257685140038
+        ],
+        "shot_failure_rate": 0.0392,
+        "shots": 5000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": -0.0034,
+          "failure_rate_excess_ci95": [
+            -0.007299211999981534,
+            0.0004992119999815345
+          ],
+          "mcnemar_p": 0.10735158653318887,
+          "regressions": 41,
+          "repairs": 58
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.0078,
+          "failure_rate_excess_ci95": [
+            0.002056219414775665,
+            0.013543780585224334
+          ],
+          "mcnemar_p": 0.009393715378303875,
+          "regressions": 127,
+          "repairs": 88
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": -0.036,
+          "failure_rate_excess_ci95": [
+            -0.0431158528146667,
+            -0.028884147185333296
+          ],
+          "mcnemar_p": 1.2294897775009472e-23,
+          "regressions": 78,
+          "repairs": 258
+        }
+      },
+      "bp5_uf": {
+        "failures": 213,
+        "normalized_ler": 0.0001653372767806971,
+        "normalized_ler_ci95": [
+          0.00014449832887220015,
+          0.00018911674623789398
+        ],
+        "normalized_ler_ratio_to_mwpm": 1.3655157688879802,
+        "raw_failure_ratio_to_mwpm": 1.3566878980891721,
+        "shot_failure_ci95": [
+          0.03734452469569485,
+          0.04855776904364341
+        ],
+        "shot_failure_rate": 0.0426,
+        "shots": 5000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": 0.0,
+          "failure_rate_excess_ci95": [
+            0.0,
+            0.0
+          ],
+          "mcnemar_p": 1.0,
+          "regressions": 0,
+          "repairs": 0
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.0112,
+          "failure_rate_excess_ci95": [
+            0.005341300661477839,
+            0.017058699338522162
+          ],
+          "mcnemar_p": 0.00022221771173716067,
+          "regressions": 140,
+          "repairs": 84
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": -0.0326,
+          "failure_rate_excess_ci95": [
+            -0.03973920361362526,
+            -0.025460796386374735
+          ],
+          "mcnemar_p": 2.0920137854368456e-19,
+          "regressions": 87,
+          "repairs": 250
+        }
+      },
+      "correlated_mwpm": {
+        "failures": 157,
+        "normalized_ler": 0.00012108045952141655,
+        "normalized_ler_ci95": [
+          0.00010351596190871781,
+          0.0001415769710794157
+        ],
+        "normalized_ler_ratio_to_mwpm": 1.0,
+        "raw_failure_ratio_to_mwpm": 1.0,
+        "shot_failure_ci95": [
+          0.026914300443434944,
+          0.0366051898194726
+        ],
+        "shot_failure_rate": 0.0314,
+        "shots": 5000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": -0.0112,
+          "failure_rate_excess_ci95": [
+            -0.017058699338522162,
+            -0.005341300661477839
+          ],
+          "mcnemar_p": 0.00022221771173716067,
+          "regressions": 84,
+          "repairs": 140
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.0,
+          "failure_rate_excess_ci95": [
+            0.0,
+            0.0
+          ],
+          "mcnemar_p": 1.0,
+          "regressions": 0,
+          "repairs": 0
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": -0.0438,
+          "failure_rate_excess_ci95": [
+            -0.050827717138530834,
+            -0.03677228286146916
+          ],
+          "mcnemar_p": 7.454797211382e-36,
+          "regressions": 56,
+          "repairs": 275
+        }
+      },
+      "correlated_uf": {
+        "failures": 376,
+        "normalized_ler": 0.00029753935513721075,
+        "normalized_ler_ci95": [
+          0.00026876510812479104,
+          0.0003292801079406438
+        ],
+        "normalized_ler_ratio_to_mwpm": 2.4573688959660944,
+        "raw_failure_ratio_to_mwpm": 2.3949044585987265,
+        "shot_failure_ci95": [
+          0.06821201319858257,
+          0.08284022637393797
+        ],
+        "shot_failure_rate": 0.0752,
+        "shots": 5000,
+        "vs_bp5_uf": {
+          "failure_rate_excess": 0.0326,
+          "failure_rate_excess_ci95": [
+            0.025460796386374735,
+            0.03973920361362526
+          ],
+          "mcnemar_p": 2.0920137854368456e-19,
+          "regressions": 250,
+          "repairs": 87
+        },
+        "vs_correlated_mwpm": {
+          "failure_rate_excess": 0.0438,
+          "failure_rate_excess_ci95": [
+            0.03677228286146916,
+            0.050827717138530834
+          ],
+          "mcnemar_p": 7.454797211382e-36,
+          "regressions": 275,
+          "repairs": 56
+        },
+        "vs_correlated_uf": {
+          "failure_rate_excess": 0.0,
+          "failure_rate_excess_ci95": [
+            0.0,
+            0.0
+          ],
+          "mcnemar_p": 1.0,
+          "regressions": 0,
+          "repairs": 0
+        }
+      }
+    },
+    "shots": 5000
+  },
+  "serial_native_timing": {
+    "bp5_correlated_uf": {
+      "evidence_mean_ms": 449.072410375,
+      "final_uf_mean_ms": 43.9771324375,
+      "shots": 16,
+      "total_mean_ms": 493.0495428125
+    },
+    "bp5_uf": {
+      "evidence_mean_ms": 403.1285720625,
+      "final_uf_mean_ms": 45.5137633125,
+      "shots": 16,
+      "total_mean_ms": 448.64233537499996
+    }
+  },
+  "validation": {
+    "batch_decode_wall_seconds": 1177.128823345527,
+    "frozen_bp5_predictions_and_diagnostics_reproduced": 4,
+    "full_syndrome_checks": 200000,
+    "ideal_yoke_prediction_checks": 200000,
+    "matching_wall_seconds_until_collection": 1179.1028256630525,
+    "native_thread_counts": [
+      1,
+      64
+    ],
+    "note": "Matching ran concurrently; collection wall time is not isolated matching latency.",
+    "physical_checks": [
+      {
+        "physical_corrections_checked": 2,
+        "physical_forests_checked": 2,
+        "posterior_max_absolute_difference": 1.56097357262297e-13,
+        "row": 22715
+      },
+      {
+        "physical_corrections_checked": 2,
+        "physical_forests_checked": 2,
+        "posterior_max_absolute_difference": 2.2115642650533118e-13,
+        "row": 46258
+      },
+      {
+        "physical_corrections_checked": 2,
+        "physical_forests_checked": 2,
+        "posterior_max_absolute_difference": 1.61259894326804e-13,
+        "row": 62973
+      },
+      {
+        "physical_corrections_checked": 2,
+        "physical_forests_checked": 2,
+        "posterior_max_absolute_difference": 1.8474111129762605e-13,
+        "row": 91637
+      }
+    ],
+    "pilot_bp5_predictions_and_all_nontiming_diagnostics_reproduced": 5000,
+    "recomputed_correlated_mwpm_matches": 100000,
+    "result_sha256": "3df635ba13f62c29aa9f4e803df22c6f9ce43dac23c975449b65789ab7e5551d",
+    "rows": [
+      22715,
+      46258,
+      62973,
+      91637
+    ],
+    "saved_correlated_uf_predictions_reproduced": 4,
+    "thread_results_identical_except_timing": true,
+    "total_elapsed_seconds": 1248.704722092487,
+    "truth_passed_to_native": false
+  }
+}

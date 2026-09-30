@@ -1,0 +1,3158 @@
+{
+  "distance": 7,
+  "physical_error_probability": 0.003,
+  "cases": [
+    {
+      "shot": 76890,
+      "fault_id": 90,
+      "original_fault": {
+        "instruction_index": 2592,
+        "tick": 65,
+        "gate": "DEPOLARIZE2",
+        "target_index": 296,
+        "q0": 179,
+        "pauli0": "I",
+        "q1": 468,
+        "pauli1": "Y",
+        "measurement_index": -1,
+        "id": 90,
+        "round": 7,
+        "step_in_round": 5,
+        "channel_probability": 0.003,
+        "locations": [
+          {
+            "qubit": 179,
+            "pauli": "I",
+            "patch": 3,
+            "global_xy": [
+              28.0,
+              0.0
+            ],
+            "local_xy": [
+              4.0,
+              0.0
+            ],
+            "role": "data"
+          },
+          {
+            "qubit": 468,
+            "pauli": "Y",
+            "patch": 3,
+            "global_xy": [
+              27.5,
+              0.5
+            ],
+            "local_xy": [
+              3.5,
+              0.5
+            ],
+            "role": "check_ancilla"
+          }
+        ],
+        "patch": 3,
+        "detectors": [
+          1890,
+          1896,
+          2184,
+          2192
+        ],
+        "observables": []
+      },
+      "original_CZ_slot": 2,
+      "variants": [
+        {
+          "pauli": "II",
+          "detectors": [],
+          "observables": [],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3236,
+            "UF": 3236,
+            "MWPM": 3236,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [],
+            "data_support": [],
+            "flipped_measurements": []
+          }
+        },
+        {
+          "pauli": "IX",
+          "detectors": [
+            1890,
+            2192
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3236,
+            "UF": 3116,
+            "MWPM": 3110,
+            "UF_correct": false,
+            "MWPM_correct": false,
+            "UF_wrong_bits": [
+              3,
+              7
+            ],
+            "MWPM_wrong_bits": [
+              1,
+              7
+            ]
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462
+            ]
+          }
+        },
+        {
+          "pauli": "IY",
+          "detectors": [
+            1890,
+            1896,
+            2184,
+            2192
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3236,
+            "UF": 3116,
+            "MWPM": 3236,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              3,
+              7
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462,
+              468
+            ]
+          }
+        },
+        {
+          "pauli": "IZ",
+          "detectors": [
+            1896,
+            2184
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3236,
+            "UF": 3236,
+            "MWPM": 3236,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 468,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              468
+            ]
+          }
+        },
+        {
+          "pauli": "XI",
+          "detectors": [
+            1903,
+            2184
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            1903
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3236,
+            "UF": 3236,
+            "MWPM": 3236,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 179,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 475,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 179,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              475
+            ]
+          }
+        },
+        {
+          "pauli": "XX",
+          "detectors": [
+            1890,
+            1903,
+            2184,
+            2192
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            1903
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3236,
+            "UF": 3620,
+            "MWPM": 3236,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              7,
+              9
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Z",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 475,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462,
+              475
+            ]
+          }
+        },
+        {
+          "pauli": "XY",
+          "detectors": [
+            1890,
+            1896,
+            1903,
+            2192
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            1903
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3236,
+            "UF": 3116,
+            "MWPM": 3236,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              3,
+              7
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Y",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 475,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462,
+              468,
+              475
+            ]
+          }
+        },
+        {
+          "pauli": "XZ",
+          "detectors": [
+            1896,
+            1903
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            1903
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3236,
+            "UF": 3116,
+            "MWPM": 3236,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              3,
+              7
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 179,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 468,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 475,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 179,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              468,
+              475
+            ]
+          }
+        },
+        {
+          "pauli": "YI",
+          "detectors": [
+            1903,
+            2184,
+            2192,
+            8353
+          ],
+          "observables": [
+            7
+          ],
+          "unfired_in_original_shot": [
+            1903
+          ],
+          "alone": {
+            "actual": 128,
+            "UF": 128,
+            "MWPM": 128,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3108,
+            "UF": 3108,
+            "MWPM": 3108,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 179,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 475,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 179,
+                "pauli": "Y",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              475
+            ]
+          }
+        },
+        {
+          "pauli": "YX",
+          "detectors": [
+            1890,
+            1903,
+            2184,
+            8353
+          ],
+          "observables": [
+            7
+          ],
+          "unfired_in_original_shot": [
+            1903
+          ],
+          "alone": {
+            "actual": 128,
+            "UF": 128,
+            "MWPM": 128,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3108,
+            "UF": 3748,
+            "MWPM": 3238,
+            "UF_correct": false,
+            "MWPM_correct": false,
+            "UF_wrong_bits": [
+              7,
+              9
+            ],
+            "MWPM_wrong_bits": [
+              1,
+              7
+            ]
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Z",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 475,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462,
+              475
+            ]
+          }
+        },
+        {
+          "pauli": "YY",
+          "detectors": [
+            1890,
+            1896,
+            1903,
+            8353
+          ],
+          "observables": [
+            7
+          ],
+          "unfired_in_original_shot": [
+            1903
+          ],
+          "alone": {
+            "actual": 128,
+            "UF": 128,
+            "MWPM": 128,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3108,
+            "UF": 3748,
+            "MWPM": 3238,
+            "UF_correct": false,
+            "MWPM_correct": false,
+            "UF_wrong_bits": [
+              7,
+              9
+            ],
+            "MWPM_wrong_bits": [
+              1,
+              7
+            ]
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Y",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 475,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462,
+              468,
+              475
+            ]
+          }
+        },
+        {
+          "pauli": "YZ",
+          "detectors": [
+            1896,
+            1903,
+            2192,
+            8353
+          ],
+          "observables": [
+            7
+          ],
+          "unfired_in_original_shot": [
+            1903
+          ],
+          "alone": {
+            "actual": 128,
+            "UF": 128,
+            "MWPM": 128,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3108,
+            "UF": 3748,
+            "MWPM": 3238,
+            "UF_correct": false,
+            "MWPM_correct": false,
+            "UF_wrong_bits": [
+              7,
+              9
+            ],
+            "MWPM_wrong_bits": [
+              1,
+              7
+            ]
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 179,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 468,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 475,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 179,
+                "pauli": "Y",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              468,
+              475
+            ]
+          }
+        },
+        {
+          "pauli": "ZI",
+          "detectors": [
+            2192,
+            8353
+          ],
+          "observables": [
+            7
+          ],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 128,
+            "UF": 128,
+            "MWPM": 128,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3108,
+            "UF": 3108,
+            "MWPM": 3108,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": []
+          }
+        },
+        {
+          "pauli": "ZX",
+          "detectors": [
+            1890,
+            8353
+          ],
+          "observables": [
+            7
+          ],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 128,
+            "UF": 128,
+            "MWPM": 128,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3108,
+            "UF": 3748,
+            "MWPM": 3238,
+            "UF_correct": false,
+            "MWPM_correct": false,
+            "UF_wrong_bits": [
+              7,
+              9
+            ],
+            "MWPM_wrong_bits": [
+              1,
+              7
+            ]
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462
+            ]
+          }
+        },
+        {
+          "pauli": "ZY",
+          "detectors": [
+            1890,
+            1896,
+            2184,
+            8353
+          ],
+          "observables": [
+            7
+          ],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 128,
+            "UF": 128,
+            "MWPM": 128,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3108,
+            "UF": 3748,
+            "MWPM": 3238,
+            "UF_correct": false,
+            "MWPM_correct": false,
+            "UF_wrong_bits": [
+              7,
+              9
+            ],
+            "MWPM_wrong_bits": [
+              1,
+              7
+            ]
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462,
+              468
+            ]
+          }
+        },
+        {
+          "pauli": "ZZ",
+          "detectors": [
+            1896,
+            2184,
+            2192,
+            8353
+          ],
+          "observables": [
+            7
+          ],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 128,
+            "UF": 128,
+            "MWPM": 128,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 3108,
+            "UF": 3108,
+            "MWPM": 3108,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 468,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              468
+            ]
+          }
+        }
+      ],
+      "ancilla_error_timing": [
+        {
+          "slot": 1,
+          "instruction_index": 2585,
+          "data_qubit": 172,
+          "ancilla_qubit": 468,
+          "pauli": "IX",
+          "detectors": [
+            1890,
+            8353
+          ],
+          "observables": [
+            7
+          ],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462
+            ]
+          }
+        },
+        {
+          "slot": 1,
+          "instruction_index": 2585,
+          "data_qubit": 172,
+          "ancilla_qubit": 468,
+          "pauli": "IY",
+          "detectors": [
+            1890,
+            1896,
+            2184,
+            8353
+          ],
+          "observables": [
+            7
+          ],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 179,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462,
+              468
+            ]
+          }
+        },
+        {
+          "slot": 1,
+          "instruction_index": 2585,
+          "data_qubit": 172,
+          "ancilla_qubit": 468,
+          "pauli": "IZ",
+          "detectors": [
+            1896,
+            2184
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 468,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              468
+            ]
+          }
+        },
+        {
+          "slot": 2,
+          "instruction_index": 2592,
+          "data_qubit": 179,
+          "ancilla_qubit": 468,
+          "pauli": "IX",
+          "detectors": [
+            1890,
+            2192
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462
+            ]
+          }
+        },
+        {
+          "slot": 2,
+          "instruction_index": 2592,
+          "data_qubit": 179,
+          "ancilla_qubit": 468,
+          "pauli": "IY",
+          "detectors": [
+            1890,
+            1896,
+            2184,
+            2192
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 462,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 173,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              462,
+              468
+            ]
+          }
+        },
+        {
+          "slot": 2,
+          "instruction_index": 2592,
+          "data_qubit": 179,
+          "ancilla_qubit": 468,
+          "pauli": "IZ",
+          "detectors": [
+            1896,
+            2184
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 468,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              468
+            ]
+          }
+        },
+        {
+          "slot": 3,
+          "instruction_index": 2596,
+          "data_qubit": 173,
+          "ancilla_qubit": 468,
+          "pauli": "IX",
+          "detectors": [
+            2185,
+            2192
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": []
+          }
+        },
+        {
+          "slot": 3,
+          "instruction_index": 2596,
+          "data_qubit": 173,
+          "ancilla_qubit": 468,
+          "pauli": "IY",
+          "detectors": [
+            1896,
+            2184,
+            2185,
+            2192
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 468,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 180,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              468
+            ]
+          }
+        },
+        {
+          "slot": 3,
+          "instruction_index": 2596,
+          "data_qubit": 173,
+          "ancilla_qubit": 468,
+          "pauli": "IZ",
+          "detectors": [
+            1896,
+            2184
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 468,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              468
+            ]
+          }
+        },
+        {
+          "slot": 4,
+          "instruction_index": 2603,
+          "data_qubit": 180,
+          "ancilla_qubit": 468,
+          "pauli": "IX",
+          "detectors": [],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 468,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": []
+          }
+        },
+        {
+          "slot": 4,
+          "instruction_index": 2603,
+          "data_qubit": 180,
+          "ancilla_qubit": 468,
+          "pauli": "IY",
+          "detectors": [
+            1896,
+            2184
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 468,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              468
+            ]
+          }
+        },
+        {
+          "slot": 4,
+          "instruction_index": 2603,
+          "data_qubit": 180,
+          "ancilla_qubit": 468,
+          "pauli": "IZ",
+          "detectors": [
+            1896,
+            2184
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 2609,
+            "support": [
+              {
+                "qubit": 468,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              468
+            ]
+          }
+        }
+      ],
+      "source_hashes": {
+        "physical_faults.json": "d1efafac7090967038a057e960b5762884c8eba1ad6a64b04bb26f004aa548ec",
+        "fault_responses.npz": "36b5a0b8110a1dbc0e826de17f3f9847be52a4747923f5fb5264fa25eaa0d046",
+        "validation.json": "3efe06d4d9367bbf4800561e94ab00ca85e3f91ce3ef7266dca3179d52e95c15",
+        "evidence.json": "f15a395cf41b799af73a075a58eaac609981b6048b261dfe06cc7c3694545759"
+      },
+      "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-9pbSDiuL/shot_76890"
+    },
+    {
+      "shot": 44875,
+      "fault_id": 247,
+      "original_fault": {
+        "instruction_index": 6193,
+        "tick": 176,
+        "gate": "DEPOLARIZE2",
+        "target_index": 300,
+        "q0": 176,
+        "pauli0": "Y",
+        "q1": 466,
+        "pauli1": "X",
+        "measurement_index": -1,
+        "id": 247,
+        "round": 18,
+        "step_in_round": 6,
+        "channel_probability": 0.003,
+        "locations": [
+          {
+            "qubit": 176,
+            "pauli": "Y",
+            "patch": 3,
+            "global_xy": [
+              27.0,
+              4.0
+            ],
+            "local_xy": [
+              3.0,
+              4.0
+            ],
+            "role": "data"
+          },
+          {
+            "qubit": 466,
+            "pauli": "X",
+            "patch": 3,
+            "global_xy": [
+              26.5,
+              4.5
+            ],
+            "local_xy": [
+              2.5,
+              4.5
+            ],
+            "role": "check_ancilla"
+          }
+        ],
+        "patch": 3,
+        "detectors": [
+          5061,
+          5350,
+          5351,
+          5355
+        ],
+        "observables": []
+      },
+      "original_CZ_slot": 3,
+      "variants": [
+        {
+          "pauli": "II",
+          "detectors": [],
+          "observables": [],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 2925,
+            "MWPM": 2925,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [],
+            "data_support": [],
+            "flipped_measurements": []
+          }
+        },
+        {
+          "pauli": "IX",
+          "detectors": [
+            5351,
+            5356
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5351,
+            5356
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 2925,
+            "MWPM": 2925,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": []
+          }
+        },
+        {
+          "pauli": "IY",
+          "detectors": [
+            5062,
+            5350,
+            5351,
+            5356
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5351,
+            5356
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 3021,
+            "MWPM": 2925,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              5,
+              7
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              466
+            ]
+          }
+        },
+        {
+          "pauli": "IZ",
+          "detectors": [
+            5062,
+            5350
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 3021,
+            "MWPM": 2925,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              5,
+              7
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 466,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              466
+            ]
+          }
+        },
+        {
+          "pauli": "XI",
+          "detectors": [
+            5350,
+            5355
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 2925,
+            "MWPM": 2925,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": []
+          }
+        },
+        {
+          "pauli": "XX",
+          "detectors": [
+            5350,
+            5351,
+            5355,
+            5356
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5351,
+            5356
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 2925,
+            "MWPM": 2925,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": []
+          }
+        },
+        {
+          "pauli": "XY",
+          "detectors": [
+            5062,
+            5351,
+            5355,
+            5356
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5351,
+            5356
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 2925,
+            "MWPM": 2925,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              466
+            ]
+          }
+        },
+        {
+          "pauli": "XZ",
+          "detectors": [
+            5062,
+            5355
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 2925,
+            "MWPM": 2925,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "X",
+                "role": "data"
+              },
+              {
+                "qubit": 466,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "X",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              466
+            ]
+          }
+        },
+        {
+          "pauli": "YI",
+          "detectors": [
+            5061,
+            5350,
+            5355,
+            5356
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5356
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 2925,
+            "MWPM": 2925,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "Y",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              465
+            ]
+          }
+        },
+        {
+          "pauli": "YX",
+          "detectors": [
+            5061,
+            5350,
+            5351,
+            5355
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5351
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 3885,
+            "MWPM": 2925,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              6,
+              10
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              465
+            ]
+          }
+        },
+        {
+          "pauli": "YY",
+          "detectors": [
+            5061,
+            5062,
+            5351,
+            5355
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5351
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 3885,
+            "MWPM": 2925,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              6,
+              10
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              465,
+              466
+            ]
+          }
+        },
+        {
+          "pauli": "YZ",
+          "detectors": [
+            5061,
+            5062,
+            5355,
+            5356
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5356
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 2925,
+            "MWPM": 2925,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "Y",
+                "role": "data"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 466,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "Y",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              465,
+              466
+            ]
+          }
+        },
+        {
+          "pauli": "ZI",
+          "detectors": [
+            5061,
+            5356
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5356
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 2925,
+            "MWPM": 2925,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              465
+            ]
+          }
+        },
+        {
+          "pauli": "ZX",
+          "detectors": [
+            5061,
+            5351
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5351
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 3885,
+            "MWPM": 2925,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              6,
+              10
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              465
+            ]
+          }
+        },
+        {
+          "pauli": "ZY",
+          "detectors": [
+            5061,
+            5062,
+            5350,
+            5351
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5351
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 3981,
+            "MWPM": 2925,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              5,
+              6,
+              7,
+              10
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              465,
+              466
+            ]
+          }
+        },
+        {
+          "pauli": "ZZ",
+          "detectors": [
+            5061,
+            5062,
+            5350,
+            5356
+          ],
+          "observables": [],
+          "unfired_in_original_shot": [
+            5356
+          ],
+          "alone": {
+            "actual": 0,
+            "UF": 0,
+            "MWPM": 0,
+            "UF_correct": true,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [],
+            "MWPM_wrong_bits": []
+          },
+          "in_original_background": {
+            "actual": 2925,
+            "UF": 3021,
+            "MWPM": 2925,
+            "UF_correct": false,
+            "MWPM_correct": true,
+            "UF_wrong_bits": [
+              5,
+              7
+            ],
+            "MWPM_wrong_bits": []
+          },
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 466,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              465,
+              466
+            ]
+          }
+        }
+      ],
+      "ancilla_error_timing": [
+        {
+          "slot": 1,
+          "instruction_index": 6182,
+          "data_qubit": 169,
+          "ancilla_qubit": 466,
+          "pauli": "IX",
+          "detectors": [
+            5054,
+            5061
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 170,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 458,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 170,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              458,
+              465
+            ]
+          }
+        },
+        {
+          "slot": 1,
+          "instruction_index": 6182,
+          "data_qubit": 169,
+          "ancilla_qubit": 466,
+          "pauli": "IY",
+          "detectors": [
+            5054,
+            5061,
+            5062,
+            5350
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 170,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 458,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 170,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              458,
+              465,
+              466
+            ]
+          }
+        },
+        {
+          "slot": 1,
+          "instruction_index": 6182,
+          "data_qubit": 169,
+          "ancilla_qubit": 466,
+          "pauli": "IZ",
+          "detectors": [
+            5062,
+            5350
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 466,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              466
+            ]
+          }
+        },
+        {
+          "slot": 2,
+          "instruction_index": 6189,
+          "data_qubit": 170,
+          "ancilla_qubit": 466,
+          "pauli": "IX",
+          "detectors": [
+            5061,
+            5351
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              465
+            ]
+          }
+        },
+        {
+          "slot": 2,
+          "instruction_index": 6189,
+          "data_qubit": 170,
+          "ancilla_qubit": 466,
+          "pauli": "IY",
+          "detectors": [
+            5061,
+            5062,
+            5350,
+            5351
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 465,
+                "pauli": "X",
+                "role": "ancilla"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 176,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              465,
+              466
+            ]
+          }
+        },
+        {
+          "slot": 2,
+          "instruction_index": 6189,
+          "data_qubit": 170,
+          "ancilla_qubit": 466,
+          "pauli": "IZ",
+          "detectors": [
+            5062,
+            5350
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 466,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              466
+            ]
+          }
+        },
+        {
+          "slot": 3,
+          "instruction_index": 6193,
+          "data_qubit": 176,
+          "ancilla_qubit": 466,
+          "pauli": "IX",
+          "detectors": [
+            5351,
+            5356
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": []
+          }
+        },
+        {
+          "slot": 3,
+          "instruction_index": 6193,
+          "data_qubit": 176,
+          "ancilla_qubit": 466,
+          "pauli": "IY",
+          "detectors": [
+            5062,
+            5350,
+            5351,
+            5356
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              },
+              {
+                "qubit": 466,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [
+              {
+                "qubit": 177,
+                "pauli": "Z",
+                "role": "data"
+              }
+            ],
+            "flipped_measurements": [
+              466
+            ]
+          }
+        },
+        {
+          "slot": 3,
+          "instruction_index": 6193,
+          "data_qubit": 176,
+          "ancilla_qubit": 466,
+          "pauli": "IZ",
+          "detectors": [
+            5062,
+            5350
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 466,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              466
+            ]
+          }
+        },
+        {
+          "slot": 4,
+          "instruction_index": 6200,
+          "data_qubit": 177,
+          "ancilla_qubit": 466,
+          "pauli": "IX",
+          "detectors": [],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 466,
+                "pauli": "Z",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": []
+          }
+        },
+        {
+          "slot": 4,
+          "instruction_index": 6200,
+          "data_qubit": 177,
+          "ancilla_qubit": 466,
+          "pauli": "IY",
+          "detectors": [
+            5062,
+            5350
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 466,
+                "pauli": "Y",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              466
+            ]
+          }
+        },
+        {
+          "slot": 4,
+          "instruction_index": 6200,
+          "data_qubit": 177,
+          "ancilla_qubit": 466,
+          "pauli": "IZ",
+          "detectors": [
+            5062,
+            5350
+          ],
+          "observables": [],
+          "propagation": {
+            "before_measurement_instruction": 6206,
+            "support": [
+              {
+                "qubit": 466,
+                "pauli": "X",
+                "role": "ancilla"
+              }
+            ],
+            "data_support": [],
+            "flipped_measurements": [
+              466
+            ]
+          }
+        }
+      ],
+      "source_hashes": {
+        "physical_faults.json": "ac004f61fcce8ccb57de5870cdbae1424ce247dea847753a0f9d93f665e75bdd",
+        "fault_responses.npz": "7a3c96d002a74a8aeb10ebd2f9832279b2fe8769d4ee9b45d7fb47441f00bbe5",
+        "validation.json": "8cdbce24a54b700241cc10a5243de6d676f89d096ae0ed8ab56308c1abe487e7",
+        "evidence.json": "7b3a72fa63a10b6da176253fbadf55bb1d6e2a431da83f4ca69610ee4b23c41a"
+      },
+      "physical_source": "/data2/s2chitni/.tmp/uf-case-collection-next-6a0xaw4f/shot_44875"
+    }
+  ],
+  "single_fault_response_checks": {
+    "locations_times_products": 56,
+    "seeds": [
+      1,
+      123456
+    ],
+    "samples_per_seed": 2
+  },
+  "all_original_physical_responses_and_predictions_reproduced": true,
+  "every_decoded_correction_syndrome_checked": true,
+  "interpretation": "Selected complete-shot contexts; replacement is one event, with updated truth. Timing probes are isolated insertions, not relocated faults in the noisy context. Pauli frame support is not minimized modulo stabilizers.",
+  "source_hashes": {
+    "/data2/s2chitni/yoked-surface-codes/docs/results/cz_fault_analysis_d7_d9/trace_cases.py": "ff6d51aab22eee12a03f563d16278a35b8451a667a113d1e583f401207fd2c40",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/cz_fault_analysis_d7_d9/analyze.py": "9baa0a31da74091c0ab4fa690bb46104a6eddadfd44f58a62d4d75e937ed9dae",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/physical_fault_ablation_d7_d9/analyze.py": "f793e4b79fea463472cc1aa02eefff67e4afc66c7322dc7f84d7761eea0d3996",
+    "/data2/s2chitni/yoked-surface-codes/docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/analyze.py": "724ab32c01477c420733e2b0746b80f15b64dc42cba38cb4f6c3881e5a8ee0cd",
+    "/data2/s2chitni/.tmp/ysc-four-decoders-d7-p003-100k-adapter/circuit.stim": "8cfa9bb9eaf6db86dfc9ffcfefa4582eb29932d11dc1fd911239ef1425841ff9",
+    "/data2/s2chitni/.tmp/ysc-four-decoders-d7-p003-100k-adapter/model.dem": "9b06141668bef9b334df78e4700853f60505a71f3c4185746d0261e7e3790e0a"
+  }
+}

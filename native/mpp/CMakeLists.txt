@@ -1,0 +1,30 @@
+cmake_minimum_required(VERSION 3.18)
+project(yoked_mpp LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+foreach(source PYMATCHING_SOURCE STIM_SOURCE)
+    if(NOT DEFINED ${source} OR NOT EXISTS "${${source}}/CMakeLists.txt")
+        message(FATAL_ERROR "${source} must name an existing source checkout")
+    endif()
+endforeach()
+
+# The build tool supplies verified, pinned source trees. Configuration never
+# downloads code, and the extension never links against the installed wheel's
+# private ABI. It has its own copy of the same PyMatching 2.4.0 engine.
+set(PYBIND11_FINDPYTHON ON)
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+add_subdirectory("${PYMATCHING_SOURCE}/pybind11" pybind11 EXCLUDE_FROM_ALL)
+set(SIMD_WIDTH 128)
+add_subdirectory("${STIM_SOURCE}" stim EXCLUDE_FROM_ALL)
+
+file(GLOB_RECURSE MATCHING_SOURCES "${PYMATCHING_SOURCE}/src/pymatching/*.cc")
+list(FILTER MATCHING_SOURCES EXCLUDE REGEX "\\.(test|perf|pybind)\\.cc$")
+list(FILTER MATCHING_SOURCES EXCLUDE REGEX "/(perf|diagram)/|/namespaced_main\\.cc$")
+pybind11_add_module(_mpp_fast NO_EXTRAS mpp_fast.cc ${MATCHING_SOURCES})
+target_include_directories(_mpp_fast PRIVATE "${PYMATCHING_SOURCE}/src")
+target_link_libraries(_mpp_fast PRIVATE libstim)
+target_compile_options(_mpp_fast PRIVATE -O3 -fno-strict-aliasing)
+set_target_properties(_mpp_fast PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

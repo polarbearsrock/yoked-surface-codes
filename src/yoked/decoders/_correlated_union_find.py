@@ -45,13 +45,18 @@ class CorrelatedUnionFindDecoder(UnionFindDecoder):
 
     def _decode(self, syndrome) -> _Correction:
         first = super()._decode(syndrome)
+        second = self._second_pass_decoder(first.selected_edges)
+        return first if second is None else second._decode(syndrome)
+
+    def _second_pass_decoder(self, selected_edges) -> UnionFindDecoder | None:
+        """Freeze first-pass correlation evidence in a fresh graph for this shot."""
         weights = apply_correlation_rules(
             [weight for _, _, weight, _ in self.graph.edges],
             self._correlation_rules,
-            first.selected_edges,
+            selected_edges,
         )
         if weights is None:
-            return first
+            return None
 
         # Keep edge IDs, endpoints, and observable labels unchanged. A fresh
         # graph keeps these shot-specific weights out of subsequent calls.
@@ -62,11 +67,17 @@ class CorrelatedUnionFindDecoder(UnionFindDecoder):
         )
         # Restart growth on the original syndrome. The first correction was
         # evidence only; the second correction supplies the complete answer.
-        return UnionFindDecoder(adjusted)._decode(syndrome)
+        return UnionFindDecoder(adjusted)
 
     def decode_with_growth_costs(self, syndrome) -> GrowthDecodeResult:
-        """Refuse: two reweighted passes have no single terminated growth state to cost."""
-        raise NotImplementedError(
-            'decode_with_growth_costs is defined for the single-pass UnionFindDecoder only; '
-            'CorrelatedUnionFindDecoder has no single terminated growth state to report costs from'
-        )
+        """Return the final correction and growth costs on the same weighted graph.
+
+        The first pass supplies correlation evidence only. When it lowers any
+        weight, both the returned correction and the remaining edge lengths
+        come from a fresh second pass. The original graph remains unchanged.
+        Computing first-pass costs also handles shots with no reweighting
+        without rerunning their UF decode.
+        """
+        first = super().decode_with_growth_costs(syndrome)
+        second = self._second_pass_decoder(first.selected_edges)
+        return first if second is None else second.decode_with_growth_costs(syndrome)

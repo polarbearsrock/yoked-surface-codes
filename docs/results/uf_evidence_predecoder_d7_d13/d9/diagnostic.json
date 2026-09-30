@@ -1,0 +1,871 @@
+{
+  "eligible": 487,
+  "rows": [
+    {
+      "actual": 2120,
+      "row": 2501,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1142,
+          "partition_allows_truth": true,
+          "partition_edges": 1408
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1125,
+          "partition_allows_truth": true,
+          "partition_edges": 1315
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1578,
+          "partition_allows_truth": false,
+          "partition_edges": 2226
+        }
+      }
+    },
+    {
+      "actual": 3748,
+      "row": 6553,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1224,
+          "partition_allows_truth": true,
+          "partition_edges": 1763
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1350,
+          "partition_allows_truth": true,
+          "partition_edges": 2086
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 2105,
+          "partition_allows_truth": false,
+          "partition_edges": 4152
+        }
+      }
+    },
+    {
+      "actual": 3516,
+      "row": 7660,
+      "variants": {
+        "bp20_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1329,
+          "partition_allows_truth": false,
+          "partition_edges": 2100
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1362,
+          "partition_allows_truth": false,
+          "partition_edges": 2131
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 2247,
+          "partition_allows_truth": false,
+          "partition_edges": 4722
+        }
+      }
+    },
+    {
+      "actual": 152,
+      "row": 8191,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1272,
+          "partition_allows_truth": true,
+          "partition_edges": 1855
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1186,
+          "partition_allows_truth": true,
+          "partition_edges": 1533
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1762,
+          "partition_allows_truth": false,
+          "partition_edges": 2840
+        }
+      }
+    },
+    {
+      "actual": 3342,
+      "row": 8734,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1027,
+          "partition_allows_truth": true,
+          "partition_edges": 1234
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1052,
+          "partition_allows_truth": true,
+          "partition_edges": 1316
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 2980,
+          "partition_allows_truth": false,
+          "partition_edges": 7662
+        }
+      }
+    },
+    {
+      "actual": 2947,
+      "row": 9738,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1190,
+          "partition_allows_truth": true,
+          "partition_edges": 1491
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1358,
+          "partition_allows_truth": true,
+          "partition_edges": 1881
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1801,
+          "partition_allows_truth": false,
+          "partition_edges": 2892
+        }
+      }
+    },
+    {
+      "actual": 81,
+      "row": 13227,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1114,
+          "partition_allows_truth": true,
+          "partition_edges": 1344
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1268,
+          "partition_allows_truth": true,
+          "partition_edges": 1786
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 3251,
+          "partition_allows_truth": false,
+          "partition_edges": 8530
+        }
+      }
+    },
+    {
+      "actual": 2175,
+      "row": 18060,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1277,
+          "partition_allows_truth": true,
+          "partition_edges": 1837
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1309,
+          "partition_allows_truth": true,
+          "partition_edges": 1791
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1849,
+          "partition_allows_truth": false,
+          "partition_edges": 3156
+        }
+      }
+    },
+    {
+      "actual": 1992,
+      "row": 21718,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1113,
+          "partition_allows_truth": true,
+          "partition_edges": 1505
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1188,
+          "partition_allows_truth": true,
+          "partition_edges": 1641
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1748,
+          "partition_allows_truth": false,
+          "partition_edges": 3025
+        }
+      }
+    },
+    {
+      "actual": 1682,
+      "row": 30372,
+      "variants": {
+        "bp20_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1210,
+          "partition_allows_truth": false,
+          "partition_edges": 1578
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1258,
+          "partition_allows_truth": false,
+          "partition_edges": 1671
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1732,
+          "partition_allows_truth": false,
+          "partition_edges": 2492
+        }
+      }
+    },
+    {
+      "actual": 3419,
+      "row": 30841,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1295,
+          "partition_allows_truth": true,
+          "partition_edges": 1894
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1328,
+          "partition_allows_truth": true,
+          "partition_edges": 1907
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 2064,
+          "partition_allows_truth": false,
+          "partition_edges": 3849
+        }
+      }
+    },
+    {
+      "actual": 2213,
+      "row": 32040,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1244,
+          "partition_allows_truth": true,
+          "partition_edges": 1661
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1255,
+          "partition_allows_truth": true,
+          "partition_edges": 1693
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1877,
+          "partition_allows_truth": false,
+          "partition_edges": 3150
+        }
+      }
+    },
+    {
+      "actual": 2681,
+      "row": 38359,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1139,
+          "partition_allows_truth": true,
+          "partition_edges": 1352
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1400,
+          "partition_allows_truth": true,
+          "partition_edges": 2075
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 3154,
+          "partition_allows_truth": false,
+          "partition_edges": 7749
+        }
+      }
+    },
+    {
+      "actual": 945,
+      "row": 41086,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1095,
+          "partition_allows_truth": true,
+          "partition_edges": 1330
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1129,
+          "partition_allows_truth": true,
+          "partition_edges": 1350
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1732,
+          "partition_allows_truth": false,
+          "partition_edges": 2675
+        }
+      }
+    },
+    {
+      "actual": 3970,
+      "row": 41133,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1105,
+          "partition_allows_truth": true,
+          "partition_edges": 1463
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1181,
+          "partition_allows_truth": true,
+          "partition_edges": 1604
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1571,
+          "partition_allows_truth": false,
+          "partition_edges": 2501
+        }
+      }
+    },
+    {
+      "actual": 3708,
+      "row": 42348,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1396,
+          "partition_allows_truth": true,
+          "partition_edges": 2165
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1314,
+          "partition_allows_truth": true,
+          "partition_edges": 1838
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 2055,
+          "partition_allows_truth": false,
+          "partition_edges": 3814
+        }
+      }
+    },
+    {
+      "actual": 3803,
+      "row": 47360,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1121,
+          "partition_allows_truth": true,
+          "partition_edges": 1391
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1142,
+          "partition_allows_truth": true,
+          "partition_edges": 1491
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1687,
+          "partition_allows_truth": false,
+          "partition_edges": 2617
+        }
+      }
+    },
+    {
+      "actual": 2106,
+      "row": 54536,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 2463,
+          "partition_allows_truth": true,
+          "partition_edges": 6278
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 2849,
+          "partition_allows_truth": false,
+          "partition_edges": 7858
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 3495,
+          "partition_allows_truth": false,
+          "partition_edges": 9578
+        }
+      }
+    },
+    {
+      "actual": 392,
+      "row": 55840,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1305,
+          "partition_allows_truth": true,
+          "partition_edges": 2064
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1463,
+          "partition_allows_truth": true,
+          "partition_edges": 2421
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1747,
+          "partition_allows_truth": false,
+          "partition_edges": 2924
+        }
+      }
+    },
+    {
+      "actual": 3848,
+      "row": 62188,
+      "variants": {
+        "bp20_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1368,
+          "partition_allows_truth": false,
+          "partition_edges": 2043
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1329,
+          "partition_allows_truth": false,
+          "partition_edges": 1902
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1768,
+          "partition_allows_truth": false,
+          "partition_edges": 2737
+        }
+      }
+    },
+    {
+      "actual": 2938,
+      "row": 63140,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1912,
+          "partition_allows_truth": true,
+          "partition_edges": 3989
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1816,
+          "partition_allows_truth": true,
+          "partition_edges": 3637
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1921,
+          "partition_allows_truth": false,
+          "partition_edges": 3289
+        }
+      }
+    },
+    {
+      "actual": 3770,
+      "row": 68888,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1245,
+          "partition_allows_truth": true,
+          "partition_edges": 1722
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1211,
+          "partition_allows_truth": true,
+          "partition_edges": 1611
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1866,
+          "partition_allows_truth": false,
+          "partition_edges": 3195
+        }
+      }
+    },
+    {
+      "actual": 1753,
+      "row": 74485,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1134,
+          "partition_allows_truth": true,
+          "partition_edges": 1540
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1103,
+          "partition_allows_truth": true,
+          "partition_edges": 1417
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1641,
+          "partition_allows_truth": false,
+          "partition_edges": 2670
+        }
+      }
+    },
+    {
+      "actual": 3730,
+      "row": 74939,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 2210,
+          "partition_allows_truth": true,
+          "partition_edges": 5215
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 2291,
+          "partition_allows_truth": false,
+          "partition_edges": 5444
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 2341,
+          "partition_allows_truth": false,
+          "partition_edges": 4998
+        }
+      }
+    },
+    {
+      "actual": 2810,
+      "row": 75365,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1138,
+          "partition_allows_truth": true,
+          "partition_edges": 1431
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1137,
+          "partition_allows_truth": true,
+          "partition_edges": 1391
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1720,
+          "partition_allows_truth": false,
+          "partition_edges": 2649
+        }
+      }
+    },
+    {
+      "actual": 2468,
+      "row": 85136,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1680,
+          "partition_allows_truth": true,
+          "partition_edges": 3339
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1863,
+          "partition_allows_truth": false,
+          "partition_edges": 3846
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1797,
+          "partition_allows_truth": false,
+          "partition_edges": 2853
+        }
+      }
+    },
+    {
+      "actual": 1872,
+      "row": 86534,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1121,
+          "partition_allows_truth": true,
+          "partition_edges": 1483
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1147,
+          "partition_allows_truth": true,
+          "partition_edges": 1510
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1550,
+          "partition_allows_truth": false,
+          "partition_edges": 2296
+        }
+      }
+    },
+    {
+      "actual": 911,
+      "row": 87360,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1082,
+          "partition_allows_truth": true,
+          "partition_edges": 1260
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1204,
+          "partition_allows_truth": true,
+          "partition_edges": 1583
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 3210,
+          "partition_allows_truth": false,
+          "partition_edges": 8840
+        }
+      }
+    },
+    {
+      "actual": 2450,
+      "row": 90878,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1127,
+          "partition_allows_truth": true,
+          "partition_edges": 1408
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1292,
+          "partition_allows_truth": true,
+          "partition_edges": 1841
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1761,
+          "partition_allows_truth": false,
+          "partition_edges": 2778
+        }
+      }
+    },
+    {
+      "actual": 3394,
+      "row": 92881,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1105,
+          "partition_allows_truth": true,
+          "partition_edges": 1379
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1205,
+          "partition_allows_truth": true,
+          "partition_edges": 1662
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1728,
+          "partition_allows_truth": false,
+          "partition_edges": 2676
+        }
+      }
+    },
+    {
+      "actual": 1333,
+      "row": 92967,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1233,
+          "partition_allows_truth": true,
+          "partition_edges": 1787
+        },
+        "bp5_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 1211,
+          "partition_allows_truth": true,
+          "partition_edges": 1655
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 2017,
+          "partition_allows_truth": false,
+          "partition_edges": 3711
+        }
+      }
+    },
+    {
+      "actual": 1160,
+      "row": 96486,
+      "variants": {
+        "bp20_uf": {
+          "correct": true,
+          "forest_allows_truth": true,
+          "forest_edges": 2605,
+          "partition_allows_truth": true,
+          "partition_edges": 6734
+        },
+        "bp5_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1996,
+          "partition_allows_truth": false,
+          "partition_edges": 4371
+        },
+        "correlated_uf": {
+          "correct": false,
+          "forest_allows_truth": false,
+          "forest_edges": 1614,
+          "partition_allows_truth": false,
+          "partition_edges": 2579
+        }
+      }
+    }
+  ],
+  "selection": "Uniform subset of correlated-UF-fails / correlated-MWPM-succeeds shots within the pilot; diagnostic only, not an LER estimate.",
+  "shots": 32
+}

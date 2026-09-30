@@ -1,0 +1,77 @@
+{
+  "cases": [
+    {
+      "distance": 9,
+      "distinguishing_observable": 10,
+      "forest_true_class_cost": 3125.1661609800303,
+      "forest_wrong_class_cost": 3121.0988805904726,
+      "global_MWPM_true_class_cost": 3078.4064298175103,
+      "shot": 343,
+      "true_class_penalty_from_missing_edges": 46.759731162519984,
+      "true_class_penalty_within_forest": 4.067280389557709
+    },
+    {
+      "distance": 9,
+      "distinguishing_observable": 7,
+      "forest_true_class_cost": 3158.2111105237423,
+      "forest_wrong_class_cost": 3148.313404984839,
+      "global_MWPM_true_class_cost": 3114.786642093769,
+      "shot": 4053,
+      "true_class_penalty_from_missing_edges": 43.42446842997333,
+      "true_class_penalty_within_forest": 9.89770553890321
+    },
+    {
+      "distance": 9,
+      "distinguishing_observable": 11,
+      "forest_true_class_cost": 3008.386163278082,
+      "forest_wrong_class_cost": 2997.2372879288237,
+      "global_MWPM_true_class_cost": 2962.7121329163565,
+      "shot": 6658,
+      "true_class_penalty_from_missing_edges": 45.67403036172573,
+      "true_class_penalty_within_forest": 11.14887534925856
+    },
+    {
+      "distance": 9,
+      "distinguishing_observable": 3,
+      "forest_true_class_cost": 3071.5720162374173,
+      "forest_wrong_class_cost": 3070.532221880754,
+      "global_MWPM_true_class_cost": 3035.2065962495944,
+      "shot": 50776,
+      "true_class_penalty_from_missing_edges": 36.36541998782286,
+      "true_class_penalty_within_forest": 1.0397943566631511
+    },
+    {
+      "distance": 11,
+      "distinguishing_observable": 10,
+      "forest_true_class_cost": 5854.040817370582,
+      "forest_wrong_class_cost": 5848.962453475386,
+      "global_MWPM_true_class_cost": 5790.675797674438,
+      "shot": 11403,
+      "true_class_penalty_from_missing_edges": 63.36501969614346,
+      "true_class_penalty_within_forest": 5.078363895196162
+    },
+    {
+      "distance": 13,
+      "distinguishing_observable": 9,
+      "forest_true_class_cost": 9581.80123455658,
+      "forest_wrong_class_cost": 9577.700641231764,
+      "global_MWPM_true_class_cost": 9474.089101404144,
+      "shot": 67050,
+      "true_class_penalty_from_missing_edges": 107.71213315243585,
+      "true_class_penalty_within_forest": 4.1005933248161455
+    },
+    {
+      "distance": 13,
+      "distinguishing_observable": 8,
+      "forest_true_class_cost": 9517.934279941455,
+      "forest_wrong_class_cost": 9517.185525324698,
+      "global_MWPM_true_class_cost": 9385.946124379394,
+      "shot": 85896,
+      "true_class_penalty_from_missing_edges": 131.98815556206137,
+      "true_class_penalty_within_forest": 0.7487546167576511
+    }
+  ],
+  "independent_forced_class_MWPM_checks": 14,
+  "independent_restricted_MWPM_checks": 7,
+  "script_sha256": "f0092bbc92d5f7ab849176de4a94e7b1f1583b5cc09b3d7623ae76a0c27fe56e"
+}
