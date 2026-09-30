@@ -1,6 +1,5 @@
 {
   "original": "/data2/s2chitni/projects/dante/results/yoked_fourway_sweep_p003_4d_100k_20260929T230047Z",
-  "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/yoked_fourway_sweep_p003_4d_100k_20260929T230047Z",
   "files": 304,
   "bytes": 3337571440,
   "retained": [
@@ -31,5 +30,9 @@
     "d13/mwpm/results.json",
     "d11/mwpm/results.json",
     "d9/mwpm/results.json"
-  ]
+  ],
+  "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/yoked_fourway_sweep_p003_4d_100k_20260929T230047Z",
+  "status": "raw_results_deleted",
+  "deleted_utc": "2026-09-30T17:22:35.413945+00:00",
+  "retained_d9_reference": "/data2/s2chitni/.tmp/dante/references/yoked_fourway_d9_100k_20260929"
 }

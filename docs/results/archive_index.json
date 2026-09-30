@@ -1,446 +1,522 @@
 {
   "created_utc": "20260930T171100Z",
-  "archive_root": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z",
-  "repository_payloads": [
-    {
-      "path": "docs/results/correlated_uf_growth_diagnosis_d7_d9/full_d9_34624.json",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/correlated_uf_growth_diagnosis_d7_d9/full_d9_34624.json",
-      "bytes": 1668204,
-      "sha256": "dced9e79ad7511ab075e0c614dae62060054119bde58f69b95b3497f4bd1950f"
-    },
-    {
-      "path": "docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/reduced_44875.stim",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/reduced_44875.stim",
-      "bytes": 810736,
-      "sha256": "e06e0bf6a2c8b9123f6328b9b2f9012db1e8c642860948d9cc6d1e1bd7857dca"
-    },
-    {
-      "path": "docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/reduced_76890.stim",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/reduced_76890.stim",
-      "bytes": 810718,
-      "sha256": "901874666c28dafd64e2e12bb6243d1b4a9fcd10e8c2b3edf72871e63af8934f"
-    },
-    {
-      "path": "docs/results/coset_ensemble_d7_d9_p003_100k/d7/predictions_and_diagnostics.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/coset_ensemble_d7_d9_p003_100k/d7/predictions_and_diagnostics.npz",
-      "bytes": 1064235,
-      "sha256": "19593fbdb07c8d2a466aba42b3ab601c8e4281369229284ebd6c0701a53df0ee"
-    },
-    {
-      "path": "docs/results/coset_ensemble_d7_d9_p003_100k/d9/predictions_and_diagnostics.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/coset_ensemble_d7_d9_p003_100k/d9/predictions_and_diagnostics.npz",
-      "bytes": 1064764,
-      "sha256": "fb831d0f9df7d84fb88a00d0c410c863eb3c4fb4d55507e1f17095d065ecb0eb"
-    },
-    {
-      "path": "docs/results/cz_fault_analysis_d7_d9/d7/decoded_pauli.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d7/decoded_pauli.npz",
-      "bytes": 64630,
-      "sha256": "bd1cc036ce945503f5faea1437fcc5d96c10fefbf3e80aaad0cb5cbb31e5e992"
-    },
-    {
-      "path": "docs/results/cz_fault_analysis_d7_d9/d7/single_event_responses.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d7/single_event_responses.npz",
-      "bytes": 19661,
-      "sha256": "f72a3b607c0fe7c8b6b5db5f5e333bb7b02c2e8e28608ee31d62304c38e4a793"
-    },
-    {
-      "path": "docs/results/cz_fault_analysis_d7_d9/d7/single_events.json.gz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d7/single_events.json.gz",
-      "bytes": 157236,
-      "sha256": "8e262f4b34a3030b269d6c0b6cca7c604e696a03f238da85f983661c950b0f74"
-    },
-    {
-      "path": "docs/results/cz_fault_analysis_d7_d9/d9/decoded_pauli.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d9/decoded_pauli.npz",
-      "bytes": 76423,
-      "sha256": "6d8dda3e46ba77200076c09b1053fcad639741e9e8ebe9f32b3d9073db11e2d8"
-    },
-    {
-      "path": "docs/results/cz_fault_analysis_d7_d9/d9/single_event_responses.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d9/single_event_responses.npz",
-      "bytes": 51489,
-      "sha256": "5e661533cceaf402945fe7c2602482e14d175706a3bcd0fbd9df0e4263551457"
-    },
-    {
-      "path": "docs/results/cz_fault_analysis_d7_d9/d9/single_events.json.gz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d9/single_events.json.gz",
-      "bytes": 341904,
-      "sha256": "3e4c98c99097d022d3d30aac6ac994d36f438a5f80f04f4fac3b458b09102b88"
-    },
-    {
-      "path": "docs/results/iterative_correlated_uf_pilot_d7_d9/d7/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/iterative_correlated_uf_pilot_d7_d9/d7/results.npz",
-      "bytes": 63893,
-      "sha256": "78f1794770e2fa183b8b9aacc89c574c9e83856c15ec64ec961b693e6f4699d8"
-    },
-    {
-      "path": "docs/results/iterative_correlated_uf_pilot_d7_d9/d9/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/iterative_correlated_uf_pilot_d7_d9/d9/results.npz",
-      "bytes": 70219,
-      "sha256": "32cc4b5cb0ebdb07c94d17ac931517b595915cefd3e4a3e5b5dda25205e0a690"
-    },
-    {
-      "path": "docs/results/parallel_uf_clustering_d11_d13_p003_100k/d11/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_d11_d13_p003_100k/d11/results.npz",
-      "bytes": 9431050,
-      "sha256": "cfacf14e50471f6ef11a5b2d6a9f9cc705da36fcdc56962f693ddd2e7014fb5f"
-    },
-    {
-      "path": "docs/results/parallel_uf_clustering_d11_d13_p003_100k/d13/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_d11_d13_p003_100k/d13/results.npz",
-      "bytes": 9805808,
-      "sha256": "d0cabd019ee393d786701e8c699208fabe327ac089286076b603764cfa35051a"
-    },
-    {
-      "path": "docs/results/parallel_uf_clustering_d7_d9_p003_100k/d7/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_d7_d9_p003_100k/d7/results.npz",
-      "bytes": 8333426,
-      "sha256": "d7bbb770121ace6df2b815a366641a71149bd649a311556d83a68b4e1a7bc36c"
-    },
-    {
-      "path": "docs/results/parallel_uf_clustering_d7_d9_p003_100k/d9/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_d7_d9_p003_100k/d9/results.npz",
-      "bytes": 8972246,
-      "sha256": "5ed8c3d1d0ccebca80409e704230daf5f4ac187eb851ecc80194e5bddc57a8d7"
-    },
-    {
-      "path": "docs/results/parallel_uf_clustering_p001_100k/d11/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_p001_100k/d11/results.npz",
-      "bytes": 6298121,
-      "sha256": "2ab8c5bc6aa4dfb2ba817036fa5800cc3bfb4d944214a7ecc023c1cd67535a89"
-    },
-    {
-      "path": "docs/results/parallel_uf_clustering_p001_100k/d13/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_p001_100k/d13/results.npz",
-      "bytes": 6606174,
-      "sha256": "ae4f6c9bf117114d82ae12e75aca7681fdb3d6eac3a256d276f31de5b51782c7"
-    },
-    {
-      "path": "docs/results/parallel_uf_clustering_p001_100k/d7/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_p001_100k/d7/results.npz",
-      "bytes": 5495055,
-      "sha256": "52dd56cff6acdb9810bcb2d0f6d4f877093dadc90c8c208bdf2b3a20f72f6f56"
-    },
-    {
-      "path": "docs/results/parallel_uf_clustering_p001_100k/d9/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_p001_100k/d9/results.npz",
-      "bytes": 5919817,
-      "sha256": "4882b9310c51bbdb5b01e2e170ba87356e25969993b4daa34cfa6b2ec0dbd236"
-    },
-    {
-      "path": "docs/results/physical_fault_ablation_d7_d9/d7/baseline_labels.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d7/baseline_labels.npz",
-      "bytes": 6755,
-      "sha256": "66a1c0969a955aac69b97a9147154da0bfb6cf6650249f84dc8a6d521bf4f382"
-    },
-    {
-      "path": "docs/results/physical_fault_ablation_d7_d9/d7/decoded_detail.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d7/decoded_detail.npz",
-      "bytes": 48936,
-      "sha256": "f819d3146fb9a4cdcba0f3a8e07d5816b23add3f169e75aa10bb5960de680397"
-    },
-    {
-      "path": "docs/results/physical_fault_ablation_d7_d9/d7/decoded_primary.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d7/decoded_primary.npz",
-      "bytes": 33379,
-      "sha256": "96f4b38a5836ff02549aee1c1e8ba5f6ae932a8eaf77f0abba3d572354d7add0"
-    },
-    {
-      "path": "docs/results/physical_fault_ablation_d7_d9/d7/event_counts.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d7/event_counts.npz",
-      "bytes": 26321,
-      "sha256": "8bf03587ede77b46504db88153416622ff1d5946b78099e3ab5b25e13dde5be5"
-    },
-    {
-      "path": "docs/results/physical_fault_ablation_d7_d9/d9/baseline_labels.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d9/baseline_labels.npz",
-      "bytes": 6803,
-      "sha256": "45dfc6cbbc95101c5d50143f5d28bae65798d07d4e400610a5bd8a01906e910b"
-    },
-    {
-      "path": "docs/results/physical_fault_ablation_d7_d9/d9/decoded_detail.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d9/decoded_detail.npz",
-      "bytes": 49812,
-      "sha256": "3930fbad1242822bf6571e7ea9f9fc303613137a6b5e7b4f0e422c0d611d8c78"
-    },
-    {
-      "path": "docs/results/physical_fault_ablation_d7_d9/d9/decoded_primary.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d9/decoded_primary.npz",
-      "bytes": 33815,
-      "sha256": "63e740a94c0354af34cacac8a00ce2f5ae3a41d6f6a0e4bccc3beeb59b07977d"
-    },
-    {
-      "path": "docs/results/physical_fault_ablation_d7_d9/d9/event_counts.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d9/event_counts.npz",
-      "bytes": 29894,
-      "sha256": "cdedf0613fa8eb4f04b0a1f71962162f52bdaa5057ac3588a9d345d8c81d3022"
-    },
-    {
-      "path": "docs/results/uf_evidence_predecoder_100k_d7_d13/d11/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_100k_d7_d13/d11/results.npz",
-      "bytes": 8442093,
-      "sha256": "3df635ba13f62c29aa9f4e803df22c6f9ce43dac23c975449b65789ab7e5551d"
-    },
-    {
-      "path": "docs/results/uf_evidence_predecoder_100k_d7_d13/d13/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_100k_d7_d13/d13/results.npz",
-      "bytes": 8589273,
-      "sha256": "630007c568e7a3169b1297dfd5253b8ddafcd8fbb221305e8d4d0087b8d986b9"
-    },
-    {
-      "path": "docs/results/uf_evidence_predecoder_100k_d7_d13/d7/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_100k_d7_d13/d7/results.npz",
-      "bytes": 8023428,
-      "sha256": "c9e67c63b2c0f4845774f6200a83c99ca1ed8192b244483e1d65268dcdb70f4a"
-    },
-    {
-      "path": "docs/results/uf_evidence_predecoder_100k_d7_d13/d9/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_100k_d7_d13/d9/results.npz",
-      "bytes": 8243014,
-      "sha256": "804f9eed1e9ca503573de58f26234bd97b924a9f3cbdb3105916db4b16222cb0"
-    },
-    {
-      "path": "docs/results/uf_evidence_predecoder_d7_d13/d11/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_d7_d13/d11/results.npz",
-      "bytes": 902379,
-      "sha256": "b20e52b2749b0b48093645e57cc3c83e688719d360372a108441e5b038cc4b6b"
-    },
-    {
-      "path": "docs/results/uf_evidence_predecoder_d7_d13/d13/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_d7_d13/d13/results.npz",
-      "bytes": 914906,
-      "sha256": "330023ec9b89e240241abb5fdd53b6cf82c5649abd014acc0852ae49b442b13b"
-    },
-    {
-      "path": "docs/results/uf_evidence_predecoder_d7_d13/d7/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_d7_d13/d7/results.npz",
-      "bytes": 859753,
-      "sha256": "554496d36568dd6292669bd0b2ce19838d145c714e413d07a5c5cad2382ec6ff"
-    },
-    {
-      "path": "docs/results/uf_evidence_predecoder_d7_d13/d9/results.npz",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_d7_d13/d9/results.npz",
-      "bytes": 885574,
-      "sha256": "642455810d7d8b6ac78a88c4a991479f7e2e44a7e2f5bc863dde08c6afca3350"
-    },
-    {
-      "path": "docs/results/uf_soft_confidence_d7_d9_p003_100k/d7/calibrators.json",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_soft_confidence_d7_d9_p003_100k/d7/calibrators.json",
-      "bytes": 1923872,
-      "sha256": "8f4c305cd56691c0e7bf2a7461ff10f033ddca76acaaaf1d7171e04a5a2807e3"
-    },
-    {
-      "path": "docs/results/uf_soft_confidence_d7_d9_p003_100k/d9/calibrators.json",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_soft_confidence_d7_d9_p003_100k/d9/calibrators.json",
-      "bytes": 3849212,
-      "sha256": "bc7638449e52db1cc9f5c689175a73bce5d8d608b47ecf1aec983b7bcd22c7f3"
-    }
-  ],
+  "policy": "Extra raw results permanently deleted at the user\u2019s explicit request; compact reports and recipes retained.",
   "workspace_runs": [
     {
       "original": "/data2/s2chitni/projects/dante/results/bp_uf_single_patch_d7_p003_20260929T054150Z",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/bp_uf_single_patch_d7_p003_20260929T054150Z",
       "files": 185,
-      "bytes": 1595373
+      "bytes": 1595373,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/bp_uf_single_patch_d7_p003_20260929T054150Z",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/bp_uf_single_patch_d7_p003_20260929T054231Z",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/bp_uf_single_patch_d7_p003_20260929T054231Z",
       "files": 191,
-      "bytes": 1648438
+      "bytes": 1648438,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/bp_uf_single_patch_d7_p003_20260929T054231Z",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/bp_uf_single_patch_d7_p003_20260929T054325Z",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/bp_uf_single_patch_d7_p003_20260929T054325Z",
       "files": 237,
-      "bytes": 30333775
+      "bytes": 30333775,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/bp_uf_single_patch_d7_p003_20260929T054325Z",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/bp_uf_single_patch_d9_d11_d13_p003_20260929T062831Z",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/bp_uf_single_patch_d9_d11_d13_p003_20260929T062831Z",
       "files": 260,
-      "bytes": 112332846
+      "bytes": 112332846,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/bp_uf_single_patch_d9_d11_d13_p003_20260929T062831Z",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/bp_uf_slides_100k_20260929",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/bp_uf_slides_100k_20260929",
       "files": 53,
-      "bytes": 8668543
+      "bytes": 8668543,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/bp_uf_slides_100k_20260929",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/correlated_uf_cluster_gap_p003_4d_100k_20260923",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/correlated_uf_cluster_gap_p003_4d_100k_20260923",
       "files": 872,
-      "bytes": 199486189
+      "bytes": 199486189,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/correlated_uf_cluster_gap_p003_4d_100k_20260923",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/correlated_uf_cluster_gap_setup_20260923",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/correlated_uf_cluster_gap_setup_20260923",
       "files": 91,
-      "bytes": 516082
+      "bytes": 516082,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/correlated_uf_cluster_gap_setup_20260923",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/decoder_gap_explainer_20260924",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/decoder_gap_explainer_20260924",
       "files": 8,
-      "bytes": 3590616
+      "bytes": 3590616,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/decoder_gap_explainer_20260924",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/decoder_gap_explainer_detailed_20260924",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/decoder_gap_explainer_detailed_20260924",
       "files": 10,
-      "bytes": 10355820
+      "bytes": 10355820,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/decoder_gap_explainer_detailed_20260924",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/dongwhee_noise_model_review_20260929",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/dongwhee_noise_model_review_20260929",
       "files": 40,
-      "bytes": 1906806
+      "bytes": 1906806,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/dongwhee_noise_model_review_20260929",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/hierarchical_accuracy_1m_setup_20260924",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_accuracy_1m_setup_20260924",
       "files": 259,
-      "bytes": 131307566
+      "bytes": 131307566,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_accuracy_1m_setup_20260924",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/hierarchical_accuracy_p003_4d_1m_20260924",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_accuracy_p003_4d_1m_20260924",
       "files": 32329,
-      "bytes": 30692455243
+      "bytes": 30692455243,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_accuracy_p003_4d_1m_20260924",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/hierarchical_decoder_plots_p003_4d_1m_complete_20260927",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_decoder_plots_p003_4d_1m_complete_20260927",
       "files": 29,
-      "bytes": 1139381
+      "bytes": 1139381,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_decoder_plots_p003_4d_1m_complete_20260927",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/hierarchical_decoder_separation_p003_4d_1m_d7_d13_20260926",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_decoder_separation_p003_4d_1m_d7_d13_20260926",
       "files": 23,
-      "bytes": 905662
+      "bytes": 905662,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_decoder_separation_p003_4d_1m_d7_d13_20260926",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/hierarchical_experiment_sections_20260930",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_experiment_sections_20260930",
       "files": 13,
-      "bytes": 2445163
+      "bytes": 2445163,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_experiment_sections_20260930",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/hierarchical_failure_diagnosis_p003_4d_1m_20260928",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_failure_diagnosis_p003_4d_1m_20260928",
       "files": 10,
-      "bytes": 433451
+      "bytes": 433451,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_failure_diagnosis_p003_4d_1m_20260928",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/hierarchical_ler_per_patch_round_p003_4d_100k_20260924",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_ler_per_patch_round_p003_4d_100k_20260924",
       "files": 17,
-      "bytes": 296221
+      "bytes": 296221,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_ler_per_patch_round_p003_4d_100k_20260924",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/hierarchical_ler_per_patch_round_p003_4d_100k_complete_20260924",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_ler_per_patch_round_p003_4d_100k_complete_20260924",
       "files": 19,
-      "bytes": 325428
+      "bytes": 325428,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_ler_per_patch_round_p003_4d_100k_complete_20260924",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/hierarchical_ler_per_patch_round_p003_4d_1m_d7_d9_20260924",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_ler_per_patch_round_p003_4d_1m_d7_d9_20260924",
       "files": 13,
-      "bytes": 494138
+      "bytes": 494138,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/hierarchical_ler_per_patch_round_p003_4d_1m_d7_d9_20260924",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/mpp_confidence_p001_100k_20260923",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_p001_100k_20260923",
       "files": 208,
-      "bytes": 295541570
+      "bytes": 295541570,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_p001_100k_20260923",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/mpp_confidence_p003_100k_20260923",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_p003_100k_20260923",
       "files": 212,
-      "bytes": 302183346
+      "bytes": 302183346,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_p003_100k_20260923",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/mpp_confidence_p003_4d_100k_20260923",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_p003_4d_100k_20260923",
       "files": 883,
-      "bytes": 3071623953
+      "bytes": 3071623953,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_p003_4d_100k_20260923",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/mpp_confidence_p003_d11_100k_20260923",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_p003_d11_100k_20260923",
       "files": 203,
-      "bytes": 211082337
+      "bytes": 211082337,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_p003_d11_100k_20260923",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/mpp_confidence_p003_d13_d15_100k_20260923",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_p003_d13_d15_100k_20260923",
       "files": 376,
-      "bytes": 584192062
+      "bytes": 584192062,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_p003_d13_d15_100k_20260923",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/mpp_confidence_pilot_20260922",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_pilot_20260922",
       "files": 44,
-      "bytes": 14805978
+      "bytes": 14805978,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_confidence_pilot_20260922",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/mpp_relative_increase_d21_4d_20260923",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_relative_increase_d21_4d_20260923",
       "files": 7,
-      "bytes": 368475
+      "bytes": 368475,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_relative_increase_d21_4d_20260923",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/mpp_relative_increase_d21_paper_20260923",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_relative_increase_d21_paper_20260923",
       "files": 8,
-      "bytes": 156007
+      "bytes": 156007,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_relative_increase_d21_paper_20260923",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/mpp_relative_increase_d21_paper_no_ci_20260923",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_relative_increase_d21_paper_no_ci_20260923",
       "files": 8,
-      "bytes": 151507
+      "bytes": 151507,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/mpp_relative_increase_d21_paper_no_ci_20260923",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/stim_dante_main_20260929",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/stim_dante_main_20260929",
       "files": 48,
-      "bytes": 1131156
+      "bytes": 1131156,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/stim_dante_main_20260929",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/stim_dante_setup_20260929",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/stim_dante_setup_20260929",
       "files": 46,
-      "bytes": 729730
+      "bytes": 729730,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/stim_dante_setup_20260929",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/yoked_bp5_weighted_d7_p003_100k_20260929T204943Z",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/yoked_bp5_weighted_d7_p003_100k_20260929T204943Z",
       "files": 223,
-      "bytes": 220316467
+      "bytes": 220316467,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/yoked_bp5_weighted_d7_p003_100k_20260929T204943Z",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/yoked_fourway_d7_p003_100k_20260929T201317Z",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/yoked_fourway_d7_p003_100k_20260929T201317Z",
       "files": 218,
-      "bytes": 272693845
+      "bytes": 272693845,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/yoked_fourway_d7_p003_100k_20260929T201317Z",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/yoked_fourway_sweep_p003_4d_100k_20260929T230047Z",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/yoked_fourway_sweep_p003_4d_100k_20260929T230047Z",
       "files": 304,
-      "bytes": 3337571440
+      "bytes": 3337571440,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/yoked_fourway_sweep_p003_4d_100k_20260929T230047Z",
+      "status": "deleted"
     },
     {
       "original": "/data2/s2chitni/projects/dante/results/yoked_fourway_sweep_slides_20260930",
-      "archive": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/yoked_fourway_sweep_slides_20260930",
       "files": 30,
-      "bytes": 3625938
+      "bytes": 3625938,
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/workspace_results/yoked_fourway_sweep_slides_20260930",
+      "status": "deleted"
     }
-  ]
+  ],
+  "repository_payloads": [
+    {
+      "path": "docs/results/correlated_uf_growth_diagnosis_d7_d9/full_d9_34624.json",
+      "bytes": 1668204,
+      "sha256": "dced9e79ad7511ab075e0c614dae62060054119bde58f69b95b3497f4bd1950f",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/correlated_uf_growth_diagnosis_d7_d9/full_d9_34624.json",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/reduced_44875.stim",
+      "bytes": 810736,
+      "sha256": "e06e0bf6a2c8b9123f6328b9b2f9012db1e8c642860948d9cc6d1e1bd7857dca",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/reduced_44875.stim",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/reduced_76890.stim",
+      "bytes": 810718,
+      "sha256": "901874666c28dafd64e2e12bb6243d1b4a9fcd10e8c2b3edf72871e63af8934f",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/correlated_uf_mwpm_failure_analysis_d7_d9/reduced_76890.stim",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/coset_ensemble_d7_d9_p003_100k/d7/predictions_and_diagnostics.npz",
+      "bytes": 1064235,
+      "sha256": "19593fbdb07c8d2a466aba42b3ab601c8e4281369229284ebd6c0701a53df0ee",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/coset_ensemble_d7_d9_p003_100k/d7/predictions_and_diagnostics.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/coset_ensemble_d7_d9_p003_100k/d9/predictions_and_diagnostics.npz",
+      "bytes": 1064764,
+      "sha256": "fb831d0f9df7d84fb88a00d0c410c863eb3c4fb4d55507e1f17095d065ecb0eb",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/coset_ensemble_d7_d9_p003_100k/d9/predictions_and_diagnostics.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/cz_fault_analysis_d7_d9/d7/decoded_pauli.npz",
+      "bytes": 64630,
+      "sha256": "bd1cc036ce945503f5faea1437fcc5d96c10fefbf3e80aaad0cb5cbb31e5e992",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d7/decoded_pauli.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/cz_fault_analysis_d7_d9/d7/single_event_responses.npz",
+      "bytes": 19661,
+      "sha256": "f72a3b607c0fe7c8b6b5db5f5e333bb7b02c2e8e28608ee31d62304c38e4a793",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d7/single_event_responses.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/cz_fault_analysis_d7_d9/d7/single_events.json.gz",
+      "bytes": 157236,
+      "sha256": "8e262f4b34a3030b269d6c0b6cca7c604e696a03f238da85f983661c950b0f74",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d7/single_events.json.gz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/cz_fault_analysis_d7_d9/d9/decoded_pauli.npz",
+      "bytes": 76423,
+      "sha256": "6d8dda3e46ba77200076c09b1053fcad639741e9e8ebe9f32b3d9073db11e2d8",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d9/decoded_pauli.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/cz_fault_analysis_d7_d9/d9/single_event_responses.npz",
+      "bytes": 51489,
+      "sha256": "5e661533cceaf402945fe7c2602482e14d175706a3bcd0fbd9df0e4263551457",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d9/single_event_responses.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/cz_fault_analysis_d7_d9/d9/single_events.json.gz",
+      "bytes": 341904,
+      "sha256": "3e4c98c99097d022d3d30aac6ac994d36f438a5f80f04f4fac3b458b09102b88",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/cz_fault_analysis_d7_d9/d9/single_events.json.gz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/iterative_correlated_uf_pilot_d7_d9/d7/results.npz",
+      "bytes": 63893,
+      "sha256": "78f1794770e2fa183b8b9aacc89c574c9e83856c15ec64ec961b693e6f4699d8",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/iterative_correlated_uf_pilot_d7_d9/d7/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/iterative_correlated_uf_pilot_d7_d9/d9/results.npz",
+      "bytes": 70219,
+      "sha256": "32cc4b5cb0ebdb07c94d17ac931517b595915cefd3e4a3e5b5dda25205e0a690",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/iterative_correlated_uf_pilot_d7_d9/d9/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/parallel_uf_clustering_d11_d13_p003_100k/d11/results.npz",
+      "bytes": 9431050,
+      "sha256": "cfacf14e50471f6ef11a5b2d6a9f9cc705da36fcdc56962f693ddd2e7014fb5f",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_d11_d13_p003_100k/d11/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/parallel_uf_clustering_d11_d13_p003_100k/d13/results.npz",
+      "bytes": 9805808,
+      "sha256": "d0cabd019ee393d786701e8c699208fabe327ac089286076b603764cfa35051a",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_d11_d13_p003_100k/d13/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/parallel_uf_clustering_d7_d9_p003_100k/d7/results.npz",
+      "bytes": 8333426,
+      "sha256": "d7bbb770121ace6df2b815a366641a71149bd649a311556d83a68b4e1a7bc36c",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_d7_d9_p003_100k/d7/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/parallel_uf_clustering_d7_d9_p003_100k/d9/results.npz",
+      "bytes": 8972246,
+      "sha256": "5ed8c3d1d0ccebca80409e704230daf5f4ac187eb851ecc80194e5bddc57a8d7",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_d7_d9_p003_100k/d9/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/parallel_uf_clustering_p001_100k/d11/results.npz",
+      "bytes": 6298121,
+      "sha256": "2ab8c5bc6aa4dfb2ba817036fa5800cc3bfb4d944214a7ecc023c1cd67535a89",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_p001_100k/d11/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/parallel_uf_clustering_p001_100k/d13/results.npz",
+      "bytes": 6606174,
+      "sha256": "ae4f6c9bf117114d82ae12e75aca7681fdb3d6eac3a256d276f31de5b51782c7",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_p001_100k/d13/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/parallel_uf_clustering_p001_100k/d7/results.npz",
+      "bytes": 5495055,
+      "sha256": "52dd56cff6acdb9810bcb2d0f6d4f877093dadc90c8c208bdf2b3a20f72f6f56",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_p001_100k/d7/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/parallel_uf_clustering_p001_100k/d9/results.npz",
+      "bytes": 5919817,
+      "sha256": "4882b9310c51bbdb5b01e2e170ba87356e25969993b4daa34cfa6b2ec0dbd236",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/parallel_uf_clustering_p001_100k/d9/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/physical_fault_ablation_d7_d9/d7/baseline_labels.npz",
+      "bytes": 6755,
+      "sha256": "66a1c0969a955aac69b97a9147154da0bfb6cf6650249f84dc8a6d521bf4f382",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d7/baseline_labels.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/physical_fault_ablation_d7_d9/d7/decoded_detail.npz",
+      "bytes": 48936,
+      "sha256": "f819d3146fb9a4cdcba0f3a8e07d5816b23add3f169e75aa10bb5960de680397",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d7/decoded_detail.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/physical_fault_ablation_d7_d9/d7/decoded_primary.npz",
+      "bytes": 33379,
+      "sha256": "96f4b38a5836ff02549aee1c1e8ba5f6ae932a8eaf77f0abba3d572354d7add0",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d7/decoded_primary.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/physical_fault_ablation_d7_d9/d7/event_counts.npz",
+      "bytes": 26321,
+      "sha256": "8bf03587ede77b46504db88153416622ff1d5946b78099e3ab5b25e13dde5be5",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d7/event_counts.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/physical_fault_ablation_d7_d9/d9/baseline_labels.npz",
+      "bytes": 6803,
+      "sha256": "45dfc6cbbc95101c5d50143f5d28bae65798d07d4e400610a5bd8a01906e910b",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d9/baseline_labels.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/physical_fault_ablation_d7_d9/d9/decoded_detail.npz",
+      "bytes": 49812,
+      "sha256": "3930fbad1242822bf6571e7ea9f9fc303613137a6b5e7b4f0e422c0d611d8c78",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d9/decoded_detail.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/physical_fault_ablation_d7_d9/d9/decoded_primary.npz",
+      "bytes": 33815,
+      "sha256": "63e740a94c0354af34cacac8a00ce2f5ae3a41d6f6a0e4bccc3beeb59b07977d",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d9/decoded_primary.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/physical_fault_ablation_d7_d9/d9/event_counts.npz",
+      "bytes": 29894,
+      "sha256": "cdedf0613fa8eb4f04b0a1f71962162f52bdaa5057ac3588a9d345d8c81d3022",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/physical_fault_ablation_d7_d9/d9/event_counts.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/uf_evidence_predecoder_100k_d7_d13/d11/results.npz",
+      "bytes": 8442093,
+      "sha256": "3df635ba13f62c29aa9f4e803df22c6f9ce43dac23c975449b65789ab7e5551d",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_100k_d7_d13/d11/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/uf_evidence_predecoder_100k_d7_d13/d13/results.npz",
+      "bytes": 8589273,
+      "sha256": "630007c568e7a3169b1297dfd5253b8ddafcd8fbb221305e8d4d0087b8d986b9",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_100k_d7_d13/d13/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/uf_evidence_predecoder_100k_d7_d13/d7/results.npz",
+      "bytes": 8023428,
+      "sha256": "c9e67c63b2c0f4845774f6200a83c99ca1ed8192b244483e1d65268dcdb70f4a",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_100k_d7_d13/d7/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/uf_evidence_predecoder_100k_d7_d13/d9/results.npz",
+      "bytes": 8243014,
+      "sha256": "804f9eed1e9ca503573de58f26234bd97b924a9f3cbdb3105916db4b16222cb0",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_100k_d7_d13/d9/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/uf_evidence_predecoder_d7_d13/d11/results.npz",
+      "bytes": 902379,
+      "sha256": "b20e52b2749b0b48093645e57cc3c83e688719d360372a108441e5b038cc4b6b",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_d7_d13/d11/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/uf_evidence_predecoder_d7_d13/d13/results.npz",
+      "bytes": 914906,
+      "sha256": "330023ec9b89e240241abb5fdd53b6cf82c5649abd014acc0852ae49b442b13b",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_d7_d13/d13/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/uf_evidence_predecoder_d7_d13/d7/results.npz",
+      "bytes": 859753,
+      "sha256": "554496d36568dd6292669bd0b2ce19838d145c714e413d07a5c5cad2382ec6ff",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_d7_d13/d7/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/uf_evidence_predecoder_d7_d13/d9/results.npz",
+      "bytes": 885574,
+      "sha256": "642455810d7d8b6ac78a88c4a991479f7e2e44a7e2f5bc863dde08c6afca3350",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_evidence_predecoder_d7_d13/d9/results.npz",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/uf_soft_confidence_d7_d9_p003_100k/d7/calibrators.json",
+      "bytes": 1923872,
+      "sha256": "8f4c305cd56691c0e7bf2a7461ff10f033ddca76acaaaf1d7171e04a5a2807e3",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_soft_confidence_d7_d9_p003_100k/d7/calibrators.json",
+      "status": "deleted"
+    },
+    {
+      "path": "docs/results/uf_soft_confidence_d7_d9_p003_100k/d9/calibrators.json",
+      "bytes": 3849212,
+      "sha256": "bc7638449e52db1cc9f5c689175a73bce5d8d608b47ecf1aec983b7bcd22c7f3",
+      "deleted_from": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z/repository_payloads/docs/results/uf_soft_confidence_d7_d9_p003_100k/d9/calibrators.json",
+      "status": "deleted"
+    }
+  ],
+  "deleted_archive_root": "/data2/s2chitni/.tmp/dante/archives/results-20260930T171100Z",
+  "deleted_utc": "2026-09-30T17:22:35.413945+00:00",
+  "retained_d9_reference": "/data2/s2chitni/.tmp/dante/references/yoked_fourway_d9_100k_20260929"
 }
